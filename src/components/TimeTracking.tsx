@@ -21,6 +21,15 @@ interface JobSite {
   client_name: string;
 }
 
+interface Schedule {
+  id: string;
+  employee_id: string;
+  job_site_id: string;
+  start_time: string;
+  end_time: string;
+  job_sites: JobSite;
+}
+
 interface TimeEntry {
   id: string;
   employee_id: string;
@@ -37,6 +46,7 @@ const TimeTracking = () => {
   const [activeEntries, setActiveEntries] = useState<TimeEntry[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [selectedJobSite, setSelectedJobSite] = useState<string>('');
+  const [scheduledJobSite, setScheduledJobSite] = useState<Schedule | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const { toast } = useToast();
 
@@ -51,6 +61,16 @@ const TimeTracking = () => {
 
     return () => clearInterval(timer);
   }, []);
+
+  // Auto-select job site when employee is selected
+  useEffect(() => {
+    if (selectedEmployee) {
+      fetchEmployeeSchedule(selectedEmployee);
+    } else {
+      setScheduledJobSite(null);
+      setSelectedJobSite('');
+    }
+  }, [selectedEmployee]);
 
   const fetchEmployees = async () => {
     const { data, error } = await supabase
@@ -95,6 +115,33 @@ const TimeTracking = () => {
       toast({ title: 'Error', description: 'Failed to fetch active entries', variant: 'destructive' });
     } else {
       setActiveEntries(data || []);
+    }
+  };
+
+  const fetchEmployeeSchedule = async (employeeId: string) => {
+    const currentDay = new Date().getDay(); // 0=Sunday, 1=Monday, etc.
+    const adjustedDay = currentDay === 0 ? 7 : currentDay; // Convert to 1=Monday, 7=Sunday
+    
+    const { data, error } = await supabase
+      .from('employee_schedules')
+      .select(`
+        *,
+        job_sites:job_site_id(id, name, address, client_name)
+      `)
+      .eq('employee_id', employeeId)
+      .eq('active', true)
+      .contains('days_of_week', [adjustedDay])
+      .lte('start_date', new Date().toISOString().split('T')[0])
+      .or(`end_date.is.null,end_date.gte.${new Date().toISOString().split('T')[0]}`)
+      .single();
+
+    if (error) {
+      console.log('No schedule found for employee');
+      setScheduledJobSite(null);
+      setSelectedJobSite('');
+    } else if (data) {
+      setScheduledJobSite(data);
+      setSelectedJobSite(data.job_site_id);
     }
   };
 
@@ -179,18 +226,30 @@ const TimeTracking = () => {
               </SelectContent>
             </Select>
 
-            <Select value={selectedJobSite} onValueChange={setSelectedJobSite}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Job Site" />
-              </SelectTrigger>
-              <SelectContent>
-                {jobSites.map((site) => (
-                  <SelectItem key={site.id} value={site.id}>
-                    {site.name} - {site.client_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <Select value={selectedJobSite} onValueChange={setSelectedJobSite}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Job Site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {jobSites.map((site) => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name} - {site.client_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {scheduledJobSite && (
+                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Badge variant="outline" className="text-xs">
+                    Scheduled: {scheduledJobSite.job_sites.name}
+                  </Badge>
+                  <span className="text-xs">
+                    {scheduledJobSite.start_time} - {scheduledJobSite.end_time}
+                  </span>
+                </div>
+              )}
+            </div>
 
             <Button 
               onClick={clockIn} 

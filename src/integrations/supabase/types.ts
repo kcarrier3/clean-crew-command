@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      employee_schedules: {
+        Row: {
+          active: boolean
+          created_at: string
+          days_of_week: number[]
+          employee_id: string
+          end_date: string | null
+          end_time: string | null
+          id: string
+          job_site_id: string
+          start_date: string
+          start_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          days_of_week?: number[]
+          employee_id: string
+          end_date?: string | null
+          end_time?: string | null
+          id?: string
+          job_site_id: string
+          start_date: string
+          start_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          days_of_week?: number[]
+          employee_id?: string
+          end_date?: string | null
+          end_time?: string | null
+          id?: string
+          job_site_id?: string
+          start_date?: string
+          start_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_schedules_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_schedules_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           active: boolean
