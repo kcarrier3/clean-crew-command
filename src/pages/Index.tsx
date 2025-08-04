@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TimeTracking from '@/components/TimeTracking';
 import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
+import SchedulingDashboard from '@/components/SchedulingDashboard';
 
 const Index = () => {
   return (
@@ -13,9 +14,10 @@ const Index = () => {
         </div>
         
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="dashboard">Worker Dashboard</TabsTrigger>
             <TabsTrigger value="clock">Time Clock</TabsTrigger>
+            <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
           </TabsList>
           
           <TabsContent value="dashboard" className="mt-6">
@@ -24,6 +26,10 @@ const Index = () => {
           
           <TabsContent value="clock" className="mt-6">
             <TimeTracking />
+          </TabsContent>
+          
+          <TabsContent value="scheduling" className="mt-6">
+            <SchedulingDashboard />
           </TabsContent>
         </Tabs>
       </div>
