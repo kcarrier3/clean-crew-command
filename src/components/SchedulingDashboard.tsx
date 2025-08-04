@@ -7,15 +7,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar, Clock, Users, MapPin, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Calendar, Clock, Users, MapPin, Plus, List, Grid3X3, ArrowUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import ScheduleListView from './ScheduleListView';
+import WeeklyScheduleView from './WeeklyScheduleView';
 
 interface Employee {
   id: string;
   employee_id: string;
   first_name: string;
   last_name: string;
+  job_title: string;
 }
 
 interface JobSite {
@@ -55,6 +59,8 @@ const SchedulingDashboard = () => {
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'weekly'>('list');
+  const [sortBy, setSortBy] = useState<'alphabetical' | 'job_title'>('alphabetical');
   const [formData, setFormData] = useState<ScheduleFormData>({
     employee_id: '',
     job_site_id: '',
@@ -79,7 +85,7 @@ const SchedulingDashboard = () => {
         .from('employee_schedules')
         .select(`
           *,
-          employees:employee_id(id, employee_id, first_name, last_name),
+          employees:employee_id(id, employee_id, first_name, last_name, job_title),
           job_sites:job_site_id(id, name, address, client_name)
         `)
         .eq('active', true)
@@ -441,80 +447,57 @@ const SchedulingDashboard = () => {
         </Card>
       </div>
 
-      {/* Schedules List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Current Schedules
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {schedules.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No schedules created yet</p>
-          ) : (
-            <div className="space-y-4">
-              {schedules.map((schedule) => (
-                <div key={schedule.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-2">
-                      <h3 className="font-semibold">
-                        {schedule.employees.first_name} {schedule.employees.last_name}
-                      </h3>
-                      <Badge variant="outline">
-                        {schedule.employees.employee_id}
-                      </Badge>
-                      <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                        {schedule.job_sites.name}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span>
-                          {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        <span>{formatDaysOfWeek(schedule.days_of_week)}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        <span>{schedule.job_sites.client_name}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      {schedule.start_date} {schedule.end_date && `to ${schedule.end_date}`}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(schedule)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(schedule.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* View Controls */}
+      <div className="flex justify-between items-center">
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-4 w-4 mr-2" />
+            List View
+          </Button>
+          <Button
+            variant={viewMode === 'weekly' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('weekly')}
+          >
+            <Grid3X3 className="h-4 w-4 mr-2" />
+            Weekly View
+          </Button>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <ArrowUpDown className="h-4 w-4" />
+          <Select value={sortBy} onValueChange={(value: 'alphabetical' | 'job_title') => setSortBy(value)}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="alphabetical">Sort Alphabetically</SelectItem>
+              <SelectItem value="job_title">Sort by Job Title</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Schedule Views */}
+      {viewMode === 'list' ? (
+        <ScheduleListView
+          schedules={schedules}
+          sortBy={sortBy}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      ) : (
+        <WeeklyScheduleView
+          schedules={schedules}
+          sortBy={sortBy}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      )}
     </div>
   );
 };

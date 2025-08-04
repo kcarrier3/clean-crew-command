@@ -81,6 +81,7 @@ export type Database = {
           hire_date: string | null
           hourly_rate: number | null
           id: string
+          job_title: string
           last_name: string
           phone: string | null
           updated_at: string
@@ -94,6 +95,7 @@ export type Database = {
           hire_date?: string | null
           hourly_rate?: number | null
           id?: string
+          job_title: string
           last_name: string
           phone?: string | null
           updated_at?: string
@@ -107,6 +109,7 @@ export type Database = {
           hire_date?: string | null
           hourly_rate?: number | null
           id?: string
+          job_title?: string
           last_name?: string
           phone?: string | null
           updated_at?: string
