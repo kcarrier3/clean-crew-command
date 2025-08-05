@@ -262,10 +262,19 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     // Get selected employee details for geofencing
     const employee = forManager 
       ? employees.find(emp => emp.id === selectedEmployee)
-      : employees.find(emp => emp.id === profile?.id);
-      
+      : profile ? {
+          id: profile.id,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          employee_id: profile.employee_id || '',
+          require_geofencing: profile.require_geofencing,
+          geofence_lat: profile.geofence_lat,
+          geofence_lng: profile.geofence_lng,
+          geofence_radius_meters: profile.geofence_radius_meters
+        } : null;
+        
     if (!employee) {
-      toast({ title: 'Error', description: 'Employee not found', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Employee data not found', variant: 'destructive' });
       return;
     }
 

@@ -13,6 +13,10 @@ export interface UserProfile {
   hire_date: string | null;
   hourly_rate: number | null;
   active: boolean;
+  require_geofencing: boolean;
+  geofence_lat: number | null;
+  geofence_lng: number | null;
+  geofence_radius_meters: number;
 }
 
 export interface UserRole {
