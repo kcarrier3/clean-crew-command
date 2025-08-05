@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TimeTracking from '@/components/TimeTracking';
 import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
 import SchedulingDashboard from '@/components/SchedulingDashboard';
+import EmployeeSelector from '@/components/EmployeeSelector';
 
 const Index = () => {
   return (
@@ -13,12 +14,17 @@ const Index = () => {
           <p className="text-muted-foreground">Janitorial Services Management System</p>
         </div>
         
-        <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="dashboard">Worker Dashboard</TabsTrigger>
+        <Tabs defaultValue="employee" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="employee">Employee Portal</TabsTrigger>
+            <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
             <TabsTrigger value="clock">Time Clock</TabsTrigger>
             <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="employee" className="mt-6">
+            <EmployeeSelector />
+          </TabsContent>
           
           <TabsContent value="dashboard" className="mt-6">
             <WorkerStatusDashboard />
