@@ -82,16 +82,32 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
       }, {} as Record<string, Employee[]>)
     : { 'All Employees': employees };
 
-  const getDayColor = (daySchedules: Schedule[]) => {
-    if (daySchedules.length === 0) return 'bg-gray-50';
-    if (daySchedules.length === 1) return 'bg-blue-50';
-    return 'bg-yellow-50'; // Multiple schedules
+  // Color mapping for different job titles
+  const getJobTitleColors = (jobTitle: string) => {
+    const colorMap: Record<string, { bg: string; border: string; text: string }> = {
+      'Manager': { bg: 'bg-red-100', border: 'border-red-300', text: 'text-red-800' },
+      'Supervisor': { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-800' },
+      'Project Worker': { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' },
+      'Janitorial Staff': { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-800' },
+      'Maintenance': { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-800' },
+      'Security': { bg: 'bg-gray-100', border: 'border-gray-300', text: 'text-gray-800' },
+    };
+    
+    return colorMap[jobTitle] || { bg: 'bg-slate-100', border: 'border-slate-300', text: 'text-slate-800' };
   };
 
-  const getDayBorderColor = (daySchedules: Schedule[]) => {
-    if (daySchedules.length === 0) return 'border-gray-200';
-    if (daySchedules.length === 1) return 'border-blue-200';
-    return 'border-yellow-300';
+  // Get day cell colors based on job titles of scheduled employees
+  const getDayColors = (daySchedules: Schedule[]) => {
+    if (daySchedules.length === 0) return { bg: 'bg-gray-50', border: 'border-gray-200' };
+    
+    // If single schedule, use job title color
+    if (daySchedules.length === 1) {
+      const colors = getJobTitleColors(daySchedules[0].employees.job_title);
+      return { bg: colors.bg, border: colors.border };
+    }
+    
+    // Multiple schedules - use a mixed color (yellow warning)
+    return { bg: 'bg-yellow-50', border: 'border-yellow-300' };
   };
 
   return (
@@ -149,48 +165,55 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
                           )}
                         </div>
                         
-                        {/* Day columns */}
-                        {[1, 2, 3, 4, 5, 6, 7].map((dayNumber) => {
-                          const daySchedules = getEmployeeScheduleForDay(employee.id, dayNumber);
-                          return (
-                            <div 
-                              key={dayNumber} 
-                              className={`p-1 border rounded min-h-[60px] ${getDayColor(daySchedules)} ${getDayBorderColor(daySchedules)}`}
-                            >
-                              {daySchedules.map((schedule) => (
-                                <div key={schedule.id} className="mb-1">
-                                  <div className="text-xs font-medium">
-                                    {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
-                                  </div>
-                                   <div className="text-xs text-muted-foreground truncate">
-                                     {schedule.job_sites.name}
-                                   </div>
-                                   {schedule.notes && (
-                                     <div className="text-xs text-blue-600 truncate mt-1" title={schedule.notes}>
-                                       <FileText className="h-3 w-3 inline mr-1" />
-                                       Notes
+                         {/* Day columns */}
+                         {[1, 2, 3, 4, 5, 6, 7].map((dayNumber) => {
+                           const daySchedules = getEmployeeScheduleForDay(employee.id, dayNumber);
+                           const dayColors = getDayColors(daySchedules);
+                           return (
+                             <div 
+                               key={dayNumber} 
+                               className={`p-1 border rounded min-h-[60px] ${dayColors.bg} ${dayColors.border}`}
+                             >
+                               {daySchedules.map((schedule) => {
+                                 const jobColors = getJobTitleColors(schedule.employees.job_title);
+                                 return (
+                                   <div key={schedule.id} className="mb-1">
+                                     <div className={`text-xs font-medium ${jobColors.text}`}>
+                                       {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
                                      </div>
-                                   )}
-                                  <div className="flex gap-1 mt-1">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-5 w-5 p-0"
-                                      onClick={() => onEdit(schedule)}
-                                    >
-                                      <Edit2 className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-5 w-5 p-0"
-                                      onClick={() => onDelete(schedule.id)}
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
+                                     <div className="text-xs text-muted-foreground truncate">
+                                       {schedule.job_sites.name}
+                                     </div>
+                                     <div className={`text-xs font-medium ${jobColors.text}`}>
+                                       {schedule.employees.job_title}
+                                     </div>
+                                     {schedule.notes && (
+                                       <div className="text-xs text-blue-600 truncate mt-1" title={schedule.notes}>
+                                         <FileText className="h-3 w-3 inline mr-1" />
+                                         Notes
+                                       </div>
+                                      )}
+                                      <div className="flex gap-1 mt-1">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-5 w-5 p-0"
+                                          onClick={() => onEdit(schedule)}
+                                        >
+                                          <Edit2 className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-5 w-5 p-0"
+                                          onClick={() => onDelete(schedule.id)}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                             </div>
                           );
                         })}
@@ -199,19 +222,29 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
                   </div>
                 </div>
                 
-                {/* Legend */}
-                <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gray-50 border border-gray-200 rounded"></div>
-                    <span>No Schedule</span>
+                {/* Job Title Color Legend */}
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium mb-2">Job Title Color Coding:</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                    {Object.entries({
+                      'Manager': getJobTitleColors('Manager'),
+                      'Supervisor': getJobTitleColors('Supervisor'),
+                      'Project Worker': getJobTitleColors('Project Worker'),
+                      'Janitorial Staff': getJobTitleColors('Janitorial Staff'),
+                      'Maintenance': getJobTitleColors('Maintenance'),
+                      'Security': getJobTitleColors('Security')
+                    }).map(([title, colors]) => (
+                      <div key={title} className="flex items-center gap-2">
+                        <div className={`w-4 h-4 ${colors.bg} border ${colors.border} rounded`}></div>
+                        <span className={colors.text}>{title}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-blue-50 border border-blue-200 rounded"></div>
-                    <span>Single Schedule</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-yellow-50 border border-yellow-300 rounded"></div>
-                    <span>Multiple Schedules</span>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-yellow-50 border border-yellow-300 rounded"></div>
+                      <span>Multiple Job Titles Scheduled</span>
+                    </div>
                   </div>
                 </div>
               </div>
