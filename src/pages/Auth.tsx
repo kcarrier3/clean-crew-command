@@ -81,8 +81,8 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">CrewCompass</h1>
-          <p className="text-orange-500 font-bold">Summit Facilities Group</p>
+          <h1 className="text-3xl font-bold text-orange-500">CrewCompass</h1>
+          <p className="text-muted-foreground italic">by Summit Facilities Group</p>
           <p className="text-muted-foreground italic">Every team needs a great compass!</p>
         </div>
 
