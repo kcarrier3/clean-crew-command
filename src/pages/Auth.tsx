@@ -83,7 +83,7 @@ const Auth = () => {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-orange-500">CrewCompass</h1>
           <p className="text-muted-foreground italic">by Summit Facilities Group</p>
-          <p className="text-muted-foreground italic">Every team needs a great compass!</p>
+          <p className="text-muted-foreground">Every team needs a great compass!</p>
         </div>
 
         <Tabs defaultValue="signin" className="w-full">
