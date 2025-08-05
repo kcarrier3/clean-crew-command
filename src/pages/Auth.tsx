@@ -82,7 +82,8 @@ const Auth = () => {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold">CrewCompass</h1>
-          <p className="text-muted-foreground">Summit Facilities Group</p>
+          <p className="text-orange-500 font-bold">Summit Facilities Group</p>
+          <p className="text-muted-foreground italic">Every team needs a great compass!</p>
         </div>
 
         <Tabs defaultValue="signin" className="w-full">
