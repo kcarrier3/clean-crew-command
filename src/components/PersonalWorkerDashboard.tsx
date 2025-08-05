@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock, Calendar, MapPin, FileText, CalendarDays } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import TimeTracking from './TimeTracking';
+import TimeClock from './TimeClock';
 import TimeOffRequests from './TimeOffRequests';
 
 interface Employee {
@@ -181,7 +181,7 @@ const PersonalWorkerDashboard = ({ selectedEmployee }: PersonalWorkerDashboardPr
         </TabsContent>
         
         <TabsContent value="timetracking">
-          <TimeTracking />
+          <TimeClock forManager={false} selectedEmployeeId={selectedEmployee?.id} />
         </TabsContent>
         
         <TabsContent value="timeoff">

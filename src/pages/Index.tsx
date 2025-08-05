@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Clock, Calendar, FileText, LogOut, User, MessageSquare } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import TimeTracking from '@/components/TimeTracking';
+import ManagerDashboard from '@/components/ManagerDashboard';
 import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
 import SchedulingDashboard from '@/components/SchedulingDashboard';
 import EmployeeDashboard from '@/components/EmployeeDashboard';
@@ -139,11 +139,11 @@ const Index = () => {
             )}
             
             <TabsContent value="dashboard" className="mt-6">
-              {isManager() ? <WorkerStatusDashboard /> : <EmployeeDashboard />}
+              {isManager() ? <ManagerDashboard /> : <EmployeeDashboard />}
             </TabsContent>
             
             <TabsContent value="clock" className="mt-6">
-              <TimeTracking />
+              {isManager() ? <WorkerStatusDashboard /> : <EmployeeDashboard />}
             </TabsContent>
             
             {isManager() && (

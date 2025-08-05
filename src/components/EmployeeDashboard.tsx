@@ -6,7 +6,7 @@ import { Clock, MapPin, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import TimeTracking from '@/components/TimeTracking';
+import TimeClock from '@/components/TimeClock';
 
 interface Schedule {
   id: string;
@@ -190,7 +190,7 @@ const EmployeeDashboard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <TimeTracking />
+          <TimeClock forManager={false} />
         </CardContent>
       </Card>
     </div>
