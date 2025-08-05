@@ -89,7 +89,7 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
       'Supervisor': { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-800' },
       'Project Worker': { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' },
       'Janitorial Staff': { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-800' },
-      'Maintenance': { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-800' },
+      'Floaters': { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-800' },
       'Supply Management': { bg: 'bg-gray-100', border: 'border-gray-300', text: 'text-gray-800' },
     };
     
@@ -231,7 +231,7 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
                       'Supervisor': getJobTitleColors('Supervisor'),
                       'Project Worker': getJobTitleColors('Project Worker'),
                       'Janitorial Staff': getJobTitleColors('Janitorial Staff'),
-                      'Maintenance': getJobTitleColors('Maintenance'),
+                      'Floaters': getJobTitleColors('Floaters'),
                       'Supply Management': getJobTitleColors('Supply Management')
                     }).map(([title, colors]) => (
                       <div key={title} className="flex items-center gap-2">
