@@ -24,6 +24,7 @@ export type Database = {
           end_time: string | null
           id: string
           job_site_id: string
+          notes: string | null
           start_date: string
           start_time: string | null
           updated_at: string
@@ -37,6 +38,7 @@ export type Database = {
           end_time?: string | null
           id?: string
           job_site_id: string
+          notes?: string | null
           start_date: string
           start_time?: string | null
           updated_at?: string
@@ -50,6 +52,7 @@ export type Database = {
           end_time?: string | null
           id?: string
           job_site_id?: string
+          notes?: string | null
           start_date?: string
           start_time?: string | null
           updated_at?: string

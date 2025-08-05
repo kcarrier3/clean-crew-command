@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Edit2, Trash2, Users } from 'lucide-react';
+import { Calendar, Edit2, Trash2, Users, FileText } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -27,6 +27,7 @@ interface Schedule {
   days_of_week: number[];
   start_date: string;
   end_date: string | null;
+  notes: string | null;
   active: boolean;
   employees: Employee;
   job_sites: JobSite;
@@ -161,9 +162,15 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
                                   <div className="text-xs font-medium">
                                     {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
                                   </div>
-                                  <div className="text-xs text-muted-foreground truncate">
-                                    {schedule.job_sites.name}
-                                  </div>
+                                   <div className="text-xs text-muted-foreground truncate">
+                                     {schedule.job_sites.name}
+                                   </div>
+                                   {schedule.notes && (
+                                     <div className="text-xs text-blue-600 truncate mt-1" title={schedule.notes}>
+                                       <FileText className="h-3 w-3 inline mr-1" />
+                                       Notes
+                                     </div>
+                                   )}
                                   <div className="flex gap-1 mt-1">
                                     <Button
                                       variant="outline"

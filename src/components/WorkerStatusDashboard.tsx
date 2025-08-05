@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Users, AlertCircle, CheckCircle2, Timer } from 'lucide-react';
+import { Clock, Users, AlertCircle, CheckCircle2, Timer, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,6 +25,7 @@ interface Schedule {
   job_site_id: string;
   start_time: string;
   end_time: string;
+  notes: string | null;
   job_sites: JobSite;
   employees: Employee;
 }
@@ -321,9 +322,18 @@ const WorkerStatusDashboard = () => {
                             <span>Clocked in: {new Date(worker.timeEntry.clock_in).toLocaleTimeString()}</span>
                             <span>@ {worker.timeEntry.job_sites.name}</span>
                           </>
-                        )}
-                      </div>
-                    </div>
+                         )}
+                       </div>
+                       {worker.schedule?.notes && (
+                         <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                           <div className="flex items-center gap-2 mb-1">
+                             <FileText className="h-3 w-3 text-blue-600" />
+                             <span className="font-medium text-blue-800 text-xs">Shift Notes:</span>
+                           </div>
+                           <p className="text-blue-700 text-xs">{worker.schedule.notes}</p>
+                         </div>
+                       )}
+                     </div>
                   </div>
                   
                   <div className="flex items-center gap-4">

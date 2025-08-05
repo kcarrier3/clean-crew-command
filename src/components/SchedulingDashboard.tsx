@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,6 +39,7 @@ interface Schedule {
   days_of_week: number[];
   start_date: string;
   end_date: string | null;
+  notes: string | null;
   active: boolean;
   employees: Employee;
   job_sites: JobSite;
@@ -51,6 +53,7 @@ interface ScheduleFormData {
   days_of_week: number[];
   start_date: string;
   end_date: string;
+  notes: string;
 }
 
 const SchedulingDashboard = () => {
@@ -68,7 +71,8 @@ const SchedulingDashboard = () => {
     end_time: '',
     days_of_week: [],
     start_date: '',
-    end_date: ''
+    end_date: '',
+    notes: ''
   });
   const { toast } = useToast();
 
@@ -141,6 +145,7 @@ const SchedulingDashboard = () => {
             days_of_week: formData.days_of_week,
             start_date: formData.start_date,
             end_date: formData.end_date || null,
+            notes: formData.notes || null,
             updated_at: new Date().toISOString()
           })
           .eq('id', editingSchedule.id);
@@ -162,7 +167,8 @@ const SchedulingDashboard = () => {
             end_time: formData.end_time,
             days_of_week: formData.days_of_week,
             start_date: formData.start_date,
-            end_date: formData.end_date || null
+            end_date: formData.end_date || null,
+            notes: formData.notes || null
           });
 
         if (error) throw error;
@@ -198,7 +204,8 @@ const SchedulingDashboard = () => {
       end_time: schedule.end_time,
       days_of_week: schedule.days_of_week,
       start_date: schedule.start_date,
-      end_date: schedule.end_date || ''
+      end_date: schedule.end_date || '',
+      notes: schedule.notes || ''
     });
     setIsDialogOpen(true);
   };
@@ -236,7 +243,8 @@ const SchedulingDashboard = () => {
       end_time: '',
       days_of_week: [],
       start_date: '',
-      end_date: ''
+      end_date: '',
+      notes: ''
     });
   };
 
@@ -385,6 +393,21 @@ const SchedulingDashboard = () => {
                     onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="notes">Shift Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Enter any special instructions, address details, or important information for this shift..."
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="mt-1"
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Workers will see these notes when viewing their scheduled shifts
+                </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-4">

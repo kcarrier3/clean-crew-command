@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, Edit2, Trash2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Edit2, Trash2, FileText } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -28,6 +28,7 @@ interface Schedule {
   days_of_week: number[];
   start_date: string;
   end_date: string | null;
+  notes: string | null;
   active: boolean;
   employees: Employee;
   job_sites: JobSite;
@@ -137,6 +138,16 @@ const ScheduleListView = ({ schedules, sortBy, onEdit, onDelete }: ScheduleListV
                             <span>{schedule.job_sites.client_name}</span>
                           </div>
                         </div>
+                        
+                        {schedule.notes && (
+                          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FileText className="h-4 w-4 text-blue-600" />
+                              <span className="font-medium text-blue-800">Shift Notes:</span>
+                            </div>
+                            <p className="text-blue-700">{schedule.notes}</p>
+                          </div>
+                        )}
                         
                         <div className="mt-2 text-xs text-muted-foreground">
                           {schedule.start_date} {schedule.end_date && `to ${schedule.end_date}`}
