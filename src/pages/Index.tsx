@@ -1,18 +1,61 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import TimeTracking from '@/components/TimeTracking';
 import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
 import SchedulingDashboard from '@/components/SchedulingDashboard';
-import EmployeeSelector from '@/components/EmployeeSelector';
+import EmployeeDashboard from '@/components/EmployeeDashboard';
 import QualityControlDashboard from '@/components/QualityControlDashboard';
 import { WorkOrdersDashboard } from '@/components/WorkOrdersDashboard';
 import { NotificationBell } from '@/components/NotificationBell';
 import { TestNotificationButton } from '@/components/TestNotificationButton';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("employee");
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user, loading, profile, isManager, signOut } = useAuth();
+  const [activeTab, setActiveTab] = useState("dashboard");
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive"
+      });
+    } else {
+      navigate('/auth');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect to auth
+  }
+
+  const userDisplayName = profile ? `${profile.first_name} ${profile.last_name}` : user.email;
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,42 +70,71 @@ const Index = () => {
             <div className="flex items-center gap-3">
               <TestNotificationButton />
               <NotificationBell />
+              
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <span className="hidden md:inline">{userDisplayName}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            {/* Desktop: Show all tabs */}
-            <TabsList className="hidden md:grid w-full grid-cols-6">
-              <TabsTrigger value="employee">Employee Portal</TabsTrigger>
-              <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
-              <TabsTrigger value="clock">Time Clock</TabsTrigger>
-              <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
-              <TabsTrigger value="quality">Quality Control</TabsTrigger>
-              <TabsTrigger value="workorders">Work Orders</TabsTrigger>
-            </TabsList>
+            {/* Desktop: Show tabs based on user role */}
+            {isManager() ? (
+              <TabsList className="hidden md:grid w-full grid-cols-5">
+                <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
+                <TabsTrigger value="clock">Time Clock</TabsTrigger>
+                <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
+                <TabsTrigger value="quality">Quality Control</TabsTrigger>
+                <TabsTrigger value="workorders">Work Orders</TabsTrigger>
+              </TabsList>
+            ) : (
+              <TabsList className="hidden md:grid w-full grid-cols-4">
+                <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
+                <TabsTrigger value="clock">Time Clock</TabsTrigger>
+                <TabsTrigger value="quality">Quality Control</TabsTrigger>
+                <TabsTrigger value="workorders">Work Orders</TabsTrigger>
+              </TabsList>
+            )}
 
-            {/* Mobile: Show only main tabs */}
-            <TabsList className="md:hidden grid w-full grid-cols-3">
-              <TabsTrigger value="employee">Employee Portal</TabsTrigger>
-              <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
-              <TabsTrigger value="quality">Quality Control</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="employee" className="mt-6">
-              <EmployeeSelector />
-            </TabsContent>
+            {/* Mobile: Show tabs based on user role */}
+            {isManager() ? (
+              <TabsList className="md:hidden grid w-full grid-cols-3">
+                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+                <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
+                <TabsTrigger value="quality">Quality</TabsTrigger>
+              </TabsList>
+            ) : (
+              <TabsList className="md:hidden grid w-full grid-cols-2">
+                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+                <TabsTrigger value="quality">Quality</TabsTrigger>
+              </TabsList>
+            )}
             
             <TabsContent value="dashboard" className="mt-6">
-              <WorkerStatusDashboard />
+              {isManager() ? <WorkerStatusDashboard /> : <EmployeeDashboard />}
             </TabsContent>
             
             <TabsContent value="clock" className="mt-6">
               <TimeTracking />
             </TabsContent>
             
-            <TabsContent value="scheduling" className="mt-6">
-              <SchedulingDashboard />
-            </TabsContent>
+            {isManager() && (
+              <TabsContent value="scheduling" className="mt-6">
+                <SchedulingDashboard />
+              </TabsContent>
+            )}
             
             <TabsContent value="quality" className="mt-6">
               <QualityControlDashboard />
@@ -75,7 +147,7 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation - Fixed at bottom */}
+      {/* Mobile Bottom Navigation - Role-based */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4">
         <div className="flex justify-around items-center max-w-md mx-auto">
           <Button
@@ -88,15 +160,17 @@ const Index = () => {
             <span className="text-xs">Time Clock</span>
           </Button>
           
-          <Button
-            variant={activeTab === "scheduling" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("scheduling")}
-            className="flex flex-col items-center gap-1 h-auto py-2 px-3"
-          >
-            <Calendar className="h-5 w-5" />
-            <span className="text-xs">Schedule</span>
-          </Button>
+          {isManager() && (
+            <Button
+              variant={activeTab === "scheduling" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("scheduling")}
+              className="flex flex-col items-center gap-1 h-auto py-2 px-3"
+            >
+              <Calendar className="h-5 w-5" />
+              <span className="text-xs">Schedule</span>
+            </Button>
+          )}
           
           <Button
             variant={activeTab === "workorders" ? "default" : "ghost"}
