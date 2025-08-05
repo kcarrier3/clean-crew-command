@@ -13,16 +13,16 @@ interface WorkOrder {
   id: string;
   title: string;
   description: string;
-  status: 'open' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'open' | 'in_progress' | 'completed' | 'reviewed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   job_site_id: string;
   assigned_to: string;
   created_by: string;
   created_at: string;
   due_date: string;
-  job_sites: { name: string };
-  employees: { first_name: string; last_name: string };
-  created_by_employee: { first_name: string; last_name: string };
+  job_sites?: { name: string };
+  employees?: { first_name: string; last_name: string };
+  created_by_employee?: { first_name: string; last_name: string };
 }
 
 const QualityControlDashboard = () => {
@@ -49,7 +49,7 @@ const QualityControlDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setWorkOrders(data || []);
+      setWorkOrders((data || []) as WorkOrder[]);
     } catch (error) {
       toast({
         title: "Error",

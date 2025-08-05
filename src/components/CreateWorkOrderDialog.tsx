@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Camera, X } from 'lucide-react';
 
 interface CreateWorkOrderDialogProps {
   open: boolean;
@@ -15,104 +18,70 @@ interface CreateWorkOrderDialogProps {
   onSuccess: () => void;
 }
 
+interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  employee_id: string;
+}
+
 interface JobSite {
   id: string;
   name: string;
 }
 
-interface Employee {
-  id: string;
-  first_name: string;
-  last_name: string;
-}
-
-export const CreateWorkOrderDialog = ({ open, onOpenChange, onSuccess }: CreateWorkOrderDialogProps) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
-  const [jobSiteId, setJobSiteId] = useState('');
-  const [assignedTo, setAssignedTo] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [jobSites, setJobSites] = useState<JobSite[]>([]);
+export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
+  open,
+  onOpenChange,
+  onSuccess
+}) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    job_site_id: '',
+    assigned_to: '',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
+    due_date: undefined as Date | undefined
+  });
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (open) {
-      fetchJobSites();
       fetchEmployees();
+      fetchJobSites();
     }
   }, [open]);
+
+  const fetchEmployees = async () => {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('id, first_name, last_name, employee_id')
+      .eq('active', true)
+      .order('first_name');
+
+    if (!error && data) {
+      setEmployees(data);
+    }
+  };
 
   const fetchJobSites = async () => {
     const { data, error } = await supabase
       .from('job_sites')
       .select('id, name')
-      .eq('active', true);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch job sites",
-        variant: "destructive",
-      });
-    } else {
-      setJobSites(data || []);
+      .eq('active', true)
+      .order('name');
+
+    if (!error && data) {
+      setJobSites(data);
     }
-  };
-
-  const fetchEmployees = async () => {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('id, first_name, last_name')
-      .eq('active', true);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch employees",
-        variant: "destructive",
-      });
-    } else {
-      setEmployees(data || []);
-    }
-  };
-
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setPhotos(prev => [...prev, ...files]);
-  };
-
-  const removePhoto = (index: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const uploadPhoto = async (file: File, workOrderId: string) => {
-    const fileName = `${workOrderId}/${Date.now()}-${file.name}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from('work-order-photos')
-      .upload(fileName, file);
-
-    if (uploadError) throw uploadError;
-
-    const { error: dbError } = await supabase
-      .from('work_order_photos')
-      .insert({
-        work_order_id: workOrderId,
-        photo_url: fileName,
-        photo_type: 'deficiency',
-        uploaded_by: 'current-user' // TODO: Replace with actual user ID when auth is implemented
-      });
-
-    if (dbError) throw dbError;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !description || !jobSiteId || !assignedTo || !dueDate) {
+    if (!formData.title || !formData.job_site_id || !formData.assigned_to) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -122,28 +91,21 @@ export const CreateWorkOrderDialog = ({ open, onOpenChange, onSuccess }: CreateW
     }
 
     setLoading(true);
+
     try {
-      // Create work order
-      const { data: workOrder, error: workOrderError } = await supabase
+      const { error } = await supabase
         .from('work_orders')
         .insert({
-          title,
-          description,
-          priority,
-          job_site_id: jobSiteId,
-          assigned_to: assignedTo,
-          due_date: dueDate,
-          created_by: 'current-user' // TODO: Replace with actual user ID when auth is implemented
-        })
-        .select()
-        .single();
+          title: formData.title,
+          description: formData.description,
+          job_site_id: formData.job_site_id,
+          assigned_to: formData.assigned_to,
+          priority: formData.priority,
+          due_date: formData.due_date?.toISOString().split('T')[0],
+          created_by: 'temp-user-id' // TODO: Replace with actual user ID when auth is implemented
+        });
 
-      if (workOrderError) throw workOrderError;
-
-      // Upload photos
-      for (const photo of photos) {
-        await uploadPhoto(photo, workOrder.id);
-      }
+      if (error) throw error;
 
       toast({
         title: "Success",
@@ -151,16 +113,18 @@ export const CreateWorkOrderDialog = ({ open, onOpenChange, onSuccess }: CreateW
       });
 
       // Reset form
-      setTitle('');
-      setDescription('');
-      setPriority('medium');
-      setJobSiteId('');
-      setAssignedTo('');
-      setDueDate('');
-      setPhotos([]);
-      
+      setFormData({
+        title: '',
+        description: '',
+        job_site_id: '',
+        assigned_to: '',
+        priority: 'medium',
+        due_date: undefined
+      });
+
       onSuccess();
-    } catch (error) {
+      onOpenChange(false);
+    } catch (error: any) {
       toast({
         title: "Error",
         description: "Failed to create work order",
@@ -173,39 +137,27 @@ export const CreateWorkOrderDialog = ({ open, onOpenChange, onSuccess }: CreateW
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Create Work Order</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter work order title"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="description">Description *</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the quality issue or deficiency"
-              rows={3}
-              required
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="priority">Priority *</Label>
-              <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
+            <div className="space-y-2">
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Work order title"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority</Label>
+              <Select value={formData.priority} onValueChange={(value: any) => setFormData({ ...formData, priority: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -217,95 +169,71 @@ export const CreateWorkOrderDialog = ({ open, onOpenChange, onSuccess }: CreateW
                 </SelectContent>
               </Select>
             </div>
-
-            <div>
-              <Label htmlFor="dueDate">Due Date *</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                required
-              />
-            </div>
           </div>
 
-          <div>
-            <Label htmlFor="jobSite">Job Site *</Label>
-            <Select value={jobSiteId} onValueChange={setJobSiteId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select job site" />
-              </SelectTrigger>
-              <SelectContent>
-                {jobSites.map(site => (
-                  <SelectItem key={site.id} value={site.id}>
-                    {site.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Describe the work that needs to be done"
+              rows={3}
+            />
           </div>
 
-          <div>
-            <Label htmlFor="assignedTo">Assign To *</Label>
-            <Select value={assignedTo} onValueChange={setAssignedTo}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select employee" />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map(employee => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.first_name} {employee.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Photos</Label>
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('photo-input')?.click()}
-                className="w-full"
-              >
-                <Camera className="h-4 w-4 mr-2" />
-                Add Photos
-              </Button>
-              <input
-                id="photo-input"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handlePhotoSelect}
-                className="hidden"
-              />
-              
-              {photos.length > 0 && (
-                <div className="grid grid-cols-3 gap-2">
-                  {photos.map((photo, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={URL.createObjectURL(photo)}
-                        alt={`Photo ${index + 1}`}
-                        className="w-full h-20 object-cover rounded"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                        onClick={() => removePhoto(index)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
+              <Label htmlFor="job_site">Job Site *</Label>
+              <Select value={formData.job_site_id} onValueChange={(value) => setFormData({ ...formData, job_site_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select job site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {jobSites.map((site) => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name}
+                    </SelectItem>
                   ))}
-                </div>
-              )}
+                </SelectContent>
+              </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="assigned_to">Assign To *</Label>
+              <Select value={formData.assigned_to} onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.first_name} {employee.last_name} ({employee.employee_id})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Due Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.due_date ? format(formData.due_date, "PPP") : "Select due date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={formData.due_date}
+                  onSelect={(date) => setFormData({ ...formData, due_date: date })}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
@@ -313,7 +241,7 @@ export const CreateWorkOrderDialog = ({ open, onOpenChange, onSuccess }: CreateW
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create Work Order"}
+              {loading ? 'Creating...' : 'Create Work Order'}
             </Button>
           </div>
         </form>

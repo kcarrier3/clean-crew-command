@@ -5,6 +5,7 @@ import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
 import SchedulingDashboard from '@/components/SchedulingDashboard';
 import EmployeeSelector from '@/components/EmployeeSelector';
 import QualityControlDashboard from '@/components/QualityControlDashboard';
+import { WorkOrdersDashboard } from '@/components/WorkOrdersDashboard';
 
 const Index = () => {
   return (
@@ -42,6 +43,10 @@ const Index = () => {
           
           <TabsContent value="quality" className="mt-6">
             <QualityControlDashboard />
+          </TabsContent>
+          
+          <TabsContent value="workorders" className="mt-6">
+            <WorkOrdersDashboard />
           </TabsContent>
         </Tabs>
       </div>

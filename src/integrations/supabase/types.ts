@@ -293,6 +293,127 @@ export type Database = {
         }
         Relationships: []
       }
+      work_order_notes: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          note: string
+          work_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          note: string
+          work_order_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_notes_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          photo_type: Database["public"]["Enums"]["work_order_photo_type"]
+          photo_url: string
+          uploaded_by: string
+          work_order_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          photo_type: Database["public"]["Enums"]["work_order_photo_type"]
+          photo_url: string
+          uploaded_by: string
+          work_order_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          photo_type?: Database["public"]["Enums"]["work_order_photo_type"]
+          photo_url?: string
+          uploaded_by?: string
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_photos_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders: {
+        Row: {
+          assigned_to: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          job_site_id: string
+          priority: Database["public"]["Enums"]["work_order_priority"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["work_order_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to: string
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          job_site_id: string
+          priority?: Database["public"]["Enums"]["work_order_priority"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["work_order_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          job_site_id?: string
+          priority?: Database["public"]["Enums"]["work_order_priority"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["work_order_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -302,6 +423,9 @@ export type Database = {
     }
     Enums: {
       time_off_status: "pending" | "approved" | "declined"
+      work_order_photo_type: "deficiency" | "completion"
+      work_order_priority: "low" | "medium" | "high" | "urgent"
+      work_order_status: "open" | "in_progress" | "completed" | "reviewed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -430,6 +554,9 @@ export const Constants = {
   public: {
     Enums: {
       time_off_status: ["pending", "approved", "declined"],
+      work_order_photo_type: ["deficiency", "completion"],
+      work_order_priority: ["low", "medium", "high", "urgent"],
+      work_order_status: ["open", "in_progress", "completed", "reviewed"],
     },
   },
 } as const
