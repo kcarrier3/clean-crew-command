@@ -19,12 +19,19 @@ export interface UserRole {
   role: 'admin' | 'manager' | 'employee';
 }
 
+export interface UserPermission {
+  permission: 'view_schedules' | 'edit_schedules' | 'view_time_tracking' | 'edit_time_tracking' | 
+              'view_work_orders' | 'create_work_orders' | 'edit_work_orders' | 'view_quality_control' | 
+              'edit_quality_control' | 'view_worker_status' | 'manage_employees' | 'view_notifications' | 'admin_settings';
+}
+
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
+  const [permissions, setPermissions] = useState<UserPermission[]>([]);
 
   useEffect(() => {
     // Set up auth state listener
@@ -33,15 +40,17 @@ export const useAuth = () => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Fetch user profile and roles when authenticated
+        // Fetch user profile, roles, and permissions when authenticated
         if (session?.user) {
           setTimeout(() => {
             fetchUserProfile(session.user.id);
             fetchUserRoles(session.user.id);
+            fetchUserPermissions(session.user.id);
           }, 0);
         } else {
           setProfile(null);
           setRoles([]);
+          setPermissions([]);
         }
         setLoading(false);
       }
@@ -56,6 +65,7 @@ export const useAuth = () => {
         setTimeout(() => {
           fetchUserProfile(session.user.id);
           fetchUserRoles(session.user.id);
+          fetchUserPermissions(session.user.id);
         }, 0);
       }
       setLoading(false);
@@ -101,6 +111,24 @@ export const useAuth = () => {
     }
   };
 
+  const fetchUserPermissions = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_permissions')
+        .select('permission')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching permissions:', error);
+        return;
+      }
+
+      setPermissions(data || []);
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+    }
+  };
+
   const signUp = async (email: string, password: string, firstName: string, lastName: string, employeeId?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
@@ -139,17 +167,50 @@ export const useAuth = () => {
   const isManager = () => hasRole('admin') || hasRole('manager');
   const isEmployee = () => hasRole('employee');
 
+  const hasPermission = (permission: UserPermission['permission']) => {
+    return permissions.some(p => p.permission === permission);
+  };
+
+  const canViewSchedules = () => hasPermission('view_schedules');
+  const canEditSchedules = () => hasPermission('edit_schedules');
+  const canViewTimeTracking = () => hasPermission('view_time_tracking');
+  const canEditTimeTracking = () => hasPermission('edit_time_tracking');
+  const canViewWorkOrders = () => hasPermission('view_work_orders');
+  const canCreateWorkOrders = () => hasPermission('create_work_orders');
+  const canEditWorkOrders = () => hasPermission('edit_work_orders');
+  const canViewQualityControl = () => hasPermission('view_quality_control');
+  const canEditQualityControl = () => hasPermission('edit_quality_control');
+  const canViewWorkerStatus = () => hasPermission('view_worker_status');
+  const canManageEmployees = () => hasPermission('manage_employees');
+  const canViewNotifications = () => hasPermission('view_notifications');
+  const canAccessAdminSettings = () => hasPermission('admin_settings');
+
   return {
     user,
     session,
     profile,
     roles,
+    permissions,
     loading,
     signUp,
     signIn,
     signOut,
     hasRole,
+    hasPermission,
     isManager,
-    isEmployee
+    isEmployee,
+    canViewSchedules,
+    canEditSchedules,
+    canViewTimeTracking,
+    canEditTimeTracking,
+    canViewWorkOrders,
+    canCreateWorkOrders,
+    canEditWorkOrders,
+    canViewQualityControl,
+    canEditQualityControl,
+    canViewWorkerStatus,
+    canManageEmployees,
+    canViewNotifications,
+    canAccessAdminSettings
   };
 };

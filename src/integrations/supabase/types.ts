@@ -194,6 +194,33 @@ export type Database = {
         }
         Relationships: []
       }
+      permissions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          name: Database["public"]["Enums"]["app_permission"]
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          name: Database["public"]["Enums"]["app_permission"]
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          name?: Database["public"]["Enums"]["app_permission"]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active: boolean
@@ -353,6 +380,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_permissions: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -500,6 +551,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      grant_default_employee_permissions: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
+      grant_default_manager_permissions: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
+      has_permission: {
+        Args: {
+          _user_id: string
+          _permission: Database["public"]["Enums"]["app_permission"]
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _user_id: string
@@ -509,6 +575,20 @@ export type Database = {
       }
     }
     Enums: {
+      app_permission:
+        | "view_schedules"
+        | "edit_schedules"
+        | "view_time_tracking"
+        | "edit_time_tracking"
+        | "view_work_orders"
+        | "create_work_orders"
+        | "edit_work_orders"
+        | "view_quality_control"
+        | "edit_quality_control"
+        | "view_worker_status"
+        | "manage_employees"
+        | "view_notifications"
+        | "admin_settings"
       app_role: "admin" | "manager" | "employee"
       time_off_status: "pending" | "approved" | "declined"
       work_order_photo_type: "deficiency" | "completion"
@@ -641,6 +721,21 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_permission: [
+        "view_schedules",
+        "edit_schedules",
+        "view_time_tracking",
+        "edit_time_tracking",
+        "view_work_orders",
+        "create_work_orders",
+        "edit_work_orders",
+        "view_quality_control",
+        "edit_quality_control",
+        "view_worker_status",
+        "manage_employees",
+        "view_notifications",
+        "admin_settings",
+      ],
       app_role: ["admin", "manager", "employee"],
       time_off_status: ["pending", "approved", "declined"],
       work_order_photo_type: ["deficiency", "completion"],

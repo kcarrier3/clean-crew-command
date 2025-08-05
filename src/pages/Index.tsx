@@ -12,13 +12,14 @@ import QualityControlDashboard from '@/components/QualityControlDashboard';
 import { WorkOrdersDashboard } from '@/components/WorkOrdersDashboard';
 import { NotificationBell } from '@/components/NotificationBell';
 import { TestNotificationButton } from '@/components/TestNotificationButton';
+import PermissionManagement from '@/components/PermissionManagement';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading, profile, isManager, signOut } = useAuth();
+  const { user, loading, profile, isManager, canManageEmployees, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
 
   useEffect(() => {
@@ -92,13 +93,24 @@ const Index = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Desktop: Show tabs based on user role */}
             {isManager() ? (
-              <TabsList className="hidden md:grid w-full grid-cols-5">
-                <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
-                <TabsTrigger value="clock">Time Clock</TabsTrigger>
-                <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
-                <TabsTrigger value="quality">Quality Control</TabsTrigger>
-                <TabsTrigger value="workorders">Work Orders</TabsTrigger>
-              </TabsList>
+              canManageEmployees() ? (
+                <TabsList className="hidden md:grid w-full grid-cols-6">
+                  <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
+                  <TabsTrigger value="clock">Time Clock</TabsTrigger>
+                  <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
+                  <TabsTrigger value="quality">Quality Control</TabsTrigger>
+                  <TabsTrigger value="workorders">Work Orders</TabsTrigger>
+                  <TabsTrigger value="permissions">Permissions</TabsTrigger>
+                </TabsList>
+              ) : (
+                <TabsList className="hidden md:grid w-full grid-cols-5">
+                  <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
+                  <TabsTrigger value="clock">Time Clock</TabsTrigger>
+                  <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
+                  <TabsTrigger value="quality">Quality Control</TabsTrigger>
+                  <TabsTrigger value="workorders">Work Orders</TabsTrigger>
+                </TabsList>
+              )
             ) : (
               <TabsList className="hidden md:grid w-full grid-cols-4">
                 <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
@@ -143,6 +155,12 @@ const Index = () => {
             <TabsContent value="workorders" className="mt-6">
               <WorkOrdersDashboard />
             </TabsContent>
+
+            {canManageEmployees() && (
+              <TabsContent value="permissions" className="mt-6">
+                <PermissionManagement />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>
