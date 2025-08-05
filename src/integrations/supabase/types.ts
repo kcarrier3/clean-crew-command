@@ -81,12 +81,16 @@ export type Database = {
           email: string | null
           employee_id: string
           first_name: string
+          geofence_lat: number | null
+          geofence_lng: number | null
+          geofence_radius_meters: number | null
           hire_date: string | null
           hourly_rate: number | null
           id: string
           job_title: string
           last_name: string
           phone: string | null
+          require_geofencing: boolean
           updated_at: string
         }
         Insert: {
@@ -95,12 +99,16 @@ export type Database = {
           email?: string | null
           employee_id: string
           first_name: string
+          geofence_lat?: number | null
+          geofence_lng?: number | null
+          geofence_radius_meters?: number | null
           hire_date?: string | null
           hourly_rate?: number | null
           id?: string
           job_title: string
           last_name: string
           phone?: string | null
+          require_geofencing?: boolean
           updated_at?: string
         }
         Update: {
@@ -109,12 +117,16 @@ export type Database = {
           email?: string | null
           employee_id?: string
           first_name?: string
+          geofence_lat?: number | null
+          geofence_lng?: number | null
+          geofence_radius_meters?: number | null
           hire_date?: string | null
           hourly_rate?: number | null
           id?: string
           job_title?: string
           last_name?: string
           phone?: string | null
+          require_geofencing?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -146,6 +158,36 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      location_updates: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          latitude: number
+          longitude: number
+          recorded_at: string
+          time_entry_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          latitude: number
+          longitude: number
+          recorded_at?: string
+          time_entry_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          recorded_at?: string
+          time_entry_id?: string
         }
         Relationships: []
       }

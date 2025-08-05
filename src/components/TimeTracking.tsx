@@ -12,6 +12,10 @@ interface Employee {
   employee_id: string;
   first_name: string;
   last_name: string;
+  require_geofencing: boolean;
+  geofence_lat: number | null;
+  geofence_lng: number | null;
+  geofence_radius_meters: number;
 }
 
 interface JobSite {
@@ -48,6 +52,9 @@ const TimeTracking = () => {
   const [selectedJobSite, setSelectedJobSite] = useState<string>('');
   const [scheduledJobSite, setScheduledJobSite] = useState<Schedule | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -105,7 +112,7 @@ const TimeTracking = () => {
       .from('time_entries')
       .select(`
         *,
-        employees:employee_id(id, employee_id, first_name, last_name),
+        employees:employee_id(id, employee_id, first_name, last_name, require_geofencing, geofence_lat, geofence_lng, geofence_radius_meters),
         job_sites:job_site_id(id, name, address, client_name)
       `)
       .is('clock_out', null)
@@ -145,6 +152,100 @@ const TimeTracking = () => {
     }
   };
 
+  // Geolocation functions
+  const getCurrentLocation = (): Promise<{lat: number, lng: number}> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported by this browser'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          let message = 'Unable to get location';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              message = 'Location permission denied';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              message = 'Location information unavailable';
+              break;
+            case error.TIMEOUT:
+              message = 'Location request timed out';
+              break;
+          }
+          reject(new Error(message));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        }
+      );
+    });
+  };
+
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lng2-lng1) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c; // Distance in meters
+  };
+
+  const validateGeofencing = (employee: Employee, location: {lat: number, lng: number}): boolean => {
+    if (!employee.require_geofencing || !employee.geofence_lat || !employee.geofence_lng) {
+      return true; // No geofencing required
+    }
+
+    const distance = calculateDistance(
+      location.lat, 
+      location.lng, 
+      employee.geofence_lat, 
+      employee.geofence_lng
+    );
+
+    return distance <= employee.geofence_radius_meters;
+  };
+
+  const startLocationTracking = async (timeEntryId: string, employeeId: string) => {
+    const trackLocation = async () => {
+      try {
+        const location = await getCurrentLocation();
+        await supabase
+          .from('location_updates')
+          .insert({
+            time_entry_id: timeEntryId,
+            employee_id: employeeId,
+            latitude: location.lat,
+            longitude: location.lng
+          });
+      } catch (error) {
+        console.error('Failed to track location:', error);
+      }
+    };
+
+    // Track location immediately, then every hour
+    trackLocation();
+    const interval = setInterval(trackLocation, 60 * 60 * 1000); // 1 hour
+    
+    // Store interval ID for cleanup (you might want to store this globally)
+    return interval;
+  };
+
   const clockIn = async () => {
     if (!selectedEmployee || !selectedJobSite) {
       toast({ title: 'Error', description: 'Please select an employee and job site', variant: 'destructive' });
@@ -158,35 +259,104 @@ const TimeTracking = () => {
       return;
     }
 
-    const { error } = await supabase
-      .from('time_entries')
-      .insert({
-        employee_id: selectedEmployee,
-        job_site_id: selectedJobSite,
-        clock_in: new Date().toISOString()
-      });
+    // Get selected employee details for geofencing
+    const employee = employees.find(emp => emp.id === selectedEmployee);
+    if (!employee) {
+      toast({ title: 'Error', description: 'Employee not found', variant: 'destructive' });
+      return;
+    }
 
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to clock in', variant: 'destructive' });
-    } else {
-      toast({ title: 'Success', description: 'Clocked in successfully!' });
-      setSelectedEmployee('');
-      setSelectedJobSite('');
-      fetchActiveEntries();
+    setIsGettingLocation(true);
+    setLocationError(null);
+
+    try {
+      // Get current location
+      const location = await getCurrentLocation();
+      setCurrentLocation(location);
+
+      // Validate geofencing if required
+      if (!validateGeofencing(employee, location)) {
+        toast({ 
+          title: 'Location Error', 
+          description: `You must be within ${employee.geofence_radius_meters}m of the assigned location to clock in`, 
+          variant: 'destructive' 
+        });
+        setIsGettingLocation(false);
+        return;
+      }
+
+      // Clock in with location
+      const { data, error } = await supabase
+        .from('time_entries')
+        .insert({
+          employee_id: selectedEmployee,
+          job_site_id: selectedJobSite,
+          clock_in: new Date().toISOString(),
+          location_lat: location.lat,
+          location_lng: location.lng
+        })
+        .select()
+        .single();
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to clock in', variant: 'destructive' });
+      } else {
+        toast({ title: 'Success', description: 'Clocked in successfully!' });
+        
+        // Start location tracking for this time entry
+        if (data) {
+          startLocationTracking(data.id, selectedEmployee);
+        }
+        
+        setSelectedEmployee('');
+        setSelectedJobSite('');
+        fetchActiveEntries();
+      }
+    } catch (error: any) {
+      setLocationError(error.message);
+      toast({ 
+        title: 'Location Required', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsGettingLocation(false);
     }
   };
 
   const clockOut = async (entryId: string) => {
-    const { error } = await supabase
-      .from('time_entries')
-      .update({ clock_out: new Date().toISOString() })
-      .eq('id', entryId);
+    try {
+      // Get current location for clock out
+      const location = await getCurrentLocation();
+      
+      const { error } = await supabase
+        .from('time_entries')
+        .update({ 
+          clock_out: new Date().toISOString(),
+          location_lat: location.lat,
+          location_lng: location.lng
+        })
+        .eq('id', entryId);
 
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to clock out', variant: 'destructive' });
-    } else {
-      toast({ title: 'Success', description: 'Clocked out successfully!' });
-      fetchActiveEntries();
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to clock out', variant: 'destructive' });
+      } else {
+        toast({ title: 'Success', description: 'Clocked out successfully!' });
+        fetchActiveEntries();
+      }
+    } catch (error) {
+      // Clock out without location if location fails
+      const { error: clockOutError } = await supabase
+        .from('time_entries')
+        .update({ clock_out: new Date().toISOString() })
+        .eq('id', entryId);
+
+      if (clockOutError) {
+        toast({ title: 'Error', description: 'Failed to clock out', variant: 'destructive' });
+      } else {
+        toast({ title: 'Success', description: 'Clocked out successfully (location unavailable)' });
+        fetchActiveEntries();
+      }
     }
   };
 
@@ -251,14 +421,46 @@ const TimeTracking = () => {
               )}
             </div>
 
-            <Button 
-              onClick={clockIn} 
-              className="w-full"
-              disabled={!selectedEmployee || !selectedJobSite}
-            >
-              <PlayCircle className="h-4 w-4 mr-2" />
-              Clock In
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                onClick={clockIn} 
+                className="w-full"
+                disabled={!selectedEmployee || !selectedJobSite || isGettingLocation}
+              >
+                {isGettingLocation ? (
+                  <>
+                    <MapPin className="h-4 w-4 mr-2 animate-pulse" />
+                    Getting Location...
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                    Clock In
+                  </>
+                )}
+              </Button>
+              
+              {/* Location status indicators */}
+              {selectedEmployee && employees.find(emp => emp.id === selectedEmployee)?.require_geofencing && (
+                <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  Location required for this employee
+                </div>
+              )}
+              
+              {locationError && (
+                <div className="text-xs text-destructive">
+                  {locationError}
+                </div>
+              )}
+              
+              {currentLocation && (
+                <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  Location detected
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
