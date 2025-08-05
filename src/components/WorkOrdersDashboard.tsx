@@ -58,7 +58,7 @@ export const WorkOrdersDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setWorkOrders((data || []) as WorkOrder[]);
+      setWorkOrders((data || []) as unknown as WorkOrder[]);
     } catch (error: any) {
       toast({
         title: "Error",
