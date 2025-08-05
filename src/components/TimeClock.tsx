@@ -247,7 +247,10 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   };
 
   const clockIn = async () => {
+    console.log('Clock in attempt:', { selectedEmployee, selectedJobSite, forManager, profileId: profile?.id });
+    
     if (!selectedEmployee || !selectedJobSite) {
+      console.log('Missing required fields:', { selectedEmployee, selectedJobSite });
       toast({ title: 'Error', description: 'Please select an employee and job site', variant: 'destructive' });
       return;
     }
@@ -311,7 +314,8 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
         .single();
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to clock in', variant: 'destructive' });
+        console.error('Clock in error:', error);
+        toast({ title: 'Error', description: `Failed to clock in: ${error.message}`, variant: 'destructive' });
       } else {
         toast({ title: 'Success', description: 'Clocked in successfully!' });
         
