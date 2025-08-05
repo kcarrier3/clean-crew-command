@@ -92,6 +92,7 @@ export type Database = {
           phone: string | null
           require_geofencing: boolean
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           active?: boolean
@@ -110,6 +111,7 @@ export type Database = {
           phone?: string | null
           require_geofencing?: boolean
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           active?: boolean
@@ -128,6 +130,7 @@ export type Database = {
           phone?: string | null
           require_geofencing?: boolean
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -188,6 +191,63 @@ export type Database = {
           longitude?: number
           recorded_at?: string
           time_entry_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string | null
+          employee_id: string | null
+          first_name: string
+          geofence_lat: number | null
+          geofence_lng: number | null
+          geofence_radius_meters: number | null
+          hire_date: string | null
+          hourly_rate: number | null
+          id: string
+          job_title: string | null
+          last_name: string
+          phone: string | null
+          require_geofencing: boolean
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email?: string | null
+          employee_id?: string | null
+          first_name: string
+          geofence_lat?: number | null
+          geofence_lng?: number | null
+          geofence_radius_meters?: number | null
+          hire_date?: string | null
+          hourly_rate?: number | null
+          id: string
+          job_title?: string | null
+          last_name: string
+          phone?: string | null
+          require_geofencing?: boolean
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string | null
+          employee_id?: string | null
+          first_name?: string
+          geofence_lat?: number | null
+          geofence_lng?: number | null
+          geofence_radius_meters?: number | null
+          hire_date?: string | null
+          hourly_rate?: number | null
+          id?: string
+          job_title?: string | null
+          last_name?: string
+          phone?: string | null
+          require_geofencing?: boolean
+          updated_at?: string
         }
         Relationships: []
       }
@@ -290,6 +350,27 @@ export type Database = {
           start_date?: string
           status?: Database["public"]["Enums"]["time_off_status"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -419,9 +500,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "manager" | "employee"
       time_off_status: "pending" | "approved" | "declined"
       work_order_photo_type: "deficiency" | "completion"
       work_order_priority: "low" | "medium" | "high" | "urgent"
@@ -553,6 +641,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "manager", "employee"],
       time_off_status: ["pending", "approved", "declined"],
       work_order_photo_type: ["deficiency", "completion"],
       work_order_priority: ["low", "medium", "high", "urgent"],
