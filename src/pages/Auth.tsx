@@ -81,8 +81,8 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">Summit Connect</h1>
-          <p className="text-muted-foreground">Janitorial Services Management</p>
+          <h1 className="text-3xl font-bold">CrewCompass</h1>
+          <p className="text-muted-foreground">Summit Facilities Group</p>
         </div>
 
         <Tabs defaultValue="signin" className="w-full">
