@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Users, AlertCircle, CheckCircle2, Timer, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Clock, Users, AlertCircle, CheckCircle2, Timer, FileText, CalendarDays } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import TimeTracking from './TimeTracking';
+import TimeOffRequests from './TimeOffRequests';
 
 interface Employee {
   id: string;

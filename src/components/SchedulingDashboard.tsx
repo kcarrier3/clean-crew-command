@@ -9,11 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Users, MapPin, Plus, List, Grid3X3, ArrowUpDown } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, Plus, List, Grid3X3, ArrowUpDown, CalendarDays } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import ScheduleListView from './ScheduleListView';
 import WeeklyScheduleView from './WeeklyScheduleView';
+import ManagerTimeOffReview from './ManagerTimeOffReview';
 
 interface Employee {
   id: string;
@@ -269,12 +270,11 @@ const SchedulingDashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <Tabs defaultValue="schedules" className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Employee Scheduling</h2>
-          <p className="text-muted-foreground">Manage employee work schedules and assignments</p>
+          <h2 className="text-2xl font-bold">Employee Management</h2>
+          <p className="text-muted-foreground">Manage employee schedules, assignments, and time off requests</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -431,97 +431,108 @@ const SchedulingDashboard = () => {
         </Dialog>
       </div>
 
-      {/* Schedule Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Calendar className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-2xl font-bold">{schedules.length}</p>
-                <p className="text-sm text-muted-foreground">Active Schedules</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Users className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold">{new Set(schedules.map(s => s.employee_id)).size}</p>
-                <p className="text-sm text-muted-foreground">Scheduled Employees</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <MapPin className="h-8 w-8 text-purple-500" />
-              <div>
-                <p className="text-2xl font-bold">{new Set(schedules.map(s => s.job_site_id)).size}</p>
-                <p className="text-sm text-muted-foreground">Active Job Sites</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="schedules">Schedules</TabsTrigger>
+        <TabsTrigger value="timeoff">Time Off Requests</TabsTrigger>
+      </TabsList>
 
-      {/* View Controls */}
-      <div className="flex justify-between items-center">
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-          >
-            <List className="h-4 w-4 mr-2" />
-            List View
-          </Button>
-          <Button
-            variant={viewMode === 'weekly' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('weekly')}
-          >
-            <Grid3X3 className="h-4 w-4 mr-2" />
-            Weekly View
-          </Button>
+      <TabsContent value="schedules" className="space-y-6">
+        {/* Schedule Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-8 w-8 text-blue-500" />
+                <div>
+                  <p className="text-2xl font-bold">{schedules.length}</p>
+                  <p className="text-sm text-muted-foreground">Active Schedules</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Users className="h-8 w-8 text-green-500" />
+                <div>
+                  <p className="text-2xl font-bold">{new Set(schedules.map(s => s.employee_id)).size}</p>
+                  <p className="text-sm text-muted-foreground">Scheduled Employees</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <MapPin className="h-8 w-8 text-purple-500" />
+                <div>
+                  <p className="text-2xl font-bold">{new Set(schedules.map(s => s.job_site_id)).size}</p>
+                  <p className="text-sm text-muted-foreground">Active Job Sites</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-        
-        <div className="flex items-center gap-2">
-          <ArrowUpDown className="h-4 w-4" />
-          <Select value={sortBy} onValueChange={(value: 'alphabetical' | 'job_title') => setSortBy(value)}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="alphabetical">Sort Alphabetically</SelectItem>
-              <SelectItem value="job_title">Sort by Job Title</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
-      {/* Schedule Views */}
-      {viewMode === 'list' ? (
-        <ScheduleListView
-          schedules={schedules}
-          sortBy={sortBy}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      ) : (
-        <WeeklyScheduleView
-          schedules={schedules}
-          sortBy={sortBy}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      )}
-    </div>
+        {/* View Controls */}
+        <div className="flex justify-between items-center">
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4 mr-2" />
+              List View
+            </Button>
+            <Button
+              variant={viewMode === 'weekly' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('weekly')}
+            >
+              <Grid3X3 className="h-4 w-4 mr-2" />
+              Weekly View
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <ArrowUpDown className="h-4 w-4" />
+            <Select value={sortBy} onValueChange={(value: 'alphabetical' | 'job_title') => setSortBy(value)}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alphabetical">Sort Alphabetically</SelectItem>
+                <SelectItem value="job_title">Sort by Job Title</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Schedule Views */}
+        {viewMode === 'list' ? (
+          <ScheduleListView
+            schedules={schedules}
+            sortBy={sortBy}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        ) : (
+          <WeeklyScheduleView
+            schedules={schedules}
+            sortBy={sortBy}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        )}
+      </TabsContent>
+
+      <TabsContent value="timeoff">
+        <ManagerTimeOffReview />
+      </TabsContent>
+    </Tabs>
   );
 };
 
