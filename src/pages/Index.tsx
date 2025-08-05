@@ -4,6 +4,7 @@ import TimeTracking from '@/components/TimeTracking';
 import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
 import SchedulingDashboard from '@/components/SchedulingDashboard';
 import EmployeeSelector from '@/components/EmployeeSelector';
+import QualityControlDashboard from '@/components/QualityControlDashboard';
 
 const Index = () => {
   return (
@@ -15,11 +16,12 @@ const Index = () => {
         </div>
         
         <Tabs defaultValue="employee" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="employee">Employee Portal</TabsTrigger>
             <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
             <TabsTrigger value="clock">Time Clock</TabsTrigger>
             <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
+            <TabsTrigger value="quality">Quality Control</TabsTrigger>
           </TabsList>
           
           <TabsContent value="employee" className="mt-6">
@@ -36,6 +38,10 @@ const Index = () => {
           
           <TabsContent value="scheduling" className="mt-6">
             <SchedulingDashboard />
+          </TabsContent>
+          
+          <TabsContent value="quality" className="mt-6">
+            <QualityControlDashboard />
           </TabsContent>
         </Tabs>
       </div>
