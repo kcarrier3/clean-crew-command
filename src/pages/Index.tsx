@@ -95,9 +95,8 @@ const Index = () => {
             {/* Desktop: Show tabs based on user role */}
             {isManager() ? (
               canManageEmployees() ? (
-                <TabsList className="hidden md:grid w-full grid-cols-7">
+                <TabsList className="hidden md:grid w-full grid-cols-6">
                   <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
-                  <TabsTrigger value="clock">Time Clock</TabsTrigger>
                   <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
                   <TabsTrigger value="quality">Quality Control</TabsTrigger>
                   <TabsTrigger value="workorders">Work Orders</TabsTrigger>
@@ -105,9 +104,8 @@ const Index = () => {
                   <TabsTrigger value="permissions">Permissions</TabsTrigger>
                 </TabsList>
               ) : (
-                <TabsList className="hidden md:grid w-full grid-cols-6">
+                <TabsList className="hidden md:grid w-full grid-cols-5">
                   <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
-                  <TabsTrigger value="clock">Time Clock</TabsTrigger>
                   <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
                   <TabsTrigger value="quality">Quality Control</TabsTrigger>
                   <TabsTrigger value="workorders">Work Orders</TabsTrigger>
@@ -115,9 +113,8 @@ const Index = () => {
                 </TabsList>
               )
             ) : (
-              <TabsList className="hidden md:grid w-full grid-cols-5">
+              <TabsList className="hidden md:grid w-full grid-cols-4">
                 <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
-                <TabsTrigger value="clock">Time Clock</TabsTrigger>
                 <TabsTrigger value="quality">Quality Control</TabsTrigger>
                 <TabsTrigger value="workorders">Work Orders</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
@@ -142,9 +139,6 @@ const Index = () => {
               {isManager() ? <ManagerDashboard /> : <EmployeeDashboard />}
             </TabsContent>
             
-            <TabsContent value="clock" className="mt-6">
-              {isManager() ? <WorkerStatusDashboard /> : <EmployeeDashboard />}
-            </TabsContent>
             
             {isManager() && (
               <TabsContent value="scheduling" className="mt-6">
@@ -176,16 +170,6 @@ const Index = () => {
       {/* Mobile Bottom Navigation - Role-based */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4">
         <div className="flex justify-around items-center max-w-md mx-auto">
-          <Button
-            variant={activeTab === "clock" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("clock")}
-            className="flex flex-col items-center gap-1 h-auto py-2 px-3"
-          >
-            <Clock className="h-5 w-5" />
-            <span className="text-xs">Time Clock</span>
-          </Button>
-          
           {isManager() && (
             <Button
               variant={activeTab === "scheduling" ? "default" : "ghost"}

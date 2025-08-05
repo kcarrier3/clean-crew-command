@@ -386,6 +386,30 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
 
   return (
     <div className="space-y-6">
+      {/* Current Time Display */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="text-center">
+            <div className="text-3xl font-mono font-bold text-primary">
+              {currentTime.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true 
+              })}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {currentTime.toLocaleDateString([], { 
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Clock In/Out Section */}
       <Card>
         <CardHeader>
