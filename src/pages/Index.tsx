@@ -66,7 +66,7 @@ const Index = () => {
         <div className="max-w-6xl mx-auto">
           <div className="mb-8 flex justify-between items-center">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">CrewCompass</h1>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2 text-brand-orange">CrewCompass</h1>
               <p className="text-muted-foreground text-sm md:text-base">Summit Facilities Group</p>
             </div>
             <div className="flex items-center gap-3">
