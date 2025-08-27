@@ -81,7 +81,7 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <img src="/lovable-uploads/15903461-f6a6-4e12-bd88-aaae74e48f31.png" alt="Summit Facilities Group" className="mx-auto mb-4 h-24 w-auto" />
+          <img src="/lovable-uploads/15903461-f6a6-4e12-bd88-aaae74e48f31.png" alt="Summit Facilities Group" className="mx-auto mb-4 h-48 w-auto" />
           <h1 className="text-3xl font-bold text-orange-500">CrewCompass</h1>
           <p className="text-muted-foreground italic">by Summit Facilities Group</p>
           <p className="text-muted-foreground">Every great team needs a compass!</p>
