@@ -271,6 +271,32 @@ export default function JobSitesManagement() {
 
   const deleteJobSite = async (jobSite: JobSite) => {
     try {
+      // First, check if the job site is referenced by other records
+      const [schedulesCheck, timeEntriesCheck, workOrdersCheck] = await Promise.all([
+        supabase.from('employee_schedules').select('id').eq('job_site_id', jobSite.id).limit(1),
+        supabase.from('time_entries').select('id').eq('job_site_id', jobSite.id).limit(1),
+        supabase.from('work_orders').select('id').eq('job_site_id', jobSite.id).limit(1)
+      ]);
+
+      const hasSchedules = schedulesCheck.data && schedulesCheck.data.length > 0;
+      const hasTimeEntries = timeEntriesCheck.data && timeEntriesCheck.data.length > 0;
+      const hasWorkOrders = workOrdersCheck.data && workOrdersCheck.data.length > 0;
+
+      if (hasSchedules || hasTimeEntries || hasWorkOrders) {
+        const references = [];
+        if (hasSchedules) references.push('employee schedules');
+        if (hasTimeEntries) references.push('time entries');
+        if (hasWorkOrders) references.push('work orders');
+        
+        toast({
+          title: "Cannot Delete Job Site",
+          description: `This job site is still referenced by: ${references.join(', ')}. Please remove these references first or keep the job site inactive.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // If no references, proceed with deletion
       const { error } = await supabase
         .from('job_sites')
         .delete()
@@ -288,9 +314,52 @@ export default function JobSitesManagement() {
       console.error('Error deleting job site:', error);
       toast({
         title: "Error",
-        description: "Failed to delete job site. It may still be referenced by other records.",
+        description: "Failed to delete job site. Please try again.",
         variant: "destructive"
       });
+    }
+  };
+
+  const checkJobSiteReferences = async (jobSite: JobSite) => {
+    try {
+      const [schedulesResult, timeEntriesResult, workOrdersResult] = await Promise.all([
+        supabase.from('employee_schedules').select('id, employees(first_name, last_name)').eq('job_site_id', jobSite.id),
+        supabase.from('time_entries').select('id, employees(first_name, last_name), clock_in').eq('job_site_id', jobSite.id).limit(10),
+        supabase.from('work_orders').select('id, title, status').eq('job_site_id', jobSite.id).limit(10)
+      ]);
+
+      const schedules = schedulesResult.data || [];
+      const timeEntries = timeEntriesResult.data || [];
+      const workOrders = workOrdersResult.data || [];
+
+      if (schedules.length === 0 && timeEntries.length === 0 && workOrders.length === 0) {
+        toast({
+          title: "Ready to Delete",
+          description: "This job site has no references and can be safely deleted.",
+        });
+        return { canDelete: true, references: { schedules, timeEntries, workOrders } };
+      } else {
+        let message = "This job site cannot be deleted because it has:\n";
+        if (schedules.length > 0) message += `• ${schedules.length} employee schedule(s)\n`;
+        if (timeEntries.length > 0) message += `• ${timeEntries.length} time entries\n`;
+        if (workOrders.length > 0) message += `• ${workOrders.length} work order(s)\n`;
+        message += "\nRemove these references first or keep the job site inactive.";
+        
+        toast({
+          title: "Cannot Delete",
+          description: message,
+          variant: "destructive"
+        });
+        return { canDelete: false, references: { schedules, timeEntries, workOrders } };
+      }
+    } catch (error) {
+      console.error('Error checking references:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check job site references",
+        variant: "destructive"
+      });
+      return { canDelete: false, references: { schedules: [], timeEntries: [], workOrders: [] } };
     }
   };
 
@@ -762,6 +831,18 @@ export default function JobSitesManagement() {
                           <Button
                             size="sm"
                             variant="outline"
+                            className="text-blue-600 hover:bg-blue-50"
+                            onClick={() => checkJobSiteReferences(site)}
+                          >
+                            <FileText className="h-3 w-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                      </AlertDialog>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             className="text-red-600 hover:bg-red-50"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -770,9 +851,15 @@ export default function JobSitesManagement() {
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Job Site</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to permanently delete "{site.name}"? 
-                              This action cannot be undone and may fail if the job site is referenced by existing records.
+                            <AlertDialogDescription className="space-y-2">
+                              <p>Are you sure you want to permanently delete "{site.name}"?</p>
+                              <p className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                                ⚠️ This will fail if the job site is referenced by employee schedules, 
+                                time entries, or work orders.
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Tip: Use the info button (📄) to check what's preventing deletion.
+                              </p>
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -781,7 +868,7 @@ export default function JobSitesManagement() {
                               onClick={() => deleteJobSite(site)}
                               className="bg-red-600 hover:bg-red-700"
                             >
-                              Delete
+                              Delete Anyway
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
