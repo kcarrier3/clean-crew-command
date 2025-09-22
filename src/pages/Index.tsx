@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import ManagerDashboard from '@/components/ManagerDashboard';
 import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
@@ -15,6 +15,7 @@ import { TestNotificationButton } from '@/components/TestNotificationButton';
 import PermissionManagement from '@/components/PermissionManagement';
 import MessagingCenter from '@/components/MessagingCenter';
 import ManagerLog from '@/components/ManagerLog';
+import JobSitesManagement from '@/components/JobSitesManagement';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -96,9 +97,10 @@ const Index = () => {
             {/* Desktop: Show tabs based on user role */}
             {isManager() ? (
               canManageEmployees() ? (
-                <TabsList className="hidden md:grid w-full grid-cols-7">
+                <TabsList className="hidden md:grid w-full grid-cols-8">
                   <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
                   <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
+                  <TabsTrigger value="jobsites">Job Sites</TabsTrigger>
                   <TabsTrigger value="quality">Quality Control</TabsTrigger>
                   <TabsTrigger value="workorders">Work Orders</TabsTrigger>
                   <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
@@ -106,9 +108,10 @@ const Index = () => {
                   <TabsTrigger value="permissions">Permissions</TabsTrigger>
                 </TabsList>
               ) : (
-                <TabsList className="hidden md:grid w-full grid-cols-6">
+                <TabsList className="hidden md:grid w-full grid-cols-7">
                   <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
                   <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
+                  <TabsTrigger value="jobsites">Job Sites</TabsTrigger>
                   <TabsTrigger value="quality">Quality Control</TabsTrigger>
                   <TabsTrigger value="workorders">Work Orders</TabsTrigger>
                   <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
@@ -126,9 +129,10 @@ const Index = () => {
 
             {/* Mobile: Show tabs based on user role */}
             {isManager() ? (
-              <TabsList className="md:hidden grid w-full grid-cols-4">
+              <TabsList className="md:hidden grid w-full grid-cols-5">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="scheduling">Schedule</TabsTrigger>
+                <TabsTrigger value="jobsites">Sites</TabsTrigger>
                 <TabsTrigger value="quality">Quality</TabsTrigger>
                 <TabsTrigger value="managerlog">Log</TabsTrigger>
               </TabsList>
@@ -147,6 +151,12 @@ const Index = () => {
             {isManager() && (
               <TabsContent value="scheduling" className="mt-6">
                 <SchedulingDashboard />
+              </TabsContent>
+            )}
+
+            {isManager() && (
+              <TabsContent value="jobsites" className="mt-6">
+                <JobSitesManagement />
               </TabsContent>
             )}
             
@@ -201,6 +211,18 @@ const Index = () => {
             <FileText className="h-5 w-5" />
             <span className="text-xs">Work Orders</span>
           </Button>
+
+          {isManager() && (
+            <Button
+              variant={activeTab === "jobsites" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("jobsites")}
+              className="flex flex-col items-center gap-1 h-auto py-2 px-3"
+            >
+              <MapPin className="h-5 w-5" />
+              <span className="text-xs">Sites</span>
+            </Button>
+          )}
 
           <Button
             variant={activeTab === "messages" ? "default" : "ghost"}
