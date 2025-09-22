@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { MapPin, Plus, Edit2, Building2, Users } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { MapPin, Plus, Edit2, Building2, Users, Trash2, Phone, Mail, User, AlertTriangle, Calendar, DollarSign, FileText, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +18,14 @@ interface JobSite {
   name: string;
   address: string | null;
   client_name: string | null;
+  contact_person: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  project_manager: string | null;
+  estimated_duration: string | null;
+  budget_info: string | null;
+  special_instructions: string | null;
+  safety_requirements: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -26,6 +35,14 @@ interface FormData {
   name: string;
   address: string;
   client_name: string;
+  contact_person: string;
+  contact_phone: string;
+  contact_email: string;
+  project_manager: string;
+  estimated_duration: string;
+  budget_info: string;
+  special_instructions: string;
+  safety_requirements: string;
   active: boolean;
 }
 
@@ -43,6 +60,14 @@ export default function JobSitesManagement() {
     name: '',
     address: '',
     client_name: '',
+    contact_person: '',
+    contact_phone: '',
+    contact_email: '',
+    project_manager: '',
+    estimated_duration: '',
+    budget_info: '',
+    special_instructions: '',
+    safety_requirements: '',
     active: true
   });
 
@@ -90,6 +115,14 @@ export default function JobSitesManagement() {
           name: formData.name.trim(),
           address: formData.address.trim() || null,
           client_name: formData.client_name.trim() || null,
+          contact_person: formData.contact_person.trim() || null,
+          contact_phone: formData.contact_phone.trim() || null,
+          contact_email: formData.contact_email.trim() || null,
+          project_manager: formData.project_manager.trim() || null,
+          estimated_duration: formData.estimated_duration.trim() || null,
+          budget_info: formData.budget_info.trim() || null,
+          special_instructions: formData.special_instructions.trim() || null,
+          safety_requirements: formData.safety_requirements.trim() || null,
           active: formData.active
         });
 
@@ -101,7 +134,7 @@ export default function JobSitesManagement() {
       });
 
       // Reset form and close dialog
-      setFormData({ name: '', address: '', client_name: '', active: true });
+      resetForm();
       setIsCreateDialogOpen(false);
       
       // Refresh list
@@ -136,6 +169,14 @@ export default function JobSitesManagement() {
           name: formData.name.trim(),
           address: formData.address.trim() || null,
           client_name: formData.client_name.trim() || null,
+          contact_person: formData.contact_person.trim() || null,
+          contact_phone: formData.contact_phone.trim() || null,
+          contact_email: formData.contact_email.trim() || null,
+          project_manager: formData.project_manager.trim() || null,
+          estimated_duration: formData.estimated_duration.trim() || null,
+          budget_info: formData.budget_info.trim() || null,
+          special_instructions: formData.special_instructions.trim() || null,
+          safety_requirements: formData.safety_requirements.trim() || null,
           active: formData.active
         })
         .eq('id', editingJobSite.id);
@@ -148,7 +189,7 @@ export default function JobSitesManagement() {
       });
 
       // Reset form and close dialog
-      setFormData({ name: '', address: '', client_name: '', active: true });
+      resetForm();
       setIsEditDialogOpen(false);
       setEditingJobSite(null);
       
@@ -172,13 +213,34 @@ export default function JobSitesManagement() {
       name: jobSite.name,
       address: jobSite.address || '',
       client_name: jobSite.client_name || '',
+      contact_person: jobSite.contact_person || '',
+      contact_phone: jobSite.contact_phone || '',
+      contact_email: jobSite.contact_email || '',
+      project_manager: jobSite.project_manager || '',
+      estimated_duration: jobSite.estimated_duration || '',
+      budget_info: jobSite.budget_info || '',
+      special_instructions: jobSite.special_instructions || '',
+      safety_requirements: jobSite.safety_requirements || '',
       active: jobSite.active
     });
     setIsEditDialogOpen(true);
   };
 
   const resetForm = () => {
-    setFormData({ name: '', address: '', client_name: '', active: true });
+    setFormData({ 
+      name: '', 
+      address: '', 
+      client_name: '', 
+      contact_person: '',
+      contact_phone: '',
+      contact_email: '',
+      project_manager: '',
+      estimated_duration: '',
+      budget_info: '',
+      special_instructions: '',
+      safety_requirements: '',
+      active: true 
+    });
     setEditingJobSite(null);
   };
 
@@ -202,6 +264,31 @@ export default function JobSitesManagement() {
       toast({
         title: "Error",
         description: "Failed to update job site status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteJobSite = async (jobSite: JobSite) => {
+    try {
+      const { error } = await supabase
+        .from('job_sites')
+        .delete()
+        .eq('id', jobSite.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Job site deleted successfully"
+      });
+
+      fetchJobSites();
+    } catch (error) {
+      console.error('Error deleting job site:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete job site. It may still be referenced by other records.",
         variant: "destructive"
       });
     }
@@ -253,6 +340,27 @@ export default function JobSitesManagement() {
                 />
               </div>
               
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="client_name">Client Name</Label>
+                  <Input
+                    id="client_name"
+                    value={formData.client_name}
+                    onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                    placeholder="Enter client name..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="project_manager">Project Manager</Label>
+                  <Input
+                    id="project_manager"
+                    value={formData.project_manager}
+                    onChange={(e) => setFormData({ ...formData, project_manager: e.target.value })}
+                    placeholder="Project manager name..."
+                  />
+                </div>
+              </div>
+              
               <div>
                 <Label htmlFor="address">Address</Label>
                 <Textarea
@@ -263,14 +371,100 @@ export default function JobSitesManagement() {
                   className="min-h-[80px]"
                 />
               </div>
-              
+
+              {/* Contact Information Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  <Label className="font-semibold">Contact Information</Label>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6">
+                  <div>
+                    <Label htmlFor="contact_person">Contact Person</Label>
+                    <Input
+                      id="contact_person"
+                      value={formData.contact_person}
+                      onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                      placeholder="Primary contact name..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="contact_phone">Phone</Label>
+                    <Input
+                      id="contact_phone"
+                      value={formData.contact_phone}
+                      onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                      placeholder="Phone number..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="contact_email">Email</Label>
+                    <Input
+                      id="contact_email"
+                      type="email"
+                      value={formData.contact_email}
+                      onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                      placeholder="Contact email..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Project Information Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <Label className="font-semibold">Project Information</Label>
+                </div>
+                <div className="grid grid-cols-2 gap-4 pl-6">
+                  <div>
+                    <Label htmlFor="estimated_duration">Estimated Duration</Label>
+                    <Input
+                      id="estimated_duration"
+                      value={formData.estimated_duration}
+                      onChange={(e) => setFormData({ ...formData, estimated_duration: e.target.value })}
+                      placeholder="e.g., 3 months, 6 weeks..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="budget_info">Budget Information</Label>
+                    <Input
+                      id="budget_info"
+                      value={formData.budget_info}
+                      onChange={(e) => setFormData({ ...formData, budget_info: e.target.value })}
+                      placeholder="Budget details (manager only)..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Special Instructions */}
               <div>
-                <Label htmlFor="client_name">Client Name</Label>
-                <Input
-                  id="client_name"
-                  value={formData.client_name}
-                  onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                  placeholder="Enter client name..."
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <Label htmlFor="special_instructions">Special Instructions</Label>
+                </div>
+                <Textarea
+                  id="special_instructions"
+                  value={formData.special_instructions}
+                  onChange={(e) => setFormData({ ...formData, special_instructions: e.target.value })}
+                  placeholder="Any special instructions or notes..."
+                  className="min-h-[60px]"
+                />
+              </div>
+
+              {/* Safety Requirements */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="h-4 w-4" />
+                  <Label htmlFor="safety_requirements">Safety Requirements</Label>
+                </div>
+                <Textarea
+                  id="safety_requirements"
+                  value={formData.safety_requirements}
+                  onChange={(e) => setFormData({ ...formData, safety_requirements: e.target.value })}
+                  placeholder="Safety protocols, PPE requirements, etc..."
+                  className="min-h-[60px]"
                 />
               </div>
               
@@ -363,26 +557,87 @@ export default function JobSitesManagement() {
               {activeJobSites.map((site) => (
                 <Card key={site.id} className="border-green-200 bg-green-50/50">
                   <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold">{site.name}</h3>
-                      <div className="flex items-center gap-1">
-                        <Badge variant="default" className="bg-green-100 text-green-800">
-                          Active
-                        </Badge>
-                      </div>
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="font-semibold text-lg">{site.name}</h3>
+                      <Badge variant="default" className="bg-green-100 text-green-800">
+                        Active
+                      </Badge>
                     </div>
                     
+                    {/* Basic Information */}
                     {site.address && (
-                      <p className="text-sm text-muted-foreground mb-1">
-                        📍 {site.address}
+                      <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {site.address}
                       </p>
                     )}
                     
                     {site.client_name && (
-                      <p className="text-sm text-muted-foreground mb-3">
-                        👤 {site.client_name}
+                      <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        {site.client_name}
                       </p>
                     )}
+
+                    {/* Manager-Only Information */}
+                    <div className="space-y-2 mb-3 bg-white/50 p-2 rounded border-l-2 border-blue-400">
+                      <p className="text-xs text-blue-700 font-medium">Manager Information</p>
+                      
+                      {site.contact_person && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          Contact: {site.contact_person}
+                          {site.contact_phone && ` • ${site.contact_phone}`}
+                        </p>
+                      )}
+                      
+                      {site.contact_email && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {site.contact_email}
+                        </p>
+                      )}
+                      
+                      {site.project_manager && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          PM: {site.project_manager}
+                        </p>
+                      )}
+                      
+                      {(site.estimated_duration || site.budget_info) && (
+                        <div className="flex gap-4">
+                          {site.estimated_duration && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {site.estimated_duration}
+                            </p>
+                          )}
+                          {site.budget_info && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <DollarSign className="h-3 w-3" />
+                              {site.budget_info}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {site.safety_requirements && (
+                        <p className="text-xs text-orange-700 flex items-center gap-1">
+                          <Shield className="h-3 w-3" />
+                          Safety: {site.safety_requirements.substring(0, 50)}
+                          {site.safety_requirements.length > 50 && '...'}
+                        </p>
+                      )}
+                      
+                      {site.special_instructions && (
+                        <p className="text-xs text-amber-700 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          Instructions: {site.special_instructions.substring(0, 50)}
+                          {site.special_instructions.length > 50 && '...'}
+                        </p>
+                      )}
+                    </div>
                     
                     <div className="flex gap-2">
                       <Button
@@ -425,24 +680,64 @@ export default function JobSitesManagement() {
               {inactiveJobSites.map((site) => (
                 <Card key={site.id} className="border-gray-200 bg-gray-50/50">
                   <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-gray-700">{site.name}</h3>
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="font-semibold text-gray-700 text-lg">{site.name}</h3>
                       <Badge variant="secondary">
                         Inactive
                       </Badge>
                     </div>
                     
+                    {/* Basic Information */}
                     {site.address && (
-                      <p className="text-sm text-muted-foreground mb-1">
-                        📍 {site.address}
+                      <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {site.address}
                       </p>
                     )}
                     
                     {site.client_name && (
-                      <p className="text-sm text-muted-foreground mb-3">
-                        👤 {site.client_name}
+                      <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        {site.client_name}
                       </p>
                     )}
+
+                    {/* Manager-Only Information */}
+                    <div className="space-y-2 mb-3 bg-white/30 p-2 rounded border-l-2 border-gray-400">
+                      <p className="text-xs text-gray-600 font-medium">Manager Information</p>
+                      
+                      {site.contact_person && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          Contact: {site.contact_person}
+                          {site.contact_phone && ` • ${site.contact_phone}`}
+                        </p>
+                      )}
+                      
+                      {site.project_manager && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          PM: {site.project_manager}
+                        </p>
+                      )}
+                      
+                      {(site.estimated_duration || site.budget_info) && (
+                        <div className="flex gap-4">
+                          {site.estimated_duration && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {site.estimated_duration}
+                            </p>
+                          )}
+                          {site.budget_info && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <DollarSign className="h-3 w-3" />
+                              {site.budget_info}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     
                     <div className="flex gap-2">
                       <Button
@@ -462,6 +757,35 @@ export default function JobSitesManagement() {
                       >
                         Activate
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Job Site</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to permanently delete "{site.name}"? 
+                              This action cannot be undone and may fail if the job site is referenced by existing records.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteJobSite(site)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </CardContent>
                 </Card>

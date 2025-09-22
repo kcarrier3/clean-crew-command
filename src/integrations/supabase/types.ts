@@ -188,28 +188,52 @@ export type Database = {
         Row: {
           active: boolean
           address: string | null
+          budget_info: string | null
           client_name: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
           created_at: string
+          estimated_duration: string | null
           id: string
           name: string
+          project_manager: string | null
+          safety_requirements: string | null
+          special_instructions: string | null
           updated_at: string
         }
         Insert: {
           active?: boolean
           address?: string | null
+          budget_info?: string | null
           client_name?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
           created_at?: string
+          estimated_duration?: string | null
           id?: string
           name: string
+          project_manager?: string | null
+          safety_requirements?: string | null
+          special_instructions?: string | null
           updated_at?: string
         }
         Update: {
           active?: boolean
           address?: string | null
+          budget_info?: string | null
           client_name?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
           created_at?: string
+          estimated_duration?: string | null
           id?: string
           name?: string
+          project_manager?: string | null
+          safety_requirements?: string | null
+          special_instructions?: string | null
           updated_at?: string
         }
         Relationships: []
