@@ -9,7 +9,6 @@ import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
 import SchedulingDashboard from '@/components/SchedulingDashboard';
 import EmployeeDashboard from '@/components/EmployeeDashboard';
 import QualityControlDashboard from '@/components/QualityControlDashboard';
-import { WorkOrdersDashboard } from '@/components/WorkOrdersDashboard';
 import { NotificationBell } from '@/components/NotificationBell';
 import { TestNotificationButton } from '@/components/TestNotificationButton';
 import PermissionManagement from '@/components/PermissionManagement';
@@ -97,32 +96,29 @@ const Index = () => {
             {/* Desktop: Show tabs based on user role */}
             {isManager() ? (
               canManageEmployees() ? (
-                <TabsList className="hidden md:grid w-full grid-cols-8">
-                  <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
-                  <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
-                  <TabsTrigger value="jobsites">Job Sites</TabsTrigger>
-                  <TabsTrigger value="quality">Quality Control</TabsTrigger>
-                  <TabsTrigger value="workorders">Work Orders</TabsTrigger>
-                  <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
-                  <TabsTrigger value="messages">Messages</TabsTrigger>
-                  <TabsTrigger value="permissions">Permissions</TabsTrigger>
-                </TabsList>
-              ) : (
                 <TabsList className="hidden md:grid w-full grid-cols-7">
                   <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
                   <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
                   <TabsTrigger value="jobsites">Job Sites</TabsTrigger>
                   <TabsTrigger value="quality">Quality Control</TabsTrigger>
-                  <TabsTrigger value="workorders">Work Orders</TabsTrigger>
+                  <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
+                  <TabsTrigger value="messages">Messages</TabsTrigger>
+                  <TabsTrigger value="permissions">Permissions</TabsTrigger>
+                </TabsList>
+              ) : (
+                <TabsList className="hidden md:grid w-full grid-cols-6">
+                  <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
+                  <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
+                  <TabsTrigger value="jobsites">Job Sites</TabsTrigger>
+                  <TabsTrigger value="quality">Quality Control</TabsTrigger>
                   <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
                   <TabsTrigger value="messages">Messages</TabsTrigger>
                 </TabsList>
               )
             ) : (
-              <TabsList className="hidden md:grid w-full grid-cols-4">
+              <TabsList className="hidden md:grid w-full grid-cols-3">
                 <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
                 <TabsTrigger value="quality">Quality Control</TabsTrigger>
-                <TabsTrigger value="workorders">Work Orders</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
             )}
@@ -163,10 +159,6 @@ const Index = () => {
             <TabsContent value="quality" className="mt-6">
               <QualityControlDashboard />
             </TabsContent>
-            
-            <TabsContent value="workorders" className="mt-6">
-              <WorkOrdersDashboard />
-            </TabsContent>
 
             <TabsContent value="messages" className="mt-6">
               <MessagingCenter />
@@ -203,13 +195,13 @@ const Index = () => {
           )}
           
           <Button
-            variant={activeTab === "workorders" ? "default" : "ghost"}
+            variant={activeTab === "quality" ? "default" : "ghost"}
             size="sm"
-            onClick={() => setActiveTab("workorders")}
+            onClick={() => setActiveTab("quality")}
             className="flex flex-col items-center gap-1 h-auto py-2 px-3"
           >
             <FileText className="h-5 w-5" />
-            <span className="text-xs">Work Orders</span>
+            <span className="text-xs">Quality</span>
           </Button>
 
           {isManager() && (

@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Camera, FileText, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Calendar, User, MapPin, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
-import { WorkOrderDetailsDialog } from './WorkOrderDetailsDialog';
+import { WorkOrderDetail } from './WorkOrderDetail';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 interface WorkOrder {
   id: string;
@@ -30,6 +31,7 @@ const QualityControlDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
+  const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -42,9 +44,8 @@ const QualityControlDashboard = () => {
         .from('work_orders')
         .select(`
           *,
-          job_sites(name),
-          employees:assigned_to(first_name, last_name),
-          created_by_employee:created_by(first_name, last_name)
+          job_sites (name),
+          employees (first_name, last_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -61,155 +62,133 @@ const QualityControlDashboard = () => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'open':
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case 'in_progress':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
+  const statusColors = {
+    open: 'bg-blue-100 text-blue-800',
+    in_progress: 'bg-yellow-100 text-yellow-800',
+    completed: 'bg-green-100 text-green-800',
+    reviewed: 'bg-gray-100 text-gray-800'
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'bg-red-500';
-      case 'high':
-        return 'bg-orange-500';
-      case 'medium':
-        return 'bg-yellow-500';
-      case 'low':
-        return 'bg-green-500';
-      default:
-        return 'bg-gray-500';
-    }
+  const priorityColors = {
+    low: 'bg-green-100 text-green-800',
+    medium: 'bg-yellow-100 text-yellow-800',
+    high: 'bg-orange-100 text-orange-800',
+    urgent: 'bg-red-100 text-red-800'
   };
 
-  const filterWorkOrders = (status?: string) => {
-    if (!status) return workOrders;
-    return workOrders.filter(wo => wo.status === status);
+  const filteredWorkOrders = workOrders.filter(wo => {
+    if (activeTab === 'all') return true;
+    return wo.status === activeTab;
+  });
+
+  const getStatusCounts = () => {
+    return {
+      all: workOrders.length,
+      open: workOrders.filter(wo => wo.status === 'open').length,
+      in_progress: workOrders.filter(wo => wo.status === 'in_progress').length,
+      completed: workOrders.filter(wo => wo.status === 'completed').length,
+      reviewed: workOrders.filter(wo => wo.status === 'reviewed').length
+    };
   };
 
-  const WorkOrderCard = ({ workOrder }: { workOrder: WorkOrder }) => (
-    <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow"
-      onClick={() => setSelectedWorkOrder(workOrder)}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2">
-            {getStatusIcon(workOrder.status)}
-            <h3 className="font-semibold text-sm">{workOrder.title}</h3>
-          </div>
-          <Badge className={`${getPriorityColor(workOrder.priority)} text-white text-xs`}>
-            {workOrder.priority}
-          </Badge>
-        </div>
-        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-          {workOrder.description}
-        </p>
-        <div className="space-y-1 text-xs text-muted-foreground">
-          <div>Site: {workOrder.job_sites?.name}</div>
-          <div>Assigned: {workOrder.employees?.first_name} {workOrder.employees?.last_name}</div>
-          <div>Due: {new Date(workOrder.due_date).toLocaleDateString()}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const counts = getStatusCounts();
 
-  if (loading) {
+  if (selectedWorkOrder) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Quality Control</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-4">
-                <div className="h-4 bg-muted rounded mb-2"></div>
-                <div className="h-3 bg-muted rounded mb-2"></div>
-                <div className="h-3 bg-muted rounded w-3/4"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      <WorkOrderDetail
+        workOrder={selectedWorkOrder}
+        onBack={() => setSelectedWorkOrder(null)}
+        onUpdate={fetchWorkOrders}
+      />
     );
   }
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Quality Control</h2>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Quality Control & Work Orders</h1>
         <Button onClick={() => setCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Create Work Order
         </Button>
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList>
-          <TabsTrigger value="all">All ({workOrders.length})</TabsTrigger>
-          <TabsTrigger value="open">Open ({filterWorkOrders('open').length})</TabsTrigger>
-          <TabsTrigger value="in_progress">In Progress ({filterWorkOrders('in_progress').length})</TabsTrigger>
-          <TabsTrigger value="completed">Completed ({filterWorkOrders('completed').length})</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-5 w-full max-w-lg">
+          <TabsTrigger value="all">All ({counts.all})</TabsTrigger>
+          <TabsTrigger value="open">Open ({counts.open})</TabsTrigger>
+          <TabsTrigger value="in_progress">In Progress ({counts.in_progress})</TabsTrigger>
+          <TabsTrigger value="completed">Completed ({counts.completed})</TabsTrigger>
+          <TabsTrigger value="reviewed">Reviewed ({counts.reviewed})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {workOrders.map((workOrder) => (
-              <WorkOrderCard key={workOrder.id} workOrder={workOrder} />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="open" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filterWorkOrders('open').map((workOrder) => (
-              <WorkOrderCard key={workOrder.id} workOrder={workOrder} />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="in_progress" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filterWorkOrders('in_progress').map((workOrder) => (
-              <WorkOrderCard key={workOrder.id} workOrder={workOrder} />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="completed" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filterWorkOrders('completed').map((workOrder) => (
-              <WorkOrderCard key={workOrder.id} workOrder={workOrder} />
-            ))}
+        <TabsContent value={activeTab}>
+          <div className="grid gap-4">
+            {loading ? (
+              <div className="text-center py-8">Loading work orders...</div>
+            ) : filteredWorkOrders.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No work orders found
+              </div>
+            ) : (
+              filteredWorkOrders.map((workOrder) => (
+                <Card 
+                  key={workOrder.id} 
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setSelectedWorkOrder(workOrder)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">{workOrder.title}</CardTitle>
+                      <div className="flex gap-2">
+                        <Badge className={priorityColors[workOrder.priority]}>
+                          {workOrder.priority}
+                        </Badge>
+                        <Badge className={statusColors[workOrder.status]}>
+                          {workOrder.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground mb-4 line-clamp-2">
+                      {workOrder.description}
+                    </p>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        {workOrder.job_sites?.name}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <User className="h-4 w-4" />
+                        {workOrder.employees?.first_name} {workOrder.employees?.last_name}
+                      </div>
+                      {workOrder.due_date && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          Due: {format(new Date(workOrder.due_date), 'MMM d, yyyy')}
+                        </div>
+                      )}
+                      {workOrder.priority === 'urgent' && (
+                        <div className="flex items-center gap-1 text-red-600">
+                          <AlertCircle className="h-4 w-4" />
+                          Urgent
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
       </Tabs>
 
-      <CreateWorkOrderDialog 
+      <CreateWorkOrderDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        onSuccess={() => {
-          fetchWorkOrders();
-          setCreateDialogOpen(false);
-        }}
+        onSuccess={fetchWorkOrders}
       />
-
-      {selectedWorkOrder && (
-        <WorkOrderDetailsDialog
-          workOrder={selectedWorkOrder}
-          open={!!selectedWorkOrder}
-          onOpenChange={(open) => !open && setSelectedWorkOrder(null)}
-          onUpdate={fetchWorkOrders}
-        />
-      )}
     </div>
   );
 };
