@@ -16,6 +16,7 @@ interface CreateWorkOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  preSelectedJobSite?: string;
 }
 
 interface Employee {
@@ -33,7 +34,8 @@ interface JobSite {
 export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
   open,
   onOpenChange,
-  onSuccess
+  onSuccess,
+  preSelectedJobSite
 }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -52,8 +54,12 @@ export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
     if (open) {
       fetchEmployees();
       fetchJobSites();
+      // Set pre-selected job site if provided
+      if (preSelectedJobSite) {
+        setFormData(prev => ({ ...prev, job_site_id: preSelectedJobSite }));
+      }
     }
-  }, [open]);
+  }, [open, preSelectedJobSite]);
 
   const fetchEmployees = async () => {
     const { data, error } = await supabase

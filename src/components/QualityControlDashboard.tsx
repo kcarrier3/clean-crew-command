@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, User, MapPin, AlertCircle } from 'lucide-react';
+import { Plus, Calendar, User, MapPin, AlertCircle, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 import { WorkOrderDetail } from './WorkOrderDetail';
+import { StartInspectionDialog } from './StartInspectionDialog';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -22,14 +23,14 @@ interface WorkOrder {
   created_at: string;
   due_date: string;
   job_sites?: { name: string };
-  employees?: { first_name: string; last_name: string };
-  created_by_employee?: { first_name: string; last_name: string };
+  profiles?: { first_name: string; last_name: string };
 }
 
 const QualityControlDashboard = () => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [inspectionDialogOpen, setInspectionDialogOpen] = useState(false);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
@@ -44,8 +45,8 @@ const QualityControlDashboard = () => {
         .from('work_orders')
         .select(`
           *,
-          job_sites (name),
-          employees (first_name, last_name)
+          job_sites!work_orders_job_site_id_fkey (name),
+          profiles!work_orders_assigned_to_fkey (first_name, last_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -107,10 +108,19 @@ const QualityControlDashboard = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Quality Control & Work Orders</h1>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Work Order
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setInspectionDialogOpen(true)}
+          >
+            <Camera className="h-4 w-4 mr-2" />
+            Start an Inspection
+          </Button>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Work Order
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -161,7 +171,7 @@ const QualityControlDashboard = () => {
                       </div>
                       <div className="flex items-center gap-1">
                         <User className="h-4 w-4" />
-                        {workOrder.employees?.first_name} {workOrder.employees?.last_name}
+                        {workOrder.profiles?.first_name} {workOrder.profiles?.last_name}
                       </div>
                       {workOrder.due_date && (
                         <div className="flex items-center gap-1">
@@ -187,6 +197,12 @@ const QualityControlDashboard = () => {
       <CreateWorkOrderDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+        onSuccess={fetchWorkOrders}
+      />
+
+      <StartInspectionDialog
+        open={inspectionDialogOpen}
+        onOpenChange={setInspectionDialogOpen}
         onSuccess={fetchWorkOrders}
       />
     </div>
