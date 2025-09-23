@@ -11,7 +11,7 @@ import EmployeeDashboard from '@/components/EmployeeDashboard';
 import QualityControlDashboard from '@/components/QualityControlDashboard';
 import { NotificationBell } from '@/components/NotificationBell';
 import { TestNotificationButton } from '@/components/TestNotificationButton';
-import PermissionManagement from '@/components/PermissionManagement';
+import TeamManagement from '@/components/TeamManagement';
 import MessagingCenter from '@/components/MessagingCenter';
 import ManagerLog from '@/components/ManagerLog';
 import JobSitesManagement from '@/components/JobSitesManagement';
@@ -102,7 +102,7 @@ const Index = () => {
                   <TabsTrigger value="jobsites">Accounts</TabsTrigger>
                   <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
                   <TabsTrigger value="messages">Messages</TabsTrigger>
-                  <TabsTrigger value="permissions">Permissions</TabsTrigger>
+                  <TabsTrigger value="team">Team</TabsTrigger>
                 </TabsList>
               ) : (
                 <TabsList className="hidden md:grid w-full grid-cols-5">
@@ -167,8 +167,8 @@ const Index = () => {
             )}
 
             {canManageEmployees() && (
-              <TabsContent value="permissions" className="mt-6">
-                <PermissionManagement />
+              <TabsContent value="team" className="mt-6">
+                <TeamManagement />
               </TabsContent>
             )}
           </Tabs>
