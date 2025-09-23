@@ -381,7 +381,7 @@ export default function JobSitesManagement() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Accounts Management</h2>
+          <h2 className="text-2xl font-bold">Account Management</h2>
           <p className="text-muted-foreground">Manage your company's accounts and locations</p>
         </div>
         
