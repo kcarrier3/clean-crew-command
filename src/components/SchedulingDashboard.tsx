@@ -85,7 +85,7 @@ const SchedulingDashboard = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch schedules with employee and job site data
+      // Fetch schedules with employee and account data
       const { data: schedulesData, error: schedulesError } = await supabase
         .from('employee_schedules')
         .select(`
@@ -107,7 +107,7 @@ const SchedulingDashboard = () => {
 
       if (employeesError) throw employeesError;
 
-      // Fetch job sites
+      // Fetch accounts
       const { data: jobSitesData, error: jobSitesError } = await supabase
         .from('job_sites')
         .select('*')
@@ -314,14 +314,14 @@ const SchedulingDashboard = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="jobSite">Job Site</Label>
+                  <Label htmlFor="jobSite">Account</Label>
                   <Select 
                     value={formData.job_site_id} 
                     onValueChange={(value) => setFormData(prev => ({ ...prev, job_site_id: value }))}
                     required
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select job site" />
+                      <SelectValue placeholder="Select account" />
                     </SelectTrigger>
                     <SelectContent>
                       {jobSites.map((site) => (
@@ -469,7 +469,7 @@ const SchedulingDashboard = () => {
                 <MapPin className="h-8 w-8 text-purple-500" />
                 <div>
                   <p className="text-2xl font-bold">{new Set(schedules.map(s => s.job_site_id)).size}</p>
-                  <p className="text-sm text-muted-foreground">Active Job Sites</p>
+                  <p className="text-sm text-muted-foreground">Active Accounts</p>
                 </div>
               </div>
             </CardContent>

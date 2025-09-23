@@ -54,7 +54,7 @@ export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
     if (open) {
       fetchEmployees();
       fetchJobSites();
-      // Set pre-selected job site if provided
+      // Set pre-selected account if provided
       if (preSelectedJobSite) {
         setFormData(prev => ({ ...prev, job_site_id: preSelectedJobSite }));
       }
@@ -190,10 +190,10 @@ export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="job_site">Job Site *</Label>
+              <Label htmlFor="job_site">Account *</Label>
               <Select value={formData.job_site_id} onValueChange={(value) => setFormData({ ...formData, job_site_id: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select job site" />
+                  <SelectValue placeholder="Select account" />
                 </SelectTrigger>
                 <SelectContent>
                   {jobSites.map((site) => (

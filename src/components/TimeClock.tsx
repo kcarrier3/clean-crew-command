@@ -87,7 +87,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     }
   }, [forManager, profile, selectedEmployeeId]);
 
-  // Auto-select job site when employee is selected
+  // Auto-select account when employee is selected
   useEffect(() => {
     if (selectedEmployee) {
       fetchEmployeeSchedule(selectedEmployee);
@@ -119,7 +119,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       .order('name');
     
     if (error) {
-      toast({ title: 'Error', description: 'Failed to fetch job sites', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to fetch accounts', variant: 'destructive' });
     } else {
       setJobSites(data || []);
     }
@@ -248,7 +248,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
 
   const clockIn = async () => {
     if (!selectedEmployee || !selectedJobSite) {
-      toast({ title: 'Error', description: 'Please select an employee and job site', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Please select an employee and account', variant: 'destructive' });
       return;
     }
 
@@ -445,11 +445,11 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
               </Select>
             )}
 
-            {/* Job Site Selection */}
+            {/* Account Selection */}
             <div className="space-y-2">
               <Select value={selectedJobSite} onValueChange={setSelectedJobSite}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Job Site" />
+                  <SelectValue placeholder="Select Account" />
                 </SelectTrigger>
                 <SelectContent>
                   {jobSites.map((site) => (

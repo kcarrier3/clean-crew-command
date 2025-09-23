@@ -59,7 +59,7 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch job sites",
+        description: "Failed to fetch accounts",
         variant: "destructive",
       });
     }
@@ -127,7 +127,7 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
     if (!selectedJobSite) {
       toast({
         title: "Error",
-        description: "Please select a job site",
+        description: "Please select an account",
         variant: "destructive",
       });
       return;
@@ -155,7 +155,7 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
       // In a real implementation, you might want to create an inspections table
       toast({
         title: "Success",
-        description: `Inspection completed for job site. ${uploadedPhotos.length} photos uploaded.`,
+        description: `Inspection completed for account. ${uploadedPhotos.length} photos uploaded.`,
       });
 
       // Reset form
@@ -202,12 +202,12 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Job Site Selection */}
+            {/* Account Selection */}
             <div className="space-y-2">
-              <Label htmlFor="jobSite">Job Site *</Label>
+              <Label htmlFor="jobSite">Account *</Label>
               <Select value={selectedJobSite} onValueChange={setSelectedJobSite}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a job site" />
+                  <SelectValue placeholder="Select an account" />
                 </SelectTrigger>
                 <SelectContent>
                   {jobSites.map((site) => (

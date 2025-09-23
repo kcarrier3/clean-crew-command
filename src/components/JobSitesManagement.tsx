@@ -90,7 +90,7 @@ export default function JobSitesManagement() {
       console.error('Error fetching job sites:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch job sites",
+        description: "Failed to fetch accounts",
         variant: "destructive"
       });
     } finally {
@@ -102,7 +102,7 @@ export default function JobSitesManagement() {
     if (!formData.name.trim()) {
       toast({
         title: "Validation Error",
-        description: "Job site name is required",
+        description: "Account name is required",
         variant: "destructive"
       });
       return;
@@ -131,7 +131,7 @@ export default function JobSitesManagement() {
 
       toast({
         title: "Success",
-        description: "Job site created successfully"
+        description: "Account created successfully"
       });
 
       // Reset form and close dialog
@@ -144,7 +144,7 @@ export default function JobSitesManagement() {
       console.error('Error creating job site:', error);
       toast({
         title: "Error",
-        description: "Failed to create job site",
+        description: "Failed to create account",
         variant: "destructive"
       });
     } finally {
@@ -156,7 +156,7 @@ export default function JobSitesManagement() {
     if (!editingJobSite || !formData.name.trim()) {
       toast({
         title: "Validation Error",
-        description: "Job site name is required",
+        description: "Account name is required",
         variant: "destructive"
       });
       return;
@@ -186,7 +186,7 @@ export default function JobSitesManagement() {
 
       toast({
         title: "Success",
-        description: "Job site updated successfully"
+        description: "Account updated successfully"
       });
 
       // Reset form and close dialog
@@ -200,7 +200,7 @@ export default function JobSitesManagement() {
       console.error('Error updating job site:', error);
       toast({
         title: "Error",
-        description: "Failed to update job site",
+        description: "Failed to update account",
         variant: "destructive"
       });
     } finally {
@@ -256,7 +256,7 @@ export default function JobSitesManagement() {
 
       toast({
         title: "Success",
-        description: `Job site ${!jobSite.active ? 'activated' : 'deactivated'} successfully`
+        description: `Account ${!jobSite.active ? 'activated' : 'deactivated'} successfully`
       });
 
       fetchJobSites();
@@ -264,7 +264,7 @@ export default function JobSitesManagement() {
       console.error('Error updating job site status:', error);
       toast({
         title: "Error",
-        description: "Failed to update job site status",
+        description: "Failed to update account status",
         variant: "destructive"
       });
     }
@@ -272,7 +272,7 @@ export default function JobSitesManagement() {
 
   const deleteJobSite = async (jobSite: JobSite) => {
     try {
-      // First, check if the job site is referenced by other records
+      // First, check if the account is referenced by other records
       const [schedulesCheck, timeEntriesCheck, workOrdersCheck] = await Promise.all([
         supabase.from('employee_schedules').select('id').eq('job_site_id', jobSite.id).limit(1),
         supabase.from('time_entries').select('id').eq('job_site_id', jobSite.id).limit(1),
@@ -290,8 +290,8 @@ export default function JobSitesManagement() {
         if (hasWorkOrders) references.push('work orders');
         
         toast({
-          title: "Cannot Delete Job Site",
-          description: `This job site is still referenced by: ${references.join(', ')}. Please remove these references first or keep the job site inactive.`,
+          title: "Cannot Delete Account",
+          description: `This account is still referenced by: ${references.join(', ')}. Please remove these references first or keep the account inactive.`,
           variant: "destructive"
         });
         return;
@@ -307,7 +307,7 @@ export default function JobSitesManagement() {
 
       toast({
         title: "Success",
-        description: "Job site deleted successfully"
+        description: "Account deleted successfully"
       });
 
       fetchJobSites();
@@ -315,7 +315,7 @@ export default function JobSitesManagement() {
       console.error('Error deleting job site:', error);
       toast({
         title: "Error",
-        description: "Failed to delete job site. Please try again.",
+        description: "Failed to delete account. Please try again.",
         variant: "destructive"
       });
     }
@@ -336,15 +336,15 @@ export default function JobSitesManagement() {
       if (schedules.length === 0 && timeEntries.length === 0 && workOrders.length === 0) {
         toast({
           title: "Ready to Delete",
-          description: "This job site has no references and can be safely deleted.",
+          description: "This account has no references and can be safely deleted.",
         });
         return { canDelete: true, references: { schedules, timeEntries, workOrders } };
       } else {
-        let message = "This job site cannot be deleted because it has:\n";
+        let message = "This account cannot be deleted because it has:\n";
         if (schedules.length > 0) message += `• ${schedules.length} employee schedule(s)\n`;
         if (timeEntries.length > 0) message += `• ${timeEntries.length} time entries\n`;
         if (workOrders.length > 0) message += `• ${workOrders.length} work order(s)\n`;
-        message += "\nRemove these references first or keep the job site inactive.";
+        message += "\nRemove these references first or keep the account inactive.";
         
         toast({
           title: "Cannot Delete",
@@ -357,7 +357,7 @@ export default function JobSitesManagement() {
       console.error('Error checking references:', error);
       toast({
         title: "Error",
-        description: "Failed to check job site references",
+        description: "Failed to check account references",
         variant: "destructive"
       });
       return { canDelete: false, references: { schedules: [], timeEntries: [], workOrders: [] } };
@@ -381,8 +381,8 @@ export default function JobSitesManagement() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Job Sites Management</h2>
-          <p className="text-muted-foreground">Manage your company's job sites and locations</p>
+          <h2 className="text-2xl font-bold">Accounts Management</h2>
+          <p className="text-muted-foreground">Manage your company's accounts and locations</p>
         </div>
         
         <div className="flex items-center gap-4">
@@ -392,7 +392,7 @@ export default function JobSitesManagement() {
               checked={showInactive}
               onCheckedChange={setShowInactive}
             />
-            <Label htmlFor="show-inactive" className="text-sm">Show inactive sites</Label>
+            <Label htmlFor="show-inactive" className="text-sm">Show inactive accounts</Label>
           </div>
           
           <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
@@ -402,21 +402,21 @@ export default function JobSitesManagement() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Job Site
+                Add Account
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create New Job Site</DialogTitle>
+                <DialogTitle>Create New Account</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Job Site Name *</Label>
+                  <Label htmlFor="name">Account Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Enter job site name..."
+                    placeholder="Enter account name..."
                   />
                 </div>
                 
@@ -447,7 +447,7 @@ export default function JobSitesManagement() {
                     id="address"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Enter job site address..."
+                    placeholder="Enter account address..."
                     className="min-h-[80px]"
                   />
                 </div>
@@ -555,7 +555,7 @@ export default function JobSitesManagement() {
                     disabled={loading || !formData.name.trim()}
                     className="flex-1"
                   >
-                    {loading ? "Creating..." : "Create Job Site"}
+                    {loading ? "Creating..." : "Create Account"}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -578,7 +578,7 @@ export default function JobSitesManagement() {
               <Building2 className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-2xl font-bold">{jobSites.length}</p>
-                <p className="text-sm text-muted-foreground">Total Job Sites</p>
+                <p className="text-sm text-muted-foreground">Total Accounts</p>
               </div>
             </div>
           </CardContent>
@@ -590,7 +590,7 @@ export default function JobSitesManagement() {
               <MapPin className="h-8 w-8 text-green-500" />
               <div>
                 <p className="text-2xl font-bold">{activeJobSites.length}</p>
-                <p className="text-sm text-muted-foreground">Active Sites</p>
+                <p className="text-sm text-muted-foreground">Active Accounts</p>
               </div>
             </div>
           </CardContent>
@@ -614,17 +614,17 @@ export default function JobSitesManagement() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-green-500" />
-            Active Job Sites ({activeJobSites.length})
+            Active Accounts ({activeJobSites.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="text-muted-foreground mt-2">Loading job sites...</p>
+              <p className="text-muted-foreground mt-2">Loading accounts...</p>
             </div>
           ) : activeJobSites.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No active job sites</p>
+            <p className="text-muted-foreground text-center py-8">No active accounts</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {activeJobSites.map((site) => (
@@ -733,7 +733,7 @@ export default function JobSitesManagement() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-gray-500" />
-              Inactive Job Sites ({inactiveJobSites.length})
+              Inactive Accounts ({inactiveJobSites.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -849,11 +849,11 @@ export default function JobSitesManagement() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Job Site</AlertDialogTitle>
+                            <AlertDialogTitle>Delete Account</AlertDialogTitle>
                             <AlertDialogDescription>
                               Are you sure you want to permanently delete "{site.name}"? This action cannot be undone.
                               <br /><br />
-                              <strong>Warning:</strong> This will fail if the job site has any associated employee schedules, time entries, or work orders.
+                              <strong>Warning:</strong> This will fail if the account has any associated employee schedules, time entries, or work orders.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -885,16 +885,16 @@ export default function JobSitesManagement() {
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Job Site</DialogTitle>
+            <DialogTitle>Edit Account</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-name">Job Site Name *</Label>
+              <Label htmlFor="edit-name">Account Name *</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter job site name..."
+                placeholder="Enter account name..."
               />
             </div>
             
@@ -904,7 +904,7 @@ export default function JobSitesManagement() {
                 id="edit-address"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Enter job site address..."
+                placeholder="Enter account address..."
                 className="min-h-[80px]"
               />
             </div>
@@ -934,7 +934,7 @@ export default function JobSitesManagement() {
                 disabled={loading || !formData.name.trim()}
                 className="flex-1"
               >
-                {loading ? "Updating..." : "Update Job Site"}
+                {loading ? "Updating..." : "Update Account"}
               </Button>
               <Button 
                 variant="outline" 
