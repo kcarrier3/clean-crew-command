@@ -3,11 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Users, Settings, Shield, User, DollarSign, FileText, Search } from 'lucide-react';
+import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -47,7 +47,16 @@ const TeamManagement = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [newEmployeeData, setNewEmployeeData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    hourly_rate: '',
+  });
+  const [isSubmittingEmployee, setIsSubmittingEmployee] = useState(false);
 
   useEffect(() => {
     if (canManageEmployees()) {
@@ -236,6 +245,70 @@ const TeamManagement = () => {
     setEditMode(false);
   };
 
+  const handleAddEmployee = async () => {
+    if (!newEmployeeData.first_name || !newEmployeeData.last_name || !newEmployeeData.email) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmittingEmployee(true);
+    try {
+      // Send invitation email via edge function
+      const { error: inviteError } = await supabase.functions.invoke('invite-employee', {
+        body: {
+          email: newEmployeeData.email,
+          firstName: newEmployeeData.first_name,
+          lastName: newEmployeeData.last_name,
+          phone: newEmployeeData.phone,
+          hourlyRate: newEmployeeData.hourly_rate ? parseFloat(newEmployeeData.hourly_rate) : null,
+        },
+      });
+
+      if (inviteError) throw inviteError;
+
+      toast({
+        title: "Success",
+        description: "Employee invitation sent successfully!",
+      });
+
+      // Reset form
+      setNewEmployeeData({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        hourly_rate: '',
+      });
+      setIsAddEmployeeDialogOpen(false);
+      
+      // Refresh employee list
+      fetchEmployees();
+    } catch (error) {
+      console.error('Error inviting employee:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send employee invitation.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingEmployee(false);
+    }
+  };
+
+  const resetAddEmployeeForm = () => {
+    setNewEmployeeData({
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      hourly_rate: '',
+    });
+  };
+
   if (!canManageEmployees()) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -259,10 +332,114 @@ const TeamManagement = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Team Members</CardTitle>
-          <CardDescription>
-            View and manage all team members, their profiles, and permissions.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Team Members</CardTitle>
+              <CardDescription>
+                View and manage all team members, their profiles, and permissions.
+              </CardDescription>
+            </div>
+            <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetAddEmployeeForm}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Add New Employee
+                  </DialogTitle>
+                  <DialogDescription>
+                    Enter employee details to send them an invitation to join the app.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="add_first_name">First Name *</Label>
+                      <Input
+                        id="add_first_name"
+                        value={newEmployeeData.first_name}
+                        onChange={(e) => setNewEmployeeData(prev => ({ ...prev, first_name: e.target.value }))}
+                        placeholder="John"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="add_last_name">Last Name *</Label>
+                      <Input
+                        id="add_last_name"
+                        value={newEmployeeData.last_name}
+                        onChange={(e) => setNewEmployeeData(prev => ({ ...prev, last_name: e.target.value }))}
+                        placeholder="Doe"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="add_email">Email Address *</Label>
+                    <Input
+                      id="add_email"
+                      type="email"
+                      value={newEmployeeData.email}
+                      onChange={(e) => setNewEmployeeData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="john.doe@company.com"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="add_phone">Phone Number</Label>
+                    <Input
+                      id="add_phone"
+                      type="tel"
+                      value={newEmployeeData.phone}
+                      onChange={(e) => setNewEmployeeData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="add_hourly_rate">Hourly Rate</Label>
+                    <Input
+                      id="add_hourly_rate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newEmployeeData.hourly_rate}
+                      onChange={(e) => setNewEmployeeData(prev => ({ ...prev, hourly_rate: e.target.value }))}
+                      placeholder="25.00"
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsAddEmployeeDialogOpen(false)}
+                      disabled={isSubmittingEmployee}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleAddEmployee}
+                      disabled={isSubmittingEmployee}
+                    >
+                      {isSubmittingEmployee ? (
+                        <>Sending Invite...</>
+                      ) : (
+                        <>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Send Invitation
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -517,21 +694,48 @@ const TeamManagement = () => {
                 </CardContent>
               </Card>
 
-              {/* Documents Section - Placeholder for future implementation */}
+              {/* Documents Section */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <FileText className="h-5 w-5" />
-                    Documents
+                    Documents & E-Signing
                   </CardTitle>
                   <CardDescription>
-                    Employee documents and files
+                    Upload onboarding documents and send for e-signature
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">
-                    Document management coming soon...
-                  </p>
+                <CardContent className="space-y-4">
+                  <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
+                    <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-2 text-sm font-semibold">Upload Documents</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Upload contracts, forms, and other onboarding documents
+                    </p>
+                    <Button variant="outline" size="sm" className="mt-2">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Choose Files
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Common Documents:</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm">Employment Agreement</Button>
+                      <Button variant="outline" size="sm">W-4 Form</Button>
+                      <Button variant="outline" size="sm">I-9 Form</Button>
+                      <Button variant="outline" size="sm">Direct Deposit</Button>
+                    </div>
+                  </div>
+
+                  <Separator />
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Document Status:</h4>
+                    <p className="text-sm text-muted-foreground">
+                      No documents uploaded yet. Upload documents and they will appear here for e-signing.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </div>
