@@ -110,7 +110,7 @@ const QualityControlDashboard = () => {
         <h1 className="text-3xl font-bold">Quality Control & Work Orders</h1>
         <div className="flex gap-2">
           <Button 
-            variant="outline" 
+            variant="orange" 
             onClick={() => setInspectionDialogOpen(true)}
           >
             <Camera className="h-4 w-4 mr-2" />
