@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -54,7 +55,9 @@ const TeamManagement = () => {
     last_name: '',
     email: '',
     phone: '',
+    pay_type: 'hourly' as 'hourly' | 'salary',
     hourly_rate: '',
+    salary_amount: '',
   });
   const [isSubmittingEmployee, setIsSubmittingEmployee] = useState(false);
 
@@ -264,7 +267,9 @@ const TeamManagement = () => {
           firstName: newEmployeeData.first_name,
           lastName: newEmployeeData.last_name,
           phone: newEmployeeData.phone,
-          hourlyRate: newEmployeeData.hourly_rate ? parseFloat(newEmployeeData.hourly_rate) : null,
+          payType: newEmployeeData.pay_type,
+          hourlyRate: newEmployeeData.pay_type === 'hourly' && newEmployeeData.hourly_rate ? parseFloat(newEmployeeData.hourly_rate) : null,
+          salaryAmount: newEmployeeData.pay_type === 'salary' && newEmployeeData.salary_amount ? parseFloat(newEmployeeData.salary_amount) : null,
         },
       });
 
@@ -281,7 +286,9 @@ const TeamManagement = () => {
         last_name: '',
         email: '',
         phone: '',
+        pay_type: 'hourly',
         hourly_rate: '',
+        salary_amount: '',
       });
       setIsAddEmployeeDialogOpen(false);
       
@@ -305,7 +312,9 @@ const TeamManagement = () => {
       last_name: '',
       email: '',
       phone: '',
+      pay_type: 'hourly',
       hourly_rate: '',
+      salary_amount: '',
     });
   };
 
@@ -402,17 +411,46 @@ const TeamManagement = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="add_hourly_rate">Hourly Rate</Label>
-                    <Input
-                      id="add_hourly_rate"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={newEmployeeData.hourly_rate}
-                      onChange={(e) => setNewEmployeeData(prev => ({ ...prev, hourly_rate: e.target.value }))}
-                      placeholder="25.00"
-                    />
+                    <Label htmlFor="add_pay_type">Pay Type</Label>
+                    <Select value={newEmployeeData.pay_type} onValueChange={(value: 'hourly' | 'salary') => 
+                      setNewEmployeeData(prev => ({ ...prev, pay_type: value }))
+                    }>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select pay type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hourly">Hourly</SelectItem>
+                        <SelectItem value="salary">Salary</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {newEmployeeData.pay_type === 'hourly' ? (
+                    <div>
+                      <Label htmlFor="add_hourly_rate">Hourly Rate</Label>
+                      <Input
+                        id="add_hourly_rate"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={newEmployeeData.hourly_rate}
+                        onChange={(e) => setNewEmployeeData(prev => ({ ...prev, hourly_rate: e.target.value }))}
+                        placeholder="25.00"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <Label htmlFor="add_salary_amount">Annual Salary</Label>
+                      <Input
+                        id="add_salary_amount"
+                        type="number"
+                        min="0"
+                        value={newEmployeeData.salary_amount}
+                        onChange={(e) => setNewEmployeeData(prev => ({ ...prev, salary_amount: e.target.value }))}
+                        placeholder="50000"
+                      />
+                    </div>
+                  )}
 
                   <div className="flex justify-end space-x-2 pt-4">
                     <Button 
