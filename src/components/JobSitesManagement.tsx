@@ -51,6 +51,7 @@ export default function JobSitesManagement() {
   const { isManager } = useAuth();
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showInactive, setShowInactive] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingJobSite, setEditingJobSite] = useState<JobSite | null>(null);
@@ -384,186 +385,189 @@ export default function JobSitesManagement() {
           <p className="text-muted-foreground">Manage your company's job sites and locations</p>
         </div>
         
-        <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
-          setIsCreateDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Job Site
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Job Site</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Job Site Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter job site name..."
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="show-inactive"
+              checked={showInactive}
+              onCheckedChange={setShowInactive}
+            />
+            <Label htmlFor="show-inactive" className="text-sm">Show inactive sites</Label>
+          </div>
+          
+          <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+            setIsCreateDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Job Site
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Job Site</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="client_name">Client Name</Label>
+                  <Label htmlFor="name">Job Site Name *</Label>
                   <Input
-                    id="client_name"
-                    value={formData.client_name}
-                    onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                    placeholder="Enter client name..."
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Enter job site name..."
                   />
                 </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="client_name">Client Name</Label>
+                    <Input
+                      id="client_name"
+                      value={formData.client_name}
+                      onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                      placeholder="Enter client name..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="project_manager">Project Manager</Label>
+                    <Input
+                      id="project_manager"
+                      value={formData.project_manager}
+                      onChange={(e) => setFormData({ ...formData, project_manager: e.target.value })}
+                      placeholder="Project manager name..."
+                    />
+                  </div>
+                </div>
+                
                 <div>
-                  <Label htmlFor="project_manager">Project Manager</Label>
-                  <Input
-                    id="project_manager"
-                    value={formData.project_manager}
-                    onChange={(e) => setFormData({ ...formData, project_manager: e.target.value })}
-                    placeholder="Project manager name..."
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Enter job site address..."
+                    className="min-h-[80px]"
                   />
                 </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Textarea
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Enter job site address..."
-                  className="min-h-[80px]"
-                />
-              </div>
 
-              {/* Contact Information Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  <Label className="font-semibold">Contact Information</Label>
+                {/* Contact Information Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    <Label className="font-semibold">Contact Information</Label>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6">
+                    <div>
+                      <Label htmlFor="contact_person">Contact Person</Label>
+                      <Input
+                        id="contact_person"
+                        value={formData.contact_person}
+                        onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                        placeholder="Primary contact name..."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="contact_phone">Phone</Label>
+                      <Input
+                        id="contact_phone"
+                        value={formData.contact_phone}
+                        onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                        placeholder="Phone number..."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="contact_email">Email</Label>
+                      <Input
+                        id="contact_email"
+                        type="email"
+                        value={formData.contact_email}
+                        onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                        placeholder="Contact email..."
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6">
-                  <div>
-                    <Label htmlFor="contact_person">Contact Person</Label>
-                    <Input
-                      id="contact_person"
-                      value={formData.contact_person}
-                      onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-                      placeholder="Primary contact name..."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="contact_phone">Phone</Label>
-                    <Input
-                      id="contact_phone"
-                      value={formData.contact_phone}
-                      onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                      placeholder="Phone number..."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="contact_email">Email</Label>
-                    <Input
-                      id="contact_email"
-                      type="email"
-                      value={formData.contact_email}
-                      onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                      placeholder="Contact email..."
-                    />
-                  </div>
-                </div>
-              </div>
 
-              {/* Project Information Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  <Label className="font-semibold">Project Information</Label>
-                </div>
-                <div className="grid grid-cols-2 gap-4 pl-6">
-                  <div>
-                    <Label htmlFor="estimated_duration">Estimated Duration</Label>
-                    <Input
-                      id="estimated_duration"
-                      value={formData.estimated_duration}
-                      onChange={(e) => setFormData({ ...formData, estimated_duration: e.target.value })}
-                      placeholder="e.g., 3 months, 6 weeks..."
-                    />
+                {/* Project Information Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <Label className="font-semibold">Project Information</Label>
                   </div>
-                  <div>
-                    <Label htmlFor="budget_info">Budget Information</Label>
-                    <Input
-                      id="budget_info"
-                      value={formData.budget_info}
-                      onChange={(e) => setFormData({ ...formData, budget_info: e.target.value })}
-                      placeholder="Budget details (manager only)..."
-                    />
+                  <div className="grid grid-cols-1 gap-4 pl-6">
+                    <div>
+                      <Label htmlFor="estimated_duration">Estimated Duration</Label>
+                      <Input
+                        id="estimated_duration"
+                        value={formData.estimated_duration}
+                        onChange={(e) => setFormData({ ...formData, estimated_duration: e.target.value })}
+                        placeholder="e.g., 6 months, 2 weeks..."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="budget_info">Budget Information</Label>
+                      <Textarea
+                        id="budget_info"
+                        value={formData.budget_info}
+                        onChange={(e) => setFormData({ ...formData, budget_info: e.target.value })}
+                        placeholder="Budget details, constraints, etc..."
+                        className="min-h-[60px]"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Special Instructions */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <Label htmlFor="special_instructions">Special Instructions</Label>
+                {/* Instructions & Safety Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <Label className="font-semibold">Instructions & Safety</Label>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 pl-6">
+                    <div>
+                      <Label htmlFor="special_instructions">Special Instructions</Label>
+                      <Textarea
+                        id="special_instructions"
+                        value={formData.special_instructions}
+                        onChange={(e) => setFormData({ ...formData, special_instructions: e.target.value })}
+                        placeholder="Special requirements, access instructions, etc..."
+                        className="min-h-[60px]"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="safety_requirements">Safety Requirements</Label>
+                      <Textarea
+                        id="safety_requirements"
+                        value={formData.safety_requirements}
+                        onChange={(e) => setFormData({ ...formData, safety_requirements: e.target.value })}
+                        placeholder="PPE requirements, safety protocols, etc..."
+                        className="min-h-[60px]"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <Textarea
-                  id="special_instructions"
-                  value={formData.special_instructions}
-                  onChange={(e) => setFormData({ ...formData, special_instructions: e.target.value })}
-                  placeholder="Any special instructions or notes..."
-                  className="min-h-[60px]"
-                />
-              </div>
-
-              {/* Safety Requirements */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield className="h-4 w-4" />
-                  <Label htmlFor="safety_requirements">Safety Requirements</Label>
+                
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    onClick={handleCreate} 
+                    disabled={loading || !formData.name.trim()}
+                    className="flex-1"
+                  >
+                    {loading ? "Creating..." : "Create Job Site"}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsCreateDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
                 </div>
-                <Textarea
-                  id="safety_requirements"
-                  value={formData.safety_requirements}
-                  onChange={(e) => setFormData({ ...formData, safety_requirements: e.target.value })}
-                  placeholder="Safety protocols, PPE requirements, etc..."
-                  className="min-h-[60px]"
-                />
               </div>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="active"
-                  checked={formData.active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
-                />
-                <Label htmlFor="active">Active</Label>
-              </div>
-              
-              <div className="flex gap-2 pt-4">
-                <Button 
-                  onClick={handleCreate} 
-                  disabled={loading || !formData.name.trim()}
-                  className="flex-1"
-                >
-                  {loading ? "Creating..." : "Create Job Site"}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsCreateDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Stats */}
@@ -633,96 +637,84 @@ export default function JobSitesManagement() {
                       </Badge>
                     </div>
                     
-                    {/* Basic Information */}
                     {site.address && (
-                      <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
+                      <p className="text-muted-foreground text-sm mb-2 flex items-start gap-1">
+                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         {site.address}
                       </p>
                     )}
                     
                     {site.client_name && (
-                      <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
-                        <Building2 className="h-3 w-3" />
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <User className="h-4 w-4 flex-shrink-0" />
                         {site.client_name}
                       </p>
                     )}
 
-                    {/* Manager-Only Information */}
-                    <div className="space-y-2 mb-3 bg-white/50 p-2 rounded border-l-2 border-blue-400">
-                      <p className="text-xs text-blue-700 font-medium">Manager Information</p>
-                      
-                      {site.contact_person && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          Contact: {site.contact_person}
-                          {site.contact_phone && ` • ${site.contact_phone}`}
-                        </p>
-                      )}
-                      
-                      {site.contact_email && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {site.contact_email}
-                        </p>
-                      )}
-                      
-                      {site.project_manager && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          PM: {site.project_manager}
-                        </p>
-                      )}
-                      
-                      {(site.estimated_duration || site.budget_info) && (
-                        <div className="flex gap-4">
-                          {site.estimated_duration && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {site.estimated_duration}
-                            </p>
-                          )}
-                          {site.budget_info && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              {site.budget_info}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                      
-                      {site.safety_requirements && (
-                        <p className="text-xs text-orange-700 flex items-center gap-1">
-                          <Shield className="h-3 w-3" />
-                          Safety: {site.safety_requirements.substring(0, 50)}
-                          {site.safety_requirements.length > 50 && '...'}
-                        </p>
-                      )}
-                      
-                      {site.special_instructions && (
-                        <p className="text-xs text-amber-700 flex items-center gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          Instructions: {site.special_instructions.substring(0, 50)}
-                          {site.special_instructions.length > 50 && '...'}
-                        </p>
-                      )}
-                    </div>
+                    {site.contact_person && (
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <Phone className="h-4 w-4 flex-shrink-0" />
+                        {site.contact_person}
+                        {site.contact_phone && ` (${site.contact_phone})`}
+                      </p>
+                    )}
+
+                    {site.contact_email && (
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <Mail className="h-4 w-4 flex-shrink-0" />
+                        {site.contact_email}
+                      </p>
+                    )}
+
+                    {site.project_manager && (
+                      <p className="text-muted-foreground text-sm mb-2">
+                        <strong>PM:</strong> {site.project_manager}
+                      </p>
+                    )}
+
+                    {site.estimated_duration && (
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <Calendar className="h-4 w-4 flex-shrink-0" />
+                        {site.estimated_duration}
+                      </p>
+                    )}
+
+                    {site.budget_info && (
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <DollarSign className="h-4 w-4 flex-shrink-0" />
+                        {site.budget_info.substring(0, 50)}{site.budget_info.length > 50 && '...'}
+                      </p>
+                    )}
+
+                    {site.special_instructions && (
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <FileText className="h-4 w-4 flex-shrink-0" />
+                        {site.special_instructions.substring(0, 50)}{site.special_instructions.length > 50 && '...'}
+                      </p>
+                    )}
+
+                    {site.safety_requirements && (
+                      <p className="text-muted-foreground text-sm mb-3 flex items-center gap-1">
+                        <Shield className="h-4 w-4 flex-shrink-0" />
+                        {site.safety_requirements.substring(0, 50)}{site.safety_requirements.length > 50 && '...'}
+                      </p>
+                    )}
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pt-2 border-t">
                       <Button
-                        size="sm"
                         variant="outline"
+                        size="sm"
                         onClick={() => openEditDialog(site)}
                         className="flex-1"
                       >
-                        <Edit2 className="h-3 w-3 mr-1" />
+                        <Edit2 className="h-4 w-4 mr-1" />
                         Edit
                       </Button>
                       <Button
-                        size="sm"
                         variant="outline"
+                        size="sm"
                         onClick={() => toggleJobSiteStatus(site)}
-                        className="text-orange-600 hover:bg-orange-50"
+                        className="bg-yellow-50 hover:bg-yellow-100"
                       >
                         Deactivate
                       </Button>
@@ -736,7 +728,7 @@ export default function JobSitesManagement() {
       </Card>
 
       {/* Inactive Job Sites */}
-      {inactiveJobSites.length > 0 && (
+      {showInactive && inactiveJobSites.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -756,110 +748,112 @@ export default function JobSitesManagement() {
                       </Badge>
                     </div>
                     
-                    {/* Basic Information */}
                     {site.address && (
-                      <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
+                      <p className="text-muted-foreground text-sm mb-2 flex items-start gap-1">
+                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         {site.address}
                       </p>
                     )}
                     
                     {site.client_name && (
-                      <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
-                        <Building2 className="h-3 w-3" />
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <User className="h-4 w-4 flex-shrink-0" />
                         {site.client_name}
                       </p>
                     )}
 
-                    {/* Manager-Only Information */}
-                    <div className="space-y-2 mb-3 bg-white/30 p-2 rounded border-l-2 border-gray-400">
-                      <p className="text-xs text-gray-600 font-medium">Manager Information</p>
-                      
-                      {site.contact_person && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          Contact: {site.contact_person}
-                          {site.contact_phone && ` • ${site.contact_phone}`}
-                        </p>
-                      )}
-                      
-                      {site.project_manager && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          PM: {site.project_manager}
-                        </p>
-                      )}
-                      
-                      {(site.estimated_duration || site.budget_info) && (
-                        <div className="flex gap-4">
-                          {site.estimated_duration && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {site.estimated_duration}
-                            </p>
-                          )}
-                          {site.budget_info && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              {site.budget_info}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    {site.contact_person && (
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <Phone className="h-4 w-4 flex-shrink-0" />
+                        {site.contact_person}
+                        {site.contact_phone && ` (${site.contact_phone})`}
+                      </p>
+                    )}
+
+                    {site.contact_email && (
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <Mail className="h-4 w-4 flex-shrink-0" />
+                        {site.contact_email}
+                      </p>
+                    )}
+
+                    {site.project_manager && (
+                      <p className="text-muted-foreground text-sm mb-2">
+                        <strong>PM:</strong> {site.project_manager}
+                      </p>
+                    )}
+
+                    {site.estimated_duration && (
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <Calendar className="h-4 w-4 flex-shrink-0" />
+                        {site.estimated_duration}
+                      </p>
+                    )}
+
+                    {site.budget_info && (
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <DollarSign className="h-4 w-4 flex-shrink-0" />
+                        {site.budget_info.substring(0, 50)}{site.budget_info.length > 50 && '...'}
+                      </p>
+                    )}
+
+                    {site.special_instructions && (
+                      <p className="text-muted-foreground text-sm mb-2 flex items-center gap-1">
+                        <FileText className="h-4 w-4 flex-shrink-0" />
+                        {site.special_instructions.substring(0, 50)}{site.special_instructions.length > 50 && '...'}
+                      </p>
+                    )}
+
+                    {site.safety_requirements && (
+                      <p className="text-muted-foreground text-sm mb-3 flex items-center gap-1">
+                        <Shield className="h-4 w-4 flex-shrink-0" />
+                        {site.safety_requirements.substring(0, 50)}{site.safety_requirements.length > 50 && '...'}
+                      </p>
+                    )}
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pt-2 border-t">
                       <Button
-                        size="sm"
                         variant="outline"
+                        size="sm"
                         onClick={() => openEditDialog(site)}
                         className="flex-1"
                       >
-                        <Edit2 className="h-3 w-3 mr-1" />
+                        <Edit2 className="h-4 w-4 mr-1" />
                         Edit
                       </Button>
                       <Button
-                        size="sm"
                         variant="outline"
+                        size="sm"
                         onClick={() => toggleJobSiteStatus(site)}
-                        className="text-green-600 hover:bg-green-50"
+                        className="bg-green-50 hover:bg-green-100"
                       >
-                        Activate
+                        Reactivate
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => checkJobSiteReferences(site)}
+                        className="bg-blue-50 hover:bg-blue-100"
+                      >
+                        <AlertTriangle className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
+                            variant="outline" 
                             size="sm"
-                            variant="outline"
-                            className="text-blue-600 hover:bg-blue-50"
-                            onClick={() => checkJobSiteReferences(site)}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700"
                           >
-                            <FileText className="h-3 w-3" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </AlertDialog>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Job Site</AlertDialogTitle>
-                            <AlertDialogDescription className="space-y-2">
-                              <p>Are you sure you want to permanently delete "{site.name}"?</p>
-                              <p className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
-                                ⚠️ This will fail if the job site is referenced by employee schedules, 
-                                time entries, or work orders.
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Tip: Use the info button (📄) to check what's preventing deletion.
-                              </p>
+                            <AlertDialogDescription>
+                              Are you sure you want to permanently delete "{site.name}"? This action cannot be undone.
+                              <br /><br />
+                              <strong>Warning:</strong> This will fail if the job site has any associated employee schedules, time entries, or work orders.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -868,7 +862,7 @@ export default function JobSitesManagement() {
                               onClick={() => deleteJobSite(site)}
                               className="bg-red-600 hover:bg-red-700"
                             >
-                              Delete Anyway
+                              Delete Permanently
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -885,7 +879,9 @@ export default function JobSitesManagement() {
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
         setIsEditDialogOpen(open);
-        if (!open) resetForm();
+        if (!open) {
+          resetForm();
+        }
       }}>
         <DialogContent>
           <DialogHeader>
