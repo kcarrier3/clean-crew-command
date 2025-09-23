@@ -99,7 +99,7 @@ const Index = () => {
                 <TabsList className="hidden md:grid w-full grid-cols-7">
                   <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
                   <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
-                  <TabsTrigger value="jobsites">Job Sites</TabsTrigger>
+                  <TabsTrigger value="jobsites">Accounts</TabsTrigger>
                   <TabsTrigger value="quality">Quality Control</TabsTrigger>
                   <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
                   <TabsTrigger value="messages">Messages</TabsTrigger>
@@ -109,7 +109,7 @@ const Index = () => {
                 <TabsList className="hidden md:grid w-full grid-cols-6">
                   <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
                   <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
-                  <TabsTrigger value="jobsites">Job Sites</TabsTrigger>
+                  <TabsTrigger value="jobsites">Accounts</TabsTrigger>
                   <TabsTrigger value="quality">Quality Control</TabsTrigger>
                   <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
                   <TabsTrigger value="messages">Messages</TabsTrigger>
@@ -128,7 +128,7 @@ const Index = () => {
               <TabsList className="md:hidden grid w-full grid-cols-5">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="scheduling">Schedule</TabsTrigger>
-                <TabsTrigger value="jobsites">Sites</TabsTrigger>
+                <TabsTrigger value="jobsites">Accounts</TabsTrigger>
                 <TabsTrigger value="quality">Quality</TabsTrigger>
                 <TabsTrigger value="managerlog">Log</TabsTrigger>
               </TabsList>
@@ -212,7 +212,7 @@ const Index = () => {
               className="flex flex-col items-center gap-1 h-auto py-2 px-3"
             >
               <MapPin className="h-5 w-5" />
-              <span className="text-xs">Sites</span>
+              <span className="text-xs">Accounts</span>
             </Button>
           )}
 
