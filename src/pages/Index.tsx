@@ -96,46 +96,42 @@ const Index = () => {
             {/* Desktop: Show tabs based on user role */}
             {isManager() ? (
               canManageEmployees() ? (
-                <TabsList className="hidden md:grid w-full grid-cols-7">
+                <TabsList className="hidden md:grid w-full grid-cols-6">
                   <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
                   <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
                   <TabsTrigger value="jobsites">Accounts</TabsTrigger>
-                  <TabsTrigger value="quality">Quality Control</TabsTrigger>
                   <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
                   <TabsTrigger value="messages">Messages</TabsTrigger>
                   <TabsTrigger value="permissions">Permissions</TabsTrigger>
                 </TabsList>
               ) : (
-                <TabsList className="hidden md:grid w-full grid-cols-6">
+                <TabsList className="hidden md:grid w-full grid-cols-5">
                   <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
                   <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
                   <TabsTrigger value="jobsites">Accounts</TabsTrigger>
-                  <TabsTrigger value="quality">Quality Control</TabsTrigger>
                   <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
                   <TabsTrigger value="messages">Messages</TabsTrigger>
                 </TabsList>
               )
             ) : (
-              <TabsList className="hidden md:grid w-full grid-cols-3">
+              <TabsList className="hidden md:grid w-full grid-cols-2">
                 <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
-                <TabsTrigger value="quality">Quality Control</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
             )}
 
             {/* Mobile: Show tabs based on user role */}
             {isManager() ? (
-              <TabsList className="md:hidden grid w-full grid-cols-5">
+              <TabsList className="md:hidden grid w-full grid-cols-4">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="scheduling">Schedule</TabsTrigger>
                 <TabsTrigger value="jobsites">Accounts</TabsTrigger>
-                <TabsTrigger value="quality">Quality</TabsTrigger>
                 <TabsTrigger value="managerlog">Log</TabsTrigger>
               </TabsList>
             ) : (
               <TabsList className="md:hidden grid w-full grid-cols-2">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                <TabsTrigger value="quality">Quality</TabsTrigger>
+                <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
             )}
             
@@ -194,28 +190,6 @@ const Index = () => {
             </Button>
           )}
           
-          <Button
-            variant={activeTab === "quality" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("quality")}
-            className="flex flex-col items-center gap-1 h-auto py-2 px-3"
-          >
-            <FileText className="h-5 w-5" />
-            <span className="text-xs">Quality</span>
-          </Button>
-
-          {isManager() && (
-            <Button
-              variant={activeTab === "jobsites" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("jobsites")}
-              className="flex flex-col items-center gap-1 h-auto py-2 px-3"
-            >
-              <MapPin className="h-5 w-5" />
-              <span className="text-xs">Accounts</span>
-            </Button>
-          )}
-
           <Button
             variant={activeTab === "messages" ? "default" : "ghost"}
             size="sm"
