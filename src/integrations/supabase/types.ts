@@ -392,6 +392,36 @@ export type Database = {
           },
         ]
       }
+      monthly_budget_history: {
+        Row: {
+          budgeted_hours: number
+          created_at: string
+          id: string
+          job_site_id: string
+          month_year: string
+          updated_at: string
+          used_hours: number
+        }
+        Insert: {
+          budgeted_hours: number
+          created_at?: string
+          id?: string
+          job_site_id: string
+          month_year: string
+          updated_at?: string
+          used_hours?: number
+        }
+        Update: {
+          budgeted_hours?: number
+          created_at?: string
+          id?: string
+          job_site_id?: string
+          month_year?: string
+          updated_at?: string
+          used_hours?: number
+        }
+        Relationships: []
+      }
       permissions: {
         Row: {
           category: string
