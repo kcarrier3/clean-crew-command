@@ -26,7 +26,12 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
 
     const { email, firstName, lastName, phone, hourlyRate, salaryAmount, payType }: InviteEmployeeRequest = await req.json();
 
@@ -34,12 +39,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Check if user already exists by trying to get user data
     try {
-      const { data: existingUser } = await supabase.auth.admin.listUsers({
+      const { data: existingUsers } = await supabase.auth.admin.listUsers({
         page: 1,
         perPage: 1000 // Supabase admin client limitation workaround
       });
       
-      const userExists = existingUser.users?.some(user => user.email === email);
+      const userExists = existingUsers.users?.some(user => user.email === email);
       
       if (userExists) {
         return new Response(
@@ -51,11 +56,11 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
     } catch (error) {
-      console.log('Could not check existing users, proceeding with invitation');
+      console.log('Could not check existing users, proceeding with invitation:', error);
     }
 
     // Send invitation email via Supabase Auth with metadata
-    const redirectUrl = `${supabaseUrl}/auth/v1/verify?type=invite&redirect_to=${encodeURIComponent('https://lqtfbqfnpjobrwjlpqhr.supabase.app/')}`;
+    const redirectUrl = `https://lqtfbqfnpjobrwjlpqhr.supabase.app/`;
     
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectUrl,

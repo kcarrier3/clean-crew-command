@@ -413,8 +413,10 @@ export type Database = {
           id: string
           job_title: string | null
           last_name: string
+          pay_type: string | null
           phone: string | null
           require_geofencing: boolean
+          salary_amount: number | null
           updated_at: string
         }
         Insert: {
@@ -431,8 +433,10 @@ export type Database = {
           id: string
           job_title?: string | null
           last_name: string
+          pay_type?: string | null
           phone?: string | null
           require_geofencing?: boolean
+          salary_amount?: number | null
           updated_at?: string
         }
         Update: {
@@ -449,8 +453,10 @@ export type Database = {
           id?: string
           job_title?: string | null
           last_name?: string
+          pay_type?: string | null
           phone?: string | null
           require_geofencing?: boolean
+          salary_amount?: number | null
           updated_at?: string
         }
         Relationships: []
