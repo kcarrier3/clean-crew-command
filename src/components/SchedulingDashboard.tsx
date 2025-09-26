@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import ScheduleListView from './ScheduleListView';
 import WeeklyScheduleView from './WeeklyScheduleView';
 import ManagerTimeOffReview from './ManagerTimeOffReview';
+import PayrollReports from './PayrollReports';
 
 interface Employee {
   id: string;
@@ -431,8 +432,9 @@ const SchedulingDashboard = () => {
         </Dialog>
       </div>
 
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="schedules">Schedules</TabsTrigger>
+        <TabsTrigger value="payroll">Payroll</TabsTrigger>
         <TabsTrigger value="timeoff">Time Off Requests</TabsTrigger>
       </TabsList>
 
@@ -527,6 +529,10 @@ const SchedulingDashboard = () => {
             onDelete={handleDelete}
           />
         )}
+      </TabsContent>
+
+      <TabsContent value="payroll">
+        <PayrollReports />
       </TabsContent>
 
       <TabsContent value="timeoff">
