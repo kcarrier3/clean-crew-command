@@ -11,20 +11,21 @@ interface JobBudgetingWidgetProps {
     budgeted_hours: number | null;
     used_hours: number | null;
     remaining_hours: number | null;
+    current_month_used_hours: number | null;
+    current_month_year: string | null;
   };
   className?: string;
 }
 
 const JobBudgetingWidget = ({ jobSite, className }: JobBudgetingWidgetProps) => {
-  if (jobSite.is_recurring_monthly || !jobSite.budgeted_hours) {
+  // Handle accounts without budgets
+  if (!jobSite.budgeted_hours) {
     return (
       <Card className={className}>
         <CardContent className="p-4">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {jobSite.is_recurring_monthly ? 'Recurring Monthly Account' : 'No Budget Set'}
-            </span>
+            <span className="text-sm text-muted-foreground">No Budget Set</span>
           </div>
         </CardContent>
       </Card>
@@ -32,8 +33,13 @@ const JobBudgetingWidget = ({ jobSite, className }: JobBudgetingWidgetProps) => 
   }
 
   const budgetedHours = jobSite.budgeted_hours;
-  const usedHours = jobSite.used_hours || 0;
-  const remainingHours = jobSite.remaining_hours || 0;
+  
+  // For recurring monthly accounts, use current month data
+  const usedHours = jobSite.is_recurring_monthly 
+    ? (jobSite.current_month_used_hours || 0)
+    : (jobSite.used_hours || 0);
+  
+  const remainingHours = budgetedHours - usedHours;
   const progressPercentage = Math.min((usedHours / budgetedHours) * 100, 100);
 
   const getBudgetStatus = () => {
@@ -51,11 +57,26 @@ const JobBudgetingWidget = ({ jobSite, className }: JobBudgetingWidgetProps) => 
   const status = getBudgetStatus();
   const StatusIcon = status.icon;
 
+  // Format month display for recurring accounts
+  const formatMonthYear = (monthYear: string | null) => {
+    if (!monthYear) return 'Current Month';
+    const [year, month] = monthYear.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center justify-between">
-          <span>Job Budget</span>
+          <span>
+            {jobSite.is_recurring_monthly ? 'Monthly Budget' : 'Job Budget'}
+            {jobSite.is_recurring_monthly && (
+              <div className="text-xs text-muted-foreground font-normal mt-1">
+                {formatMonthYear(jobSite.current_month_year)}
+              </div>
+            )}
+          </span>
           <Badge variant={status.color as any} className="text-xs">
             <StatusIcon className="h-3 w-3 mr-1" />
             {status.label}
@@ -77,7 +98,9 @@ const JobBudgetingWidget = ({ jobSite, className }: JobBudgetingWidgetProps) => 
             <div className="font-semibold text-sm">{budgetedHours}h</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">Used</div>
+            <div className="text-xs text-muted-foreground">
+              {jobSite.is_recurring_monthly ? 'This Month' : 'Used'}
+            </div>
             <div className="font-semibold text-sm">{Math.round(usedHours * 100) / 100}h</div>
           </div>
           <div>

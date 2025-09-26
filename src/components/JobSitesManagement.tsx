@@ -31,6 +31,8 @@ interface JobSite {
   budgeted_hours: number | null;
   used_hours: number | null;
   remaining_hours: number | null;
+  current_month_used_hours: number | null;
+  current_month_year: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -786,7 +788,7 @@ export default function JobSitesManagement() {
                                 </div>
 
                                 {/* Budget Widget */}
-                                {!jobSite.is_recurring_monthly && jobSite.budgeted_hours && (
+                                {jobSite.budgeted_hours && (
                                   <div className="mt-4">
                                     <JobBudgetingWidget jobSite={jobSite} />
                                   </div>
