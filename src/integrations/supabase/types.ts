@@ -195,9 +195,12 @@ export type Database = {
           contact_person: string | null
           contact_phone: string | null
           created_at: string
+          current_month_used_hours: number | null
+          current_month_year: string | null
           estimated_duration: string | null
           id: string
           is_recurring_monthly: boolean | null
+          last_reset_date: string | null
           name: string
           project_manager: string | null
           remaining_hours: number | null
@@ -216,9 +219,12 @@ export type Database = {
           contact_person?: string | null
           contact_phone?: string | null
           created_at?: string
+          current_month_used_hours?: number | null
+          current_month_year?: string | null
           estimated_duration?: string | null
           id?: string
           is_recurring_monthly?: boolean | null
+          last_reset_date?: string | null
           name: string
           project_manager?: string | null
           remaining_hours?: number | null
@@ -237,9 +243,12 @@ export type Database = {
           contact_person?: string | null
           contact_phone?: string | null
           created_at?: string
+          current_month_used_hours?: number | null
+          current_month_year?: string | null
           estimated_duration?: string | null
           id?: string
           is_recurring_monthly?: boolean | null
+          last_reset_date?: string | null
           name?: string
           project_manager?: string | null
           remaining_hours?: number | null
