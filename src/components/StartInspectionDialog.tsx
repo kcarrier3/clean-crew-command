@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Camera, Upload, X, Plus, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 
 interface JobSite {
@@ -39,6 +40,7 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
   const [loading, setLoading] = useState(false);
   const [showCreateWorkOrder, setShowCreateWorkOrder] = useState(false);
   const { toast } = useToast();
+  const { canCreateWorkOrders } = useAuth();
 
   useEffect(() => {
     if (open) {
@@ -303,15 +305,17 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
                     Create a work order if repairs or maintenance are needed
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowCreateWorkOrder(true)}
-                  disabled={!selectedJobSite}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Work Order
-                </Button>
+                {canCreateWorkOrders() && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCreateWorkOrder(true)}
+                    disabled={!selectedJobSite}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Work Order
+                  </Button>
+                )}
               </div>
             </div>
           </div>

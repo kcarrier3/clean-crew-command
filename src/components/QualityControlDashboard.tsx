@@ -9,6 +9,7 @@ import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 import { WorkOrderDetail } from './WorkOrderDetail';
 import { StartInspectionDialog } from './StartInspectionDialog';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 
 interface WorkOrder {
@@ -34,6 +35,7 @@ const QualityControlDashboard = () => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
+  const { canCreateWorkOrders } = useAuth();
 
   useEffect(() => {
     fetchWorkOrders();
@@ -116,10 +118,12 @@ const QualityControlDashboard = () => {
             <Camera className="h-4 w-4 mr-2" />
             Start an Inspection
           </Button>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Work Order
-          </Button>
+          {canCreateWorkOrders() && (
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Work Order
+            </Button>
+          )}
         </div>
       </div>
 

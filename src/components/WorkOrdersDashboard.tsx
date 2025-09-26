@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Calendar, User, MapPin, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 import { WorkOrderDetail } from './WorkOrderDetail';
@@ -31,6 +32,7 @@ export const WorkOrdersDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const { toast } = useToast();
+  const { canCreateWorkOrders } = useAuth();
 
   const statusColors = {
     open: 'bg-blue-100 text-blue-800',
@@ -105,10 +107,12 @@ export const WorkOrdersDashboard = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Work Orders</h1>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Work Order
-        </Button>
+        {canCreateWorkOrders() && (
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Work Order
+          </Button>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
