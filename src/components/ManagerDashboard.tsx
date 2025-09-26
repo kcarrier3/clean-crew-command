@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import TimeClock from './TimeClock';
+import BudgetReports from './BudgetReports';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Employee {
@@ -189,10 +190,11 @@ const ManagerDashboard = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="timeclock" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="timeclock">Time Clock</TabsTrigger>
           <TabsTrigger value="active">Active Sessions</TabsTrigger>
           <TabsTrigger value="reports">Today's Report</TabsTrigger>
+          <TabsTrigger value="budget">Budget Reports</TabsTrigger>
         </TabsList>
 
         <TabsContent value="timeclock">
@@ -319,6 +321,10 @@ const ManagerDashboard = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="budget">
+          <BudgetReports />
         </TabsContent>
       </Tabs>
     </div>
