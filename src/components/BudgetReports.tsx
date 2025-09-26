@@ -27,8 +27,8 @@ const BudgetReports = () => {
   const [previousMonthData, setPreviousMonthData] = useState<MonthlyHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const currentMonth = format(new Date(), 'YYYY-MM');
-  const previousMonth = format(subMonths(new Date(), 1), 'YYYY-MM');
+  const currentMonth = format(new Date(), 'yyyy-MM');
+  const previousMonth = format(subMonths(new Date(), 1), 'yyyy-MM');
 
   useEffect(() => {
     fetchBudgetData();
