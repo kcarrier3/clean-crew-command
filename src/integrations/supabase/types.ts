@@ -818,6 +818,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      initialize_monthly_budget: {
+        Args: { _job_site_id: string }
+        Returns: undefined
+      }
       is_conversation_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
