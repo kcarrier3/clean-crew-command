@@ -189,6 +189,7 @@ export type Database = {
           active: boolean
           address: string | null
           budget_info: string | null
+          budgeted_hours: number | null
           client_name: string | null
           contact_email: string | null
           contact_person: string | null
@@ -196,16 +197,20 @@ export type Database = {
           created_at: string
           estimated_duration: string | null
           id: string
+          is_recurring_monthly: boolean | null
           name: string
           project_manager: string | null
+          remaining_hours: number | null
           safety_requirements: string | null
           special_instructions: string | null
           updated_at: string
+          used_hours: number | null
         }
         Insert: {
           active?: boolean
           address?: string | null
           budget_info?: string | null
+          budgeted_hours?: number | null
           client_name?: string | null
           contact_email?: string | null
           contact_person?: string | null
@@ -213,16 +218,20 @@ export type Database = {
           created_at?: string
           estimated_duration?: string | null
           id?: string
+          is_recurring_monthly?: boolean | null
           name: string
           project_manager?: string | null
+          remaining_hours?: number | null
           safety_requirements?: string | null
           special_instructions?: string | null
           updated_at?: string
+          used_hours?: number | null
         }
         Update: {
           active?: boolean
           address?: string | null
           budget_info?: string | null
+          budgeted_hours?: number | null
           client_name?: string | null
           contact_email?: string | null
           contact_person?: string | null
@@ -230,11 +239,14 @@ export type Database = {
           created_at?: string
           estimated_duration?: string | null
           id?: string
+          is_recurring_monthly?: boolean | null
           name?: string
           project_manager?: string | null
+          remaining_hours?: number | null
           safety_requirements?: string | null
           special_instructions?: string | null
           updated_at?: string
+          used_hours?: number | null
         }
         Relationships: []
       }
