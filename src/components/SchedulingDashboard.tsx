@@ -16,6 +16,7 @@ import ScheduleListView from './ScheduleListView';
 import WeeklyScheduleView from './WeeklyScheduleView';
 import ManagerTimeOffReview from './ManagerTimeOffReview';
 import PayrollReports from './PayrollReports';
+import AttendanceReports from './AttendanceReports';
 
 interface Employee {
   id: string;
@@ -432,9 +433,10 @@ const SchedulingDashboard = () => {
         </Dialog>
       </div>
 
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="schedules">Schedules</TabsTrigger>
         <TabsTrigger value="payroll">Payroll</TabsTrigger>
+        <TabsTrigger value="attendance">Attendance</TabsTrigger>
         <TabsTrigger value="timeoff">Time Off Requests</TabsTrigger>
       </TabsList>
 
@@ -533,6 +535,10 @@ const SchedulingDashboard = () => {
 
       <TabsContent value="payroll">
         <PayrollReports />
+      </TabsContent>
+
+      <TabsContent value="attendance">
+        <AttendanceReports />
       </TabsContent>
 
       <TabsContent value="timeoff">

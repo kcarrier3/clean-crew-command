@@ -58,6 +58,7 @@ const TeamManagement = () => {
     pay_type: 'hourly' as 'hourly' | 'salary',
     hourly_rate: '',
     salary_amount: '',
+    attendance_tracking_type: 'attendance_only' as 'attendance_only' | 'attendance_and_punctuality',
   });
   const [isSubmittingEmployee, setIsSubmittingEmployee] = useState(false);
 
@@ -270,6 +271,7 @@ const TeamManagement = () => {
           payType: newEmployeeData.pay_type,
           hourlyRate: newEmployeeData.pay_type === 'hourly' && newEmployeeData.hourly_rate ? parseFloat(newEmployeeData.hourly_rate) : null,
           salaryAmount: newEmployeeData.pay_type === 'salary' && newEmployeeData.salary_amount ? parseFloat(newEmployeeData.salary_amount) : null,
+          attendanceTrackingType: newEmployeeData.attendance_tracking_type,
         },
       });
 
@@ -289,6 +291,7 @@ const TeamManagement = () => {
         pay_type: 'hourly',
         hourly_rate: '',
         salary_amount: '',
+        attendance_tracking_type: 'attendance_only',
       });
       setIsAddEmployeeDialogOpen(false);
       
@@ -315,6 +318,7 @@ const TeamManagement = () => {
       pay_type: 'hourly',
       hourly_rate: '',
       salary_amount: '',
+      attendance_tracking_type: 'attendance_only',
     });
   };
 
@@ -451,6 +455,24 @@ const TeamManagement = () => {
                       />
                     </div>
                   )}
+
+                  <div>
+                    <Label htmlFor="add_attendance_tracking">Attendance Tracking</Label>
+                    <Select value={newEmployeeData.attendance_tracking_type || 'attendance_only'} onValueChange={(value: 'attendance_only' | 'attendance_and_punctuality') => 
+                      setNewEmployeeData(prev => ({ ...prev, attendance_tracking_type: value }))
+                    }>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select tracking type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="attendance_only">Attendance Only</SelectItem>
+                        <SelectItem value="attendance_and_punctuality">Attendance & Punctuality</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Attendance Only: Track only call-offs for basic bonus. Attendance & Punctuality: Track call-offs and late arrivals for higher bonus.
+                    </p>
+                  </div>
 
                   <div className="flex justify-end space-x-2 pt-4">
                     <Button 

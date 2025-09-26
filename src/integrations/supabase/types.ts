@@ -401,6 +401,7 @@ export type Database = {
       profiles: {
         Row: {
           active: boolean
+          attendance_tracking_type: string | null
           created_at: string
           email: string | null
           employee_id: string | null
@@ -421,6 +422,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          attendance_tracking_type?: string | null
           created_at?: string
           email?: string | null
           employee_id?: string | null
@@ -441,6 +443,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          attendance_tracking_type?: string | null
           created_at?: string
           email?: string | null
           employee_id?: string | null
