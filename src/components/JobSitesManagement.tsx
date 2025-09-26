@@ -14,20 +14,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import QualityControlDashboard from './QualityControlDashboard';
+import JobBudgetingWidget from './JobBudgetingWidget';
 
 interface JobSite {
   id: string;
   name: string;
   address: string | null;
   client_name: string | null;
-  contact_person: string | null;
   contact_phone: string | null;
   contact_email: string | null;
-  project_manager: string | null;
   estimated_duration: string | null;
   budget_info: string | null;
   special_instructions: string | null;
   safety_requirements: string | null;
+  is_recurring_monthly: boolean;
+  budgeted_hours: number | null;
+  used_hours: number | null;
+  remaining_hours: number | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -37,14 +40,14 @@ interface FormData {
   name: string;
   address: string;
   client_name: string;
-  contact_person: string;
   contact_phone: string;
   contact_email: string;
-  project_manager: string;
   estimated_duration: string;
   budget_info: string;
   special_instructions: string;
   safety_requirements: string;
+  is_recurring_monthly: boolean;
+  budgeted_hours: string;
   active: boolean;
 }
 
@@ -64,14 +67,14 @@ export default function JobSitesManagement() {
     name: '',
     address: '',
     client_name: '',
-    contact_person: '',
     contact_phone: '',
     contact_email: '',
-    project_manager: '',
     estimated_duration: '',
     budget_info: '',
     special_instructions: '',
     safety_requirements: '',
+    is_recurring_monthly: false,
+    budgeted_hours: '',
     active: true
   });
 
@@ -119,14 +122,14 @@ export default function JobSitesManagement() {
           name: formData.name.trim(),
           address: formData.address.trim() || null,
           client_name: formData.client_name.trim() || null,
-          contact_person: formData.contact_person.trim() || null,
           contact_phone: formData.contact_phone.trim() || null,
           contact_email: formData.contact_email.trim() || null,
-          project_manager: formData.project_manager.trim() || null,
           estimated_duration: formData.estimated_duration.trim() || null,
           budget_info: formData.budget_info.trim() || null,
           special_instructions: formData.special_instructions.trim() || null,
           safety_requirements: formData.safety_requirements.trim() || null,
+          is_recurring_monthly: formData.is_recurring_monthly,
+          budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
           active: formData.active
         });
 
@@ -173,14 +176,14 @@ export default function JobSitesManagement() {
           name: formData.name.trim(),
           address: formData.address.trim() || null,
           client_name: formData.client_name.trim() || null,
-          contact_person: formData.contact_person.trim() || null,
           contact_phone: formData.contact_phone.trim() || null,
           contact_email: formData.contact_email.trim() || null,
-          project_manager: formData.project_manager.trim() || null,
           estimated_duration: formData.estimated_duration.trim() || null,
           budget_info: formData.budget_info.trim() || null,
           special_instructions: formData.special_instructions.trim() || null,
           safety_requirements: formData.safety_requirements.trim() || null,
+          is_recurring_monthly: formData.is_recurring_monthly,
+          budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
           active: formData.active
         })
         .eq('id', editingJobSite.id);
@@ -217,14 +220,14 @@ export default function JobSitesManagement() {
       name: jobSite.name,
       address: jobSite.address || '',
       client_name: jobSite.client_name || '',
-      contact_person: jobSite.contact_person || '',
       contact_phone: jobSite.contact_phone || '',
       contact_email: jobSite.contact_email || '',
-      project_manager: jobSite.project_manager || '',
       estimated_duration: jobSite.estimated_duration || '',
       budget_info: jobSite.budget_info || '',
       special_instructions: jobSite.special_instructions || '',
       safety_requirements: jobSite.safety_requirements || '',
+      is_recurring_monthly: jobSite.is_recurring_monthly || false,
+      budgeted_hours: jobSite.budgeted_hours ? jobSite.budgeted_hours.toString() : '',
       active: jobSite.active
     });
     setIsEditDialogOpen(true);
@@ -235,14 +238,14 @@ export default function JobSitesManagement() {
       name: '', 
       address: '', 
       client_name: '', 
-      contact_person: '',
       contact_phone: '',
       contact_email: '',
-      project_manager: '',
       estimated_duration: '',
       budget_info: '',
       special_instructions: '',
       safety_requirements: '',
+      is_recurring_monthly: false,
+      budgeted_hours: '',
       active: true 
     });
     setEditingJobSite(null);
@@ -442,14 +445,35 @@ export default function JobSitesManagement() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="project_manager">Project Manager</Label>
+                      <Label htmlFor="budgeted_hours">Budgeted Hours</Label>
                       <Input
-                        id="project_manager"
-                        value={formData.project_manager}
-                        onChange={(e) => setFormData({ ...formData, project_manager: e.target.value })}
-                        placeholder="Project manager name..."
+                        id="budgeted_hours"
+                        type="number"
+                        min="0"
+                        step="0.25"
+                        value={formData.budgeted_hours}
+                        onChange={(e) => setFormData({ ...formData, budgeted_hours: e.target.value })}
+                        placeholder="Enter budgeted hours..."
+                        disabled={formData.is_recurring_monthly}
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Hours will be deducted from this budget when employees clock in (disabled for recurring accounts)
+                      </p>
                     </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="is_recurring_monthly"
+                        checked={formData.is_recurring_monthly}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring_monthly: checked, budgeted_hours: checked ? '' : formData.budgeted_hours })}
+                      />
+                      <Label htmlFor="is_recurring_monthly">Recurring Monthly Account</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Recurring accounts don't track budgeted hours - hours are not deducted from a budget
+                    </p>
                   </div>
                   
                   <div>
@@ -469,16 +493,7 @@ export default function JobSitesManagement() {
                       <Phone className="h-4 w-4" />
                       <Label className="font-semibold">Contact Information</Label>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6">
-                      <div>
-                        <Label htmlFor="contact_person">Contact Person</Label>
-                        <Input
-                          id="contact_person"
-                          value={formData.contact_person}
-                          onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-                          placeholder="Primary contact name..."
-                        />
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                       <div>
                         <Label htmlFor="contact_phone">Phone</Label>
                         <Input
@@ -578,6 +593,369 @@ export default function JobSitesManagement() {
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Edit Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+              setIsEditDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Account</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit_name">Account Name *</Label>
+                    <Input
+                      id="edit_name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Enter account name..."
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit_client_name">Client Name</Label>
+                      <Input
+                        id="edit_client_name"
+                        value={formData.client_name}
+                        onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                        placeholder="Enter client name..."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_budgeted_hours">Budgeted Hours</Label>
+                      <Input
+                        id="edit_budgeted_hours"
+                        type="number"
+                        min="0"
+                        step="0.25"
+                        value={formData.budgeted_hours}
+                        onChange={(e) => setFormData({ ...formData, budgeted_hours: e.target.value })}
+                        placeholder="Enter budgeted hours..."
+                        disabled={formData.is_recurring_monthly}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Hours will be deducted from this budget when employees clock in (disabled for recurring accounts)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="edit_is_recurring_monthly"
+                        checked={formData.is_recurring_monthly}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring_monthly: checked, budgeted_hours: checked ? '' : formData.budgeted_hours })}
+                      />
+                      <Label htmlFor="edit_is_recurring_monthly">Recurring Monthly Account</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Recurring accounts don't track budgeted hours - hours are not deducted from a budget
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="edit_address">Address</Label>
+                    <Textarea
+                      id="edit_address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Enter account address..."
+                      className="min-h-[80px]"
+                    />
+                  </div>
+
+                  {/* Contact Information Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      <Label className="font-semibold">Contact Information</Label>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+                      <div>
+                        <Label htmlFor="edit_contact_phone">Phone</Label>
+                        <Input
+                          id="edit_contact_phone"
+                          value={formData.contact_phone}
+                          onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                          placeholder="Phone number..."
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_contact_email">Email</Label>
+                        <Input
+                          id="edit_contact_email"
+                          type="email"
+                          value={formData.contact_email}
+                          onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                          placeholder="Contact email..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Project Information Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <Label className="font-semibold">Project Information</Label>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 pl-6">
+                      <div>
+                        <Label htmlFor="edit_estimated_duration">Estimated Duration</Label>
+                        <Input
+                          id="edit_estimated_duration"
+                          value={formData.estimated_duration}
+                          onChange={(e) => setFormData({ ...formData, estimated_duration: e.target.value })}
+                          placeholder="e.g., 6 months, 2 weeks..."
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_budget_info">Budget Information</Label>
+                        <Textarea
+                          id="edit_budget_info"
+                          value={formData.budget_info}
+                          onChange={(e) => setFormData({ ...formData, budget_info: e.target.value })}
+                          placeholder="Budget details, constraints, etc..."
+                          className="min-h-[60px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Instructions & Safety Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      <Label className="font-semibold">Instructions & Safety</Label>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 pl-6">
+                      <div>
+                        <Label htmlFor="edit_special_instructions">Special Instructions</Label>
+                        <Textarea
+                          id="edit_special_instructions"
+                          value={formData.special_instructions}
+                          onChange={(e) => setFormData({ ...formData, special_instructions: e.target.value })}
+                          placeholder="Special requirements, access instructions, etc..."
+                          className="min-h-[60px]"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_safety_requirements">Safety Requirements</Label>
+                        <Textarea
+                          id="edit_safety_requirements"
+                          value={formData.safety_requirements}
+                          onChange={(e) => setFormData({ ...formData, safety_requirements: e.target.value })}
+                          placeholder="PPE requirements, safety protocols, etc..."
+                          className="min-h-[60px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 pt-4">
+                    <Button 
+                      onClick={handleEdit} 
+                      disabled={loading || !formData.name.trim()}
+                      className="flex-1"
+                    >
+                      {loading ? "Saving..." : "Save Changes"}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsEditDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Job Sites List */}
+          <div className="space-y-4">
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="text-muted-foreground mt-2">Loading accounts...</p>
+              </div>
+            ) : (
+              <>
+                {/* Active Job Sites */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Active Accounts ({activeJobSites.length})
+                  </h3>
+                  {activeJobSites.length === 0 ? (
+                    <Card>
+                      <CardContent className="p-8 text-center">
+                        <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">No active accounts found</p>
+                        <p className="text-sm text-muted-foreground mt-1">Create your first account to get started</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4">
+                      {activeJobSites.map((jobSite) => (
+                        <Card key={jobSite.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-6">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="text-lg font-semibold">{jobSite.name}</h3>
+                                  <div className="flex gap-2">
+                                    <Badge variant="default">Active</Badge>
+                                    {jobSite.is_recurring_monthly && (
+                                      <Badge variant="secondary">Recurring</Badge>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                  <div className="space-y-2">
+                                    {jobSite.client_name && (
+                                      <p className="text-sm"><strong>Client:</strong> {jobSite.client_name}</p>
+                                    )}
+                                    {jobSite.address && (
+                                      <p className="text-sm"><strong>Address:</strong> {jobSite.address}</p>
+                                    )}
+                                    {jobSite.contact_phone && (
+                                      <p className="text-sm"><strong>Phone:</strong> {jobSite.contact_phone}</p>
+                                    )}
+                                    {jobSite.contact_email && (
+                                      <p className="text-sm"><strong>Email:</strong> {jobSite.contact_email}</p>
+                                    )}
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    {jobSite.estimated_duration && (
+                                      <p className="text-sm"><strong>Duration:</strong> {jobSite.estimated_duration}</p>
+                                    )}
+                                    {jobSite.budget_info && (
+                                      <p className="text-sm"><strong>Budget:</strong> {jobSite.budget_info}</p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Budget Widget */}
+                                {!jobSite.is_recurring_monthly && jobSite.budgeted_hours && (
+                                  <div className="mt-4">
+                                    <JobBudgetingWidget jobSite={jobSite} />
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex gap-2 ml-4">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openEditDialog(jobSite)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => toggleJobSiteStatus(jobSite)}
+                                >
+                                  <Switch className="h-4 w-4" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Account</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete "{jobSite.name}"? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => deleteJobSite(jobSite)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Inactive Job Sites */}
+                {showInactive && inactiveJobSites.length > 0 && (
+                  <div className="space-y-4 mt-8">
+                    <h3 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
+                      <Building2 className="h-5 w-5" />
+                      Inactive Accounts ({inactiveJobSites.length})
+                    </h3>
+                    <div className="grid gap-4">
+                      {inactiveJobSites.map((jobSite) => (
+                        <Card key={jobSite.id} className="opacity-60">
+                          <CardContent className="p-6">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="text-lg font-semibold">{jobSite.name}</h3>
+                                  <Badge variant="secondary">Inactive</Badge>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                  <div className="space-y-2">
+                                    {jobSite.client_name && (
+                                      <p className="text-sm"><strong>Client:</strong> {jobSite.client_name}</p>
+                                    )}
+                                    {jobSite.address && (
+                                      <p className="text-sm"><strong>Address:</strong> {jobSite.address}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex gap-2 ml-4">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openEditDialog(jobSite)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => toggleJobSiteStatus(jobSite)}
+                                >
+                                  <Switch className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </TabsContent>
 

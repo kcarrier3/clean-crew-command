@@ -14,6 +14,7 @@ interface InviteEmployeeRequest {
   hourlyRate?: number;
   salaryAmount?: number;
   payType: 'hourly' | 'salary';
+  attendanceTrackingType?: 'attendance_only' | 'attendance_and_punctuality';
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -33,9 +34,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
-    const { email, firstName, lastName, phone, hourlyRate, salaryAmount, payType }: InviteEmployeeRequest = await req.json();
+    const { email, firstName, lastName, phone, hourlyRate, salaryAmount, payType, attendanceTrackingType }: InviteEmployeeRequest = await req.json();
 
-    console.log('Inviting employee:', { email, firstName, lastName, phone, hourlyRate, salaryAmount, payType });
+    console.log('Inviting employee:', { email, firstName, lastName, phone, hourlyRate, salaryAmount, payType, attendanceTrackingType });
 
     // Check if user already exists by trying to get user data
     try {
@@ -71,6 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
         hourly_rate: payType === 'hourly' ? hourlyRate : null,
         salary_amount: payType === 'salary' ? salaryAmount : null,
         pay_type: payType,
+        attendance_tracking_type: attendanceTrackingType || 'attendance_only',
       }
     });
 
