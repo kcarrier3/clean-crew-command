@@ -516,34 +516,6 @@ export default function JobSitesManagement() {
                     </div>
                   </div>
 
-                  {/* Project Information Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <Label className="font-semibold">Project Information</Label>
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 pl-6">
-                      <div>
-                        <Label htmlFor="estimated_duration">Estimated Duration</Label>
-                        <Input
-                          id="estimated_duration"
-                          value={formData.estimated_duration}
-                          onChange={(e) => setFormData({ ...formData, estimated_duration: e.target.value })}
-                          placeholder="e.g., 6 months, 2 weeks..."
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="budget_info">Budget Information</Label>
-                        <Textarea
-                          id="budget_info"
-                          value={formData.budget_info}
-                          onChange={(e) => setFormData({ ...formData, budget_info: e.target.value })}
-                          placeholder="Budget details, constraints, etc..."
-                          className="min-h-[60px]"
-                        />
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Instructions & Safety Section */}
                   <div className="space-y-4">
@@ -696,34 +668,6 @@ export default function JobSitesManagement() {
                     </div>
                   </div>
 
-                  {/* Project Information Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <Label className="font-semibold">Project Information</Label>
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 pl-6">
-                      <div>
-                        <Label htmlFor="edit_estimated_duration">Estimated Duration</Label>
-                        <Input
-                          id="edit_estimated_duration"
-                          value={formData.estimated_duration}
-                          onChange={(e) => setFormData({ ...formData, estimated_duration: e.target.value })}
-                          placeholder="e.g., 6 months, 2 weeks..."
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="edit_budget_info">Budget Information</Label>
-                        <Textarea
-                          id="edit_budget_info"
-                          value={formData.budget_info}
-                          onChange={(e) => setFormData({ ...formData, budget_info: e.target.value })}
-                          placeholder="Budget details, constraints, etc..."
-                          className="min-h-[60px]"
-                        />
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Instructions & Safety Section */}
                   <div className="space-y-4">
