@@ -434,46 +434,14 @@ export default function JobSitesManagement() {
                     />
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="client_name">Client Name</Label>
-                      <Input
-                        id="client_name"
-                        value={formData.client_name}
-                        onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                        placeholder="Enter client name..."
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="budgeted_hours">Budgeted Hours</Label>
-                      <Input
-                        id="budgeted_hours"
-                        type="number"
-                        min="0"
-                        step="0.25"
-                        value={formData.budgeted_hours}
-                        onChange={(e) => setFormData({ ...formData, budgeted_hours: e.target.value })}
-                        placeholder="Enter budgeted hours..."
-                        disabled={formData.is_recurring_monthly}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Hours will be deducted from this budget when employees clock in (disabled for recurring accounts)
-                      </p>
-                    </div>
-                  </div>
-
                   <div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="is_recurring_monthly"
-                        checked={formData.is_recurring_monthly}
-                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring_monthly: checked, budgeted_hours: checked ? '' : formData.budgeted_hours })}
-                      />
-                      <Label htmlFor="is_recurring_monthly">Recurring Monthly Account</Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Recurring accounts don't track budgeted hours - hours are not deducted from a budget
-                    </p>
+                    <Label htmlFor="client_name">Client Name</Label>
+                    <Input
+                      id="client_name"
+                      value={formData.client_name}
+                      onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                      placeholder="Enter client name..."
+                    />
                   </div>
                   
                   <div>
@@ -530,16 +498,6 @@ export default function JobSitesManagement() {
                           value={formData.estimated_duration}
                           onChange={(e) => setFormData({ ...formData, estimated_duration: e.target.value })}
                           placeholder="e.g., 6 months, 2 weeks..."
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="budget_info">Budget Information</Label>
-                        <Textarea
-                          id="budget_info"
-                          value={formData.budget_info}
-                          onChange={(e) => setFormData({ ...formData, budget_info: e.target.value })}
-                          placeholder="Budget details, constraints, etc..."
-                          className="min-h-[60px]"
                         />
                       </div>
                     </div>
@@ -614,46 +572,14 @@ export default function JobSitesManagement() {
                     />
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="edit_client_name">Client Name</Label>
-                      <Input
-                        id="edit_client_name"
-                        value={formData.client_name}
-                        onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                        placeholder="Enter client name..."
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="edit_budgeted_hours">Budgeted Hours</Label>
-                      <Input
-                        id="edit_budgeted_hours"
-                        type="number"
-                        min="0"
-                        step="0.25"
-                        value={formData.budgeted_hours}
-                        onChange={(e) => setFormData({ ...formData, budgeted_hours: e.target.value })}
-                        placeholder="Enter budgeted hours..."
-                        disabled={formData.is_recurring_monthly}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Hours will be deducted from this budget when employees clock in (disabled for recurring accounts)
-                      </p>
-                    </div>
-                  </div>
-
                   <div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="edit_is_recurring_monthly"
-                        checked={formData.is_recurring_monthly}
-                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring_monthly: checked, budgeted_hours: checked ? '' : formData.budgeted_hours })}
-                      />
-                      <Label htmlFor="edit_is_recurring_monthly">Recurring Monthly Account</Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Recurring accounts don't track budgeted hours - hours are not deducted from a budget
-                    </p>
+                    <Label htmlFor="edit_client_name">Client Name</Label>
+                    <Input
+                      id="edit_client_name"
+                      value={formData.client_name}
+                      onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                      placeholder="Enter client name..."
+                    />
                   </div>
                   
                   <div>
