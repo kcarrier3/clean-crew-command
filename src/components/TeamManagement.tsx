@@ -7,11 +7,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload } from 'lucide-react';
+import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload, Briefcase } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { JOB_TITLES, JOB_TITLE_PERMISSIONS, getJobTitleColor } from '@/lib/jobTitles';
 
 interface Employee {
   id: string;
@@ -55,6 +56,7 @@ const TeamManagement = () => {
     last_name: '',
     email: '',
     phone: '',
+    job_title: '',
     pay_type: 'hourly' as 'hourly' | 'salary',
     hourly_rate: '',
     salary_amount: '',
@@ -250,10 +252,10 @@ const TeamManagement = () => {
   };
 
   const handleAddEmployee = async () => {
-    if (!newEmployeeData.first_name || !newEmployeeData.last_name || !newEmployeeData.email) {
+    if (!newEmployeeData.first_name || !newEmployeeData.last_name || !newEmployeeData.email || !newEmployeeData.job_title) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields including job title.",
         variant: "destructive",
       });
       return;
@@ -268,6 +270,7 @@ const TeamManagement = () => {
           firstName: newEmployeeData.first_name,
           lastName: newEmployeeData.last_name,
           phone: newEmployeeData.phone,
+          jobTitle: newEmployeeData.job_title,
           payType: newEmployeeData.pay_type,
           hourlyRate: newEmployeeData.pay_type === 'hourly' && newEmployeeData.hourly_rate ? parseFloat(newEmployeeData.hourly_rate) : null,
           salaryAmount: newEmployeeData.pay_type === 'salary' && newEmployeeData.salary_amount ? parseFloat(newEmployeeData.salary_amount) : null,
@@ -279,7 +282,7 @@ const TeamManagement = () => {
 
       toast({
         title: "Success",
-        description: "Employee invitation sent successfully!",
+        description: `Employee invitation sent successfully! ${newEmployeeData.job_title} permissions will be automatically assigned.`,
       });
 
       // Reset form
@@ -288,6 +291,7 @@ const TeamManagement = () => {
         last_name: '',
         email: '',
         phone: '',
+        job_title: '',
         pay_type: 'hourly',
         hourly_rate: '',
         salary_amount: '',
@@ -315,6 +319,7 @@ const TeamManagement = () => {
       last_name: '',
       email: '',
       phone: '',
+      job_title: '',
       pay_type: 'hourly',
       hourly_rate: '',
       salary_amount: '',
@@ -415,6 +420,36 @@ const TeamManagement = () => {
                   </div>
 
                   <div>
+                    <Label htmlFor="add_job_title" className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Job Title *
+                    </Label>
+                    <Select value={newEmployeeData.job_title} onValueChange={(value) => 
+                      setNewEmployeeData(prev => ({ ...prev, job_title: value }))
+                    }>
+                      <SelectTrigger id="add_job_title">
+                        <SelectValue placeholder="Select job title" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background">
+                        {JOB_TITLES.map((title) => {
+                          const colors = getJobTitleColor(title);
+                          return (
+                            <SelectItem key={title} value={title}>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded ${colors.bg} border ${colors.border}`}></div>
+                                {title}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Default permissions will be automatically assigned based on job title
+                    </p>
+                  </div>
+
+                  <div>
                     <Label htmlFor="add_pay_type">Pay Type</Label>
                     <Select value={newEmployeeData.pay_type} onValueChange={(value: 'hourly' | 'salary') => 
                       setNewEmployeeData(prev => ({ ...prev, pay_type: value }))
@@ -422,7 +457,7 @@ const TeamManagement = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="Select pay type" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background">
                         <SelectItem value="hourly">Hourly</SelectItem>
                         <SelectItem value="salary">Salary</SelectItem>
                       </SelectContent>
@@ -464,7 +499,7 @@ const TeamManagement = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="Select tracking type" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background">
                         <SelectItem value="attendance_only">Attendance Only</SelectItem>
                         <SelectItem value="attendance_and_punctuality">Attendance & Punctuality</SelectItem>
                       </SelectContent>
@@ -527,11 +562,21 @@ const TeamManagement = () => {
                           <User className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <h3 className="font-semibold">
-                            {employee.first_name} {employee.last_name}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">
+                              {employee.first_name} {employee.last_name}
+                            </h3>
+                            {employee.job_title && (
+                              <Badge 
+                                variant="outline" 
+                                className={`${getJobTitleColor(employee.job_title).text} ${getJobTitleColor(employee.job_title).bg} border-0`}
+                              >
+                                {employee.job_title}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">
-                            {employee.job_title || 'No title'} • ID: {employee.employee_id || 'N/A'}
+                            ID: {employee.employee_id || 'N/A'}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {employee.email || 'No email'}
@@ -623,11 +668,27 @@ const TeamManagement = () => {
                       </div>
                       <div>
                         <Label htmlFor="job_title">Job Title</Label>
-                        <Input
-                          id="job_title"
-                          defaultValue={selectedEmployee.job_title || ''}
-                          onBlur={(e) => updateEmployeeProfile({ job_title: e.target.value })}
-                        />
+                        <Select 
+                          defaultValue={selectedEmployee.job_title || ''} 
+                          onValueChange={(value) => updateEmployeeProfile({ job_title: value })}
+                        >
+                          <SelectTrigger id="job_title">
+                            <SelectValue placeholder="Select job title" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background">
+                            {JOB_TITLES.map((title) => {
+                              const colors = getJobTitleColor(title);
+                              return (
+                                <SelectItem key={title} value={title}>
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-3 h-3 rounded ${colors.bg} border ${colors.border}`}></div>
+                                    {title}
+                                  </div>
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label htmlFor="employee_id">Employee ID</Label>
@@ -658,7 +719,18 @@ const TeamManagement = () => {
                       </div>
                       <div>
                         <Label className="text-sm font-medium">Job Title</Label>
-                        <p className="text-sm">{selectedEmployee.job_title || 'Not set'}</p>
+                        <div className="text-sm">
+                          {selectedEmployee.job_title ? (
+                            <Badge 
+                              variant="outline" 
+                              className={`${getJobTitleColor(selectedEmployee.job_title).text} ${getJobTitleColor(selectedEmployee.job_title).bg} border-0`}
+                            >
+                              {selectedEmployee.job_title}
+                            </Badge>
+                          ) : (
+                            'Not set'
+                          )}
+                        </div>
                       </div>
                       <div>
                         <Label className="text-sm font-medium">Hire Date</Label>
@@ -709,6 +781,33 @@ const TeamManagement = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Job Title Default Permissions Info */}
+                  {selectedEmployee.job_title && JOB_TITLE_PERMISSIONS[selectedEmployee.job_title as keyof typeof JOB_TITLE_PERMISSIONS] && (
+                    <div className="mb-6 p-4 bg-muted/50 rounded-lg border">
+                      <div className="flex items-start gap-2 mb-2">
+                        <Briefcase className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            Default permissions for {selectedEmployee.job_title}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            The following {JOB_TITLE_PERMISSIONS[selectedEmployee.job_title as keyof typeof JOB_TITLE_PERMISSIONS].length} permissions are automatically assigned to this role. You can customize them below.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-3">
+                        {JOB_TITLE_PERMISSIONS[selectedEmployee.job_title as keyof typeof JOB_TITLE_PERMISSIONS].map((perm) => {
+                          const permission = permissions.find(p => p.name === perm);
+                          return permission ? (
+                            <Badge key={perm} variant="secondary" className="text-xs">
+                              {permission.display_name}
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {loading ? (
                     <p>Loading permissions...</p>
                   ) : (

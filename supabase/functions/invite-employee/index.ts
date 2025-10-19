@@ -11,6 +11,7 @@ interface InviteEmployeeRequest {
   firstName: string;
   lastName: string;
   phone?: string;
+  jobTitle: string;
   hourlyRate?: number;
   salaryAmount?: number;
   payType: 'hourly' | 'salary';
@@ -34,9 +35,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
-    const { email, firstName, lastName, phone, hourlyRate, salaryAmount, payType, attendanceTrackingType }: InviteEmployeeRequest = await req.json();
+    const { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType }: InviteEmployeeRequest = await req.json();
 
-    console.log('Inviting employee:', { email, firstName, lastName, phone, hourlyRate, salaryAmount, payType, attendanceTrackingType });
+    console.log('Inviting employee:', { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType });
 
     // Check if user already exists by trying to get user data
     try {
@@ -69,6 +70,7 @@ const handler = async (req: Request): Promise<Response> => {
         first_name: firstName,
         last_name: lastName,
         phone: phone || null,
+        job_title: jobTitle,
         hourly_rate: payType === 'hourly' ? hourlyRate : null,
         salary_amount: payType === 'salary' ? salaryAmount : null,
         pay_type: payType,
@@ -82,6 +84,76 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('Employee invitation sent successfully to:', email);
+
+    // If user was created, assign default permissions based on job title
+    if (inviteData.user?.id) {
+      // Define permission mappings for each job title
+      const jobTitlePermissions: Record<string, string[]> = {
+        'Manager': [
+          'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
+          'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
+          'edit_quality_control', 'view_worker_status', 'manage_employees', 'view_notifications'
+        ],
+        'Supervisor': [
+          'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
+          'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
+          'edit_quality_control', 'view_worker_status', 'view_notifications'
+        ],
+        'Project Worker': [
+          'view_schedules', 'view_time_tracking', 'edit_time_tracking',
+          'view_work_orders', 'view_notifications'
+        ],
+        'Janitorial Staff': [
+          'view_schedules', 'view_time_tracking', 'edit_time_tracking',
+          'view_work_orders', 'view_notifications'
+        ],
+        'Floaters': [
+          'view_schedules', 'view_time_tracking', 'edit_time_tracking',
+          'view_work_orders', 'view_notifications'
+        ],
+        'Supply Management': [
+          'view_schedules', 'view_time_tracking', 'edit_time_tracking',
+          'view_work_orders', 'view_notifications'
+        ],
+      };
+
+      const permissions = jobTitlePermissions[jobTitle] || [];
+      
+      // Insert permissions for the new user
+      if (permissions.length > 0) {
+        const permissionInserts = permissions.map(permission => ({
+          user_id: inviteData.user.id,
+          permission: permission
+        }));
+
+        const { error: permError } = await supabase
+          .from('user_permissions')
+          .insert(permissionInserts);
+
+        if (permError) {
+          console.error('Error assigning permissions:', permError);
+          // Don't fail the whole operation if permissions fail
+        } else {
+          console.log(`Assigned ${permissions.length} permissions to user based on job title: ${jobTitle}`);
+        }
+      }
+
+      // Also assign manager role if job title is Manager
+      if (jobTitle === 'Manager') {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: inviteData.user.id,
+            role: 'manager'
+          });
+
+        if (roleError) {
+          console.error('Error assigning manager role:', roleError);
+        } else {
+          console.log('Assigned manager role to user');
+        }
+      }
+    }
 
     return new Response(
       JSON.stringify({ 
