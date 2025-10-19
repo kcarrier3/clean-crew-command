@@ -68,7 +68,7 @@ export function LateNotifications() {
         .from('late_notifications')
         .select(`
           *,
-          employee:profiles!late_notifications_employee_id_fkey(
+          employee:employee_id(
             first_name,
             last_name,
             job_title
@@ -80,7 +80,7 @@ export function LateNotifications() {
 
       if (error) throw error;
 
-      setNotifications(data || []);
+      setNotifications(data as any || []);
     } catch (error) {
       console.error('Error fetching late notifications:', error);
     } finally {

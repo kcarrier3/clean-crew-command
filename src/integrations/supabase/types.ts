@@ -289,6 +289,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "late_notifications_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "late_notifications_time_entry_id_fkey"
             columns: ["time_entry_id"]
             isOneToOne: false
