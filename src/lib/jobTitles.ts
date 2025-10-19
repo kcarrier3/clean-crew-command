@@ -89,6 +89,7 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
     'edit_time_tracking',
     'view_work_orders',
     'view_notifications',
+    'view_quality_control', // Floaters can access job site details even if not scheduled
   ],
   'Supply Management': [
     'view_schedules',
