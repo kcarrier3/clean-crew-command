@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { MapPin, Plus, Edit2, Building2, Users, Trash2, Phone, Mail, User, AlertTriangle, Calendar, DollarSign, FileText, Shield } from 'lucide-react';
+import { MapPin, Plus, Edit2, Building2, Users, Trash2, Phone, Mail, User, AlertTriangle, Calendar, DollarSign, FileText, Shield, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,6 +26,7 @@ interface JobSite {
   estimated_duration: string | null;
   budget_info: string | null;
   special_instructions: string | null;
+  access_instructions: string | null;
   safety_requirements: string | null;
   is_recurring_monthly: boolean;
   budgeted_hours: number | null;
@@ -47,6 +48,7 @@ interface FormData {
   estimated_duration: string;
   budget_info: string;
   special_instructions: string;
+  access_instructions: string;
   safety_requirements: string;
   is_recurring_monthly: boolean;
   budgeted_hours: string;
@@ -74,6 +76,7 @@ export default function JobSitesManagement() {
     estimated_duration: '',
     budget_info: '',
     special_instructions: '',
+    access_instructions: '',
     safety_requirements: '',
     is_recurring_monthly: false,
     budgeted_hours: '',
@@ -129,6 +132,7 @@ export default function JobSitesManagement() {
           estimated_duration: formData.estimated_duration.trim() || null,
           budget_info: formData.budget_info.trim() || null,
           special_instructions: formData.special_instructions.trim() || null,
+          access_instructions: formData.access_instructions.trim() || null,
           safety_requirements: formData.safety_requirements.trim() || null,
           is_recurring_monthly: formData.is_recurring_monthly,
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
@@ -183,6 +187,7 @@ export default function JobSitesManagement() {
           estimated_duration: formData.estimated_duration.trim() || null,
           budget_info: formData.budget_info.trim() || null,
           special_instructions: formData.special_instructions.trim() || null,
+          access_instructions: formData.access_instructions.trim() || null,
           safety_requirements: formData.safety_requirements.trim() || null,
           is_recurring_monthly: formData.is_recurring_monthly,
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
@@ -227,6 +232,7 @@ export default function JobSitesManagement() {
       estimated_duration: jobSite.estimated_duration || '',
       budget_info: jobSite.budget_info || '',
       special_instructions: jobSite.special_instructions || '',
+      access_instructions: jobSite.access_instructions || '',
       safety_requirements: jobSite.safety_requirements || '',
       is_recurring_monthly: jobSite.is_recurring_monthly || false,
       budgeted_hours: jobSite.budgeted_hours ? jobSite.budgeted_hours.toString() : '',
@@ -245,6 +251,7 @@ export default function JobSitesManagement() {
       estimated_duration: '',
       budget_info: '',
       special_instructions: '',
+      access_instructions: '',
       safety_requirements: '',
       is_recurring_monthly: false,
       budgeted_hours: '',
@@ -532,9 +539,25 @@ export default function JobSitesManagement() {
                           id="special_instructions"
                           value={formData.special_instructions}
                           onChange={(e) => setFormData({ ...formData, special_instructions: e.target.value })}
-                          placeholder="Special requirements, access instructions, etc..."
+                          placeholder="General instructions and requirements..."
                           className="min-h-[60px]"
                         />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Lock className="h-3 w-3" />
+                          <Label htmlFor="access_instructions">Access Instructions (Secure)</Label>
+                        </div>
+                        <Textarea
+                          id="access_instructions"
+                          value={formData.access_instructions}
+                          onChange={(e) => setFormData({ ...formData, access_instructions: e.target.value })}
+                          placeholder="Alarm codes, gate codes, keys, etc... (visible only to scheduled employees, floaters, and managers)"
+                          className="min-h-[60px]"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Only visible to managers, floaters, and employees scheduled at this location
+                        </p>
                       </div>
                       <div>
                         <Label htmlFor="safety_requirements">Safety Requirements</Label>
@@ -684,9 +707,25 @@ export default function JobSitesManagement() {
                           id="edit_special_instructions"
                           value={formData.special_instructions}
                           onChange={(e) => setFormData({ ...formData, special_instructions: e.target.value })}
-                          placeholder="Special requirements, access instructions, etc..."
+                          placeholder="General instructions and requirements..."
                           className="min-h-[60px]"
                         />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Lock className="h-3 w-3" />
+                          <Label htmlFor="edit_access_instructions">Access Instructions (Secure)</Label>
+                        </div>
+                        <Textarea
+                          id="edit_access_instructions"
+                          value={formData.access_instructions}
+                          onChange={(e) => setFormData({ ...formData, access_instructions: e.target.value })}
+                          placeholder="Alarm codes, gate codes, keys, etc... (visible only to scheduled employees, floaters, and managers)"
+                          className="min-h-[60px]"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Only visible to managers, floaters, and employees scheduled at this location
+                        </p>
                       </div>
                       <div>
                         <Label htmlFor="edit_safety_requirements">Safety Requirements</Label>
@@ -791,6 +830,40 @@ export default function JobSitesManagement() {
                                 {jobSite.budgeted_hours && (
                                   <div className="mt-4">
                                     <JobBudgetingWidget jobSite={jobSite} />
+                                  </div>
+                                )}
+
+                                {/* Instructions and Safety */}
+                                {(jobSite.special_instructions || jobSite.access_instructions || jobSite.safety_requirements) && (
+                                  <div className="mt-4 space-y-2 pt-4 border-t">
+                                    {jobSite.special_instructions && (
+                                      <div>
+                                        <p className="text-sm font-semibold flex items-center gap-1">
+                                          <FileText className="h-3 w-3" />
+                                          Special Instructions
+                                        </p>
+                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{jobSite.special_instructions}</p>
+                                      </div>
+                                    )}
+                                    {jobSite.access_instructions && (
+                                      <div>
+                                        <p className="text-sm font-semibold flex items-center gap-1">
+                                          <Lock className="h-3 w-3" />
+                                          Access Instructions
+                                          <Badge variant="outline" className="ml-2 text-xs">Secure</Badge>
+                                        </p>
+                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{jobSite.access_instructions}</p>
+                                      </div>
+                                    )}
+                                    {jobSite.safety_requirements && (
+                                      <div>
+                                        <p className="text-sm font-semibold flex items-center gap-1">
+                                          <Shield className="h-3 w-3" />
+                                          Safety Requirements
+                                        </p>
+                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{jobSite.safety_requirements}</p>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>

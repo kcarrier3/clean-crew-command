@@ -186,6 +186,7 @@ export type Database = {
       }
       job_sites: {
         Row: {
+          access_instructions: string | null
           active: boolean
           address: string | null
           budget_info: string | null
@@ -210,6 +211,7 @@ export type Database = {
           used_hours: number | null
         }
         Insert: {
+          access_instructions?: string | null
           active?: boolean
           address?: string | null
           budget_info?: string | null
@@ -234,6 +236,7 @@ export type Database = {
           used_hours?: number | null
         }
         Update: {
+          access_instructions?: string | null
           active?: boolean
           address?: string | null
           budget_info?: string | null
@@ -788,6 +791,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_job_site_sensitive_info: {
+        Args: { _job_site_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_message_user: {
         Args: { _recipient_id: string; _sender_id: string }
         Returns: boolean

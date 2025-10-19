@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Clock, PlayCircle, StopCircle, MapPin, Timer } from 'lucide-react';
+import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useJobSiteAccess } from '@/hooks/useJobSiteAccess';
 
 interface Employee {
   id: string;
@@ -24,6 +25,9 @@ interface JobSite {
   name: string;
   address: string;
   client_name: string;
+  special_instructions?: string | null;
+  access_instructions?: string | null;
+  safety_requirements?: string | null;
 }
 
 interface Schedule {
@@ -63,6 +67,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const { toast } = useToast();
   const { profile, isManager } = useAuth();
+  const { canAccessSensitiveInfo } = useJobSiteAccess(selectedJobSite || null);
+
+  const selectedSite = jobSites.find(s => s.id === selectedJobSite);
 
   useEffect(() => {
     if (forManager) {
@@ -513,6 +520,51 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
               )}
             </div>
           </div>
+
+          {/* Job Site Details with Access Instructions */}
+          {selectedSite && (
+            <div className="mt-4 space-y-3 p-4 bg-muted/50 rounded-lg">
+              <h4 className="font-semibold text-sm">Account Information</h4>
+              {selectedSite.address && (
+                <p className="text-sm">
+                  <strong>Address:</strong> {selectedSite.address}
+                </p>
+              )}
+              {selectedSite.special_instructions && (
+                <div>
+                  <p className="text-sm font-semibold flex items-center gap-1 mb-1">
+                    <FileText className="h-3 w-3" />
+                    Special Instructions
+                  </p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {selectedSite.special_instructions}
+                  </p>
+                </div>
+              )}
+              {selectedSite.access_instructions && canAccessSensitiveInfo && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded">
+                  <p className="text-sm font-semibold flex items-center gap-1 mb-1 text-amber-900 dark:text-amber-100">
+                    <Lock className="h-3 w-3" />
+                    Access Instructions
+                  </p>
+                  <p className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">
+                    {selectedSite.access_instructions}
+                  </p>
+                </div>
+              )}
+              {selectedSite.safety_requirements && (
+                <div>
+                  <p className="text-sm font-semibold flex items-center gap-1 mb-1">
+                    <Shield className="h-3 w-3" />
+                    Safety Requirements
+                  </p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {selectedSite.safety_requirements}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
