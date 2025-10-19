@@ -126,6 +126,8 @@ serve(async (req) => {
 
       // Create in-app notifications for managers
       const employee = timeEntry.employee as any;
+      const managerIds = managers.map((m: any) => m.manager_id);
+      
       const notificationPromises = managers.map((manager: any) =>
         supabase.from('messages').insert({
           conversation_id: '00000000-0000-0000-0000-000000000000', // System message
@@ -136,6 +138,32 @@ serve(async (req) => {
       );
 
       await Promise.all(notificationPromises);
+
+      // Send push notifications to managers
+      console.log('Sending push notifications to managers...');
+      try {
+        const { error: pushError } = await supabase.functions.invoke('send-push-notification', {
+          body: {
+            userIds: managerIds,
+            title: '⏰ Late Clock-In Alert',
+            body: `${employee.first_name} ${employee.last_name} clocked in ${minutesLate} minutes late`,
+            data: {
+              type: 'late_notification',
+              employeeId: employeeId,
+              timeEntryId: timeEntryId,
+              minutesLate: minutesLate
+            }
+          }
+        });
+
+        if (pushError) {
+          console.error('Error sending push notification:', pushError);
+        } else {
+          console.log('Push notifications sent successfully');
+        }
+      } catch (pushError) {
+        console.error('Error invoking push notification function:', pushError);
+      }
 
       console.log('Late notification sent to managers');
 

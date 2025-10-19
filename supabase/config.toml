@@ -1,1 +1,7 @@
 project_id = "lqtfbqfnpjobrwjlpqhr"
+
+[functions.check-late-workers]
+verify_jwt = true
+
+[functions.send-push-notification]
+verify_jwt = true
