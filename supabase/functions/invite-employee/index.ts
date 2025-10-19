@@ -89,10 +89,19 @@ const handler = async (req: Request): Promise<Response> => {
     if (inviteData.user?.id) {
       // Define permission mappings for each job title
       const jobTitlePermissions: Record<string, string[]> = {
-        'Manager': [
+        'Owner': [
           'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
           'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
           'edit_quality_control', 'view_worker_status', 'manage_employees', 'view_notifications'
+        ],
+        'Administrator': [
+          'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
+          'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
+          'edit_quality_control', 'view_worker_status', 'manage_employees', 'view_notifications'
+        ],
+        'Manager': [
+          'view_schedules', 'edit_schedules', 'view_work_orders', 'create_work_orders',
+          'edit_work_orders', 'view_quality_control', 'edit_quality_control', 'view_notifications'
         ],
         'Supervisor': [
           'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
@@ -138,8 +147,8 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
 
-      // Also assign manager role if job title is Manager
-      if (jobTitle === 'Manager') {
+      // Assign manager role for Owner, Administrator, and Manager
+      if (jobTitle === 'Owner' || jobTitle === 'Administrator' || jobTitle === 'Manager') {
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
@@ -150,7 +159,23 @@ const handler = async (req: Request): Promise<Response> => {
         if (roleError) {
           console.error('Error assigning manager role:', roleError);
         } else {
-          console.log('Assigned manager role to user');
+          console.log(`Assigned manager role to user with job title: ${jobTitle}`);
+        }
+      }
+
+      // Assign admin role for Owner and Administrator
+      if (jobTitle === 'Owner' || jobTitle === 'Administrator') {
+        const { error: adminRoleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: inviteData.user.id,
+            role: 'admin'
+          });
+
+        if (adminRoleError) {
+          console.error('Error assigning admin role:', adminRoleError);
+        } else {
+          console.log(`Assigned admin role to user with job title: ${jobTitle}`);
         }
       }
     }

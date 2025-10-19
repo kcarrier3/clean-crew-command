@@ -85,6 +85,8 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
   // Color mapping for different job titles
   const getJobTitleColors = (jobTitle: string) => {
     const colorMap: Record<string, { bg: string; border: string; text: string }> = {
+      'Owner': { bg: 'bg-violet-100', border: 'border-violet-300', text: 'text-violet-800' },
+      'Administrator': { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' },
       'Manager': { bg: 'bg-red-100', border: 'border-red-300', text: 'text-red-800' },
       'Supervisor': { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-800' },
       'Project Worker': { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' },
@@ -227,6 +229,8 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
                   <h4 className="text-sm font-medium mb-2">Job Title Color Coding:</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                     {Object.entries({
+                      'Owner': getJobTitleColors('Owner'),
+                      'Administrator': getJobTitleColors('Administrator'),
                       'Manager': getJobTitleColors('Manager'),
                       'Supervisor': getJobTitleColors('Supervisor'),
                       'Project Worker': getJobTitleColors('Project Worker'),

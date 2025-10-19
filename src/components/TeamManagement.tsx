@@ -7,12 +7,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload, Briefcase } from 'lucide-react';
+import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload, Briefcase, AlertCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { JOB_TITLES, JOB_TITLE_PERMISSIONS, getJobTitleColor } from '@/lib/jobTitles';
+import { JOB_TITLES, JOB_TITLE_PERMISSIONS, getJobTitleColor, canManageUser } from '@/lib/jobTitles';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Employee {
   id: string;
@@ -40,7 +41,7 @@ interface UserPermissionWithDetails {
 }
 
 const TeamManagement = () => {
-  const { canManageEmployees } = useAuth();
+  const { canManageEmployees, profile } = useAuth();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -249,6 +250,12 @@ const TeamManagement = () => {
     fetchUserPermissions(employee.id);
     setIsProfileDialogOpen(true);
     setEditMode(false);
+  };
+
+  // Check if current user can manage the selected employee
+  const canManageCurrentEmployee = () => {
+    if (!selectedEmployee || !profile) return false;
+    return canManageUser(profile.job_title, selectedEmployee.job_title);
   };
 
   const handleAddEmployee = async () => {
@@ -584,7 +591,8 @@ const TeamManagement = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        {employee.hourly_rate && (
+                        {/* Only show pay rate to Owner/Administrator */}
+                        {(profile?.job_title === 'Owner' || profile?.job_title === 'Administrator') && employee.hourly_rate && (
                           <div className="flex items-center text-sm font-medium">
                             <DollarSign className="h-4 w-4 mr-1" />
                             ${employee.hourly_rate}/hr
@@ -615,6 +623,16 @@ const TeamManagement = () => {
 
           {selectedEmployee && (
             <div className="space-y-6">
+              {/* Access Warning */}
+              {!canManageCurrentEmployee() && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    You cannot modify this employee. {selectedEmployee.job_title === 'Owner' ? 'Only the Owner can be modified by themselves.' : 'Administrators cannot modify the Owner account.'}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {/* Personal Information */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -626,6 +644,7 @@ const TeamManagement = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => setEditMode(!editMode)}
+                    disabled={!canManageCurrentEmployee()}
                   >
                     {editMode ? 'Cancel' : 'Edit'}
                   </Button>
@@ -741,35 +760,37 @@ const TeamManagement = () => {
                 </CardContent>
               </Card>
 
-              {/* Pay Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    Pay Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="hourly_rate">Hourly Rate</Label>
-                      {editMode ? (
-                        <Input
-                          id="hourly_rate"
-                          type="number"
-                          step="0.01"
-                          defaultValue={selectedEmployee.hourly_rate || ''}
-                          onBlur={(e) => updateEmployeeProfile({ hourly_rate: parseFloat(e.target.value) || null })}
-                        />
-                      ) : (
-                        <p className="text-sm">${selectedEmployee.hourly_rate || 'Not set'}/hr</p>
-                      )}
+              {/* Pay Information - Only visible to Owner/Administrator or when viewing own profile */}
+              {(profile?.job_title === 'Owner' || profile?.job_title === 'Administrator' || profile?.id === selectedEmployee.id) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      Pay Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="hourly_rate">Hourly Rate</Label>
+                        {editMode && canManageCurrentEmployee() ? (
+                          <Input
+                            id="hourly_rate"
+                            type="number"
+                            step="0.01"
+                            defaultValue={selectedEmployee.hourly_rate || ''}
+                            onBlur={(e) => updateEmployeeProfile({ hourly_rate: parseFloat(e.target.value) || null })}
+                          />
+                        ) : (
+                          <p className="text-sm">${selectedEmployee.hourly_rate || 'Not set'}/hr</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
 
-              {/* Permissions */}
+              {/* Permissions - Only editable by those who can manage the employee */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -777,7 +798,7 @@ const TeamManagement = () => {
                     Permissions
                   </CardTitle>
                   <CardDescription>
-                    Manage what this employee can access and do
+                    {canManageCurrentEmployee() ? 'Manage what this employee can access and do' : 'View employee permissions'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -791,7 +812,7 @@ const TeamManagement = () => {
                             Default permissions for {selectedEmployee.job_title}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            The following {JOB_TITLE_PERMISSIONS[selectedEmployee.job_title as keyof typeof JOB_TITLE_PERMISSIONS].length} permissions are automatically assigned to this role. You can customize them below.
+                            The following {JOB_TITLE_PERMISSIONS[selectedEmployee.job_title as keyof typeof JOB_TITLE_PERMISSIONS].length} permissions are automatically assigned to this role. {canManageCurrentEmployee() ? 'You can customize them below.' : ''}
                           </p>
                         </div>
                       </div>
@@ -823,6 +844,7 @@ const TeamManagement = () => {
                                   <Checkbox
                                     id={permission.name}
                                     checked={hasPermission}
+                                    disabled={!canManageCurrentEmployee()}
                                     onCheckedChange={() => togglePermission(permission.name, hasPermission)}
                                     className="mt-1"
                                   />
