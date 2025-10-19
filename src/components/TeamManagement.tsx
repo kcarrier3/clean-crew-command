@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload, Briefcase, AlertCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { JOB_TITLES, JOB_TITLE_PERMISSIONS, getJobTitleColor, canManageUser } from '@/lib/jobTitles';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { RoleManagement } from '@/components/RoleManagement';
 
 interface Employee {
   id: string;
@@ -40,13 +42,26 @@ interface UserPermissionWithDetails {
   category: string;
 }
 
+interface Role {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+interface UserRole {
+  role_id: string;
+  role: Role;
+}
+
 const TeamManagement = () => {
-  const { canManageEmployees, profile } = useAuth();
+  const { canManageEmployees, profile, session } = useAuth();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [userPermissions, setUserPermissions] = useState<UserPermissionWithDetails[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
@@ -69,6 +84,7 @@ const TeamManagement = () => {
     if (canManageEmployees()) {
       fetchEmployees();
       fetchPermissions();
+      fetchRoles();
     }
   }, [canManageEmployees]);
 
@@ -105,6 +121,37 @@ const TeamManagement = () => {
     }
   };
 
+  const fetchRoles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('roles')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setRoles(data || []);
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+    }
+  };
+
+  const fetchUserRoles = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_custom_roles')
+        .select(`
+          role_id,
+          role:roles(id, name, description)
+        `)
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      setUserRoles(data || []);
+    } catch (error) {
+      console.error('Error fetching user roles:', error);
+    }
+  };
+
   const fetchUserPermissions = async (userId: string) => {
     try {
       setLoading(true);
@@ -129,6 +176,7 @@ const TeamManagement = () => {
       })) || [];
       
       setUserPermissions(formattedPermissions);
+      fetchUserRoles(userId);
     } catch (error) {
       console.error('Error fetching user permissions:', error);
       toast({
@@ -138,6 +186,51 @@ const TeamManagement = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleRole = async (roleId: string, hasRole: boolean) => {
+    if (!selectedEmployee) return;
+
+    try {
+      if (hasRole) {
+        // Remove role
+        const { error } = await supabase
+          .from('user_custom_roles')
+          .delete()
+          .eq('user_id', selectedEmployee.id)
+          .eq('role_id', roleId);
+
+        if (error) throw error;
+        toast({
+          title: "Success",
+          description: "Role removed successfully.",
+        });
+      } else {
+        // Add role
+        const { error } = await supabase
+          .from('user_custom_roles')
+          .insert({
+            user_id: selectedEmployee.id,
+            role_id: roleId,
+            granted_by: session?.user?.id
+          });
+
+        if (error) throw error;
+        toast({
+          title: "Success",
+          description: "Role assigned successfully.",
+        });
+      }
+
+      fetchUserRoles(selectedEmployee.id);
+    } catch (error) {
+      console.error('Error toggling role:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update role.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -355,7 +448,15 @@ const TeamManagement = () => {
         <h1 className="text-3xl font-bold">Team Management</h1>
       </div>
 
-      <Card>
+      <Tabs defaultValue="employees" className="w-full">
+        <TabsList>
+          <TabsTrigger value="employees">Employees</TabsTrigger>
+          <TabsTrigger value="roles">Roles</TabsTrigger>
+          <TabsTrigger value="permissions">Permissions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="employees" className="space-y-6">
+          <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -607,6 +708,42 @@ const TeamManagement = () => {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="roles" className="space-y-6 mt-6">
+          <RoleManagement />
+        </TabsContent>
+
+        <TabsContent value="permissions" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Permission Overview</CardTitle>
+              <CardDescription>
+                View all available permissions in the system
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {Object.entries(groupedPermissions).map(([category, categoryPermissions]) => (
+                  <div key={category}>
+                    <h4 className="font-medium mb-2 capitalize">{category.replace('_', ' ')}</h4>
+                    <div className="grid gap-2">
+                      {categoryPermissions.map((permission) => (
+                        <div key={permission.name} className="p-3 border rounded-lg">
+                          <div className="font-medium text-sm">{permission.display_name}</div>
+                          {permission.description && (
+                            <div className="text-xs text-muted-foreground mt-1">{permission.description}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Employee Profile Dialog */}
       <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
@@ -786,6 +923,48 @@ const TeamManagement = () => {
                         )}
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Custom Roles Section */}
+              {canManageCurrentEmployee() && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Custom Roles
+                    </CardTitle>
+                    <CardDescription>
+                      Assign custom roles to this employee
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {roles.map((role) => {
+                      const hasRole = userRoles.some(ur => ur.role_id === role.id);
+                      return (
+                        <div key={role.id} className="flex items-start space-x-2">
+                          <Checkbox
+                            id={`role-${role.id}`}
+                            checked={hasRole}
+                            onCheckedChange={(checked) => toggleRole(role.id, hasRole)}
+                          />
+                          <div className="flex-1">
+                            <label
+                              htmlFor={`role-${role.id}`}
+                              className="text-sm font-medium leading-none cursor-pointer"
+                            >
+                              {role.name}
+                            </label>
+                            {role.description && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {role.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </CardContent>
                 </Card>
               )}
