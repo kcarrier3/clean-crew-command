@@ -262,6 +262,41 @@ export type Database = {
         }
         Relationships: []
       }
+      late_notifications: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          minutes_late: number
+          notified_at: string
+          time_entry_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          minutes_late: number
+          notified_at?: string
+          time_entry_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          minutes_late?: number
+          notified_at?: string
+          time_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "late_notifications_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       location_updates: {
         Row: {
           created_at: string
@@ -886,6 +921,15 @@ export type Database = {
       can_message_user: {
         Args: { _recipient_id: string; _sender_id: string }
         Returns: boolean
+      }
+      get_employee_managers: {
+        Args: { _employee_id: string }
+        Returns: {
+          manager_email: string
+          manager_id: string
+          manager_job_title: string
+          manager_name: string
+        }[]
       }
       get_or_create_conversation: {
         Args: { _user1_id: string; _user2_id: string }

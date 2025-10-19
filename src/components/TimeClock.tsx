@@ -322,6 +322,17 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       } else {
         toast({ title: 'Success', description: 'Clocked in successfully!' });
         
+        // Check if employee is late and notify managers
+        supabase.functions.invoke('check-late-workers', {
+          body: {
+            timeEntryId: data.id,
+            employeeId: selectedEmployee
+          }
+        }).catch(err => {
+          console.error('Error checking late status:', err);
+          // Don't show error to user - late check is background process
+        });
+        
         if (!forManager) {
           setSelectedEmployee('');
           setSelectedJobSite('');
