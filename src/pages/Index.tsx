@@ -175,15 +175,15 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation - Role-based */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4">
+      {/* Mobile Bottom Navigation - Role-based with safe area */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 pb-safe safe-x">
         <div className="flex justify-around items-center max-w-md mx-auto">
           {isManager() && (
             <Button
               variant={activeTab === "scheduling" ? "default" : "ghost"}
               size="sm"
               onClick={() => setActiveTab("scheduling")}
-              className="flex flex-col items-center gap-1 h-auto py-2 px-3"
+              className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
             >
               <Calendar className="h-5 w-5" />
               <span className="text-xs">Schedule</span>
@@ -194,7 +194,7 @@ const Index = () => {
             variant={activeTab === "messages" ? "default" : "ghost"}
             size="sm"
             onClick={() => setActiveTab("messages")}
-            className="flex flex-col items-center gap-1 h-auto py-2 px-3"
+            className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
           >
             <MessageSquare className="h-5 w-5" />
             <span className="text-xs">Messages</span>
@@ -205,7 +205,7 @@ const Index = () => {
               variant={activeTab === "managerlog" ? "default" : "ghost"}
               size="sm"
               onClick={() => setActiveTab("managerlog")}
-              className="flex flex-col items-center gap-1 h-auto py-2 px-3"
+              className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
             >
               <BookOpen className="h-5 w-5" />
               <span className="text-xs">Log</span>
