@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+import { useStatusBar } from "@/hooks/useStatusBar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -13,6 +15,15 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   // Initialize push notifications
   usePushNotifications();
+  
+  // Configure Android back button handling
+  useAndroidBackButton();
+  
+  // Configure status bar (dark content on light background)
+  useStatusBar({ 
+    style: 'dark', 
+    backgroundColor: '#ffffff' 
+  });
   
   return (
     <Routes>
