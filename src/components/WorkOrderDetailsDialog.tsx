@@ -31,6 +31,7 @@ interface WorkOrderPhoto {
   photo_type: 'deficiency' | 'completion';
   uploaded_by: string;
   created_at: string;
+  signed_url?: string;
 }
 
 interface WorkOrderNote {
@@ -79,7 +80,19 @@ export const WorkOrderDetailsDialog = ({ workOrder, open, onOpenChange, onUpdate
         variant: "destructive",
       });
     } else {
-      setPhotos(data || []);
+      // Generate signed URLs for each photo
+      const photosWithSignedUrls = await Promise.all(
+        (data || []).map(async (photo) => {
+          const { data: signedUrlData } = await supabase.storage
+            .from('work-order-photos')
+            .createSignedUrl(photo.photo_url, 3600);
+          return {
+            ...photo,
+            signed_url: signedUrlData?.signedUrl
+          };
+        })
+      );
+      setPhotos(photosWithSignedUrls);
     }
   };
 
@@ -119,13 +132,15 @@ export const WorkOrderDetailsDialog = ({ workOrder, open, onOpenChange, onUpdate
 
     if (uploadError) throw uploadError;
 
+    const { data: userData } = await supabase.auth.getUser();
+
     const { error: dbError } = await supabase
       .from('work_order_photos')
       .insert({
         work_order_id: workOrder.id,
-        photo_url: fileName,
+        photo_url: fileName, // Store file path for signed URL generation
         photo_type: photoType,
-        uploaded_by: 'current-user' // TODO: Replace with actual user ID when auth is implemented
+        uploaded_by: userData.user?.id || 'current-user'
       });
 
     if (dbError) throw dbError;
@@ -211,11 +226,9 @@ export const WorkOrderDetailsDialog = ({ workOrder, open, onOpenChange, onUpdate
     }
   };
 
-  const getPhotoUrl = (photoUrl: string) => {
-    const { data } = supabase.storage
-      .from('work-order-photos')
-      .getPublicUrl(photoUrl);
-    return data.publicUrl;
+  const getPhotoUrl = (photo: WorkOrderPhoto) => {
+    // Use pre-fetched signed URL if available
+    return photo.signed_url || photo.photo_url;
   };
 
   const getPriorityColor = (priority: string) => {
@@ -306,10 +319,10 @@ export const WorkOrderDetailsDialog = ({ workOrder, open, onOpenChange, onUpdate
                       {photos.map((photo) => (
                         <div key={photo.id} className="relative group">
                           <img
-                            src={getPhotoUrl(photo.photo_url)}
+                            src={getPhotoUrl(photo)}
                             alt="Work order photo"
                             className="w-full h-24 object-cover rounded cursor-pointer"
-                            onClick={() => setViewingPhoto(getPhotoUrl(photo.photo_url))}
+                            onClick={() => setViewingPhoto(getPhotoUrl(photo))}
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded flex items-center justify-center">
                             <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
