@@ -1,22 +1,24 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.53.0';
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface InviteEmployeeRequest {
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  jobTitle: string;
-  hourlyRate?: number;
-  salaryAmount?: number;
-  payType: 'hourly' | 'salary';
-  attendanceTrackingType?: 'attendance_only' | 'attendance_and_punctuality';
-}
+// Input validation schema
+const InviteEmployeeSchema = z.object({
+  email: z.string().email({ message: "Invalid email format" }).max(255, { message: "Email too long" }),
+  firstName: z.string().min(1, { message: "First name required" }).max(100, { message: "First name too long" }),
+  lastName: z.string().min(1, { message: "Last name required" }).max(100, { message: "Last name too long" }),
+  phone: z.string().max(20, { message: "Phone number too long" }).optional().nullable(),
+  jobTitle: z.string().min(1, { message: "Job title required" }).max(100, { message: "Job title too long" }),
+  hourlyRate: z.number().min(0, { message: "Hourly rate cannot be negative" }).max(10000, { message: "Hourly rate too high" }).optional().nullable(),
+  salaryAmount: z.number().min(0, { message: "Salary cannot be negative" }).max(10000000, { message: "Salary too high" }).optional().nullable(),
+  payType: z.enum(['hourly', 'salary'], { message: "Pay type must be 'hourly' or 'salary'" }),
+  attendanceTrackingType: z.enum(['attendance_only', 'attendance_and_punctuality']).optional()
+});
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -35,7 +37,30 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
-    const { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType }: InviteEmployeeRequest = await req.json();
+    // Parse and validate input
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const validationResult = InviteEmployeeSchema.safeParse(requestBody);
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input', 
+          details: validationResult.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType } = validationResult.data;
 
     console.log('Inviting employee:', { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType });
 
@@ -194,7 +219,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error('Error in invite-employee function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'An unexpected error occurred' }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

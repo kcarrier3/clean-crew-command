@@ -1,10 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const NotificationSchema = z.object({
+  userIds: z.array(z.string().uuid({ message: "Invalid user ID format" }))
+    .min(1, { message: "At least one user ID required" })
+    .max(100, { message: "Cannot send to more than 100 users at once" }),
+  title: z.string().min(1, { message: "Title required" }).max(200, { message: "Title too long (max 200 chars)" }),
+  body: z.string().min(1, { message: "Body required" }).max(1000, { message: "Body too long (max 1000 chars)" }),
+  data: z.record(z.unknown()).optional()
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -18,7 +29,30 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { userIds, title, body, data } = await req.json();
+    // Parse and validate input
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validationResult = NotificationSchema.safeParse(requestBody);
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.errors);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input', 
+          details: validationResult.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { userIds, title, body, data } = validationResult.data;
 
     console.log('Sending push notification to users:', userIds);
 
@@ -109,7 +143,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in send-push-notification:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'An unexpected error occurred' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 
