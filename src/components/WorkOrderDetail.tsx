@@ -37,6 +37,7 @@ interface Photo {
   caption: string;
   uploaded_by: string;
   created_at: string;
+  signed_url?: string;
 }
 
 interface Note {
@@ -85,7 +86,19 @@ export const WorkOrderDetail: React.FC<WorkOrderDetailProps> = ({
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setPhotos(data);
+      // Generate signed URLs for each photo
+      const photosWithSignedUrls = await Promise.all(
+        data.map(async (photo) => {
+          const { data: signedUrlData } = await supabase.storage
+            .from('work-order-photos')
+            .createSignedUrl(photo.photo_url, 3600);
+          return {
+            ...photo,
+            signed_url: signedUrlData?.signedUrl || photo.photo_url
+          };
+        })
+      );
+      setPhotos(photosWithSignedUrls as any);
     }
   };
 
@@ -117,17 +130,16 @@ export const WorkOrderDetail: React.FC<WorkOrderDetailProps> = ({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('work-order-photos')
-        .getPublicUrl(fileName);
+      // Store the file path, not the URL - we'll generate signed URLs when displaying
+      const { data: userData } = await supabase.auth.getUser();
 
       const { error: dbError } = await supabase
         .from('work_order_photos')
         .insert({
           work_order_id: workOrder.id,
-          photo_url: publicUrl,
+          photo_url: fileName, // Store file path for signed URL generation
           photo_type: photoType,
-          uploaded_by: 'temp-user-id', // TODO: Replace with actual user ID
+          uploaded_by: userData.user?.id || 'temp-user-id',
           caption: ''
         });
 
@@ -304,7 +316,7 @@ export const WorkOrderDetail: React.FC<WorkOrderDetailProps> = ({
                 {photos.map((photo) => (
                   <div key={photo.id} className="space-y-2">
                     <img
-                      src={photo.photo_url}
+                      src={photo.signed_url || photo.photo_url}
                       alt="Work order photo"
                       className="w-full h-32 object-cover rounded-lg"
                     />

@@ -112,12 +112,15 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
 
       if (error) throw error;
 
-      const { data: { publicUrl } } = supabase.storage
+      // Use signed URL since bucket is private
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from('work-order-photos')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 3600); // 1 hour expiry
+
+      if (signedUrlError) throw signedUrlError;
 
       return {
-        url: publicUrl,
+        url: signedUrlData.signedUrl,
         caption: photo.caption
       };
     });
