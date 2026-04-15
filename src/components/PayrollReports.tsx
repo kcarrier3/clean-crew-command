@@ -23,6 +23,11 @@ interface PayrollEntry {
   total_pay: number;
   pay_period_start: string;
   pay_period_end: string;
+  attendance_bonus: number;
+  time_bonus: number;
+  attendance_bonus_eligible: boolean;
+  time_bonus_eligible: boolean;
+  total_with_bonus: number;
 }
 
 const PayrollReports = () => {
