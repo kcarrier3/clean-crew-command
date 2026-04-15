@@ -77,6 +77,8 @@ const TeamManagement = () => {
     hourly_rate: '',
     salary_amount: '',
     attendance_tracking_type: 'attendance_only' as 'attendance_only' | 'attendance_and_punctuality',
+    attendance_bonus_amount: '',
+    time_bonus_amount: '',
   });
   const [isSubmittingEmployee, setIsSubmittingEmployee] = useState(false);
 
@@ -375,6 +377,8 @@ const TeamManagement = () => {
           hourlyRate: newEmployeeData.pay_type === 'hourly' && newEmployeeData.hourly_rate ? parseFloat(newEmployeeData.hourly_rate) : null,
           salaryAmount: newEmployeeData.pay_type === 'salary' && newEmployeeData.salary_amount ? parseFloat(newEmployeeData.salary_amount) : null,
           attendanceTrackingType: newEmployeeData.attendance_tracking_type,
+          attendanceBonusAmount: newEmployeeData.attendance_bonus_amount ? parseFloat(newEmployeeData.attendance_bonus_amount) : null,
+          timeBonusAmount: newEmployeeData.time_bonus_amount ? parseFloat(newEmployeeData.time_bonus_amount) : null,
         },
       });
 
@@ -396,6 +400,8 @@ const TeamManagement = () => {
         hourly_rate: '',
         salary_amount: '',
         attendance_tracking_type: 'attendance_only',
+        attendance_bonus_amount: '',
+        time_bonus_amount: '',
       });
       setIsAddEmployeeDialogOpen(false);
       
@@ -423,7 +429,9 @@ const TeamManagement = () => {
       pay_type: 'hourly',
       hourly_rate: '',
       salary_amount: '',
-      attendance_tracking_type: 'attendance_only',
+        attendance_tracking_type: 'attendance_only',
+        attendance_bonus_amount: '',
+        time_bonus_amount: '',
     });
   };
 
@@ -616,6 +624,52 @@ const TeamManagement = () => {
                       Attendance Only: Track only call-offs for basic bonus. Attendance & Punctuality: Track call-offs and late arrivals for higher bonus.
                     </p>
                   </div>
+
+                  <Separator />
+                  
+                  <div>
+                    <Label className="flex items-center gap-2 text-base font-semibold mb-2">
+                      <DollarSign className="h-4 w-4" />
+                      Monthly Bonus Settings
+                    </Label>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Bonuses are paid on the 1st full paycheck of each new month. Leave blank if not eligible.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="add_attendance_bonus">Attendance Bonus Amount ($)</Label>
+                    <Input
+                      id="add_attendance_bonus"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newEmployeeData.attendance_bonus_amount}
+                      onChange={(e) => setNewEmployeeData(prev => ({ ...prev, attendance_bonus_amount: e.target.value }))}
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Awarded if the worker has no missed punches for the entire month.
+                    </p>
+                  </div>
+
+                  {(newEmployeeData.job_title === 'Project Worker' || newEmployeeData.job_title === 'Project Crew Lead') && (
+                    <div>
+                      <Label htmlFor="add_time_bonus">Time/Punctuality Bonus Amount ($)</Label>
+                      <Input
+                        id="add_time_bonus"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={newEmployeeData.time_bonus_amount}
+                        onChange={(e) => setNewEmployeeData(prev => ({ ...prev, time_bonus_amount: e.target.value }))}
+                        placeholder="0.00"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Awarded if the worker is never late by more than 5 minutes to a scheduled shift for the entire month.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex justify-end space-x-2 pt-4">
                     <Button 
