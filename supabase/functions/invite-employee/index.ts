@@ -17,7 +17,9 @@ const InviteEmployeeSchema = z.object({
   hourlyRate: z.number().min(0, { message: "Hourly rate cannot be negative" }).max(10000, { message: "Hourly rate too high" }).optional().nullable(),
   salaryAmount: z.number().min(0, { message: "Salary cannot be negative" }).max(10000000, { message: "Salary too high" }).optional().nullable(),
   payType: z.enum(['hourly', 'salary'], { message: "Pay type must be 'hourly' or 'salary'" }),
-  attendanceTrackingType: z.enum(['attendance_only', 'attendance_and_punctuality']).optional()
+  attendanceTrackingType: z.enum(['attendance_only', 'attendance_and_punctuality']).optional(),
+  attendanceBonusAmount: z.number().min(0).max(100000).optional().nullable(),
+  timeBonusAmount: z.number().min(0).max(100000).optional().nullable(),
 });
 
 const handler = async (req: Request): Promise<Response> => {
@@ -60,7 +62,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType } = validationResult.data;
+    const { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType, attendanceBonusAmount, timeBonusAmount } = validationResult.data;
 
     console.log('Inviting employee:', { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType });
 
@@ -100,6 +102,8 @@ const handler = async (req: Request): Promise<Response> => {
         salary_amount: payType === 'salary' ? salaryAmount : null,
         pay_type: payType,
         attendance_tracking_type: attendanceTrackingType || 'attendance_only',
+        attendance_bonus_amount: attendanceBonusAmount || null,
+        time_bonus_amount: timeBonusAmount || null,
       }
     });
 
