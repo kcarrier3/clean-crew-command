@@ -384,7 +384,8 @@ const PayrollReports = () => {
     });
   };
 
-  const totalPayroll = payrollData.reduce((sum, entry) => sum + entry.total_pay, 0);
+  const totalPayroll = payrollData.reduce((sum, entry) => sum + entry.total_with_bonus, 0);
+  const totalBonuses = payrollData.reduce((sum, entry) => sum + entry.attendance_bonus + entry.time_bonus, 0);
   const totalHours = payrollData.reduce((sum, entry) => sum + entry.total_hours, 0);
 
   return (
@@ -464,23 +465,37 @@ const PayrollReports = () => {
 
       {/* Payroll Summary */}
       {payrollData.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <DollarSign className="h-8 w-8 text-green-500" />
+                <DollarSign className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">${totalPayroll.toFixed(2)}</p>
-                  <p className="text-sm text-muted-foreground">Total Payroll</p>
+                  <p className="text-sm text-muted-foreground">Total Payroll (incl. bonuses)</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
+          {totalBonuses > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-8 w-8 text-accent-foreground" />
+                  <div>
+                    <p className="text-2xl font-bold">${totalBonuses.toFixed(2)}</p>
+                    <p className="text-sm text-muted-foreground">Total Bonuses</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <Clock className="h-8 w-8 text-blue-500" />
+                <Clock className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{totalHours.toFixed(1)}</p>
                   <p className="text-sm text-muted-foreground">Total Hours</p>
@@ -492,7 +507,7 @@ const PayrollReports = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <Calendar className="h-8 w-8 text-purple-500" />
+                <Calendar className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{payrollData.length}</p>
                   <p className="text-sm text-muted-foreground">Employees</p>
@@ -520,9 +535,12 @@ const PayrollReports = () => {
                   <TableHead>Job Title</TableHead>
                   <TableHead>Pay Type</TableHead>
                   <TableHead>Rate/Salary</TableHead>
-                  <TableHead>Regular Hours</TableHead>
-                  <TableHead>Overtime Hours</TableHead>
-                  <TableHead>Total Hours</TableHead>
+                  <TableHead>Regular Hrs</TableHead>
+                  <TableHead>OT Hrs</TableHead>
+                  <TableHead>Total Hrs</TableHead>
+                  <TableHead className="text-right">Base Pay</TableHead>
+                  <TableHead className="text-right">Attend. Bonus</TableHead>
+                  <TableHead className="text-right">Time Bonus</TableHead>
                   <TableHead className="text-right">Total Pay</TableHead>
                 </TableRow>
               </TableHeader>
@@ -545,8 +563,25 @@ const PayrollReports = () => {
                     <TableCell>{entry.regular_hours.toFixed(1)}</TableCell>
                     <TableCell>{entry.overtime_hours.toFixed(1)}</TableCell>
                     <TableCell>{entry.total_hours.toFixed(1)}</TableCell>
+                    <TableCell className="text-right">${entry.total_pay.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      {entry.attendance_bonus > 0 ? (
+                        <span className="font-semibold text-primary">${entry.attendance_bonus.toFixed(2)}</span>
+                      ) : entry.attendance_bonus_eligible === false && entry.attendance_bonus === 0 ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {entry.time_bonus > 0 ? (
+                        <span className="font-semibold text-primary">${entry.time_bonus.toFixed(2)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right font-semibold">
-                      ${entry.total_pay.toFixed(2)}
+                      ${entry.total_with_bonus.toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}
