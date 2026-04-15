@@ -343,6 +343,9 @@ const PayrollReports = () => {
       'Regular Hours',
       'Overtime Hours',
       'Total Pay',
+      'Attendance Bonus',
+      'Time Bonus',
+      'Total With Bonus',
       'Pay Period Start',
       'Pay Period End'
     ];
@@ -359,6 +362,9 @@ const PayrollReports = () => {
         entry.regular_hours,
         entry.overtime_hours,
         entry.total_pay,
+        entry.attendance_bonus,
+        entry.time_bonus,
+        entry.total_with_bonus,
         entry.pay_period_start,
         entry.pay_period_end
       ].join(','))
