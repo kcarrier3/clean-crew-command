@@ -76,10 +76,10 @@ const PayrollReports = () => {
   const calculatePayroll = async (startDate: string, endDate: string) => {
     setLoading(true);
     try {
-      // Fetch all profiles with pay information
+      // Fetch all profiles with pay and bonus information
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, job_title, hourly_rate, salary_amount, pay_type');
+        .select('id, first_name, last_name, job_title, hourly_rate, salary_amount, pay_type, attendance_bonus_amount, time_bonus_amount');
 
       if (profilesError) throw profilesError;
 
@@ -92,6 +92,53 @@ const PayrollReports = () => {
         .not('clock_out', 'is', null);
 
       if (timeEntriesError) throw timeEntriesError;
+
+      // Determine if this is the first full pay period of a new month
+      // Pay week is Sun-Sat. First full paycheck of a new month = first pay period
+      // that starts on or after the 1st of the month
+      const periodStart = new Date(startDate);
+      const periodEnd = new Date(endDate);
+      const isFirstFullPaycheckOfMonth = periodStart.getDate() <= 7 && periodStart.getMonth() !== new Date(periodStart.getTime() - 7 * 86400000).getMonth();
+
+      // If it's the first full paycheck, we need the previous month's data for bonus eligibility
+      let prevMonthStart = '';
+      let prevMonthEnd = '';
+      let prevMonthSchedules: any[] = [];
+      let prevMonthTimeEntries: any[] = [];
+      let prevMonthLateNotifications: any[] = [];
+
+      if (isFirstFullPaycheckOfMonth) {
+        const prevMonth = new Date(periodStart);
+        prevMonth.setMonth(prevMonth.getMonth() - 1);
+        prevMonthStart = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0).getDate();
+        prevMonthEnd = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}-${lastDay}`;
+
+        // Fetch previous month's schedules
+        const { data: schedData } = await supabase
+          .from('employee_schedules')
+          .select('*')
+          .eq('active', true)
+          .lte('start_date', prevMonthEnd)
+          .or(`end_date.is.null,end_date.gte.${prevMonthStart}`);
+        prevMonthSchedules = schedData || [];
+
+        // Fetch previous month's time entries
+        const { data: teData } = await supabase
+          .from('time_entries')
+          .select('*')
+          .gte('clock_in', `${prevMonthStart}T00:00:00`)
+          .lte('clock_in', `${prevMonthEnd}T23:59:59`);
+        prevMonthTimeEntries = teData || [];
+
+        // Fetch previous month's late notifications
+        const { data: lnData } = await supabase
+          .from('late_notifications')
+          .select('*')
+          .gte('created_at', `${prevMonthStart}T00:00:00`)
+          .lte('created_at', `${prevMonthEnd}T23:59:59`);
+        prevMonthLateNotifications = lnData || [];
+      }
 
       // Calculate payroll for each employee
       const payrollEntries: PayrollEntry[] = [];
@@ -106,23 +153,115 @@ const PayrollReports = () => {
             const clockIn = new Date(entry.clock_in);
             const clockOut = new Date(entry.clock_out);
             const minutes = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60);
-            // Subtract break minutes
             totalMinutes += minutes - (entry.break_minutes || 0);
           }
         });
 
         const totalHours = totalMinutes / 60;
-        const regularHours = Math.min(totalHours, 40); // Assuming 40 hours is regular time
+        const regularHours = Math.min(totalHours, 40);
         const overtimeHours = Math.max(totalHours - 40, 0);
 
         let totalPay = 0;
         
         if (profile.pay_type === 'hourly' && profile.hourly_rate) {
-          // Calculate hourly pay with overtime (1.5x rate for hours over 40)
           totalPay = (regularHours * profile.hourly_rate) + (overtimeHours * profile.hourly_rate * 1.5);
         } else if (profile.pay_type === 'salary' && profile.salary_amount) {
-          // Weekly salary (annual salary / 52 weeks)
           totalPay = profile.salary_amount / 52;
+        }
+
+        // Bonus calculation
+        let attendanceBonus = 0;
+        let timeBonus = 0;
+        let attendanceBonusEligible = false;
+        let timeBonusEligible = false;
+
+        if (isFirstFullPaycheckOfMonth && (profile.attendance_bonus_amount || profile.time_bonus_amount)) {
+          // Check attendance eligibility: no missed scheduled days
+          const empSchedules = prevMonthSchedules.filter(s => s.employee_id === profile.id);
+          
+          if (empSchedules.length > 0 && profile.attendance_bonus_amount) {
+            // Count scheduled days in the previous month
+            let scheduledDays = 0;
+            let workedDays = 0;
+            const empTimeEntries = prevMonthTimeEntries.filter(te => te.employee_id === profile.id);
+            
+            // Walk each day of previous month
+            const monthStart = new Date(prevMonthStart);
+            const monthEnd = new Date(prevMonthEnd);
+            for (let d = new Date(monthStart); d <= monthEnd; d.setDate(d.getDate() + 1)) {
+              const dayOfWeek = d.getDay();
+              const dateStr = d.toISOString().split('T')[0];
+              
+              // Check if this day was scheduled
+              const isScheduled = empSchedules.some(s => {
+                const schedStart = new Date(s.start_date);
+                const schedEnd = s.end_date ? new Date(s.end_date) : null;
+                return s.days_of_week.includes(dayOfWeek) &&
+                  schedStart <= d &&
+                  (!schedEnd || schedEnd >= d);
+              });
+
+              if (isScheduled) {
+                scheduledDays++;
+                // Check if they clocked in on this day
+                const hasEntry = empTimeEntries.some(te => {
+                  const clockInDate = new Date(te.clock_in).toISOString().split('T')[0];
+                  return clockInDate === dateStr;
+                });
+                if (hasEntry) workedDays++;
+              }
+            }
+
+            attendanceBonusEligible = scheduledDays > 0 && workedDays >= scheduledDays;
+            if (attendanceBonusEligible) {
+              attendanceBonus = profile.attendance_bonus_amount;
+            }
+          }
+
+          // Check time/punctuality eligibility (construction only): not late >5 min
+          if (profile.time_bonus_amount && 
+              (profile.job_title === 'Project Worker' || profile.job_title === 'Project Crew Lead')) {
+            // Check late notifications for this employee in previous month
+            const empLateNotifs = prevMonthLateNotifications.filter(
+              ln => ln.employee_id === profile.id && ln.minutes_late > 5
+            );
+
+            // Also check time entries vs schedules for lateness >5 min
+            const empTimeEntries = prevMonthTimeEntries.filter(te => te.employee_id === profile.id);
+            let wasLate = empLateNotifs.length > 0;
+
+            if (!wasLate) {
+              // Double-check by comparing clock-in times to schedules
+              for (const te of empTimeEntries) {
+                const clockIn = new Date(te.clock_in);
+                const dayOfWeek = clockIn.getDay();
+                const matchingSchedule = empSchedules.find(s => {
+                  const schedStart = new Date(s.start_date);
+                  const schedEnd = s.end_date ? new Date(s.end_date) : null;
+                  return s.days_of_week.includes(dayOfWeek) &&
+                    schedStart <= clockIn &&
+                    (!schedEnd || schedEnd >= clockIn) &&
+                    s.start_time;
+                });
+
+                if (matchingSchedule?.start_time) {
+                  const [h, m] = matchingSchedule.start_time.split(':').map(Number);
+                  const scheduledStart = new Date(clockIn);
+                  scheduledStart.setHours(h, m, 0, 0);
+                  const minsLate = (clockIn.getTime() - scheduledStart.getTime()) / (1000 * 60);
+                  if (minsLate > 5) {
+                    wasLate = true;
+                    break;
+                  }
+                }
+              }
+            }
+
+            timeBonusEligible = !wasLate && empTimeEntries.length > 0;
+            if (timeBonusEligible) {
+              timeBonus = profile.time_bonus_amount;
+            }
+          }
         }
 
         payrollEntries.push({
@@ -137,7 +276,12 @@ const PayrollReports = () => {
           overtime_hours: Number(overtimeHours.toFixed(2)),
           total_pay: Number(totalPay.toFixed(2)),
           pay_period_start: startDate,
-          pay_period_end: endDate
+          pay_period_end: endDate,
+          attendance_bonus: attendanceBonus,
+          time_bonus: timeBonus,
+          attendance_bonus_eligible: attendanceBonusEligible,
+          time_bonus_eligible: timeBonusEligible,
+          total_with_bonus: Number((totalPay + attendanceBonus + timeBonus).toFixed(2)),
         });
       }
 
