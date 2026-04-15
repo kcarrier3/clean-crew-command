@@ -524,6 +524,7 @@ export type Database = {
       profiles: {
         Row: {
           active: boolean
+          attendance_bonus_amount: number | null
           attendance_tracking_type: string | null
           created_at: string
           email: string | null
@@ -541,10 +542,12 @@ export type Database = {
           phone: string | null
           require_geofencing: boolean
           salary_amount: number | null
+          time_bonus_amount: number | null
           updated_at: string
         }
         Insert: {
           active?: boolean
+          attendance_bonus_amount?: number | null
           attendance_tracking_type?: string | null
           created_at?: string
           email?: string | null
@@ -562,10 +565,12 @@ export type Database = {
           phone?: string | null
           require_geofencing?: boolean
           salary_amount?: number | null
+          time_bonus_amount?: number | null
           updated_at?: string
         }
         Update: {
           active?: boolean
+          attendance_bonus_amount?: number | null
           attendance_tracking_type?: string | null
           created_at?: string
           email?: string | null
@@ -583,6 +588,7 @@ export type Database = {
           phone?: string | null
           require_geofencing?: boolean
           salary_amount?: number | null
+          time_bonus_amount?: number | null
           updated_at?: string
         }
         Relationships: []
