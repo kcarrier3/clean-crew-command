@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import QualityControlDashboard from './QualityControlDashboard';
 import JobBudgetingWidget from './JobBudgetingWidget';
+import { AccountDetail } from './AccountDetail';
 
 interface JobSite {
   id: string;
@@ -65,6 +66,7 @@ export default function JobSitesManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingJobSite, setEditingJobSite] = useState<JobSite | null>(null);
   const [activeTab, setActiveTab] = useState('accounts');
+  const [selectedJobSite, setSelectedJobSite] = useState<JobSite | null>(null);
   
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -391,6 +393,16 @@ export default function JobSitesManagement() {
 
   const activeJobSites = jobSites.filter(site => site.active);
   const inactiveJobSites = jobSites.filter(site => !site.active);
+
+  // Show account detail view if a job site is selected
+  if (selectedJobSite) {
+    return (
+      <AccountDetail
+        jobSite={selectedJobSite}
+        onBack={() => setSelectedJobSite(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -786,7 +798,7 @@ export default function JobSitesManagement() {
                   ) : (
                     <div className="grid gap-4">
                       {activeJobSites.map((jobSite) => (
-                        <Card key={jobSite.id} className="hover:shadow-md transition-shadow">
+                        <Card key={jobSite.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedJobSite(jobSite)}>
                           <CardContent className="p-6">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
@@ -872,14 +884,14 @@ export default function JobSitesManagement() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => openEditDialog(jobSite)}
+                                  onClick={(e) => { e.stopPropagation(); openEditDialog(jobSite); }}
                                 >
                                   <Edit2 className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => toggleJobSiteStatus(jobSite)}
+                                  onClick={(e) => { e.stopPropagation(); toggleJobSiteStatus(jobSite); }}
                                 >
                                   <Switch className="h-4 w-4" />
                                 </Button>
@@ -889,6 +901,7 @@ export default function JobSitesManagement() {
                                       variant="outline"
                                       size="sm"
                                       className="text-destructive hover:text-destructive"
+                                      onClick={(e) => e.stopPropagation()}
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -954,14 +967,14 @@ export default function JobSitesManagement() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => openEditDialog(jobSite)}
+                                  onClick={(e) => { e.stopPropagation(); openEditDialog(jobSite); }}
                                 >
                                   <Edit2 className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => toggleJobSiteStatus(jobSite)}
+                                  onClick={(e) => { e.stopPropagation(); toggleJobSiteStatus(jobSite); }}
                                 >
                                   <Switch className="h-4 w-4" />
                                 </Button>

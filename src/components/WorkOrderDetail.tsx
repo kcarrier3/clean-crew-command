@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Camera, Upload, MessageCircle, Calendar, User, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 
 interface WorkOrder {
@@ -58,6 +59,7 @@ export const WorkOrderDetail: React.FC<WorkOrderDetailProps> = ({
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   const statusColors = {
     open: 'bg-blue-100 text-blue-800',
@@ -171,7 +173,7 @@ export const WorkOrderDetail: React.FC<WorkOrderDetailProps> = ({
         .insert({
           work_order_id: workOrder.id,
           note: newNote,
-          created_by: 'temp-user-id' // TODO: Replace with actual user ID
+          created_by: profile?.id || ''
         });
 
       if (error) throw error;
