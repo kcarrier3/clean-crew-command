@@ -84,13 +84,10 @@ const Auth = () => {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <img
-            src="/lovable-uploads/15903461-f6a6-4e12-bd88-aaae74e48f31.png"
-            alt="Summit Facilities Group"
-            className="mx-auto mb-4 h-48 w-auto"
+            src="/crew-compass-logo.png"
+            alt="Crew Compass"
+            className="mx-auto mb-4 h-52 w-auto"
           />
-          <h1 className="text-3xl font-bold text-brand-orange">CrewCompass</h1>
-          <p className="text-muted-foreground italic">by Summit Facilities Group</p>
-          <p className="text-muted-foreground">Every great team needs a compass!</p>
         </div>
 
         {/* Sign In View */}
@@ -141,6 +138,9 @@ const Auth = () => {
               </form>
               <p className="text-center text-xs text-muted-foreground mt-4">
                 Don't have an account? Contact your manager to receive an invitation.
+              </p>
+              <p className="text-center text-xs text-muted-foreground mt-2">
+                <a href="/privacy-policy" className="underline hover:text-foreground">Privacy Policy</a>
               </p>
             </CardContent>
           </Card>
