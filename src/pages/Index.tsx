@@ -119,7 +119,7 @@ const Index = () => {
           <div className="mb-8 flex justify-between items-center">
             <div>
               <img
-                src="/crew-compass-logo-notag.png?v=2"
+                src="/crew-compass-logo-notag.png?v=3"
                 alt="Crew Compass"
                 className="h-14 md:h-16 w-auto"
               />
