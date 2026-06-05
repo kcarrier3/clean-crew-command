@@ -140,20 +140,20 @@ export const useMessaging = () => {
     if (!user || isManager()) return;
     try {
       const { data: mySchedules } = await supabase
-        .from('schedules')
+        .from('employee_schedules')
         .select('job_site_id')
         .eq('employee_id', user.id)
-        .gte('start_time', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+        .gte('start_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
 
       const jobSiteIds = [...new Set((mySchedules || []).map((s: any) => s.job_site_id).filter(Boolean))];
       if (jobSiteIds.length === 0) { setCoworkers([]); return; }
 
       const { data: sharedSchedules } = await supabase
-        .from('schedules')
+        .from('employee_schedules')
         .select('employee_id')
         .in('job_site_id', jobSiteIds)
         .neq('employee_id', user.id)
-        .gte('start_time', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+        .gte('start_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
 
       const coworkerIds = [...new Set((sharedSchedules || []).map((s: any) => s.employee_id).filter(Boolean))];
       if (coworkerIds.length === 0) { setCoworkers([]); return; }
