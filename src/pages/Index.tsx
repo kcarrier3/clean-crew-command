@@ -121,7 +121,7 @@ const Index = () => {
               <img
                 src="/crew-compass-logo-notag.png?v=3"
                 alt="Crew Compass"
-                className="h-14 md:h-16 w-auto"
+                className="h-28 md:h-32 w-auto"
               />
             </div>
             <div className="flex items-center gap-3">
