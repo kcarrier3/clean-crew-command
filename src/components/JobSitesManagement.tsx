@@ -799,11 +799,11 @@ export default function JobSitesManagement() {
                     <div className="grid gap-4">
                       {activeJobSites.map((jobSite) => (
                         <Card key={jobSite.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedJobSite(jobSite)}>
-                          <CardContent className="p-6">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="text-lg font-semibold">{jobSite.name}</h3>
+                          <CardContent className="p-4 md:p-6">
+                            <div className="flex items-start justify-between gap-2 flex-wrap md:flex-nowrap">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 md:gap-3 mb-2 flex-wrap">
+                                  <h3 className="text-base md:text-lg font-semibold break-words">{jobSite.name}</h3>
                                   <div className="flex gap-2">
                                     <Badge variant="default">Active</Badge>
                                     {jobSite.is_recurring_monthly && (
@@ -813,27 +813,27 @@ export default function JobSitesManagement() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                  <div className="space-y-2">
+                                  <div className="space-y-2 min-w-0">
                                     {jobSite.client_name && (
-                                      <p className="text-sm"><strong>Client:</strong> {jobSite.client_name}</p>
+                                      <p className="text-sm break-words"><strong>Client:</strong> {jobSite.client_name}</p>
                                     )}
                                     {jobSite.address && (
-                                      <p className="text-sm"><strong>Address:</strong> {jobSite.address}</p>
+                                      <p className="text-sm break-words"><strong>Address:</strong> {jobSite.address}</p>
                                     )}
                                     {jobSite.contact_phone && (
-                                      <p className="text-sm"><strong>Phone:</strong> {jobSite.contact_phone}</p>
+                                      <p className="text-sm break-words"><strong>Phone:</strong> {jobSite.contact_phone}</p>
                                     )}
                                     {jobSite.contact_email && (
-                                      <p className="text-sm"><strong>Email:</strong> {jobSite.contact_email}</p>
+                                      <p className="text-sm break-all"><strong>Email:</strong> {jobSite.contact_email}</p>
                                     )}
                                   </div>
 
-                                  <div className="space-y-2">
+                                  <div className="space-y-2 min-w-0">
                                     {jobSite.estimated_duration && (
-                                      <p className="text-sm"><strong>Duration:</strong> {jobSite.estimated_duration}</p>
+                                      <p className="text-sm break-words"><strong>Duration:</strong> {jobSite.estimated_duration}</p>
                                     )}
                                     {jobSite.budget_info && (
-                                      <p className="text-sm"><strong>Budget:</strong> {jobSite.budget_info}</p>
+                                      <p className="text-sm break-words"><strong>Budget:</strong> {jobSite.budget_info}</p>
                                     )}
                                   </div>
                                 </div>
@@ -880,7 +880,7 @@ export default function JobSitesManagement() {
                                 )}
                               </div>
 
-                              <div className="flex gap-2 ml-4">
+                              <div className="flex gap-2 md:ml-4 shrink-0">
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -943,27 +943,27 @@ export default function JobSitesManagement() {
                     <div className="grid gap-4">
                       {inactiveJobSites.map((jobSite) => (
                         <Card key={jobSite.id} className="opacity-60">
-                          <CardContent className="p-6">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="text-lg font-semibold">{jobSite.name}</h3>
+                          <CardContent className="p-4 md:p-6">
+                            <div className="flex items-start justify-between gap-2 flex-wrap md:flex-nowrap">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 md:gap-3 mb-2 flex-wrap">
+                                  <h3 className="text-base md:text-lg font-semibold break-words">{jobSite.name}</h3>
                                   <Badge variant="secondary">Inactive</Badge>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                  <div className="space-y-2">
+                                  <div className="space-y-2 min-w-0">
                                     {jobSite.client_name && (
-                                      <p className="text-sm"><strong>Client:</strong> {jobSite.client_name}</p>
+                                      <p className="text-sm break-words"><strong>Client:</strong> {jobSite.client_name}</p>
                                     )}
                                     {jobSite.address && (
-                                      <p className="text-sm"><strong>Address:</strong> {jobSite.address}</p>
+                                      <p className="text-sm break-words"><strong>Address:</strong> {jobSite.address}</p>
                                     )}
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="flex gap-2 ml-4">
+                              <div className="flex gap-2 md:ml-4 shrink-0">
                                 <Button
                                   variant="outline"
                                   size="sm"
