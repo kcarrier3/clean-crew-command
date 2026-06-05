@@ -104,8 +104,8 @@ All colors MUST be HSL.
     background-image:
       /* subtle topographic contour lines */
       url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600' viewBox='0 0 600 600'><g fill='none' stroke='hsl(25,70%25,55%25)' stroke-opacity='0.10' stroke-width='1'><path d='M-50 320 Q 80 260 200 300 T 430 290 T 680 270'/><path d='M-50 360 Q 90 290 220 330 T 460 320 T 680 300'/><path d='M-50 400 Q 110 320 240 360 T 490 350 T 680 335'/><path d='M-50 440 Q 130 360 260 395 T 510 385 T 680 370'/><path d='M-50 480 Q 150 400 280 430 T 530 420 T 680 410'/><path d='M-50 520 Q 170 450 300 470 T 550 460 T 680 450'/><path d='M-50 560 Q 190 500 320 510 T 570 500 T 680 495'/><path d='M-50 220 Q 100 180 220 220 T 460 210 T 680 200'/><path d='M-50 170 Q 120 130 240 170 T 470 165 T 680 160'/><path d='M-50 120 Q 140 90 260 125 T 480 120 T 680 118'/><path d='M-50 70 Q 160 50 280 80 T 490 78 T 680 76'/></g></svg>"),
-      /* diagonal white -> orange, concentrated bottom-right */
-      radial-gradient(ellipse 90% 80% at 100% 100%, hsl(30 85% 86%) 0%, hsl(32 80% 92%) 22%, hsl(34 75% 96%) 50%, hsl(0 0% 100%) 75%);
+      /* diagonal white -> earthy terracotta, concentrated bottom-right */
+      radial-gradient(ellipse 90% 80% at 100% 100%, hsl(26 55% 70%) 0%, hsl(28 50% 82%) 22%, hsl(30 42% 92%) 50%, hsl(0 0% 100%) 75%);
     background-repeat: repeat, no-repeat;
     background-size: 600px 600px, 100% 100%;
     background-attachment: fixed;
