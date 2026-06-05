@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -25,6 +25,7 @@ import MessagingCenter from '@/components/MessagingCenter';
 import ManagerLog from '@/components/ManagerLog';
 import JobSitesManagement from '@/components/JobSitesManagement';
 import { useAuth } from '@/hooks/useAuth';
+import MySchedule from '@/components/MySchedule';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
@@ -177,8 +178,9 @@ const Index = () => {
                 </TabsList>
               )
             ) : (
-              <TabsList className="hidden md:grid w-full grid-cols-2">
+              <TabsList className="hidden md:grid w-full grid-cols-3">
                 <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
+                <TabsTrigger value="myschedule">My Schedule</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
             )}
@@ -192,8 +194,9 @@ const Index = () => {
                 <TabsTrigger value="managerlog">Log</TabsTrigger>
               </TabsList>
             ) : (
-              <TabsList className="md:hidden grid w-full grid-cols-2">
-                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsList className="md:hidden grid w-full grid-cols-3">
+                <TabsTrigger value="dashboard">Home</TabsTrigger>
+                <TabsTrigger value="myschedule">Schedule</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
             )}
@@ -214,6 +217,12 @@ const Index = () => {
               </TabsContent>
             )}
             
+            {!isManager() && (
+              <TabsContent value="myschedule" className="mt-6">
+                <MySchedule />
+              </TabsContent>
+            )}
+
             <TabsContent value="quality" className="mt-6">
               <QualityControlDashboard />
             </TabsContent>
@@ -258,6 +267,18 @@ const Index = () => {
               className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
             >
               <Calendar className="h-5 w-5" />
+              <span className="text-xs">Schedule</span>
+            </Button>
+          )}
+
+          {!isManager() && (
+            <Button
+              variant={activeTab === "myschedule" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("myschedule")}
+              className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
+            >
+              <CalendarDays className="h-5 w-5" />
               <span className="text-xs">Schedule</span>
             </Button>
           )}
