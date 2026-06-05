@@ -115,10 +115,10 @@ const Index = () => {
   const userDisplayName = profile ? `${profile.first_name} ${profile.last_name}` : user.email;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       {/* Desktop padding, reduced mobile padding */}
-      <div className="p-6 md:p-6 pb-24 md:pb-6">
-        <div className="max-w-6xl mx-auto">
+      <div className="p-3 md:p-6 pb-24 md:pb-6">
+        <div className="max-w-6xl mx-auto min-w-0">
           <div className="mb-8 flex justify-between items-center">
             <div>
               <img

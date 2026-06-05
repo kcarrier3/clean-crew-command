@@ -182,16 +182,16 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-6 max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-start gap-4">
+      <div className="flex flex-wrap items-start gap-2 md:gap-4">
         <Button variant="ghost" size="sm" onClick={onBack} className="mt-1">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold">{jobSite.name}</h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+            <h1 className="text-xl md:text-2xl font-bold break-words">{jobSite.name}</h1>
             <Badge variant={jobSite.active ? 'default' : 'secondary'}>
               {jobSite.active ? 'Active' : 'Inactive'}
             </Badge>
@@ -200,16 +200,17 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
             )}
           </div>
           {jobSite.address && (
-            <p className="text-muted-foreground flex items-center gap-1 mt-1">
+            <p className="text-muted-foreground flex items-start gap-1 mt-1 text-sm break-words">
               <MapPin className="h-3.5 w-3.5" />
               {jobSite.address}
             </p>
           )}
         </div>
         {isManager() && (
-          <Button onClick={() => setCreateWOOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Work Order
+          <Button onClick={() => setCreateWOOpen(true)} size="sm" className="shrink-0">
+            <Plus className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">New Work Order</span>
+            <span className="md:hidden">New WO</span>
           </Button>
         )}
       </div>
@@ -246,18 +247,18 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
 
       {/* Main Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="grid grid-cols-4 w-full max-w-lg">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="workorders">
-            Work Orders
+        <TabsList className="grid grid-cols-4 w-full max-w-lg h-auto">
+          <TabsTrigger value="overview" className="text-xs md:text-sm px-1 py-1.5">Overview</TabsTrigger>
+          <TabsTrigger value="workorders" className="text-xs md:text-sm px-1 py-1.5">
+            <span className="truncate">Work Orders</span>
             {openWorkOrders.length > 0 && (
-              <Badge className="ml-1.5 bg-orange-500 text-white text-xs h-4 px-1">
+              <Badge className="ml-1 bg-orange-500 text-white text-[10px] h-4 px-1">
                 {openWorkOrders.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="inspections">QA History</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="inspections" className="text-xs md:text-sm px-1 py-1.5">QA History</TabsTrigger>
+          <TabsTrigger value="team" className="text-xs md:text-sm px-1 py-1.5">Team</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
