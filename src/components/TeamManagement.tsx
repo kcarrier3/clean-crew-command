@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload, Briefcase, AlertCircle } from 'lucide-react';
+import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload, Briefcase, AlertCircle, KeyRound } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -54,7 +54,8 @@ interface UserRole {
 }
 
 const TeamManagement = () => {
-  const { canManageEmployees, profile, session } = useAuth();
+  const { canManageEmployees, profile, session, sendPasswordResetEmail } = useAuth();
+  const [sendingReset, setSendingReset] = useState(false);
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -417,6 +418,32 @@ const TeamManagement = () => {
     } finally {
       setIsSubmittingEmployee(false);
     }
+  };
+
+  const handleSendPasswordReset = async (employee: Employee) => {
+    if (!employee.email) {
+      toast({
+        title: "No email on file",
+        description: "This employee does not have an email address saved.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSendingReset(true);
+    const { error } = await sendPasswordResetEmail(employee.email);
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send password reset email.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Password Reset Sent",
+        description: `A password reset link has been sent to ${employee.email}.`,
+      });
+    }
+    setSendingReset(false);
   };
 
   const resetAddEmployeeForm = () => {
@@ -1107,6 +1134,46 @@ const TeamManagement = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Account Management - Password Reset (Owner/Admin only) */}
+              {canManageCurrentEmployee() && (profile?.job_title === 'Owner' || profile?.job_title === 'Administrator') && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <KeyRound className="h-5 w-5" />
+                      Account Management
+                    </CardTitle>
+                    <CardDescription>
+                      Manage login credentials for this employee
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">Reset Password</p>
+                        <p className="text-xs text-muted-foreground">
+                          Send a password reset email to {selectedEmployee.email || 'this employee'}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={sendingReset || !selectedEmployee.email}
+                        onClick={() => handleSendPasswordReset(selectedEmployee)}
+                      >
+                        {sendingReset ? (
+                          'Sending...'
+                        ) : (
+                          <>
+                            <Mail className="h-4 w-4 mr-2" />
+                            Send Reset
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Documents Section */}
               <Card>

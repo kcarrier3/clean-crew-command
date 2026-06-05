@@ -22,6 +22,56 @@ const InviteEmployeeSchema = z.object({
   timeBonusAmount: z.number().min(0).max(100000).optional().nullable(),
 });
 
+// Permission mappings — must match jobTitles.ts in the frontend exactly
+const jobTitlePermissions: Record<string, string[]> = {
+  'Owner': [
+    'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
+    'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
+    'edit_quality_control', 'view_worker_status', 'manage_employees', 'view_notifications',
+    'admin_settings'
+  ],
+  'Administrator': [
+    'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
+    'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
+    'edit_quality_control', 'view_worker_status', 'manage_employees', 'view_notifications',
+    'admin_settings'
+  ],
+  'Janitorial Manager': [
+    'view_schedules', 'edit_schedules', 'view_work_orders', 'create_work_orders',
+    'edit_work_orders', 'view_quality_control', 'edit_quality_control', 'view_notifications'
+  ],
+  'Project Crew Lead': [
+    'view_schedules', 'edit_schedules', 'view_work_orders', 'create_work_orders',
+    'edit_work_orders', 'view_quality_control', 'edit_quality_control', 'view_notifications'
+  ],
+  'Supervisor': [
+    'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
+    'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
+    'edit_quality_control', 'view_worker_status', 'view_notifications'
+  ],
+  'Project Worker': [
+    'view_schedules', 'view_time_tracking', 'edit_time_tracking',
+    'view_work_orders', 'view_notifications'
+  ],
+  'Janitorial Staff': [
+    'view_schedules', 'view_time_tracking', 'edit_time_tracking',
+    'view_work_orders', 'view_notifications'
+  ],
+  'Floaters': [
+    'view_schedules', 'view_time_tracking', 'edit_time_tracking',
+    'view_work_orders', 'view_notifications', 'view_quality_control'
+  ],
+  'Supply Management': [
+    'view_schedules', 'view_time_tracking', 'edit_time_tracking',
+    'view_work_orders', 'view_notifications'
+  ],
+};
+
+// Titles that get the 'manager' system role
+const managerTitles = ['Owner', 'Administrator', 'Janitorial Manager', 'Project Crew Lead', 'Supervisor'];
+// Titles that get the 'admin' system role
+const adminTitles = ['Owner', 'Administrator'];
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -66,18 +116,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Inviting employee:', { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType });
 
-    // Check if user already exists by trying to get user data
+    // Check if user already exists
     try {
       const { data: existingUsers } = await supabase.auth.admin.listUsers({
         page: 1,
-        perPage: 1000 // Supabase admin client limitation workaround
+        perPage: 1000
       });
       
       const userExists = existingUsers.users?.some(user => user.email === email);
       
       if (userExists) {
         return new Response(
-          JSON.stringify({ error: 'User with this email already exists' }), 
+          JSON.stringify({ error: 'A user with this email already exists' }), 
           {
             status: 400,
             headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -88,8 +138,10 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Could not check existing users, proceeding with invitation:', error);
     }
 
-    // Send invitation email via Supabase Auth with metadata
-    const redirectUrl = `https://lqtfbqfnpjobrwjlpqhr.supabase.app/`;
+    // Use the app's public URL for the invite redirect so employees land on the app
+    // Falls back to the Supabase project URL if SITE_URL is not set
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://clean-crew-command.lovable.app';
+    const redirectUrl = `${siteUrl}/reset-password`;
     
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectUrl,
@@ -114,53 +166,37 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Employee invitation sent successfully to:', email);
 
-    // If user was created, assign default permissions based on job title
+    // Assign permissions and roles based on job title
     if (inviteData.user?.id) {
-      // Define permission mappings for each job title
-      const jobTitlePermissions: Record<string, string[]> = {
-        'Owner': [
-          'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
-          'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
-          'edit_quality_control', 'view_worker_status', 'manage_employees', 'view_notifications'
-        ],
-        'Administrator': [
-          'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
-          'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
-          'edit_quality_control', 'view_worker_status', 'manage_employees', 'view_notifications'
-        ],
-        'Manager': [
-          'view_schedules', 'edit_schedules', 'view_work_orders', 'create_work_orders',
-          'edit_work_orders', 'view_quality_control', 'edit_quality_control', 'view_notifications'
-        ],
-        'Supervisor': [
-          'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
-          'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
-          'edit_quality_control', 'view_worker_status', 'view_notifications'
-        ],
-        'Project Worker': [
-          'view_schedules', 'view_time_tracking', 'edit_time_tracking',
-          'view_work_orders', 'view_notifications'
-        ],
-        'Janitorial Staff': [
-          'view_schedules', 'view_time_tracking', 'edit_time_tracking',
-          'view_work_orders', 'view_notifications'
-        ],
-        'Floaters': [
-          'view_schedules', 'view_time_tracking', 'edit_time_tracking',
-          'view_work_orders', 'view_notifications'
-        ],
-        'Supply Management': [
-          'view_schedules', 'view_time_tracking', 'edit_time_tracking',
-          'view_work_orders', 'view_notifications'
-        ],
-      };
+      const userId = inviteData.user.id;
 
-      const permissions = jobTitlePermissions[jobTitle] || [];
+      // Update the profile with job_title and attendance_tracking_type
+      // (the trigger does not persist these fields, so we set them here)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          job_title: jobTitle,
+          attendance_tracking_type: attendanceTrackingType || 'attendance_only',
+        })
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error('Error updating profile with job title:', profileError);
+      }
+
+      // Remove the default employee permissions assigned by the trigger
+      // so we can replace them with job-title-specific ones
+      await supabase
+        .from('user_permissions')
+        .delete()
+        .eq('user_id', userId);
+
+      // Insert job-title-specific permissions
+      const permissions = jobTitlePermissions[jobTitle] || jobTitlePermissions['Janitorial Staff'];
       
-      // Insert permissions for the new user
       if (permissions.length > 0) {
         const permissionInserts = permissions.map(permission => ({
-          user_id: inviteData.user.id,
+          user_id: userId,
           permission: permission
         }));
 
@@ -170,41 +206,37 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (permError) {
           console.error('Error assigning permissions:', permError);
-          // Don't fail the whole operation if permissions fail
         } else {
-          console.log(`Assigned ${permissions.length} permissions to user based on job title: ${jobTitle}`);
+          console.log(`Assigned ${permissions.length} permissions for job title: ${jobTitle}`);
         }
       }
 
-      // Assign manager role for Owner, Administrator, and Manager
-      if (jobTitle === 'Owner' || jobTitle === 'Administrator' || jobTitle === 'Manager') {
+      // Assign manager role for supervisory titles
+      if (managerTitles.includes(jobTitle)) {
+        // Remove default employee role first
+        await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', 'employee');
+
         const { error: roleError } = await supabase
           .from('user_roles')
-          .insert({
-            user_id: inviteData.user.id,
-            role: 'manager'
-          });
+          .upsert({ user_id: userId, role: 'manager' }, { onConflict: 'user_id,role' });
 
         if (roleError) {
           console.error('Error assigning manager role:', roleError);
         } else {
-          console.log(`Assigned manager role to user with job title: ${jobTitle}`);
+          console.log(`Assigned manager role to: ${jobTitle}`);
         }
       }
 
       // Assign admin role for Owner and Administrator
-      if (jobTitle === 'Owner' || jobTitle === 'Administrator') {
+      if (adminTitles.includes(jobTitle)) {
         const { error: adminRoleError } = await supabase
           .from('user_roles')
-          .insert({
-            user_id: inviteData.user.id,
-            role: 'admin'
-          });
+          .upsert({ user_id: userId, role: 'admin' }, { onConflict: 'user_id,role' });
 
         if (adminRoleError) {
           console.error('Error assigning admin role:', adminRoleError);
         } else {
-          console.log(`Assigned admin role to user with job title: ${jobTitle}`);
+          console.log(`Assigned admin role to: ${jobTitle}`);
         }
       }
     }
@@ -223,7 +255,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error('Error in invite-employee function:', error);
     return new Response(
-      JSON.stringify({ error: 'An unexpected error occurred' }),
+      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

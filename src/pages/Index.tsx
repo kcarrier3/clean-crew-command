@@ -2,15 +2,24 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import ManagerDashboard from '@/components/ManagerDashboard';
 import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
 import SchedulingDashboard from '@/components/SchedulingDashboard';
 import EmployeeDashboard from '@/components/EmployeeDashboard';
 import QualityControlDashboard from '@/components/QualityControlDashboard';
 import { NotificationBell } from '@/components/NotificationBell';
-import { TestNotificationButton } from '@/components/TestNotificationButton';
 import TeamManagement from '@/components/TeamManagement';
 import MessagingCenter from '@/components/MessagingCenter';
 import ManagerLog from '@/components/ManagerLog';
@@ -21,8 +30,10 @@ import { useToast } from '@/hooks/use-toast';
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading, profile, isManager, canManageEmployees, signOut } = useAuth();
+  const { user, loading, profile, isManager, canManageEmployees, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -41,6 +52,43 @@ const Index = () => {
     } else {
       navigate('/auth');
     }
+  };
+
+  const handleChangePassword = async () => {
+    if (!user?.email) return;
+    const { error } = await sendPasswordResetEmail(user.email);
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send password reset email.",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Password Reset Email Sent",
+        description: `A password reset link has been sent to ${user.email}.`
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    const { error } = await deleteAccount();
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please contact your manager.",
+        variant: "destructive"
+      });
+      setDeletingAccount(false);
+    } else {
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been successfully deleted."
+      });
+      navigate('/auth');
+    }
+    setShowDeleteDialog(false);
   };
 
   if (loading) {
@@ -71,7 +119,6 @@ const Index = () => {
               <p className="text-muted-foreground text-sm md:text-base">Summit Facilities Group</p>
             </div>
             <div className="flex items-center gap-3">
-              <TestNotificationButton />
               <NotificationBell />
               
               {/* User Menu */}
@@ -82,10 +129,26 @@ const Index = () => {
                     <span className="hidden md:inline">{userDisplayName}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-52">
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">
+                    {user.email}
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleChangePassword}>
+                    <KeyRound className="h-4 w-4 mr-2" />
+                    Change Password
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete My Account
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -139,7 +202,6 @@ const Index = () => {
               {isManager() ? <ManagerDashboard /> : <EmployeeDashboard />}
             </TabsContent>
             
-            
             {isManager() && (
               <TabsContent value="scheduling" className="mt-6">
                 <SchedulingDashboard />
@@ -178,6 +240,16 @@ const Index = () => {
       {/* Mobile Bottom Navigation - Role-based with safe area */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 pb-safe safe-x">
         <div className="flex justify-around items-center max-w-md mx-auto">
+          <Button
+            variant={activeTab === "dashboard" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("dashboard")}
+            className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
+          >
+            <User className="h-5 w-5" />
+            <span className="text-xs">Home</span>
+          </Button>
+
           {isManager() && (
             <Button
               variant={activeTab === "scheduling" ? "default" : "ghost"}
@@ -211,8 +283,42 @@ const Index = () => {
               <span className="text-xs">Log</span>
             </Button>
           )}
+
+          {isManager() && (
+            <Button
+              variant={activeTab === "jobsites" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("jobsites")}
+              className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
+            >
+              <MapPin className="h-5 w-5" />
+              <span className="text-xs">Accounts</span>
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Your Account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action is <strong>permanent and cannot be undone</strong>. Your account, profile, and all associated data will be permanently deleted. If you need access again, you will need to be re-invited by your manager.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingAccount}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={deletingAccount}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingAccount ? "Deleting..." : "Yes, Delete My Account"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

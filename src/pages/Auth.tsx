@@ -4,16 +4,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+type AuthView = 'signin' | 'forgot_password' | 'forgot_sent';
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [view, setView] = useState<AuthView>('signin');
+  const [resetEmail, setResetEmail] = useState('');
 
   // Redirect if already authenticated
   if (user) {
@@ -32,9 +36,15 @@ const Auth = () => {
     const { error } = await signIn(email, password);
 
     if (error) {
+      let message = error.message;
+      if (message.includes('Email not confirmed')) {
+        message = 'Please check your email and confirm your account before signing in.';
+      } else if (message.includes('Invalid login credentials')) {
+        message = 'Incorrect email or password. Please try again.';
+      }
       toast({
         title: "Sign In Error",
-        description: error.message,
+        description: message,
         variant: "destructive"
       });
     } else {
@@ -48,30 +58,22 @@ const Auth = () => {
     setLoading(false);
   };
 
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const firstName = formData.get('firstName') as string;
-    const lastName = formData.get('lastName') as string;
-    const employeeId = formData.get('employeeId') as string;
-
-    const { error } = await signUp(email, password, firstName, lastName, employeeId);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
 
     if (error) {
       toast({
-        title: "Sign Up Error",
+        title: "Error",
         description: error.message,
         variant: "destructive"
       });
     } else {
-      toast({
-        title: "Account Created!",
-        description: "Please check your email to verify your account."
-      });
+      setView('forgot_sent');
     }
 
     setLoading(false);
@@ -81,125 +83,137 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <img src="/lovable-uploads/15903461-f6a6-4e12-bd88-aaae74e48f31.png" alt="Summit Facilities Group" className="mx-auto mb-4 h-48 w-auto" />
+          <img
+            src="/lovable-uploads/15903461-f6a6-4e12-bd88-aaae74e48f31.png"
+            alt="Summit Facilities Group"
+            className="mx-auto mb-4 h-48 w-auto"
+          />
           <h1 className="text-3xl font-bold text-brand-orange">CrewCompass</h1>
           <p className="text-muted-foreground italic">by Summit Facilities Group</p>
           <p className="text-muted-foreground">Every great team needs a compass!</p>
         </div>
 
-        <Tabs defaultValue="signin" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
+        {/* Sign In View */}
+        {view === 'signin' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sign In</CardTitle>
+              <CardDescription>
+                Enter your credentials to access your account
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="your.email@company.com"
+                    autoComplete="email"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Sign In
+                </Button>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full text-sm text-muted-foreground"
+                  onClick={() => setView('forgot_password')}
+                >
+                  Forgot your password?
+                </Button>
+              </form>
+              <p className="text-center text-xs text-muted-foreground mt-4">
+                Don't have an account? Contact your manager to receive an invitation.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
-          <TabsContent value="signin">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sign In</CardTitle>
-                <CardDescription>
-                  Enter your credentials to access your account
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      required
-                      placeholder="your.email@company.com"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      required
-                      placeholder="Enter your password"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign In
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
+        {/* Forgot Password View */}
+        {view === 'forgot_password' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Reset Password
+              </CardTitle>
+              <CardDescription>
+                Enter your email address and we'll send you a link to reset your password.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <Label htmlFor="reset-email">Email Address</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    required
+                    placeholder="your.email@company.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    autoComplete="email"
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send Reset Link
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setView('signin')}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Sign In
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
-          <TabsContent value="signup">
-            <Card>
-              <CardHeader>
-                <CardTitle>Create Account</CardTitle>
-                <CardDescription>
-                  Create a new employee account
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input
-                        id="firstName"
-                        name="firstName"
-                        required
-                        placeholder="John"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input
-                        id="lastName"
-                        name="lastName"
-                        required
-                        placeholder="Doe"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="employeeId">Employee ID (Optional)</Label>
-                    <Input
-                      id="employeeId"
-                      name="employeeId"
-                      placeholder="EMP001"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      required
-                      placeholder="your.email@company.com"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      required
-                      placeholder="Create a strong password"
-                      minLength={6}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Create Account
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* Reset Email Sent Confirmation */}
+        {view === 'forgot_sent' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-green-600" />
+                Check Your Email
+              </CardTitle>
+              <CardDescription>
+                If an account exists for <strong>{resetEmail}</strong>, a password reset link has been sent. Check your inbox (and spam folder).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => { setView('signin'); setResetEmail(''); }}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Sign In
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
