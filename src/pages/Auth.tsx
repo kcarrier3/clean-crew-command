@@ -84,7 +84,7 @@ const Auth = () => {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <img
-            src="/crew-compass-logo.png"
+            src="/crew-compass-logo.png?v=2"
             alt="Crew Compass"
             className="mx-auto mb-4 h-52 w-auto"
           />
