@@ -14,23 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          is_primary: boolean
+          job_site_id: string
+          last_name: string
+          notes: string | null
+          phone: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          is_primary?: boolean
+          job_site_id: string
+          last_name: string
+          notes?: string | null
+          phone?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_primary?: boolean
+          job_site_id?: string
+          last_name?: string
+          notes?: string | null
+          phone?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_contacts_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_settings: {
+        Row: {
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_participants: {
         Row: {
           conversation_id: string
           id: string
           joined_at: string
+          last_read_at: string | null
+          role: string
           user_id: string
         }
         Insert: {
           conversation_id: string
           id?: string
           joined_at?: string
+          last_read_at?: string | null
+          role?: string
           user_id: string
         }
         Update: {
           conversation_id?: string
           id?: string
           joined_at?: string
+          last_read_at?: string | null
+          role?: string
           user_id?: string
         }
         Relationships: [
@@ -45,21 +136,146 @@ export type Database = {
       }
       conversations: {
         Row: {
+          account_id: string | null
+          conversation_type: string
           created_at: string
+          created_by: string | null
+          description: string | null
           id: string
           last_message_at: string
+          name: string | null
           updated_at: string
         }
         Insert: {
+          account_id?: string | null
+          conversation_type?: string
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           id?: string
           last_message_at?: string
+          name?: string | null
           updated_at?: string
         }
         Update: {
+          account_id?: string | null
+          conversation_type?: string
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           id?: string
           last_message_at?: string
+          name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      department_employees: {
+        Row: {
+          created_at: string
+          department_id: string
+          employee_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          employee_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          employee_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_employees_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_employees_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      department_managers: {
+        Row: {
+          created_at: string
+          department_id: string
+          id: string
+          manager_id: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          id?: string
+          manager_id: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          id?: string
+          manager_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_managers_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_managers_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          active: boolean
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
@@ -90,6 +306,71 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      employee_document_submissions: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          document_id: string
+          employee_id: string
+          form_data: Json | null
+          id: string
+          ip_address: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          signature_data: string | null
+          signature_typed: string | null
+          signed_at: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          document_id: string
+          employee_id: string
+          form_data?: Json | null
+          id?: string
+          ip_address?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signature_data?: string | null
+          signature_typed?: string | null
+          signed_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          document_id?: string
+          employee_id?: string
+          form_data?: Json | null
+          id?: string
+          ip_address?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signature_data?: string | null
+          signature_typed?: string | null
+          signed_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_document_submissions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_documents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employee_schedules: {
         Row: {
@@ -210,6 +491,259 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      inspection_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          inspection_id: string
+          item_name: string
+          notes: string | null
+          rating: string | null
+          sort_order: number
+          template_item_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          inspection_id: string
+          item_name: string
+          notes?: string | null
+          rating?: string | null
+          sort_order?: number
+          template_item_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          inspection_id?: string
+          item_name?: string
+          notes?: string | null
+          rating?: string | null
+          sort_order?: number
+          template_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_items_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_items_template_item_id_fkey"
+            columns: ["template_item_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_template_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          inspection_id: string
+          inspection_item_id: string | null
+          public_url: string | null
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          inspection_id: string
+          inspection_item_id?: string | null
+          public_url?: string | null
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          inspection_id?: string
+          inspection_item_id?: string | null
+          public_url?: string | null
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_photos_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_photos_inspection_item_id_fkey"
+            columns: ["inspection_item_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_photos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_template_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          item_name: string
+          sort_order: number
+          template_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          item_name: string
+          sort_order?: number
+          template_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          item_name?: string
+          sort_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_default: boolean
+          job_site_id: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          job_site_id?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          job_site_id?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_templates_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspections: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          inspector_id: string
+          job_site_id: string
+          notes: string | null
+          overall_rating: string | null
+          overall_score: number | null
+          status: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          inspector_id: string
+          job_site_id: string
+          notes?: string | null
+          overall_rating?: string | null
+          overall_score?: number | null
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          inspector_id?: string
+          job_site_id?: string
+          notes?: string | null
+          overall_rating?: string | null
+          overall_score?: number | null
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspections_inspector_id_fkey"
+            columns: ["inspector_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       job_sites: {
         Row: {
@@ -428,6 +962,10 @@ export type Database = {
       }
       messages: {
         Row: {
+          attachment_name: string | null
+          attachment_size: number | null
+          attachment_type: string | null
+          attachment_url: string | null
           content: string
           conversation_id: string
           created_at: string
@@ -435,8 +973,13 @@ export type Database = {
           message_type: string
           read_at: string | null
           sender_id: string
+          sender_name: string | null
         }
         Insert: {
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_type?: string | null
+          attachment_url?: string | null
           content: string
           conversation_id: string
           created_at?: string
@@ -444,8 +987,13 @@ export type Database = {
           message_type?: string
           read_at?: string | null
           sender_id: string
+          sender_name?: string | null
         }
         Update: {
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_type?: string | null
+          attachment_url?: string | null
           content?: string
           conversation_id?: string
           created_at?: string
@@ -453,6 +1001,7 @@ export type Database = {
           message_type?: string
           read_at?: string | null
           sender_id?: string
+          sender_name?: string | null
         }
         Relationships: [
           {
@@ -460,6 +1009,70 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      missed_punch_notifications: {
+        Row: {
+          employee_id: string
+          id: string
+          minutes_late: number | null
+          notes: string | null
+          notification_sent_at: string
+          notification_type: string
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          schedule_id: string | null
+          scheduled_start_time: string
+        }
+        Insert: {
+          employee_id: string
+          id?: string
+          minutes_late?: number | null
+          notes?: string | null
+          notification_sent_at?: string
+          notification_type?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          schedule_id?: string | null
+          scheduled_start_time: string
+        }
+        Update: {
+          employee_id?: string
+          id?: string
+          minutes_late?: number | null
+          notes?: string | null
+          notification_sent_at?: string
+          notification_type?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          schedule_id?: string | null
+          scheduled_start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "missed_punch_notifications_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missed_punch_notifications_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missed_punch_notifications_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "employee_schedules"
             referencedColumns: ["id"]
           },
         ]
@@ -491,6 +1104,48 @@ export type Database = {
           month_year?: string
           updated_at?: string
           used_hours?: number
+        }
+        Relationships: []
+      }
+      onboarding_documents: {
+        Row: {
+          active: boolean
+          content: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number
+          document_type: string
+          id: string
+          is_required: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          document_type: string
+          id?: string
+          is_required?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          document_type?: string
+          id?: string
+          is_required?: boolean
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -660,7 +1315,9 @@ export type Database = {
           job_site_id: string | null
           location_lat: number | null
           location_lng: number | null
+          manager_override: boolean
           notes: string | null
+          override_by: string | null
           updated_at: string
         }
         Insert: {
@@ -673,7 +1330,9 @@ export type Database = {
           job_site_id?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          manager_override?: boolean
           notes?: string | null
+          override_by?: string | null
           updated_at?: string
         }
         Update: {
@@ -686,7 +1345,9 @@ export type Database = {
           job_site_id?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          manager_override?: boolean
           notes?: string | null
+          override_by?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -702,6 +1363,13 @@ export type Database = {
             columns: ["job_site_id"]
             isOneToOne: false
             referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_override_by_fkey"
+            columns: ["override_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -962,6 +1630,42 @@ export type Database = {
         Args: { _recipient_id: string; _sender_id: string }
         Returns: boolean
       }
+      compute_inspection_score: {
+        Args: { p_inspection_id: string }
+        Returns: undefined
+      }
+      create_announcement: {
+        Args: { _audience?: string; _description: string; _name: string }
+        Returns: string
+      }
+      create_group_conversation: {
+        Args: {
+          _account_id?: string
+          _description: string
+          _member_ids: string[]
+          _name: string
+        }
+        Returns: string
+      }
+      delete_own_account: { Args: never; Returns: undefined }
+      get_coworkers_at_shared_accounts: {
+        Args: never
+        Returns: {
+          first_name: string
+          id: string
+          job_title: string
+          last_name: string
+        }[]
+      }
+      get_employee_department_managers: {
+        Args: { p_employee_id: string }
+        Returns: {
+          manager_email: string
+          manager_first_name: string
+          manager_id: string
+          manager_last_name: string
+        }[]
+      }
       get_employee_managers: {
         Args: { _employee_id: string }
         Returns: {
@@ -969,6 +1673,20 @@ export type Database = {
           manager_id: string
           manager_job_title: string
           manager_name: string
+        }[]
+      }
+      get_my_conversations: {
+        Args: never
+        Returns: {
+          account_id: string
+          conversation_type: string
+          created_by: string
+          description: string
+          id: string
+          last_message_at: string
+          name: string
+          participant_count: number
+          unread_count: number
         }[]
       }
       get_or_create_conversation: {
@@ -1010,6 +1728,10 @@ export type Database = {
       is_conversation_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
+      }
+      mark_conversation_read: {
+        Args: { _conversation_id: string }
+        Returns: undefined
       }
     }
     Enums: {
