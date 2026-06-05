@@ -17,7 +17,7 @@ const PrivacyPolicy = () => {
           </Button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <img src="/crew-compass-logo.png?v=2" alt="Crew Compass" className="h-10 w-auto" />
+              <img src="/crew-compass-logo.png?v=2" alt="Crew Compass" className="h-[50px] w-auto" />
             </div>
             <h1 className="text-2xl font-bold">Privacy Policy</h1>
             <p className="text-sm text-muted-foreground">Last updated: {lastUpdated}</p>
