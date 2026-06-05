@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText } from 'lucide-react';
+import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -45,6 +45,7 @@ interface TimeEntry {
   job_site_id: string;
   clock_in: string;
   clock_out: string | null;
+  manager_override: boolean;
   employees: Employee;
   job_sites: JobSite;
 }
@@ -65,6 +66,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [companyGeofencingEnabled, setCompanyGeofencingEnabled] = useState(true);
   const { toast } = useToast();
   const { profile, isManager } = useAuth();
   const { canAccessSensitiveInfo } = useJobSiteAccess(selectedJobSite || null);
@@ -77,6 +79,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     }
     fetchJobSites();
     fetchActiveEntries();
+    fetchCompanyGeofencingSetting();
     
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -94,7 +97,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     }
   }, [forManager, profile, selectedEmployeeId]);
 
-  // Auto-select account when employee is selected
+  // Auto-select job site when employee is selected
   useEffect(() => {
     if (selectedEmployee) {
       fetchEmployeeSchedule(selectedEmployee);
@@ -103,6 +106,17 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       setSelectedJobSite('');
     }
   }, [selectedEmployee]);
+
+  const fetchCompanyGeofencingSetting = async () => {
+    const { data } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'geofencing_enabled')
+      .single();
+    if (data) {
+      setCompanyGeofencingEnabled(data.value === 'true');
+    }
+  };
 
   const fetchEmployees = async () => {
     const { data, error } = await supabase
@@ -143,7 +157,6 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       .is('clock_out', null)
       .order('clock_in', { ascending: false });
 
-    // If not a manager, only show current user's entries
     if (!forManager && profile) {
       query = query.eq('employee_id', profile.id);
     }
@@ -158,8 +171,8 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   };
 
   const fetchEmployeeSchedule = async (employeeId: string) => {
-    const currentDay = new Date().getDay(); // 0=Sunday, 1=Monday, etc.
-    const adjustedDay = currentDay === 0 ? 7 : currentDay; // Convert to 1=Monday, 7=Sunday
+    const currentDay = new Date().getDay();
+    const adjustedDay = currentDay === 0 ? 7 : currentDay;
     
     const { data, error } = await supabase
       .from('employee_schedules')
@@ -175,7 +188,6 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       .single();
 
     if (error) {
-      console.log('No schedule found for employee');
       setScheduledJobSite(null);
       setSelectedJobSite('');
     } else if (data) {
@@ -203,7 +215,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           let message = 'Unable to get location';
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              message = 'Location permission denied';
+              message = 'Location permission denied. Please enable location access in your device settings.';
               break;
             case error.POSITION_UNAVAILABLE:
               message = 'Location information unavailable';
@@ -224,7 +236,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   };
 
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 6371e3; // Earth's radius in meters
+    const R = 6371e3;
     const φ1 = lat1 * Math.PI/180;
     const φ2 = lat2 * Math.PI/180;
     const Δφ = (lat2-lat1) * Math.PI/180;
@@ -235,22 +247,34 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
               Math.sin(Δλ/2) * Math.sin(Δλ/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-    return R * c; // Distance in meters
+    return R * c;
+  };
+
+  /**
+   * Determine whether geofencing should be enforced for this clock-in.
+   * Rules:
+   *  1. If company-wide geofencing is OFF → skip geofencing
+   *  2. If this is a manager override → skip geofencing
+   *  3. If the employee's individual require_geofencing is false → skip
+   *  4. If the employee has no geofence coordinates set → skip
+   *  5. Otherwise → enforce
+   */
+  const shouldEnforceGeofencing = (employee: Employee, isManagerOverride: boolean): boolean => {
+    if (!companyGeofencingEnabled) return false;
+    if (isManagerOverride) return false;
+    if (!employee.require_geofencing) return false;
+    if (!employee.geofence_lat || !employee.geofence_lng) return false;
+    return true;
   };
 
   const validateGeofencing = (employee: Employee, location: {lat: number, lng: number}): boolean => {
-    if (!employee.require_geofencing || !employee.geofence_lat || !employee.geofence_lng) {
-      return true; // No geofencing required
-    }
-
+    if (!employee.geofence_lat || !employee.geofence_lng) return true;
+    const radius = employee.geofence_radius_meters || 100;
     const distance = calculateDistance(
-      location.lat, 
-      location.lng, 
-      employee.geofence_lat, 
-      employee.geofence_lng
+      location.lat, location.lng,
+      employee.geofence_lat, employee.geofence_lng
     );
-
-    return distance <= employee.geofence_radius_meters;
+    return distance <= radius;
   };
 
   const clockIn = async () => {
@@ -259,14 +283,13 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       return;
     }
 
-    // Check if employee is already clocked in
     const existingEntry = activeEntries.find(entry => entry.employee_id === selectedEmployee);
     if (existingEntry) {
-      toast({ title: 'Error', description: 'Employee is already clocked in', variant: 'destructive' });
+      toast({ title: 'Already Clocked In', description: 'This employee is already clocked in', variant: 'destructive' });
       return;
     }
 
-    // Get selected employee details for geofencing
+    // Build employee object for geofencing check
     const employee = forManager 
       ? employees.find(emp => emp.id === selectedEmployee)
       : profile ? {
@@ -277,7 +300,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           require_geofencing: profile.require_geofencing,
           geofence_lat: profile.geofence_lat,
           geofence_lng: profile.geofence_lng,
-          geofence_radius_meters: profile.geofence_radius_meters
+          geofence_radius_meters: profile.geofence_radius_meters || 100
         } : null;
         
     if (!employee) {
@@ -285,34 +308,51 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       return;
     }
 
+    // Manager overrides bypass geofencing
+    const isManagerOverride = forManager && isManager();
+    const enforceGeo = shouldEnforceGeofencing(employee, isManagerOverride);
+
     setIsGettingLocation(true);
     setLocationError(null);
 
     try {
-      // Get current location
-      const location = await getCurrentLocation();
-      setCurrentLocation(location);
+      let location: {lat: number, lng: number} | null = null;
 
-      // Validate geofencing if required
-      if (!validateGeofencing(employee, location)) {
-        toast({ 
-          title: 'Location Error', 
-          description: `You must be within ${employee.geofence_radius_meters}m of the assigned location to clock in`, 
-          variant: 'destructive' 
-        });
-        setIsGettingLocation(false);
-        return;
+      if (enforceGeo) {
+        // Must get location and validate
+        location = await getCurrentLocation();
+        setCurrentLocation(location);
+
+        if (!validateGeofencing(employee, location)) {
+          const radius = employee.geofence_radius_meters || 100;
+          toast({ 
+            title: 'Outside Geofence', 
+            description: `You must be within ${radius}m of your assigned location to clock in.`, 
+            variant: 'destructive' 
+          });
+          setIsGettingLocation(false);
+          return;
+        }
+      } else {
+        // Try to get location silently for logging, but don't block on failure
+        try {
+          location = await getCurrentLocation();
+          setCurrentLocation(location);
+        } catch {
+          // Location optional when geofencing not enforced
+        }
       }
 
-      // Clock in with location
       const { data, error } = await supabase
         .from('time_entries')
         .insert({
           employee_id: selectedEmployee,
           job_site_id: selectedJobSite,
           clock_in: new Date().toISOString(),
-          location_lat: location.lat,
-          location_lng: location.lng
+          location_lat: location?.lat ?? null,
+          location_lng: location?.lng ?? null,
+          manager_override: isManagerOverride,
+          override_by: isManagerOverride ? profile?.id : null,
         })
         .select()
         .single();
@@ -320,18 +360,15 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       if (error) {
         toast({ title: 'Error', description: 'Failed to clock in', variant: 'destructive' });
       } else {
-        toast({ title: 'Success', description: 'Clocked in successfully!' });
+        const empName = forManager
+          ? `${employees.find(e => e.id === selectedEmployee)?.first_name || 'Employee'} clocked in`
+          : 'Clocked in successfully!';
+        toast({ title: 'Success', description: empName + (isManagerOverride ? ' (manager override)' : '') });
         
-        // Check if employee is late and notify managers
+        // Check if employee is late and notify department managers
         supabase.functions.invoke('check-late-workers', {
-          body: {
-            timeEntryId: data.id,
-            employeeId: selectedEmployee
-          }
-        }).catch(err => {
-          console.error('Error checking late status:', err);
-          // Don't show error to user - late check is background process
-        });
+          body: { timeEntryId: data.id, employeeId: selectedEmployee }
+        }).catch(err => console.error('Error checking late status:', err));
         
         if (!forManager) {
           setSelectedEmployee('');
@@ -352,16 +389,27 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   };
 
   const clockOut = async (entryId: string) => {
+    const entry = activeEntries.find(e => e.id === entryId);
+    const isManagerOverride = forManager && isManager();
+
     try {
-      // Get current location for clock out
-      const location = await getCurrentLocation();
+      let location: {lat: number, lng: number} | null = null;
+      try {
+        location = await getCurrentLocation();
+      } catch {
+        // Location optional for clock out
+      }
       
       const { error } = await supabase
         .from('time_entries')
         .update({ 
           clock_out: new Date().toISOString(),
-          location_lat: location.lat,
-          location_lng: location.lng
+          location_lat: location?.lat ?? null,
+          location_lng: location?.lng ?? null,
+          ...(isManagerOverride && !entry?.manager_override ? {
+            manager_override: true,
+            override_by: profile?.id
+          } : {})
         })
         .eq('id', entryId);
 
@@ -372,7 +420,6 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
         fetchActiveEntries();
       }
     } catch (error) {
-      // Clock out without location if location fails
       const { error: clockOutError } = await supabase
         .from('time_entries')
         .update({ clock_out: new Date().toISOString() })
@@ -381,7 +428,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       if (clockOutError) {
         toast({ title: 'Error', description: 'Failed to clock out', variant: 'destructive' });
       } else {
-        toast({ title: 'Success', description: 'Clocked out successfully (location unavailable)' });
+        toast({ title: 'Success', description: 'Clocked out (location unavailable)' });
         fetchActiveEntries();
       }
     }
@@ -405,11 +452,16 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
         first_name: profile.first_name, 
         last_name: profile.last_name,
         employee_id: profile.employee_id || '',
-        require_geofencing: false,
-        geofence_lat: null,
-        geofence_lng: null,
-        geofence_radius_meters: 100
+        require_geofencing: profile.require_geofencing,
+        geofence_lat: profile.geofence_lat,
+        geofence_lng: profile.geofence_lng,
+        geofence_radius_meters: profile.geofence_radius_meters || 100
       });
+
+  const isManagerOverride = forManager && isManager();
+  const willEnforceGeo = currentEmployee 
+    ? shouldEnforceGeofencing(currentEmployee, isManagerOverride)
+    : false;
 
   return (
     <div className="space-y-6">
@@ -437,6 +489,22 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
         </CardContent>
       </Card>
 
+      {/* Company geofencing disabled notice */}
+      {!companyGeofencingEnabled && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+          Company-wide geofencing is currently <strong>disabled</strong>. Employees can clock in from any location.
+        </div>
+      )}
+
+      {/* Manager override notice */}
+      {isManagerOverride && (
+        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+          <Shield className="h-4 w-4 flex-shrink-0" />
+          <strong>Manager Override:</strong> Geofencing is bypassed. This action will be logged.
+        </div>
+      )}
+
       {/* Clock In/Out Section */}
       <Card>
         <CardHeader>
@@ -451,9 +519,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
             {forManager && (
               <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Employee" />
+                  <SelectValue placeholder="Select employee" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background">
                   {employees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
                       {employee.first_name} {employee.last_name} ({employee.employee_id})
@@ -463,38 +531,26 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
               </Select>
             )}
 
-            {/* Account Selection */}
-            <div className="space-y-2">
-              <Select value={selectedJobSite} onValueChange={setSelectedJobSite}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {jobSites.map((site) => (
-                    <SelectItem key={site.id} value={site.id}>
-                      {site.name} - {site.client_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {scheduledJobSite && (
-                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Badge variant="outline" className="text-xs">
-                    Scheduled: {scheduledJobSite.job_sites.name}
-                  </Badge>
-                  <span className="text-xs">
-                    {scheduledJobSite.start_time} - {scheduledJobSite.end_time}
-                  </span>
-                </div>
-              )}
-            </div>
+            {/* Job Site Selection */}
+            <Select value={selectedJobSite} onValueChange={setSelectedJobSite}>
+              <SelectTrigger className={forManager ? '' : 'md:col-span-2'}>
+                <SelectValue placeholder="Select account" />
+              </SelectTrigger>
+              <SelectContent className="bg-background">
+                {jobSites.map((site) => (
+                  <SelectItem key={site.id} value={site.id}>
+                    {site.name} {site.client_name ? `(${site.client_name})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {/* Clock In Button and Status */}
-            <div className="space-y-2">
-              <Button 
-                onClick={clockIn} 
-                className="w-full"
+            {/* Clock In Button */}
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={clockIn}
                 disabled={!selectedEmployee || !selectedJobSite || isGettingLocation}
+                className="w-full"
               >
                 {isGettingLocation ? (
                   <>
@@ -510,10 +566,10 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
               </Button>
               
               {/* Location status indicators */}
-              {currentEmployee?.require_geofencing && (
+              {willEnforceGeo && (
                 <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  Location required
+                  Location required for this employee
                 </div>
               )}
               
@@ -526,11 +582,19 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
               {currentLocation && (
                 <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  Location detected
+                  Location verified
                 </div>
               )}
             </div>
           </div>
+
+          {/* Scheduled job site info */}
+          {scheduledJobSite && (
+            <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              Scheduled today at {scheduledJobSite.job_sites?.name} · {scheduledJobSite.start_time} – {scheduledJobSite.end_time}
+            </div>
+          )}
 
           {/* Job Site Details with Access Instructions */}
           {selectedSite && (
@@ -597,13 +661,19 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
               {activeEntries.map((entry) => (
                 <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <h3 className="font-semibold">
                         {entry.employees.first_name} {entry.employees.last_name}
                       </h3>
                       <Badge variant="secondary">{entry.employees.employee_id}</Badge>
+                      {entry.manager_override && (
+                        <Badge variant="outline" className="text-blue-600 border-blue-300 text-xs">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Override
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                       <div className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
                         {entry.job_sites.name}

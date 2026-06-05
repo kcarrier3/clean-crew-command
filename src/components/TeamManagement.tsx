@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload, Briefcase, AlertCircle, KeyRound } from 'lucide-react';
+import { Users, Settings, Shield, User, DollarSign, FileText, Search, Plus, Mail, Upload, Briefcase, AlertCircle, KeyRound, Building2, MapPin } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { JOB_TITLES, JOB_TITLE_PERMISSIONS, getJobTitleColor, canManageUser } from '@/lib/jobTitles';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RoleManagement } from '@/components/RoleManagement';
+import DepartmentManagement from '@/components/DepartmentManagement';
 
 interface Employee {
   id: string;
@@ -27,6 +29,10 @@ interface Employee {
   hourly_rate: number | null;
   hire_date: string | null;
   phone: string | null;
+  require_geofencing: boolean;
+  geofence_lat: number | null;
+  geofence_lng: number | null;
+  geofence_radius_meters: number | null;
 }
 
 interface Permission {
@@ -486,6 +492,10 @@ const TeamManagement = () => {
       <Tabs defaultValue="employees" className="w-full">
         <TabsList>
           <TabsTrigger value="employees">Employees</TabsTrigger>
+          <TabsTrigger value="departments">
+            <Building2 className="h-4 w-4 mr-1" />
+            Departments
+          </TabsTrigger>
           <TabsTrigger value="roles">Roles</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
         </TabsList>
@@ -789,6 +799,10 @@ const TeamManagement = () => {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="departments" className="space-y-6 mt-6">
+          <DepartmentManagement />
         </TabsContent>
 
         <TabsContent value="roles" className="space-y-6 mt-6">
@@ -1134,6 +1148,79 @@ const TeamManagement = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Geofencing Settings - Only visible to Owner/Administrator */}
+              {canManageCurrentEmployee() && (profile?.job_title === 'Owner' || profile?.job_title === 'Administrator') && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <MapPin className="h-5 w-5" />
+                      Geofencing
+                    </CardTitle>
+                    <CardDescription>
+                      Require this employee to be at a specific location to clock in
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">Require Geofencing</p>
+                        <p className="text-xs text-muted-foreground">
+                          Employee must be within the set radius to clock in
+                        </p>
+                      </div>
+                      <Switch
+                        checked={selectedEmployee.require_geofencing || false}
+                        onCheckedChange={(checked) => {
+                          updateEmployeeProfile({ require_geofencing: checked });
+                          setSelectedEmployee(prev => prev ? { ...prev, require_geofencing: checked } : prev);
+                        }}
+                      />
+                    </div>
+                    {selectedEmployee.require_geofencing && (
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <Label htmlFor="geo_lat">Latitude</Label>
+                          <Input
+                            id="geo_lat"
+                            type="number"
+                            step="0.000001"
+                            placeholder="e.g. 37.7749"
+                            defaultValue={selectedEmployee.geofence_lat || ''}
+                            onBlur={(e) => updateEmployeeProfile({ geofence_lat: parseFloat(e.target.value) || null })}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="geo_lng">Longitude</Label>
+                          <Input
+                            id="geo_lng"
+                            type="number"
+                            step="0.000001"
+                            placeholder="e.g. -122.4194"
+                            defaultValue={selectedEmployee.geofence_lng || ''}
+                            onBlur={(e) => updateEmployeeProfile({ geofence_lng: parseFloat(e.target.value) || null })}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="geo_radius">Radius (meters)</Label>
+                          <Input
+                            id="geo_radius"
+                            type="number"
+                            placeholder="100"
+                            defaultValue={selectedEmployee.geofence_radius_meters || 100}
+                            onBlur={(e) => updateEmployeeProfile({ geofence_radius_meters: parseInt(e.target.value) || 100 })}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {selectedEmployee.require_geofencing && (
+                      <p className="text-xs text-muted-foreground">
+                        Tip: You can find the latitude and longitude of a job site by right-clicking on Google Maps and selecting "What's here?"
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Account Management - Password Reset (Owner/Admin only) */}
               {canManageCurrentEmployee() && (profile?.job_title === 'Owner' || profile?.job_title === 'Administrator') && (
