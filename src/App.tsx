@@ -24,7 +24,7 @@ const AppContent = () => {
   // Configure status bar (dark content on light background)
   useStatusBar({ 
     style: 'dark', 
-    backgroundColor: '#ffffff' 
+    backgroundColor: '#FFF8F0' 
   });
   
   return (

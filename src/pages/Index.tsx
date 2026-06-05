@@ -112,7 +112,7 @@ const Index = () => {
   const userDisplayName = profile ? `${profile.first_name} ${profile.last_name}` : user.email;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Desktop padding, reduced mobile padding */}
       <div className="p-6 md:p-6 pb-24 md:pb-6">
         <div className="max-w-6xl mx-auto">
