@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, User, MapPin, AlertCircle, Camera } from 'lucide-react';
+import { Plus, Calendar, User, MapPin, AlertCircle, Camera, ClipboardList } from 'lucide-react';
+import InspectionHistory from './InspectionHistory';
 import { supabase } from '@/integrations/supabase/client';
 import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 import { WorkOrderDetail } from './WorkOrderDetail';
@@ -109,7 +110,7 @@ const QualityControlDashboard = () => {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Quality Control & Work Orders</h1>
+        <h1 className="text-3xl font-bold">Quality Control</h1>
         <div className="flex gap-2">
           <Button 
             variant="orange" 
@@ -127,7 +128,24 @@ const QualityControlDashboard = () => {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs defaultValue="inspections">
+        <TabsList className="grid grid-cols-2 w-full max-w-sm mb-4">
+          <TabsTrigger value="inspections">
+            <Camera className="h-4 w-4 mr-2" />
+            Inspections
+          </TabsTrigger>
+          <TabsTrigger value="workorders">
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Work Orders
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="inspections">
+          <InspectionHistory />
+        </TabsContent>
+
+        <TabsContent value="workorders">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-5 w-full max-w-lg">
           <TabsTrigger value="all">All ({counts.all})</TabsTrigger>
           <TabsTrigger value="open">Open ({counts.open})</TabsTrigger>
@@ -195,6 +213,9 @@ const QualityControlDashboard = () => {
               ))
             )}
           </div>
+        </TabsContent>
+        </Tabs>
+
         </TabsContent>
       </Tabs>
 
