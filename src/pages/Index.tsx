@@ -96,7 +96,7 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="text-muted-foreground">Loading...</p>
@@ -112,7 +112,7 @@ const Index = () => {
   const userDisplayName = profile ? `${profile.first_name} ${profile.last_name}` : user.email;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Desktop padding, reduced mobile padding */}
       <div className="p-6 md:p-6 pb-24 md:pb-6">
         <div className="max-w-6xl mx-auto">

@@ -99,12 +99,18 @@ All colors MUST be HSL.
 }
 
 @layer base {
+  html {
+    background: linear-gradient(to bottom, hsl(25 100% 96%), hsl(32 100% 90%));
+    background-attachment: fixed;
+  }
+
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground;
+    background: transparent;
+    @apply text-foreground;
     /* iOS safe area support */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
