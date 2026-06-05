@@ -26,6 +26,8 @@ import ManagerLog from '@/components/ManagerLog';
 import JobSitesManagement from '@/components/JobSitesManagement';
 import { useAuth } from '@/hooks/useAuth';
 import MySchedule from '@/components/MySchedule';
+import { OnboardingCenter } from '@/components/OnboardingCenter';
+import { OnboardingManager } from '@/components/OnboardingManager';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
@@ -178,9 +180,10 @@ const Index = () => {
                 </TabsList>
               )
             ) : (
-              <TabsList className="hidden md:grid w-full grid-cols-3">
+              <TabsList className="hidden md:grid w-full grid-cols-4">
                 <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
                 <TabsTrigger value="myschedule">My Schedule</TabsTrigger>
+                <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
             )}
@@ -194,9 +197,10 @@ const Index = () => {
                 <TabsTrigger value="managerlog">Log</TabsTrigger>
               </TabsList>
             ) : (
-              <TabsList className="md:hidden grid w-full grid-cols-3">
+              <TabsList className="md:hidden grid w-full grid-cols-4">
                 <TabsTrigger value="dashboard">Home</TabsTrigger>
                 <TabsTrigger value="myschedule">Schedule</TabsTrigger>
+                <TabsTrigger value="onboarding">Docs</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
             )}
@@ -242,6 +246,11 @@ const Index = () => {
                 <TeamManagement />
               </TabsContent>
             )}
+
+            {/* Onboarding: employees complete docs, managers review */}
+            <TabsContent value="onboarding" className="mt-6">
+              {isManager() ? <OnboardingManager /> : <OnboardingCenter />}
+            </TabsContent>
           </Tabs>
         </div>
       </div>
@@ -280,6 +289,18 @@ const Index = () => {
             >
               <CalendarDays className="h-5 w-5" />
               <span className="text-xs">Schedule</span>
+            </Button>
+          )}
+
+          {!isManager() && (
+            <Button
+              variant={activeTab === "onboarding" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("onboarding")}
+              className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
+            >
+              <FileText className="h-5 w-5" />
+              <span className="text-xs">Docs</span>
             </Button>
           )}
           
