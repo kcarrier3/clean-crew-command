@@ -86,7 +86,7 @@ const Auth = () => {
           <img
             src="/crew-compass-logo.png?v=2"
             alt="Crew Compass"
-            className="mx-auto mb-4 h-52 w-auto"
+            className="mx-auto mb-4 h-64 w-auto"
           />
         </div>
 
