@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +29,7 @@ import { useAuth } from '@/hooks/useAuth';
 import MySchedule from '@/components/MySchedule';
 import { OnboardingCenter } from '@/components/OnboardingCenter';
 import { OnboardingManager } from '@/components/OnboardingManager';
+import TimeOffRequests from '@/components/TimeOffRequests';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
@@ -37,6 +39,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -119,18 +122,94 @@ const Index = () => {
           <div className="mb-8 flex justify-between items-center">
             <div>
               <img
-                src="/crew-compass-logo-notag.png?v=3"
+                src="/crew-compass-logo-notag.png?v=4"
                 alt="Crew Compass"
                 className="h-28 md:h-32 w-auto"
               />
             </div>
             <div className="flex items-center gap-3">
               <NotificationBell />
-              
+
+              {/* Mobile hamburger menu for lesser-used functions */}
+              <Sheet open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm" className="md:hidden">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-72">
+                  <SheetHeader>
+                    <SheetTitle>Menu</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-6 space-y-1">
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">
+                      {user.email}
+                    </div>
+                    {!isManager() && (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => { setActiveTab('onboarding'); setMoreMenuOpen(false); }}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Onboarding & Docs
+                      </Button>
+                    )}
+                    {isManager() && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => { setActiveTab('jobsites'); setMoreMenuOpen(false); }}
+                        >
+                          <MapPin className="h-4 w-4 mr-2" />
+                          Accounts
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => { setActiveTab('managerlog'); setMoreMenuOpen(false); }}
+                        >
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Manager Log
+                        </Button>
+                        {canManageEmployees() && (
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start"
+                            onClick={() => { setActiveTab('team'); setMoreMenuOpen(false); }}
+                          >
+                            <User className="h-4 w-4 mr-2" />
+                            Team
+                          </Button>
+                        )}
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => { handleChangePassword(); setMoreMenuOpen(false); }}>
+                      <KeyRound className="h-4 w-4 mr-2" />
+                      Change Password
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => { handleSignOut(); setMoreMenuOpen(false); }}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start text-destructive hover:text-destructive"
+                      onClick={() => { setShowDeleteDialog(true); setMoreMenuOpen(false); }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete My Account
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="hidden md:flex items-center gap-2">
                     <User className="h-4 w-4" />
                     <span className="hidden md:inline">{userDisplayName}</span>
                   </Button>
@@ -191,23 +270,6 @@ const Index = () => {
               </TabsList>
             )}
 
-            {/* Mobile: Show tabs based on user role */}
-            {isManager() ? (
-              <TabsList className="md:hidden grid w-full grid-cols-4">
-                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                <TabsTrigger value="scheduling">Schedule</TabsTrigger>
-                <TabsTrigger value="jobsites">Accounts</TabsTrigger>
-                <TabsTrigger value="managerlog">Log</TabsTrigger>
-              </TabsList>
-            ) : (
-              <TabsList className="md:hidden grid w-full grid-cols-4">
-                <TabsTrigger value="dashboard">Home</TabsTrigger>
-                <TabsTrigger value="myschedule">Schedule</TabsTrigger>
-                <TabsTrigger value="onboarding">Docs</TabsTrigger>
-                <TabsTrigger value="messages">Messages</TabsTrigger>
-              </TabsList>
-            )}
-            
             <TabsContent value="dashboard" className="mt-6">
               {isManager() ? <ManagerDashboard /> : <EmployeeDashboard />}
             </TabsContent>
@@ -238,6 +300,12 @@ const Index = () => {
               <MessagingCenter />
             </TabsContent>
 
+            {!isManager() && (
+              <TabsContent value="timeoff" className="mt-6">
+                <TimeOffRequests isManager={false} currentEmployeeId={profile?.id} />
+              </TabsContent>
+            )}
+
             {isManager() && (
               <TabsContent value="managerlog" className="mt-6">
                 <ManagerLog />
@@ -261,84 +329,21 @@ const Index = () => {
       {/* Mobile Bottom Navigation - Role-based with safe area */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 pb-safe safe-x">
         <div className="flex justify-around items-center max-w-md mx-auto">
-          <Button
-            variant={activeTab === "dashboard" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("dashboard")}
-            className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
-          >
-            <User className="h-5 w-5" />
-            <span className="text-xs">Home</span>
-          </Button>
-
-          {isManager() && (
-            <Button
-              variant={activeTab === "scheduling" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("scheduling")}
-              className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
-            >
-              <Calendar className="h-5 w-5" />
-              <span className="text-xs">Schedule</span>
-            </Button>
-          )}
-
-          {!isManager() && (
-            <Button
-              variant={activeTab === "myschedule" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("myschedule")}
-              className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
-            >
-              <CalendarDays className="h-5 w-5" />
-              <span className="text-xs">Schedule</span>
-            </Button>
-          )}
-
-          {!isManager() && (
-            <Button
-              variant={activeTab === "onboarding" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("onboarding")}
-              className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
-            >
-              <FileText className="h-5 w-5" />
-              <span className="text-xs">Docs</span>
-            </Button>
-          )}
-          
-          <Button
-            variant={activeTab === "messages" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("messages")}
-            className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
-          >
-            <MessageSquare className="h-5 w-5" />
-            <span className="text-xs">Messages</span>
-          </Button>
-
-          {isManager() && (
-            <Button
-              variant={activeTab === "managerlog" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("managerlog")}
-              className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
-            >
-              <BookOpen className="h-5 w-5" />
-              <span className="text-xs">Log</span>
-            </Button>
-          )}
-
-          {isManager() && (
-            <Button
-              variant={activeTab === "jobsites" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("jobsites")}
-              className="flex flex-col items-center gap-1 h-auto py-2 px-4 min-h-[44px] min-w-[44px]"
-            >
-              <MapPin className="h-5 w-5" />
-              <span className="text-xs">Accounts</span>
-            </Button>
+          {isManager() ? (
+            <>
+              <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
+              <MobileTab active={activeTab === 'scheduling'} onClick={() => setActiveTab('scheduling')} icon={<Calendar className="h-5 w-5" />} label="Schedule" />
+              <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
+              <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
+            </>
+          ) : (
+            <>
+              <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
+              <MobileTab active={activeTab === 'myschedule'} onClick={() => setActiveTab('myschedule')} icon={<CalendarDays className="h-5 w-5" />} label="Schedule" />
+              <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
+              <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
+              <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
+            </>
           )}
         </div>
       </div>
@@ -367,5 +372,17 @@ const Index = () => {
     </div>
   );
 };
+
+const MobileTab = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: ReactNode; label: string }) => (
+  <Button
+    variant={active ? 'default' : 'ghost'}
+    size="sm"
+    onClick={onClick}
+    className="flex flex-col items-center gap-1 h-auto py-2 px-3 min-h-[44px] min-w-[44px]"
+  >
+    {icon}
+    <span className="text-[10px]">{label}</span>
+  </Button>
+);
 
 export default Index;
