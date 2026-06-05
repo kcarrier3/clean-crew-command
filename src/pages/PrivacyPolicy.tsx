@@ -152,7 +152,7 @@ const PrivacyPolicy = () => {
         </div>
 
         <div className="mt-8 pt-6 border-t text-center">
-          <img src="/crew-compass-logo.png?v=2" alt="Crew Compass" className="h-10 w-auto mx-auto mb-2" />
+          <img src="/crew-compass-logo.png?v=2" alt="Crew Compass" className="h-[50px] w-auto mx-auto mb-2" />
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} Summit Facilities Group. All rights reserved.
           </p>
