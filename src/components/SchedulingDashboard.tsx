@@ -273,15 +273,15 @@ const SchedulingDashboard = () => {
 
   return (
     <Tabs defaultValue="schedules" className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Employee Management</h2>
-          <p className="text-muted-foreground">Manage employee schedules, assignments, and time off requests</p>
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl md:text-2xl font-bold">Employee Management</h2>
+          <p className="text-sm md:text-base text-muted-foreground">Manage employee schedules, assignments, and time off requests</p>
         </div>
-        
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { resetForm(); setEditingSchedule(null); }}>
+            <Button className="w-full md:w-auto shrink-0" onClick={() => { resetForm(); setEditingSchedule(null); }}>
               <Plus className="h-4 w-4 mr-2" />
               New Schedule
             </Button>
@@ -433,11 +433,11 @@ const SchedulingDashboard = () => {
         </Dialog>
       </div>
 
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="schedules">Schedules</TabsTrigger>
-        <TabsTrigger value="payroll">Payroll</TabsTrigger>
-        <TabsTrigger value="attendance">Attendance</TabsTrigger>
-        <TabsTrigger value="timeoff">Time Off Requests</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto gap-1">
+        <TabsTrigger value="schedules" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Schedules</TabsTrigger>
+        <TabsTrigger value="payroll" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Payroll</TabsTrigger>
+        <TabsTrigger value="attendance" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Attendance</TabsTrigger>
+        <TabsTrigger value="timeoff" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Time Off</TabsTrigger>
       </TabsList>
 
       <TabsContent value="schedules" className="space-y-6">
