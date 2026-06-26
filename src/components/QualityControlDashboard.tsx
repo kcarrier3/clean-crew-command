@@ -48,13 +48,30 @@ const QualityControlDashboard = () => {
         .from('work_orders')
         .select(`
           *,
-          job_sites!work_orders_job_site_id_fkey (name),
-          profiles!work_orders_assigned_to_fkey (first_name, last_name)
+          job_sites!work_orders_job_site_id_fkey (name)
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setWorkOrders((data || []) as unknown as WorkOrder[]);
+
+      const assigneeIds = Array.from(
+        new Set((data || []).map((wo: any) => wo.assigned_to).filter(Boolean))
+      );
+      let profilesById: Record<string, { first_name: string; last_name: string }> = {};
+      if (assigneeIds.length > 0) {
+        const { data: profs } = await supabase
+          .from('profiles_directory' as any)
+          .select('id, first_name, last_name')
+          .in('id', assigneeIds);
+        (profs || []).forEach((p: any) => {
+          profilesById[p.id] = { first_name: p.first_name, last_name: p.last_name };
+        });
+      }
+      const merged = (data || []).map((wo: any) => ({
+        ...wo,
+        profiles: wo.assigned_to ? profilesById[wo.assigned_to] : undefined,
+      }));
+      setWorkOrders(merged as unknown as WorkOrder[]);
     } catch (error) {
       toast({
         title: "Error",
