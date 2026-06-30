@@ -131,7 +131,7 @@ const TeamRoster = () => {
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.functions.invoke('invite-employee', {
+      const { data, error } = await supabase.functions.invoke('invite-employee', {
         body: {
           email: form.email,
           firstName: form.first_name,
@@ -141,7 +141,16 @@ const TeamRoster = () => {
           payType: 'hourly',
         },
       });
-      if (error) throw error;
+      if (error) {
+        // Try to extract the actual error message from the response body
+        let detail = error.message;
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) detail = body.error;
+        } catch { /* ignore */ }
+        throw new Error(detail);
+      }
+      if (data?.error) throw new Error(data.error);
       toast({ title: 'Invitation sent', description: `${form.first_name} ${form.last_name} was invited.` });
       setAddOpen(false);
       resetForm();
@@ -251,7 +260,7 @@ const TeamRoster = () => {
     if (!editMember) return;
     setResending(true);
     try {
-      const { error } = await supabase.functions.invoke('invite-employee', {
+      const { data, error } = await supabase.functions.invoke('invite-employee', {
         body: {
           email: editForm.email,
           firstName: editForm.first_name,
@@ -262,7 +271,15 @@ const TeamRoster = () => {
           resend: true,
         },
       });
-      if (error) throw error;
+      if (error) {
+        let detail = error.message;
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) detail = body.error;
+        } catch { /* ignore */ }
+        throw new Error(detail);
+      }
+      if (data?.error) throw new Error(data.error);
       toast({ title: 'Invitation resent', description: `A new invite email was sent to ${editForm.email}.` });
     } catch (err: any) {
       toast({ title: 'Error', description: err?.message ?? 'Failed to resend invite.', variant: 'destructive' });
