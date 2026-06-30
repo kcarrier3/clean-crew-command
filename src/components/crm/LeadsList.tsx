@@ -1,0 +1,137 @@
+import { useEffect, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Plus, Mail, Phone, ArrowRight, Pencil } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { LeadDialog } from './LeadDialog';
+import { LEAD_STATUS_LABELS, type CrmLead, type CrmStage } from './types';
+
+const STATUS_COLORS: Record<CrmLead['status'], string> = {
+  new: 'bg-blue-100 text-blue-800',
+  contacted: 'bg-yellow-100 text-yellow-800',
+  qualified: 'bg-green-100 text-green-800',
+  unqualified: 'bg-gray-200 text-gray-700',
+  converted: 'bg-purple-100 text-purple-800',
+};
+
+interface Props {
+  stages: CrmStage[];
+  onChanged: () => void;
+}
+
+export function LeadsList({ stages, onChanged }: Props) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [leads, setLeads] = useState<CrmLead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('');
+  const [editing, setEditing] = useState<CrmLead | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const { data, error } = await (supabase as any)
+      .from('crm_leads')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) toast({ title: 'Failed to load leads', description: error.message, variant: 'destructive' });
+    setLeads(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const convertToDeal = async (lead: CrmLead) => {
+    const firstStage = stages.find(s => !s.is_won && !s.is_lost) || stages[0];
+    if (!firstStage) {
+      toast({ title: 'No pipeline stages configured', variant: 'destructive' });
+      return;
+    }
+    const { error } = await (supabase as any).from('crm_deals').insert({
+      name: `${lead.company_name} opportunity`,
+      lead_id: lead.id,
+      stage_id: firstStage.id,
+      owner_id: user?.id,
+      created_by: user?.id,
+    });
+    if (error) {
+      toast({ title: 'Failed to create deal', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await (supabase as any).from('crm_leads').update({ status: 'converted' }).eq('id', lead.id);
+    toast({ title: 'Deal created from lead' });
+    load();
+    onChanged();
+  };
+
+  const filtered = leads.filter(l =>
+    !filter ||
+    l.company_name.toLowerCase().includes(filter.toLowerCase()) ||
+    l.contact_name?.toLowerCase().includes(filter.toLowerCase()) ||
+    l.email?.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-3 items-center justify-between">
+        <Input
+          placeholder="Search leads…"
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          className="max-w-xs"
+        />
+        <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" /> New Lead
+        </Button>
+      </div>
+
+      {loading ? (
+        <p className="text-muted-foreground text-sm">Loading…</p>
+      ) : filtered.length === 0 ? (
+        <Card><CardContent className="py-10 text-center text-muted-foreground">No leads yet. Add your first lead to get started.</CardContent></Card>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(lead => (
+            <Card key={lead.id} className="hover:shadow-sm transition">
+              <CardContent className="p-4 flex flex-wrap items-center gap-3 justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium">{lead.company_name}</p>
+                    <Badge className={STATUS_COLORS[lead.status] + ' text-xs'}>{LEAD_STATUS_LABELS[lead.status]}</Badge>
+                    {lead.source && <Badge variant="outline" className="text-xs">{lead.source}</Badge>}
+                  </div>
+                  {lead.contact_name && <p className="text-sm text-muted-foreground">{lead.contact_name}</p>}
+                  <div className="flex gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
+                    {lead.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{lead.email}</span>}
+                    {lead.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{lead.phone}</span>}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => { setEditing(lead); setDialogOpen(true); }}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  {lead.status !== 'converted' && (
+                    <Button size="sm" variant="outline" onClick={() => convertToDeal(lead)}>
+                      Convert <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <LeadDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        lead={editing}
+        onSaved={() => { load(); onChanged(); }}
+      />
+    </div>
+  );
+}
