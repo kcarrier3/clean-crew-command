@@ -1,0 +1,1 @@
+UPDATE public.profiles SET job_title = 'Owner' WHERE id = '69908444-d233-4ad5-8b3c-68a28871c6a3'; INSERT INTO public.user_roles (user_id, role) VALUES ('69908444-d233-4ad5-8b3c-68a28871c6a3', 'admin') ON CONFLICT (user_id, role) DO NOTHING;
