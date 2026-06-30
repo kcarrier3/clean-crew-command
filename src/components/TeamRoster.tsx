@@ -20,7 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, UserPlus, Mail, Phone } from 'lucide-react';
+import { Plus, Search, UserPlus, Mail, Phone, Shield, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -40,7 +51,8 @@ interface RosterMember {
 type Filter = 'active' | 'inactive';
 
 const TeamRoster = () => {
-  const { canManageEmployees } = useAuth();
+  const { canManageEmployees, isManager, isCrmUser, hasRole } = useAuth();
+  const canManage = canManageEmployees() || isManager() || isCrmUser() || hasRole('admin');
   const { toast } = useToast();
   const [members, setMembers] = useState<RosterMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +60,10 @@ const TeamRoster = () => {
   const [search, setSearch] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [editMember, setEditMember] = useState<RosterMember | null>(null);
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', phone: '', job_title: '', employee_id: '', active: true });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<RosterMember | null>(null);
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -127,6 +143,55 @@ const TeamRoster = () => {
     }
   };
 
+  const openEdit = (m: RosterMember) => {
+    if (!canManage) return;
+    setEditMember(m);
+    setEditForm({
+      first_name: m.first_name ?? '',
+      last_name: m.last_name ?? '',
+      phone: m.phone ?? '',
+      job_title: m.job_title ?? '',
+      employee_id: m.employee_id ?? '',
+      active: m.active !== false,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editMember) return;
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        first_name: editForm.first_name,
+        last_name: editForm.last_name,
+        phone: editForm.phone || null,
+        job_title: editForm.job_title || null,
+        employee_id: editForm.employee_id || null,
+        active: editForm.active,
+      })
+      .eq('id', editMember.id);
+    setSavingEdit(false);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Saved', description: 'Team member updated.' });
+    setEditMember(null);
+    fetchMembers();
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    const { error } = await supabase.from('profiles').delete().eq('id', confirmDelete.id);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Deleted', description: 'Team member removed.' });
+      fetchMembers();
+    }
+    setConfirmDelete(null);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -148,7 +213,7 @@ const TeamRoster = () => {
             <ToggleGroupItem value="active">Active</ToggleGroupItem>
             <ToggleGroupItem value="inactive">Inactive</ToggleGroupItem>
           </ToggleGroup>
-          {canManageEmployees() && (
+          {canManage && (
             <Button onClick={() => setAddOpen(true)} size="sm">
               <Plus className="h-4 w-4 mr-1" /> Add Team Member
             </Button>
@@ -177,7 +242,11 @@ const TeamRoster = () => {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((m) => (
-            <Card key={m.id}>
+            <Card
+              key={m.id}
+              className={canManage ? 'cursor-pointer hover:border-primary/50 transition-colors' : ''}
+              onClick={() => openEdit(m)}
+            >
               <CardContent className="p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -190,7 +259,12 @@ const TeamRoster = () => {
                       </Badge>
                     )}
                   </div>
-                  {m.active === false && <Badge variant="outline">Inactive</Badge>}
+                  <div className="flex items-center gap-1">
+                    {m.job_title === 'Owner' && (
+                      <Badge variant="default" className="gap-1"><Shield className="h-3 w-3" /> Owner</Badge>
+                    )}
+                    {m.active === false && <Badge variant="outline">Inactive</Badge>}
+                  </div>
                 </div>
                 {m.email && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -268,6 +342,99 @@ const TeamRoster = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!editMember} onOpenChange={(o) => !o && setEditMember(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Team Member</DialogTitle>
+            <DialogDescription>
+              {editMember?.job_title === 'Owner'
+                ? 'Owner accounts are protected and cannot be deactivated or deleted.'
+                : 'Update profile details, activate/deactivate, or remove this team member.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="ed-first">First name</Label>
+                <Input id="ed-first" value={editForm.first_name}
+                  onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="ed-last">Last name</Label>
+                <Input id="ed-last" value={editForm.last_name}
+                  onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="ed-phone">Phone</Label>
+              <Input id="ed-phone" value={editForm.phone}
+                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+            </div>
+            <div>
+              <Label htmlFor="ed-emp">Employee ID</Label>
+              <Input id="ed-emp" value={editForm.employee_id}
+                onChange={(e) => setEditForm({ ...editForm, employee_id: e.target.value })} />
+            </div>
+            <div>
+              <Label htmlFor="ed-job">Job title</Label>
+              <Select
+                value={editForm.job_title}
+                onValueChange={(v) => setEditForm({ ...editForm, job_title: v })}
+                disabled={editMember?.job_title === 'Owner'}
+              >
+                <SelectTrigger id="ed-job"><SelectValue placeholder="Select a job title" /></SelectTrigger>
+                <SelectContent>
+                  {JOB_TITLES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <div className="text-sm font-medium">Active</div>
+                <div className="text-xs text-muted-foreground">Inactive employees are hidden from the active roster.</div>
+              </div>
+              <Switch
+                checked={editForm.active}
+                onCheckedChange={(c) => setEditForm({ ...editForm, active: c })}
+                disabled={editMember?.job_title === 'Owner'}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex sm:justify-between gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => editMember && setConfirmDelete(editMember)}
+              disabled={editMember?.job_title === 'Owner' || savingEdit}
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Delete
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditMember(null)} disabled={savingEdit}>Cancel</Button>
+              <Button onClick={handleSaveEdit} disabled={savingEdit}>
+                {savingEdit ? 'Saving...' : 'Save changes'}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete team member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes {confirmDelete?.first_name} {confirmDelete?.last_name} from the roster. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
