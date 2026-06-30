@@ -61,7 +61,16 @@ const TeamRoster = () => {
   const [addOpen, setAddOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editMember, setEditMember] = useState<RosterMember | null>(null);
-  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', phone: '', job_title: '', employee_id: '', active: true });
+  const [editForm, setEditForm] = useState({
+    first_name: '', last_name: '', phone: '', email: '',
+    job_title: '', employee_id: '', active: true,
+    address_line1: '', address_line2: '', city: '', state: '', postal_code: '',
+    emergency_contact_name: '', emergency_contact_phone: '', emergency_contact_relationship: '',
+    pay_type: 'hourly', hourly_rate: '', salary_amount: '',
+    attendance_incentive_enrolled: false,
+    attendance_bonus_amount: '', time_bonus_amount: '',
+  });
+  const [editLoading, setEditLoading] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<RosterMember | null>(null);
   const [form, setForm] = useState({
@@ -146,28 +155,73 @@ const TeamRoster = () => {
   const openEdit = (m: RosterMember) => {
     if (!canManage) return;
     setEditMember(m);
-    setEditForm({
-      first_name: m.first_name ?? '',
-      last_name: m.last_name ?? '',
-      phone: m.phone ?? '',
-      job_title: m.job_title ?? '',
-      employee_id: m.employee_id ?? '',
-      active: m.active !== false,
-    });
+    setEditLoading(true);
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', m.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        setEditLoading(false);
+        if (error || !data) {
+          toast({ title: 'Error', description: error?.message ?? 'Could not load profile', variant: 'destructive' });
+          return;
+        }
+        const p: any = data;
+        setEditForm({
+          first_name: p.first_name ?? '',
+          last_name: p.last_name ?? '',
+          phone: p.phone ?? '',
+          email: p.email ?? '',
+          job_title: p.job_title ?? '',
+          employee_id: p.employee_id ?? '',
+          active: p.active !== false,
+          address_line1: p.address_line1 ?? '',
+          address_line2: p.address_line2 ?? '',
+          city: p.city ?? '',
+          state: p.state ?? '',
+          postal_code: p.postal_code ?? '',
+          emergency_contact_name: p.emergency_contact_name ?? '',
+          emergency_contact_phone: p.emergency_contact_phone ?? '',
+          emergency_contact_relationship: p.emergency_contact_relationship ?? '',
+          pay_type: p.pay_type ?? 'hourly',
+          hourly_rate: p.hourly_rate != null ? String(p.hourly_rate) : '',
+          salary_amount: p.salary_amount != null ? String(p.salary_amount) : '',
+          attendance_incentive_enrolled: !!p.attendance_incentive_enrolled,
+          attendance_bonus_amount: p.attendance_bonus_amount != null ? String(p.attendance_bonus_amount) : '',
+          time_bonus_amount: p.time_bonus_amount != null ? String(p.time_bonus_amount) : '',
+        });
+      });
   };
 
   const handleSaveEdit = async () => {
     if (!editMember) return;
     setSavingEdit(true);
+    const num = (v: string) => (v.trim() === '' ? null : Number(v));
     const { error } = await supabase
       .from('profiles')
       .update({
         first_name: editForm.first_name,
         last_name: editForm.last_name,
         phone: editForm.phone || null,
+        email: editForm.email || null,
         job_title: editForm.job_title || null,
         employee_id: editForm.employee_id || null,
         active: editForm.active,
+        address_line1: editForm.address_line1 || null,
+        address_line2: editForm.address_line2 || null,
+        city: editForm.city || null,
+        state: editForm.state || null,
+        postal_code: editForm.postal_code || null,
+        emergency_contact_name: editForm.emergency_contact_name || null,
+        emergency_contact_phone: editForm.emergency_contact_phone || null,
+        emergency_contact_relationship: editForm.emergency_contact_relationship || null,
+        pay_type: editForm.pay_type,
+        hourly_rate: num(editForm.hourly_rate),
+        salary_amount: num(editForm.salary_amount),
+        attendance_incentive_enrolled: editForm.attendance_incentive_enrolled,
+        attendance_bonus_amount: num(editForm.attendance_bonus_amount),
+        time_bonus_amount: num(editForm.time_bonus_amount),
       })
       .eq('id', editMember.id);
     setSavingEdit(false);
