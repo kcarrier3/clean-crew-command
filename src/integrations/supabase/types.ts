@@ -2418,10 +2418,17 @@ export type Database = {
       profiles: {
         Row: {
           active: boolean
+          address_line1: string | null
+          address_line2: string | null
           attendance_bonus_amount: number | null
+          attendance_incentive_enrolled: boolean
           attendance_tracking_type: string | null
+          city: string | null
           created_at: string
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relationship: string | null
           employee_id: string | null
           first_name: string
           geofence_lat: number | null
@@ -2434,17 +2441,26 @@ export type Database = {
           last_name: string
           pay_type: string | null
           phone: string | null
+          postal_code: string | null
           require_geofencing: boolean
           salary_amount: number | null
+          state: string | null
           time_bonus_amount: number | null
           updated_at: string
         }
         Insert: {
           active?: boolean
+          address_line1?: string | null
+          address_line2?: string | null
           attendance_bonus_amount?: number | null
+          attendance_incentive_enrolled?: boolean
           attendance_tracking_type?: string | null
+          city?: string | null
           created_at?: string
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
           employee_id?: string | null
           first_name: string
           geofence_lat?: number | null
@@ -2457,17 +2473,26 @@ export type Database = {
           last_name: string
           pay_type?: string | null
           phone?: string | null
+          postal_code?: string | null
           require_geofencing?: boolean
           salary_amount?: number | null
+          state?: string | null
           time_bonus_amount?: number | null
           updated_at?: string
         }
         Update: {
           active?: boolean
+          address_line1?: string | null
+          address_line2?: string | null
           attendance_bonus_amount?: number | null
+          attendance_incentive_enrolled?: boolean
           attendance_tracking_type?: string | null
+          city?: string | null
           created_at?: string
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
           employee_id?: string | null
           first_name?: string
           geofence_lat?: number | null
@@ -2480,8 +2505,10 @@ export type Database = {
           last_name?: string
           pay_type?: string | null
           phone?: string | null
+          postal_code?: string | null
           require_geofencing?: boolean
           salary_amount?: number | null
+          state?: string | null
           time_bonus_amount?: number | null
           updated_at?: string
         }
