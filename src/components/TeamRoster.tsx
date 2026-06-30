@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, UserPlus, Mail, Phone, Shield, Trash2 } from 'lucide-react';
+import { Plus, Search, UserPlus, Mail, Phone, Shield, Trash2, Send } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +73,7 @@ const TeamRoster = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<RosterMember | null>(null);
+  const [resending, setResending] = useState(false);
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -244,6 +245,30 @@ const TeamRoster = () => {
       fetchMembers();
     }
     setConfirmDelete(null);
+  };
+
+  const handleResendInvite = async () => {
+    if (!editMember) return;
+    setResending(true);
+    try {
+      const { error } = await supabase.functions.invoke('invite-employee', {
+        body: {
+          email: editForm.email,
+          firstName: editForm.first_name,
+          lastName: editForm.last_name,
+          phone: editForm.phone,
+          jobTitle: editForm.job_title,
+          payType: editForm.pay_type,
+          resend: true,
+        },
+      });
+      if (error) throw error;
+      toast({ title: 'Invitation resent', description: `A new invite email was sent to ${editForm.email}.` });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message ?? 'Failed to resend invite.', variant: 'destructive' });
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -594,6 +619,14 @@ const TeamRoster = () => {
               <Trash2 className="h-4 w-4 mr-1" /> Delete
             </Button>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleResendInvite}
+                disabled={resending || savingEdit || editLoading || !editForm.email}
+                title="Send a new invitation email"
+              >
+                <Send className="h-4 w-4 mr-1" /> {resending ? 'Sending...' : 'Resend invite'}
+              </Button>
               <Button variant="outline" onClick={() => setEditMember(null)} disabled={savingEdit}>Cancel</Button>
               <Button onClick={handleSaveEdit} disabled={savingEdit || editLoading}>
                 {savingEdit ? 'Saving...' : 'Save changes'}
