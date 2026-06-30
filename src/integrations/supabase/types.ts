@@ -980,7 +980,6 @@ export type Database = {
           geofence_lng: number | null
           geofence_radius_meters: number | null
           hire_date: string | null
-          hourly_rate: number | null
           id: string
           job_title: string
           last_name: string
@@ -999,7 +998,6 @@ export type Database = {
           geofence_lng?: number | null
           geofence_radius_meters?: number | null
           hire_date?: string | null
-          hourly_rate?: number | null
           id?: string
           job_title: string
           last_name: string
@@ -1018,7 +1016,6 @@ export type Database = {
           geofence_lng?: number | null
           geofence_radius_meters?: number | null
           hire_date?: string | null
-          hourly_rate?: number | null
           id?: string
           job_title?: string
           last_name?: string
