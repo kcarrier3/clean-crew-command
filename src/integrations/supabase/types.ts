@@ -611,6 +611,218 @@ export type Database = {
           },
         ]
       }
+      crm_email_logs: {
+        Row: {
+          body: string | null
+          cc_emails: string[]
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          deal_id: string | null
+          direction: string
+          from_email: string | null
+          id: string
+          lead_id: string | null
+          logged_by: string | null
+          sent_at: string
+          status: string
+          subject: string | null
+          to_emails: string[]
+        }
+        Insert: {
+          body?: string | null
+          cc_emails?: string[]
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          direction: string
+          from_email?: string | null
+          id?: string
+          lead_id?: string | null
+          logged_by?: string | null
+          sent_at?: string
+          status?: string
+          subject?: string | null
+          to_emails?: string[]
+        }
+        Update: {
+          body?: string | null
+          cc_emails?: string[]
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          direction?: string
+          from_email?: string | null
+          id?: string
+          lead_id?: string | null
+          logged_by?: string | null
+          sent_at?: string
+          status?: string
+          subject?: string | null
+          to_emails?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_email_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_email_logs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_email_logs_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_email_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_invoice_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          line_total: number
+          quantity: number
+          sort_order: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          line_total?: number
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          line_total?: number
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "crm_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_invoices: {
+        Row: {
+          amount_paid: number
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          due_date: string | null
+          id: string
+          invoice_number: string
+          issue_date: string
+          notes: string | null
+          paid_at: string | null
+          quote_id: string | null
+          status: string
+          subtotal: number
+          tax: number
+          tax_rate: number
+          terms: string | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          notes?: string | null
+          paid_at?: string | null
+          quote_id?: string | null
+          status?: string
+          subtotal?: number
+          tax?: number
+          tax_rate?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          notes?: string | null
+          paid_at?: string | null
+          quote_id?: string | null
+          status?: string
+          subtotal?: number
+          tax?: number
+          tax_rate?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_invoices_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_invoices_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "crm_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_lead_submission_log: {
         Row: {
           created_at: string
@@ -735,6 +947,98 @@ export type Database = {
           },
         ]
       }
+      crm_meetings: {
+        Row: {
+          attendees: Json
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          description: string | null
+          end_at: string | null
+          id: string
+          lead_id: string | null
+          location: string | null
+          meeting_url: string | null
+          notes: string | null
+          owner_id: string | null
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attendees?: Json
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          description?: string | null
+          end_at?: string | null
+          id?: string
+          lead_id?: string | null
+          location?: string | null
+          meeting_url?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          start_at: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attendees?: Json
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          description?: string | null
+          end_at?: string | null
+          id?: string
+          lead_id?: string | null
+          location?: string | null
+          meeting_url?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          start_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_meetings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_meetings_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_meetings_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_meetings_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_pipeline_stages: {
         Row: {
           active: boolean
@@ -815,6 +1119,56 @@ export type Database = {
           },
         ]
       }
+      crm_quote_signatures: {
+        Row: {
+          created_at: string
+          id: string
+          ip_hash: string | null
+          quote_id: string
+          signature_data: string
+          signature_type: string
+          signed_at: string
+          signer_email: string | null
+          signer_name: string
+          signer_title: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          quote_id: string
+          signature_data: string
+          signature_type: string
+          signed_at?: string
+          signer_email?: string | null
+          signer_name: string
+          signer_title?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          quote_id?: string
+          signature_data?: string
+          signature_type?: string
+          signed_at?: string
+          signer_email?: string | null
+          signer_name?: string
+          signer_title?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_quote_signatures_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "crm_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_quotes: {
         Row: {
           created_at: string
@@ -887,6 +1241,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      crm_services: {
+        Row: {
+          active: boolean
+          category: string | null
+          created_at: string
+          created_by: string | null
+          default_unit_price: number
+          description: string | null
+          id: string
+          name: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_unit_price?: number
+          description?: string | null
+          id?: string
+          name: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_unit_price?: number
+          description?: string | null
+          id?: string
+          name?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       crm_tasks: {
         Row: {
