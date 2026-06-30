@@ -377,7 +377,7 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {isManager() && !isNative && (
+            {!isNative && (
               <TabsContent value="calendar" className="mt-6">
                 <CalendarPlanner />
               </TabsContent>
