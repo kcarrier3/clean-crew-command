@@ -1,82 +1,61 @@
-## Goal
+# Custom Document Builder for Team
 
-Replace the current top-tab navigation on the web (desktop) experience with a collapsible left icon sidebar, add a new draft-planning **Calendar** module, and stub out a **Supply Management** module for later.
+Build a full document platform: admins upload PDFs, drag fillable/signature/acknowledgment fields onto pages, the packet is auto-assigned to new hires right after profile completion, and admins review everything in a dedicated Documents page.
 
-Mobile (and the native app) keep the bottom-bar navigation we just shipped — no change there.
+## What admins get
 
-## 1. New left sidebar (desktop only)
+1. **New top-level "Documents" page** (admin/owner only, on the web app sidebar).
+   - **Templates tab** — list of all uploaded document templates. "Upload PDF" button opens a builder.
+   - **Submissions tab** — every employee × every template, with status (Pending / Completed / Rejected), filters by employee, document, status, and date completed. Click a row to view the filled PDF + signature.
+   - **Settings tab** — toggle which templates are auto-assigned to new hires, set required vs optional, reorder.
 
-Built with the shadcn `Sidebar` component, `collapsible="icon"` so it shrinks to a 56px icon rail. The header gets a `SidebarTrigger` so users can collapse/expand.
+2. **PDF Field Builder** (modal that opens after upload)
+   - Renders the PDF page-by-page in a canvas (using `pdfjs-dist`).
+   - Admin drags rectangles onto the page and labels each as: Text, Date, Checkbox, Signature, Initials, or Acknowledgment-only (whole page is read-only with an "I acknowledge" checkbox at the bottom).
+   - Each field gets a label, required flag, and optional auto-fill source (employee name, address, SSN, DOB, phone, email — pulled from the profile).
+   - Saved as a JSON schema attached to the template.
 
-Top-level icons (flatter grouping per your pick), shown only if the user has access:
+3. **Employee profile linkage**
+   - On the employee edit dialog, a new "Documents" section shows status of every assigned doc with quick links to view the completed PDF.
 
-| Icon | Label | Opens |
-|---|---|---|
-| Home | Dashboard | Manager or Employee dashboard (role-based) |
-| CalendarDays | Schedule | Scheduling (managers) / My Schedule (crew) |
-| CalendarRange | Calendar | NEW draft planning calendar (managers + admins) |
-| PlaneTakeoff | Time Off | Time-off requests |
-| BookOpen | Manager Log | Manager log (managers) |
-| FileSpreadsheet | Payroll | Payroll Reports (admins/owner) |
-| MapPin | Accounts | Job sites |
-| ClipboardCheck | Quality Control | QC dashboard (pulled out of Accounts as its own page) |
-| Users | Team | Team management (canManageEmployees) |
-| Briefcase | CRM | CRM dashboard (CRM users) |
-| Package | Supplies | NEW stub page |
-| MessageSquare | Messages | Messaging center |
-| FileText | Onboarding | Onboarding center / manager review |
+## What employees get
 
-The user avatar / sign-out / change password / delete account live at the bottom of the sidebar in a footer popover, replacing the top-right dropdown.
+- Right after `/complete-profile` saves, they're routed to `/documents` (new page) showing their assigned packet.
+- Each document opens a viewer with the PDF rendered and the field overlays positioned where the admin placed them. Auto-fill pre-populates known fields from their profile.
+- They fill, sign (using existing `SignaturePad`), and submit. The filled values + flattened PDF (rendered with `pdf-lib`) are stored.
+- Acknowledgment-only docs just need the checkbox + signature.
 
-NotificationBell stays in the top header alongside the SidebarTrigger.
+## Access control
 
-## 2. Calendar module (new)
+- Only Owner / Administrator roles can view the Documents page, upload templates, or view submissions.
+- Employees can only see their own assigned documents.
+- All filled PDFs and signatures live in a private storage bucket gated by RLS.
 
-A monthly/weekly view where managers draft shifts and events before promoting them into the real schedule.
+## Technical plan
 
-**New table `calendar_drafts`:**
-- `id`, `created_by`, `created_at`, `updated_at`
-- `title`, `notes`
-- `start_at` (timestamptz), `end_at` (timestamptz), `all_day` (bool)
-- `kind` enum: `shift_draft`, `event`, `holiday`, `note`
-- `employee_id` (nullable, references profiles)
-- `job_site_id` (nullable, references job_sites)
-- `color` (text, optional swatch)
-- `promoted_schedule_id` (nullable, references employee_schedules) — set when promoted
-- RLS: managers/admins can read/write; service_role full access.
+### Database (one migration)
+- Extend `onboarding_documents`:
+  - `source_pdf_path TEXT` — storage path of the uploaded blank PDF
+  - `field_schema JSONB` — array of `{id, page, x, y, width, height, type, label, required, autofill_source}`
+  - `auto_assign BOOLEAN DEFAULT true`
+- Extend `employee_document_submissions`:
+  - `field_values JSONB` — `{field_id: value}`
+  - `filled_pdf_path TEXT` — storage path of the flattened PDF
+- Tighten RLS: drop the broad job-title list and replace with `has_role(auth.uid(), 'admin') OR profiles.job_title IN ('Owner','Administrator')` via the existing `is_crm_user`-style pattern.
+- New private storage bucket `onboarding-documents` with RLS: admins read/write all; employees read only their own filled PDFs.
 
-**UI (`src/components/CalendarPlanner.tsx`):**
-- Month grid + week view toggle (built with date-fns; no extra calendar lib needed for v1)
-- Click a day → "Add draft" dialog (kind, title, employee, job site, time range)
-- Click an existing draft → edit/delete
-- Color legend by `kind`
-- **Promote button** on any `shift_draft` (or "Promote all this week"): creates rows in `employee_schedules` from the selected drafts, sets `promoted_schedule_id`, and marks the draft as promoted (shown dimmed/checked). Idempotent: promoting again is a no-op.
-- Filter chips: by employee, by job site, by kind.
+### Frontend
+- New libs: `pdfjs-dist` (render), `pdf-lib` (fill + flatten), `react-rnd` (drag/resize field rectangles).
+- New files:
+  - `src/pages/Documents.tsx` — admin Documents page (tabs above)
+  - `src/pages/MyDocuments.tsx` — employee packet view, accessed at `/documents`
+  - `src/components/documents/PdfFieldBuilder.tsx` — drag-and-drop field editor
+  - `src/components/documents/PdfFiller.tsx` — employee fill experience
+  - `src/components/documents/DocumentsSection.tsx` — slot inside TeamRoster edit dialog
+- Update `src/pages/CompleteProfile.tsx` to navigate to `/documents` on save.
+- Add a "Documents" icon entry to `AppSidebar.tsx`, visible only to admins/owners on web.
 
-Google Calendar sync is **not** in scope for this pass; we'll add it as a follow-up if you want it.
-
-## 3. Supply Management stub
-
-`src/components/SupplyManagement.tsx` renders a "Coming soon" page with the planned feature list (inventory, reorder points, supply requests, per-account allocation) and a "Notify me when ready" CTA that just toasts. Icon shows in the sidebar so it's discoverable.
-
-## 4. Mobile / native app
-
-No behavior change. The new Calendar and Supply icons are **web-only** (hidden via the `isNativeApp` flag we just added).
-
-## 5. Cleanup
-
-- Pull Quality Control out of `JobSitesManagement` as its own top-level page (still backed by `QualityControlDashboard`). The Accounts tab inside JobSites stays for everything else.
-- Remove the existing top `TabsList` from `src/pages/Index.tsx`; tab routing stays but the trigger UI is replaced by the sidebar. (Active tab driven by sidebar `NavLink` style, with state persisted in URL hash so refresh keeps you in place.)
-
-## Technical notes
-
-- New file: `src/components/layout/AppSidebar.tsx` using `Sidebar`, `SidebarContent`, `SidebarGroup`, `SidebarMenu`, `SidebarFooter`.
-- New file: `src/components/CalendarPlanner.tsx` + `src/components/calendar/DraftDialog.tsx`.
-- New file: `src/components/SupplyManagement.tsx` (stub).
-- Migration: create `calendar_drafts` + enum + GRANTs + RLS + trigger to keep `updated_at` fresh.
-- `src/pages/Index.tsx`: wrap content in `SidebarProvider`, render `AppSidebar` on `md:` and up, keep mobile bottom-bar untouched.
-- `useAuth` gains no new permissions; sidebar uses existing `isManager`, `canManageEmployees`, `isCrmUser` checks. Payroll icon gated by admin/owner role like today.
-
-## What I'll ask you to approve
-
-One database migration (the `calendar_drafts` table and enum). I'll request that approval first, then ship the UI in the same response.
+### Out of scope (for this build)
+- E-signature legal compliance certificates (IP, audit trail beyond what already exists)
+- Bulk reassignment / reminder emails
+- Versioning of templates (uploading a new PDF replaces the old)
