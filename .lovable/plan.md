@@ -1,65 +1,82 @@
-# CRM Build Plan
+## Goal
 
-A focused CRM for Owner + Admin only, sharing data with your existing Accounts so a won deal becomes a real job site in one click. External CRM sync (HubSpot/Pipedrive/Zoho/Salesforce) is wired in as a Phase 2 add-on once the core works.
+Replace the current top-tab navigation on the web (desktop) experience with a collapsible left icon sidebar, add a new draft-planning **Calendar** module, and stub out a **Supply Management** module for later.
 
-## Scope (v1)
+Mobile (and the native app) keep the bottom-bar navigation we just shipped — no change there.
 
-**In:** Leads, Contacts, Deals (kanban pipeline), Activities + reminders, Quotes/estimates (PDF), convert-to-Account.
-**Out (Phase 2+):** Email send/track from inside the app, external CRM two-way sync, marketing automation.
+## 1. New left sidebar (desktop only)
 
-## Data model
+Built with the shadcn `Sidebar` component, `collapsible="icon"` so it shrinks to a 56px icon rail. The header gets a `SidebarTrigger` so users can collapse/expand.
 
-New tables (all gated to Owner + Admin via `has_role` RLS):
+Top-level icons (flatter grouping per your pick), shown only if the user has access:
 
-- **`crm_leads`** — `company_name`, `contact_name`, `email`, `phone`, `source`, `status` (new/contacted/qualified/unqualified/converted), `notes`, `assigned_to`, `created_by`
-- **`crm_deals`** — `name`, `lead_id` (nullable), `account_id` (nullable, links to existing `job_sites` once converted), `stage` (prospect/quoted/negotiation/won/lost), `value`, `expected_close_date`, `probability`, `owner_id`, `lost_reason`
-- **`crm_pipeline_stages`** — configurable stage list so you can rename/reorder later without code changes
-- **`crm_activities`** — `deal_id` or `lead_id`, `type` (call/email/meeting/note/task), `subject`, `body`, `due_at`, `completed_at`, `owner_id`. Drives the follow-up reminder feed.
-- **`crm_quotes`** — `deal_id`, `quote_number`, `status` (draft/sent/accepted/rejected), `subtotal`, `tax`, `total`, `valid_until`, `terms`
-- **`crm_quote_items`** — `quote_id`, `description`, `quantity`, `unit_price`, `line_total`
+| Icon | Label | Opens |
+|---|---|---|
+| Home | Dashboard | Manager or Employee dashboard (role-based) |
+| CalendarDays | Schedule | Scheduling (managers) / My Schedule (crew) |
+| CalendarRange | Calendar | NEW draft planning calendar (managers + admins) |
+| PlaneTakeoff | Time Off | Time-off requests |
+| BookOpen | Manager Log | Manager log (managers) |
+| FileSpreadsheet | Payroll | Payroll Reports (admins/owner) |
+| MapPin | Accounts | Job sites |
+| ClipboardCheck | Quality Control | QC dashboard (pulled out of Accounts as its own page) |
+| Users | Team | Team management (canManageEmployees) |
+| Briefcase | CRM | CRM dashboard (CRM users) |
+| Package | Supplies | NEW stub page |
+| MessageSquare | Messages | Messaging center |
+| FileText | Onboarding | Onboarding center / manager review |
 
-All tables get GRANTs + RLS limiting access to users with `admin` role or `Owner`/`Administrator` job title.
+The user avatar / sign-out / change password / delete account live at the bottom of the sidebar in a footer popover, replacing the top-right dropdown.
 
-## UI
+NotificationBell stays in the top header alongside the SidebarTrigger.
 
-A new **CRM** top-level tab visible only to Owner/Admin, with sub-tabs:
+## 2. Calendar module (new)
 
-1. **Pipeline** — Kanban board, drag deals between stages, totals per column. Card shows deal name, value, owner avatar, days-in-stage.
-2. **Leads** — Table with filters (status, source, owner), quick-add form, "Convert to Deal" action.
-3. **Deal detail page** — Header (value, stage, close date), tabs for Activities, Quotes, Files, linked Contacts. "Mark Won" prompts to convert into a Job Site (prefilling name/address/contact).
-4. **Activities feed** — "My follow-ups today / overdue / this week" on the CRM dashboard, plus a bell-icon reminder count.
-5. **Quote builder** — Line-item editor, live total, "Generate PDF" button, "Send to client" (email is Phase 2 — for now it downloads/copies a shareable link).
+A monthly/weekly view where managers draft shifts and events before promoting them into the real schedule.
 
-## Quotes PDF
+**New table `calendar_drafts`:**
+- `id`, `created_by`, `created_at`, `updated_at`
+- `title`, `notes`
+- `start_at` (timestamptz), `end_at` (timestamptz), `all_day` (bool)
+- `kind` enum: `shift_draft`, `event`, `holiday`, `note`
+- `employee_id` (nullable, references profiles)
+- `job_site_id` (nullable, references job_sites)
+- `color` (text, optional swatch)
+- `promoted_schedule_id` (nullable, references employee_schedules) — set when promoted
+- RLS: managers/admins can read/write; service_role full access.
 
-Generated client-side with `jspdf` + `jspdf-autotable` (no extra backend needed). Branded with the Crew Compass logo.
+**UI (`src/components/CalendarPlanner.tsx`):**
+- Month grid + week view toggle (built with date-fns; no extra calendar lib needed for v1)
+- Click a day → "Add draft" dialog (kind, title, employee, job site, time range)
+- Click an existing draft → edit/delete
+- Color legend by `kind`
+- **Promote button** on any `shift_draft` (or "Promote all this week"): creates rows in `employee_schedules` from the selected drafts, sets `promoted_schedule_id`, and marks the draft as promoted (shown dimmed/checked). Idempotent: promoting again is a no-op.
+- Filter chips: by employee, by job site, by kind.
 
-## Activity reminders
+Google Calendar sync is **not** in scope for this pass; we'll add it as a follow-up if you want it.
 
-A daily cron (Supabase `pg_cron` + edge function) emails/pushes overdue follow-ups to the deal owner. Reuses your existing `send-push-notification` function.
+## 3. Supply Management stub
 
-## Convert flow
+`src/components/SupplyManagement.tsx` renders a "Coming soon" page with the planned feature list (inventory, reorder points, supply requests, per-account allocation) and a "Notify me when ready" CTA that just toasts. Icon shows in the sidebar so it's discoverable.
 
-When a deal moves to **Won**, a dialog asks: *"Create a Job Site from this deal?"* → opens the existing New Account form prefilled from the deal/lead/contact, then links `crm_deals.account_id` so revenue is traceable.
+## 4. Mobile / native app
 
-## Phase 2 (after v1 ships)
+No behavior change. The new Calendar and Supply icons are **web-only** (hidden via the `isNativeApp` flag we just added).
 
-- **External CRM sync** via the Lovable connector gateway — your existing connection list shows HubSpot, Pipedrive, Zoho, Salesforce are all available. Direction (one-way pull vs. two-way) and which entities to sync (contacts only? deals?) is a separate conversation once you pick the provider.
-- **Email send/track** (SendGrid or your Microsoft 365/Google account).
-- **Reporting** — win rate, avg deal size, conversion %, source ROI.
+## 5. Cleanup
+
+- Pull Quality Control out of `JobSitesManagement` as its own top-level page (still backed by `QualityControlDashboard`). The Accounts tab inside JobSites stays for everything else.
+- Remove the existing top `TabsList` from `src/pages/Index.tsx`; tab routing stays but the trigger UI is replaced by the sidebar. (Active tab driven by sidebar `NavLink` style, with state persisted in URL hash so refresh keeps you in place.)
 
 ## Technical notes
 
-- All CRM tables protected with `has_role(auth.uid(), 'admin')` policies; managers/crew won't even see the CRM tab (route guard + RLS).
-- Stages stored in a config table so you can edit pipeline labels without a migration.
-- Deal ↔ Job Site link is bidirectional so the Accounts page can show "Originated from Deal #123."
-- Drag-and-drop kanban uses `@dnd-kit/core` (already in your stack).
-- Quote PDFs render with the same branding/colors as the rest of the app.
+- New file: `src/components/layout/AppSidebar.tsx` using `Sidebar`, `SidebarContent`, `SidebarGroup`, `SidebarMenu`, `SidebarFooter`.
+- New file: `src/components/CalendarPlanner.tsx` + `src/components/calendar/DraftDialog.tsx`.
+- New file: `src/components/SupplyManagement.tsx` (stub).
+- Migration: create `calendar_drafts` + enum + GRANTs + RLS + trigger to keep `updated_at` fresh.
+- `src/pages/Index.tsx`: wrap content in `SidebarProvider`, render `AppSidebar` on `md:` and up, keep mobile bottom-bar untouched.
+- `useAuth` gains no new permissions; sidebar uses existing `isManager`, `canManageEmployees`, `isCrmUser` checks. Payroll icon gated by admin/owner role like today.
 
-## What I need from you to start
+## What I'll ask you to approve
 
-1. **Approval to create the CRM tables** (migration with the schema above).
-2. **Pipeline stages** — confirm or edit: Prospect → Contacted → Quoted → Negotiation → Won / Lost.
-3. **Lead sources** — give me a starter list (referral, website, cold call, walk-in, repeat client, other?) so the dropdown is useful out of the gate.
-
-Once you approve, I'll ship v1 in stages: tables → Leads + Deals + Pipeline → Activities/reminders → Quote builder. You'll see each piece working before I move to the next.
+One database migration (the `calendar_drafts` table and enum). I'll request that approval first, then ship the UI in the same response.
