@@ -66,6 +66,14 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
+  // Require new hires to complete their profile before using the app
+  useEffect(() => {
+    if (loading || !user) return;
+    if ((profile as any) && !(profile as any).profile_completed_at) {
+      navigate('/complete-profile');
+    }
+  }, [user, loading, profile, navigate]);
+
   const handleSignOut = async () => {
     const { error } = await signOut();
     if (error) {
