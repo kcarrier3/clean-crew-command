@@ -79,6 +79,8 @@ export const PdfFiller = ({ fileUrl, fields, values, onChange, readOnly }: Props
                 >
                   {typeof v === 'string' && v.startsWith('data:image') ? (
                     <img src={v} alt={f.label} className="max-h-full max-w-full object-contain" />
+                  ) : typeof v === 'string' && v ? (
+                    <span className="italic font-signature text-sm truncate px-1" style={{ fontFamily: '"Brush Script MT", cursive' }}>{v}</span>
                   ) : (
                     <span className="text-[10px] text-yellow-900 font-semibold uppercase">
                       Tap to {f.type === 'signature' ? 'sign' : 'initial'}
