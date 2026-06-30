@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, UserPlus, Mail, Phone, Shield, Trash2, Send } from 'lucide-react';
+import { Plus, Search, UserPlus, Mail, Phone, Shield, Trash2, Send, KeyRound, Link2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,6 +74,9 @@ const TeamRoster = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<RosterMember | null>(null);
   const [resending, setResending] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [sendingLink, setSendingLink] = useState(false);
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -285,6 +288,59 @@ const TeamRoster = () => {
       toast({ title: 'Error', description: err?.message ?? 'Failed to resend invite.', variant: 'destructive' });
     } finally {
       setResending(false);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    if (!editMember) return;
+    if (newPassword.length < 8) {
+      toast({ title: 'Password too short', description: 'Must be at least 8 characters.', variant: 'destructive' });
+      return;
+    }
+    setSettingPassword(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: { userId: editMember.id, mode: 'set', newPassword },
+      });
+      if (error) {
+        let detail = error.message;
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) detail = body.error;
+        } catch { /* ignore */ }
+        throw new Error(detail);
+      }
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'Password updated', description: 'Share the new password with the worker securely.' });
+      setNewPassword('');
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message ?? 'Failed to set password.', variant: 'destructive' });
+    } finally {
+      setSettingPassword(false);
+    }
+  };
+
+  const handleSendResetLink = async () => {
+    if (!editMember) return;
+    setSendingLink(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: { userId: editMember.id, mode: 'link' },
+      });
+      if (error) {
+        let detail = error.message;
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) detail = body.error;
+        } catch { /* ignore */ }
+        throw new Error(detail);
+      }
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'Reset link sent', description: `A password reset email was sent to ${editForm.email}.` });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message ?? 'Failed to send reset link.', variant: 'destructive' });
+    } finally {
+      setSendingLink(false);
     }
   };
 
