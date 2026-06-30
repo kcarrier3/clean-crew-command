@@ -21,6 +21,10 @@ import { W4Form } from './forms/W4Form';
 import { I9Form } from './forms/I9Form';
 import { DirectDepositForm } from './forms/DirectDepositForm';
 import { format } from 'date-fns';
+import { PdfFiller } from './documents/PdfFiller';
+import { flattenPdf } from './documents/flattenPdf';
+import { buildAutofillValues } from './documents/autofill';
+import type { PdfField, FieldValues } from './documents/types';
 
 interface OnboardingDocument {
   id: string;
@@ -30,6 +34,8 @@ interface OnboardingDocument {
   content: string | null;
   is_required: boolean;
   display_order: number;
+  source_pdf_path?: string | null;
+  field_schema?: PdfField[];
 }
 
 interface DocumentSubmission {
@@ -41,6 +47,8 @@ interface DocumentSubmission {
   signature_typed: string | null;
   submitted_at: string | null;
   rejection_reason: string | null;
+  field_values?: any;
+  filled_pdf_path?: string | null;
 }
 
 const defaultW4 = {
@@ -76,6 +84,8 @@ export const OnboardingCenter = () => {
   const [signature, setSignature] = useState<{ data: string; type: 'drawn' | 'typed' } | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfValues, setPdfValues] = useState<FieldValues>({});
   const { toast } = useToast();
   const { profile } = useAuth();
 
@@ -89,7 +99,10 @@ export const OnboardingCenter = () => {
       supabase.from('onboarding_documents').select('*').eq('active', true).order('display_order'),
       supabase.from('employee_document_submissions').select('*').eq('employee_id', profile?.id || '')
     ]);
-    setDocuments(docsResult.data || []);
+    setDocuments(((docsResult.data as any[]) || []).map((d: any) => ({
+      ...d,
+      field_schema: Array.isArray(d.field_schema) ? d.field_schema : [],
+    })) as OnboardingDocument[]);
     setSubmissions((subsResult.data || []) as DocumentSubmission[]);
     setLoading(false);
   };
@@ -101,11 +114,13 @@ export const OnboardingCenter = () => {
   const completedRequired = documents.filter(d => d.is_required && getSubmission(d.id)?.status === 'completed').length;
   const progressPct = requiredCount > 0 ? Math.round((completedRequired / requiredCount) * 100) : 0;
 
-  const openDocument = (doc: OnboardingDocument) => {
+  const openDocument = async (doc: OnboardingDocument) => {
     const existing = getSubmission(doc.id);
     setActiveDoc(doc);
     setSignature(null);
     setAcknowledged(false);
+    setPdfUrl(null);
+    setPdfValues({});
 
     if (existing?.form_data) {
       setFormData(existing.form_data);
@@ -115,12 +130,22 @@ export const OnboardingCenter = () => {
       else if (doc.document_type === 'direct_deposit') setFormData({ ...defaultDirectDeposit });
       else setFormData({});
     }
+
+    if (doc.document_type === 'custom_form' && doc.source_pdf_path) {
+      const { data } = await supabase.storage
+        .from('onboarding-files')
+        .createSignedUrl(doc.source_pdf_path, 3600);
+      setPdfUrl(data?.signedUrl ?? null);
+      const existingVals = (existing as any)?.field_values || {};
+      setPdfValues(buildAutofillValues(doc.field_schema || [], profile as any, existingVals));
+    }
   };
 
   const handleSubmit = async () => {
     if (!activeDoc || !profile) return;
 
-    const needsSignature = activeDoc.document_type !== 'acknowledgment';
+    const isCustom = activeDoc.document_type === 'custom_form';
+    const needsSignature = activeDoc.document_type !== 'acknowledgment' && !isCustom;
     if (needsSignature && !signature?.data) {
       toast({ title: 'Signature required', description: 'Please sign the document before submitting.', variant: 'destructive' });
       return;
@@ -129,19 +154,46 @@ export const OnboardingCenter = () => {
       toast({ title: 'Acknowledgment required', description: 'Please check the acknowledgment box.', variant: 'destructive' });
       return;
     }
+    if (isCustom) {
+      const required = (activeDoc.field_schema || []).filter(f => f.required);
+      for (const f of required) {
+        const v = pdfValues[f.id];
+        if (v === undefined || v === '' || v === false) {
+          toast({ title: 'Missing field', description: `Please complete: ${f.label}`, variant: 'destructive' });
+          return;
+        }
+      }
+    }
 
     setSaving(true);
     try {
       const existing = getSubmission(activeDoc.id);
-      const payload = {
+
+      // For custom PDF docs, flatten + upload
+      let filledPath: string | null = null;
+      if (isCustom && activeDoc.source_pdf_path && pdfUrl) {
+        const res = await fetch(pdfUrl);
+        const srcBytes = await res.arrayBuffer();
+        const flat = await flattenPdf(srcBytes, activeDoc.field_schema || [], pdfValues);
+        const subId = existing?.id ?? crypto.randomUUID();
+        filledPath = `submissions/${profile.id}/${subId}.pdf`;
+        const { error: upErr } = await supabase.storage
+          .from('onboarding-files')
+          .upload(filledPath, new Blob([flat as BlobPart], { type: 'application/pdf' }), { upsert: true, contentType: 'application/pdf' });
+        if (upErr) throw upErr;
+      }
+
+      const payload: any = {
         employee_id: profile.id,
         document_id: activeDoc.id,
         status: 'completed' as const,
-        form_data: Object.keys(formData).length > 0 ? formData : null,
+        form_data: !isCustom && Object.keys(formData).length > 0 ? formData : null,
+        field_values: isCustom ? pdfValues : null,
+        filled_pdf_path: filledPath,
         signature_data: signature?.type === 'drawn' ? signature.data : null,
         signature_typed: signature?.type === 'typed' ? signature.data : null,
         acknowledged_at: activeDoc.document_type === 'acknowledgment' ? new Date().toISOString() : null,
-        signed_at: needsSignature ? new Date().toISOString() : null,
+        signed_at: (needsSignature || isCustom) ? new Date().toISOString() : null,
         submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -309,8 +361,21 @@ export const OnboardingCenter = () => {
                 <DirectDepositForm data={formData} onChange={setFormData} />
               )}
 
+              {/* Custom PDF */}
+              {activeDoc?.document_type === 'custom_form' && pdfUrl && (
+                <PdfFiller
+                  fileUrl={pdfUrl}
+                  fields={activeDoc.field_schema || []}
+                  values={pdfValues}
+                  onChange={setPdfValues}
+                />
+              )}
+              {activeDoc?.document_type === 'custom_form' && !pdfUrl && (
+                <p className="text-sm text-muted-foreground">This document is not ready yet — please check back later.</p>
+              )}
+
               {/* Signature for non-acknowledgment docs */}
-              {activeDoc?.document_type !== 'acknowledgment' && (
+              {activeDoc?.document_type !== 'acknowledgment' && activeDoc?.document_type !== 'custom_form' && (
                 <>
                   <Separator />
                   <SignaturePad

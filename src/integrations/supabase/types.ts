@@ -1513,6 +1513,8 @@ export type Database = {
           created_at: string
           document_id: string
           employee_id: string
+          field_values: Json | null
+          filled_pdf_path: string | null
           form_data: Json | null
           id: string
           ip_address: string | null
@@ -1531,6 +1533,8 @@ export type Database = {
           created_at?: string
           document_id: string
           employee_id: string
+          field_values?: Json | null
+          filled_pdf_path?: string | null
           form_data?: Json | null
           id?: string
           ip_address?: string | null
@@ -1549,6 +1553,8 @@ export type Database = {
           created_at?: string
           document_id?: string
           employee_id?: string
+          field_values?: Json | null
+          filled_pdf_path?: string | null
           form_data?: Json | null
           id?: string
           ip_address?: string | null
@@ -2349,40 +2355,49 @@ export type Database = {
       onboarding_documents: {
         Row: {
           active: boolean
+          auto_assign: boolean
           content: string | null
           created_at: string
           created_by: string | null
           description: string | null
           display_order: number
           document_type: string
+          field_schema: Json
           id: string
           is_required: boolean
+          source_pdf_path: string | null
           title: string
           updated_at: string
         }
         Insert: {
           active?: boolean
+          auto_assign?: boolean
           content?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           display_order?: number
           document_type: string
+          field_schema?: Json
           id?: string
           is_required?: boolean
+          source_pdf_path?: string | null
           title: string
           updated_at?: string
         }
         Update: {
           active?: boolean
+          auto_assign?: boolean
           content?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           display_order?: number
           document_type?: string
+          field_schema?: Json
           id?: string
           is_required?: boolean
+          source_pdf_path?: string | null
           title?: string
           updated_at?: string
         }

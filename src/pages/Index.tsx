@@ -29,6 +29,7 @@ import { useAuth } from '@/hooks/useAuth';
 import MySchedule from '@/components/MySchedule';
 import { OnboardingCenter } from '@/components/OnboardingCenter';
 import { OnboardingManager } from '@/components/OnboardingManager';
+import { DocumentsAdmin } from '@/components/documents/DocumentsAdmin';
 import TimeOffRequests from '@/components/TimeOffRequests';
 import CRMDashboard from '@/components/crm/CRMDashboard';
 import { useToast } from '@/hooks/use-toast';
@@ -151,6 +152,7 @@ const Index = () => {
         { v: 'jobsites',   label: 'Accounts',        icon: MapPin },
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
+        { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
         ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
@@ -445,6 +447,12 @@ const Index = () => {
             <TabsContent value="onboarding" className="mt-6">
               {isManager() ? <OnboardingManager /> : <OnboardingCenter />}
             </TabsContent>
+
+            {isManager() && !isNative && (
+              <TabsContent value="documents" className="mt-6">
+                <DocumentsAdmin />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>
