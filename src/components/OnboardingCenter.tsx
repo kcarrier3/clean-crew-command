@@ -99,7 +99,10 @@ export const OnboardingCenter = () => {
       supabase.from('onboarding_documents').select('*').eq('active', true).order('display_order'),
       supabase.from('employee_document_submissions').select('*').eq('employee_id', profile?.id || '')
     ]);
-    setDocuments(docsResult.data || []);
+    setDocuments(((docsResult.data as any[]) || []).map((d: any) => ({
+      ...d,
+      field_schema: Array.isArray(d.field_schema) ? d.field_schema : [],
+    })) as OnboardingDocument[]);
     setSubmissions((subsResult.data || []) as DocumentSubmission[]);
     setLoading(false);
   };
@@ -176,7 +179,7 @@ export const OnboardingCenter = () => {
         filledPath = `submissions/${profile.id}/${subId}.pdf`;
         const { error: upErr } = await supabase.storage
           .from('onboarding-files')
-          .upload(filledPath, new Blob([flat], { type: 'application/pdf' }), { upsert: true, contentType: 'application/pdf' });
+          .upload(filledPath, new Blob([flat as BlobPart], { type: 'application/pdf' }), { upsert: true, contentType: 'application/pdf' });
         if (upErr) throw upErr;
       }
 
