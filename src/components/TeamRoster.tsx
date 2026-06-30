@@ -681,6 +681,40 @@ const TeamRoster = () => {
                 disabled={editMember?.job_title === 'Owner'}
               />
             </div>
+
+            <section className="space-y-3 rounded-md border p-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <KeyRound className="h-4 w-4" /> Password
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Set a new password directly, or email the worker a reset link.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  type="text"
+                  placeholder="New password (min 8 chars)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <Button
+                  variant="secondary"
+                  onClick={handleSetPassword}
+                  disabled={settingPassword || !newPassword}
+                >
+                  {settingPassword ? 'Setting...' : 'Set password'}
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleSendResetLink}
+                disabled={sendingLink || !editForm.email}
+                className="w-full sm:w-auto"
+              >
+                <Link2 className="h-4 w-4 mr-1" />
+                {sendingLink ? 'Sending...' : 'Send password reset link'}
+              </Button>
+            </section>
           </div>
           )}
           <DialogFooter className="flex sm:justify-between gap-2">
