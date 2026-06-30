@@ -36,6 +36,7 @@ import { useIsNativeApp } from '@/hooks/useIsNativeApp';
 import { AppSidebar, type SidebarItem } from '@/components/layout/AppSidebar';
 import CalendarPlanner from '@/components/CalendarPlanner';
 import SupplyManagement from '@/components/SupplyManagement';
+import TeamRoster from '@/components/TeamRoster';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -141,11 +142,10 @@ const Index = () => {
         { v: 'managerlog', label: 'Manager Log',     icon: BookOpen },
         { v: 'jobsites',   label: 'Accounts',        icon: MapPin },
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
-        ...(canManageEmployees() ? [{ v: 'team', label: 'Team', icon: UsersIcon }] : []),
+        { v: 'team',       label: 'Team',            icon: UsersIcon },
         ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
-        { v: 'onboarding', label: 'Onboarding',      icon: FileText },
       ]
     : [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
@@ -153,9 +153,9 @@ const Index = () => {
         { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
+        { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
-        { v: 'onboarding', label: 'Onboarding',      icon: FileText },
       ];
 
   const showDesktopSidebar = !isNative;
@@ -427,9 +427,9 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {canManageEmployees() && !isNative && (
+            {!isNative && (
               <TabsContent value="team" className="mt-6">
-                <TeamManagement />
+                <TeamRoster />
               </TabsContent>
             )}
 
