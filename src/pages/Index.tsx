@@ -292,11 +292,9 @@ const Index = () => {
                 );
               })()
             ) : (
-              <TabsList className="hidden md:grid w-full grid-cols-6">
+              <TabsList className="hidden md:grid w-full grid-cols-4">
                 <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
                 <TabsTrigger value="myschedule">My Schedule</TabsTrigger>
-                <TabsTrigger value="timeoff">Time Off</TabsTrigger>
-                <TabsTrigger value="quality">Quality Control</TabsTrigger>
                 <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
