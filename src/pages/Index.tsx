@@ -150,8 +150,10 @@ const Index = () => {
     : [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
         { v: 'myschedule', label: 'My Schedule',     icon: CalendarDays },
+        { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
+        { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
         { v: 'onboarding', label: 'Onboarding',      icon: FileText },
       ];
@@ -375,7 +377,7 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {isManager() && !isNative && (
+            {!isNative && (
               <TabsContent value="calendar" className="mt-6">
                 <CalendarPlanner />
               </TabsContent>
