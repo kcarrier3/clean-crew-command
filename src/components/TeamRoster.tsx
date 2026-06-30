@@ -398,7 +398,7 @@ const TeamRoster = () => {
       </Dialog>
 
       <Dialog open={!!editMember} onOpenChange={(o) => !o && setEditMember(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Team Member</DialogTitle>
             <DialogDescription>
@@ -407,7 +407,12 @@ const TeamRoster = () => {
                 : 'Update profile details, activate/deactivate, or remove this team member.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-3">
+          {editLoading ? (
+            <p className="text-sm text-muted-foreground py-6">Loading profile…</p>
+          ) : (
+          <div className="grid gap-6">
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Name & Contact</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="ed-first">First name</Label>
@@ -420,17 +425,81 @@ const TeamRoster = () => {
                   onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} />
               </div>
             </div>
-            <div>
-              <Label htmlFor="ed-phone">Phone</Label>
-              <Input id="ed-phone" value={editForm.phone}
-                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="ed-email">Email</Label>
+                <Input id="ed-email" type="email" value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="ed-phone">Phone</Label>
+                <Input id="ed-phone" value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="ed-emp">Employee ID</Label>
-              <Input id="ed-emp" value={editForm.employee_id}
-                onChange={(e) => setEditForm({ ...editForm, employee_id: e.target.value })} />
-            </div>
-            <div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Address</h3>
+              <div>
+                <Label htmlFor="ed-addr1">Street address</Label>
+                <Input id="ed-addr1" value={editForm.address_line1}
+                  onChange={(e) => setEditForm({ ...editForm, address_line1: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="ed-addr2">Apt / Suite</Label>
+                <Input id="ed-addr2" value={editForm.address_line2}
+                  onChange={(e) => setEditForm({ ...editForm, address_line2: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-1">
+                  <Label htmlFor="ed-city">City</Label>
+                  <Input id="ed-city" value={editForm.city}
+                    onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="ed-state">State</Label>
+                  <Input id="ed-state" value={editForm.state}
+                    onChange={(e) => setEditForm({ ...editForm, state: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="ed-zip">Zip</Label>
+                  <Input id="ed-zip" value={editForm.postal_code}
+                    onChange={(e) => setEditForm({ ...editForm, postal_code: e.target.value })} />
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Emergency Contact</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="ed-ec-name">Name</Label>
+                  <Input id="ed-ec-name" value={editForm.emergency_contact_name}
+                    onChange={(e) => setEditForm({ ...editForm, emergency_contact_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="ed-ec-rel">Relationship</Label>
+                  <Input id="ed-ec-rel" value={editForm.emergency_contact_relationship}
+                    onChange={(e) => setEditForm({ ...editForm, emergency_contact_relationship: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="ed-ec-phone">Phone</Label>
+                <Input id="ed-ec-phone" value={editForm.emergency_contact_phone}
+                  onChange={(e) => setEditForm({ ...editForm, emergency_contact_phone: e.target.value })} />
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Role</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="ed-emp">Employee ID</Label>
+                  <Input id="ed-emp" value={editForm.employee_id}
+                    onChange={(e) => setEditForm({ ...editForm, employee_id: e.target.value })} />
+                </div>
+                <div>
               <Label htmlFor="ed-job">Job title</Label>
               <Select
                 value={editForm.job_title}
@@ -444,7 +513,65 @@ const TeamRoster = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Pay & Incentives</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor="ed-paytype">Pay type</Label>
+                  <Select value={editForm.pay_type} onValueChange={(v) => setEditForm({ ...editForm, pay_type: v })}>
+                    <SelectTrigger id="ed-paytype"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hourly">Hourly</SelectItem>
+                      <SelectItem value="salary">Salary</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editForm.pay_type === 'hourly' ? (
+                  <div>
+                    <Label htmlFor="ed-rate">Hourly rate ($)</Label>
+                    <Input id="ed-rate" type="number" step="0.01" min="0" value={editForm.hourly_rate}
+                      onChange={(e) => setEditForm({ ...editForm, hourly_rate: e.target.value })} />
+                  </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="ed-sal">Salary ($/yr)</Label>
+                    <Input id="ed-sal" type="number" step="0.01" min="0" value={editForm.salary_amount}
+                      onChange={(e) => setEditForm({ ...editForm, salary_amount: e.target.value })} />
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <div>
+                  <div className="text-sm font-medium">Receiving attendance incentive</div>
+                  <div className="text-xs text-muted-foreground">
+                    Auto-tabulated on the first full paycheck of each month based on the attendance rules.
+                  </div>
+                </div>
+                <Switch
+                  checked={editForm.attendance_incentive_enrolled}
+                  onCheckedChange={(c) => setEditForm({ ...editForm, attendance_incentive_enrolled: c })}
+                />
+              </div>
+              {editForm.attendance_incentive_enrolled && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="ed-att">Attendance bonus ($)</Label>
+                    <Input id="ed-att" type="number" step="0.01" min="0" value={editForm.attendance_bonus_amount}
+                      onChange={(e) => setEditForm({ ...editForm, attendance_bonus_amount: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor="ed-time">Time bonus ($) — construction only</Label>
+                    <Input id="ed-time" type="number" step="0.01" min="0" value={editForm.time_bonus_amount}
+                      onChange={(e) => setEditForm({ ...editForm, time_bonus_amount: e.target.value })} />
+                  </div>
+                </div>
+              )}
+            </section>
+
             <div className="flex items-center justify-between rounded-md border p-3">
               <div>
                 <div className="text-sm font-medium">Active</div>
@@ -457,6 +584,7 @@ const TeamRoster = () => {
               />
             </div>
           </div>
+          )}
           <DialogFooter className="flex sm:justify-between gap-2">
             <Button
               variant="destructive"
@@ -467,7 +595,7 @@ const TeamRoster = () => {
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setEditMember(null)} disabled={savingEdit}>Cancel</Button>
-              <Button onClick={handleSaveEdit} disabled={savingEdit}>
+              <Button onClick={handleSaveEdit} disabled={savingEdit || editLoading}>
                 {savingEdit ? 'Saving...' : 'Save changes'}
               </Button>
             </div>
