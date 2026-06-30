@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -32,11 +32,13 @@ import { OnboardingManager } from '@/components/OnboardingManager';
 import TimeOffRequests from '@/components/TimeOffRequests';
 import CRMDashboard from '@/components/crm/CRMDashboard';
 import { useToast } from '@/hooks/use-toast';
+import { useIsNativeApp } from '@/hooks/useIsNativeApp';
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading, profile, isManager, canManageEmployees, isCrmUser, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
+  const isNative = useIsNativeApp();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -146,6 +148,17 @@ const Index = () => {
                     <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">
                       {user.email}
                     </div>
+                    {/* On native app, surface Messages + Onboarding here since they're not in the bottom bar */}
+                    {isNative && (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => { setActiveTab('messages'); setMoreMenuOpen(false); }}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Messages
+                      </Button>
+                    )}
                     {!isManager() && (
                       <Button
                         variant="ghost"
@@ -156,7 +169,7 @@ const Index = () => {
                         Onboarding & Docs
                       </Button>
                     )}
-                    {isManager() && (
+                    {isManager() && !isNative && (
                       <>
                         <Button
                           variant="ghost"
@@ -255,15 +268,23 @@ const Index = () => {
             {/* Desktop: Show tabs based on user role */}
             {isManager() ? (
               (() => {
-                const tabs = [
-                  { v: 'dashboard',  label: 'Dashboard' },
-                  { v: 'scheduling', label: 'Scheduling' },
-                  { v: 'jobsites',   label: 'Accounts' },
-                  ...(isCrmUser() ? [{ v: 'crm', label: 'CRM' }] : []),
-                  { v: 'managerlog', label: 'Manager Log' },
-                  { v: 'messages',   label: 'Messages' },
-                  ...(canManageEmployees() ? [{ v: 'team', label: 'Team' }] : []),
-                ];
+                const tabs = isNative
+                  ? [
+                      { v: 'dashboard',  label: 'Dashboard' },
+                      { v: 'scheduling', label: 'Scheduling' },
+                      { v: 'managerlog', label: 'Manager Log' },
+                      { v: 'quality',    label: 'Quality Control' },
+                      { v: 'messages',   label: 'Messages' },
+                    ]
+                  : [
+                      { v: 'dashboard',  label: 'Dashboard' },
+                      { v: 'scheduling', label: 'Scheduling' },
+                      { v: 'jobsites',   label: 'Accounts' },
+                      ...(isCrmUser() ? [{ v: 'crm', label: 'CRM' }] : []),
+                      { v: 'managerlog', label: 'Manager Log' },
+                      { v: 'messages',   label: 'Messages' },
+                      ...(canManageEmployees() ? [{ v: 'team', label: 'Team' }] : []),
+                    ];
                 return (
                   <TabsList className="hidden md:grid w-full" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
                     {tabs.map(t => <TabsTrigger key={t.v} value={t.v}>{t.label}</TabsTrigger>)}
@@ -271,9 +292,11 @@ const Index = () => {
                 );
               })()
             ) : (
-              <TabsList className="hidden md:grid w-full grid-cols-4">
+              <TabsList className="hidden md:grid w-full grid-cols-6">
                 <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
                 <TabsTrigger value="myschedule">My Schedule</TabsTrigger>
+                <TabsTrigger value="timeoff">Time Off</TabsTrigger>
+                <TabsTrigger value="quality">Quality Control</TabsTrigger>
                 <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
@@ -289,13 +312,13 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {isManager() && (
+            {isManager() && !isNative && (
               <TabsContent value="jobsites" className="mt-6">
                 <JobSitesManagement />
               </TabsContent>
             )}
 
-            {isCrmUser() && (
+            {isCrmUser() && !isNative && (
               <TabsContent value="crm" className="mt-6">
                 <CRMDashboard />
               </TabsContent>
@@ -327,7 +350,7 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {canManageEmployees() && (
+            {canManageEmployees() && !isNative && (
               <TabsContent value="team" className="mt-6">
                 <TeamManagement />
               </TabsContent>
@@ -348,7 +371,8 @@ const Index = () => {
             <>
               <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
               <MobileTab active={activeTab === 'scheduling'} onClick={() => setActiveTab('scheduling')} icon={<Calendar className="h-5 w-5" />} label="Schedule" />
-              <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
+              <MobileTab active={activeTab === 'managerlog'} onClick={() => setActiveTab('managerlog')} icon={<BookOpen className="h-5 w-5" />} label="Log" />
+              <MobileTab active={activeTab === 'quality'} onClick={() => setActiveTab('quality')} icon={<ClipboardCheck className="h-5 w-5" />} label="QC" />
               <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
             </>
           ) : (
@@ -356,7 +380,7 @@ const Index = () => {
               <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
               <MobileTab active={activeTab === 'myschedule'} onClick={() => setActiveTab('myschedule')} icon={<CalendarDays className="h-5 w-5" />} label="Schedule" />
               <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
-              <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
+              <MobileTab active={activeTab === 'quality'} onClick={() => setActiveTab('quality')} icon={<ClipboardCheck className="h-5 w-5" />} label="QC" />
               <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
             </>
           )}
