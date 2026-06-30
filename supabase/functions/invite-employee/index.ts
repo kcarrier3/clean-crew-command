@@ -113,62 +113,83 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType, attendanceBonusAmount, timeBonusAmount } = validationResult.data;
+    const { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType, attendanceBonusAmount, timeBonusAmount, resend } = validationResult.data;
 
-    console.log('Inviting employee:', { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType });
+    console.log('Inviting employee:', { email, jobTitle, payType, resend });
 
-    // Check if user already exists
+    // Look up existing user by email (paginated through all auth users)
+    let existingUser: any = null;
     try {
-      const { data: existingUsers } = await supabase.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000
-      });
-      
-      const userExists = existingUsers.users?.some(user => user.email === email);
-      
-      if (userExists) {
-        return new Response(
-          JSON.stringify({ error: 'A user with this email already exists' }), 
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          }
-        );
+      let page = 1;
+      while (page <= 20) {
+        const { data } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+        const match = data?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (match) { existingUser = match; break; }
+        if (!data?.users || data.users.length < 1000) break;
+        page++;
       }
     } catch (error) {
-      console.log('Could not check existing users, proceeding with invitation:', error);
+      console.log('Could not check existing users:', error);
     }
 
-    // Use the app's public URL for the invite redirect so employees land on the app
-    // Falls back to the Supabase project URL if SITE_URL is not set
+    // Block re-invite of fully-activated accounts
+    if (existingUser?.email_confirmed_at && !resend) {
+      return new Response(
+        JSON.stringify({ error: 'A user with this email already exists and has activated their account.' }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const siteUrl = Deno.env.get('SITE_URL') || 'https://clean-crew-command.lovable.app';
     const redirectUrl = `${siteUrl}/reset-password`;
-    
-    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo: redirectUrl,
-      data: {
-        first_name: firstName,
-        last_name: lastName,
-        phone: phone || null,
-        job_title: jobTitle,
-        hourly_rate: payType === 'hourly' ? hourlyRate : null,
-        salary_amount: payType === 'salary' ? salaryAmount : null,
-        pay_type: payType,
-        attendance_tracking_type: attendanceTrackingType || 'attendance_only',
-        attendance_bonus_amount: attendanceBonusAmount || null,
-        time_bonus_amount: timeBonusAmount || null,
-      }
-    });
+
+    const metadata = {
+      first_name: firstName,
+      last_name: lastName,
+      phone: phone || null,
+      job_title: jobTitle,
+      hourly_rate: payType === 'hourly' ? hourlyRate : null,
+      salary_amount: payType === 'salary' ? salaryAmount : null,
+      pay_type: payType,
+      attendance_tracking_type: attendanceTrackingType || 'attendance_only',
+      attendance_bonus_amount: attendanceBonusAmount || null,
+      time_bonus_amount: timeBonusAmount || null,
+    };
+
+    let inviteData: any = null;
+    let inviteError: any = null;
+
+    if (existingUser && !existingUser.email_confirmed_at) {
+      // Re-send invite to an unconfirmed user by generating a fresh invite link
+      console.log('Resending invite to existing unconfirmed user:', email);
+      const { data, error } = await supabase.auth.admin.generateLink({
+        type: 'invite',
+        email,
+        options: { redirectTo: redirectUrl, data: metadata },
+      });
+      inviteData = { user: data?.user ?? existingUser };
+      inviteError = error;
+    } else {
+      const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+        redirectTo: redirectUrl,
+        data: metadata,
+      });
+      inviteData = data;
+      inviteError = error;
+    }
 
     if (inviteError) {
       console.error('Error sending invite:', inviteError);
-      throw inviteError;
+      return new Response(
+        JSON.stringify({ error: inviteError.message || 'Failed to send invitation' }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     console.log('Employee invitation sent successfully to:', email);
 
-    // Assign permissions and roles based on job title
-    if (inviteData.user?.id) {
+    // Assign permissions and roles based on job title (skip on resend if no jobTitle change)
+    if (inviteData.user?.id && jobTitle) {
       const userId = inviteData.user.id;
 
       // Update the profile with job_title and attendance_tracking_type
