@@ -10,16 +10,17 @@ const corsHeaders = {
 // Input validation schema
 const InviteEmployeeSchema = z.object({
   email: z.string().email({ message: "Invalid email format" }).max(255, { message: "Email too long" }),
-  firstName: z.string().min(1, { message: "First name required" }).max(100, { message: "First name too long" }),
-  lastName: z.string().min(1, { message: "Last name required" }).max(100, { message: "Last name too long" }),
+  firstName: z.string().min(1, { message: "First name required" }).max(100, { message: "First name too long" }).optional(),
+  lastName: z.string().min(1, { message: "Last name required" }).max(100, { message: "Last name too long" }).optional(),
   phone: z.string().max(20, { message: "Phone number too long" }).optional().nullable(),
-  jobTitle: z.string().min(1, { message: "Job title required" }).max(100, { message: "Job title too long" }),
+  jobTitle: z.string().min(1, { message: "Job title required" }).max(100, { message: "Job title too long" }).optional(),
   hourlyRate: z.number().min(0, { message: "Hourly rate cannot be negative" }).max(10000, { message: "Hourly rate too high" }).optional().nullable(),
   salaryAmount: z.number().min(0, { message: "Salary cannot be negative" }).max(10000000, { message: "Salary too high" }).optional().nullable(),
-  payType: z.enum(['hourly', 'salary'], { message: "Pay type must be 'hourly' or 'salary'" }),
+  payType: z.enum(['hourly', 'salary'], { message: "Pay type must be 'hourly' or 'salary'" }).optional(),
   attendanceTrackingType: z.enum(['attendance_only', 'attendance_and_punctuality']).optional(),
   attendanceBonusAmount: z.number().min(0).max(100000).optional().nullable(),
   timeBonusAmount: z.number().min(0).max(100000).optional().nullable(),
+  resend: z.boolean().optional(),
 });
 
 // Permission mappings — must match jobTitles.ts in the frontend exactly
