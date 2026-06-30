@@ -2425,6 +2425,7 @@ export type Database = {
           attendance_tracking_type: string | null
           city: string | null
           created_at: string
+          date_of_birth: string | null
           email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -2442,6 +2443,7 @@ export type Database = {
           pay_type: string | null
           phone: string | null
           postal_code: string | null
+          profile_completed_at: string | null
           require_geofencing: boolean
           salary_amount: number | null
           state: string | null
@@ -2457,6 +2459,7 @@ export type Database = {
           attendance_tracking_type?: string | null
           city?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -2474,6 +2477,7 @@ export type Database = {
           pay_type?: string | null
           phone?: string | null
           postal_code?: string | null
+          profile_completed_at?: string | null
           require_geofencing?: boolean
           salary_amount?: number | null
           state?: string | null
@@ -2489,6 +2493,7 @@ export type Database = {
           attendance_tracking_type?: string | null
           city?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -2506,6 +2511,7 @@ export type Database = {
           pay_type?: string | null
           phone?: string | null
           postal_code?: string | null
+          profile_completed_at?: string | null
           require_geofencing?: boolean
           salary_amount?: number | null
           state?: string | null
