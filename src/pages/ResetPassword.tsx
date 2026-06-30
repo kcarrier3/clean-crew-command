@@ -148,7 +148,7 @@ const ResetPassword = () => {
       });
     } else {
       setDone(true);
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate('/complete-profile'), 1500);
     }
 
     setLoading(false);
