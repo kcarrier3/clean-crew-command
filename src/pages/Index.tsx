@@ -427,9 +427,9 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {canManageEmployees() && !isNative && (
+            {!isNative && (
               <TabsContent value="team" className="mt-6">
-                <TeamManagement />
+                <TeamRoster />
               </TabsContent>
             )}
 
