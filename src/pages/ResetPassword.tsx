@@ -82,12 +82,10 @@ const ResetPassword = () => {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <img
-            src="/lovable-uploads/15903461-f6a6-4e12-bd88-aaae74e48f31.png"
-            alt="Summit Facilities Group"
-            className="mx-auto mb-4 h-48 w-auto"
+            src="/crew-compass-logo.png?v=3"
+            alt="Crew Compass"
+            className="mx-auto mb-4 h-64 w-auto"
           />
-          <h1 className="text-3xl font-bold text-brand-orange">CrewCompass</h1>
-          <p className="text-muted-foreground italic">by Summit Facilities Group</p>
         </div>
 
         {done ? (
