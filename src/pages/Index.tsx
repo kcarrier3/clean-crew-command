@@ -144,7 +144,7 @@ const Index = () => {
         ...(canManageEmployees() ? [{ v: 'team', label: 'Team', icon: UsersIcon }] : []),
         ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
-        { v: 'messages',   label: 'Messages',        icon: MessageSquare },
+        { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
         { v: 'onboarding', label: 'Onboarding',      icon: FileText },
       ]
     : [
