@@ -16,12 +16,20 @@ const ResetPassword = () => {
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
-    // Supabase handles the token from the URL hash automatically via onAuthStateChange
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    // Supabase handles the token from the URL hash automatically via onAuthStateChange.
+    // Accept both PASSWORD_RECOVERY (forgot password) and SIGNED_IN (invite acceptance)
+    // since invited users land here to set their initial password.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         setSessionReady(true);
       }
     });
+
+    // Also check for an existing session (e.g. user already authenticated via invite link)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setSessionReady(true);
+    });
+
     return () => subscription.unsubscribe();
   }, []);
 
