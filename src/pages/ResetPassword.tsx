@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, CheckCircle } from 'lucide-react';
+import { Loader2, Lock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const ResetPassword = () => {
@@ -14,23 +14,100 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Supabase handles the token from the URL hash automatically via onAuthStateChange.
+    let mounted = true;
+    let resolved = false;
+
+    const markReady = () => {
+      if (!mounted) return;
+      resolved = true;
+      setLinkError(null);
+      setSessionReady(true);
+    };
+
+    const markError = (message: string) => {
+      if (!mounted) return;
+      resolved = true;
+      setSessionReady(false);
+      setLinkError(message);
+    };
+
+    const parseUrlParams = () => {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const searchParams = new URLSearchParams(window.location.search);
+
+      return {
+        accessToken: hashParams.get('access_token'),
+        refreshToken: hashParams.get('refresh_token'),
+        code: searchParams.get('code') || hashParams.get('code'),
+        error: searchParams.get('error_description') || hashParams.get('error_description') || searchParams.get('error') || hashParams.get('error'),
+      };
+    };
+
+    const verifyLink = async () => {
+      const { accessToken, refreshToken, code, error } = parseUrlParams();
+
+      if (error) {
+        markError('This account setup link is invalid or has expired. Please ask your manager to resend your invite.');
+        return;
+      }
+
+      if (accessToken && refreshToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (sessionError) {
+          markError(sessionError.message || 'This account setup link could not be verified. Please ask your manager to resend your invite.');
+          return;
+        }
+
+        markReady();
+        return;
+      }
+
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (exchangeError) {
+          markError(exchangeError.message || 'This account setup link could not be verified. Please ask your manager to resend your invite.');
+          return;
+        }
+
+        markReady();
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        markReady();
+      }
+    };
+
     // Accept both PASSWORD_RECOVERY (forgot password) and SIGNED_IN (invite acceptance)
     // since invited users land here to set their initial password.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        setSessionReady(true);
+      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) {
+        markReady();
       }
     });
 
-    // Also check for an existing session (e.g. user already authenticated via invite link)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setSessionReady(true);
-    });
+    verifyLink();
 
-    return () => subscription.unsubscribe();
+    const timeout = window.setTimeout(() => {
+      if (!resolved) {
+        markError('This account setup link could not be verified. Please ask your manager to resend your invite.');
+      }
+    }, 8000);
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -100,12 +177,27 @@ const ResetPassword = () => {
               </CardDescription>
             </CardHeader>
           </Card>
+        ) : linkError ? (
+          <Card className="backdrop-blur-sm bg-card/90">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Link Needs Resent
+              </CardTitle>
+              <CardDescription>{linkError}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button type="button" className="w-full" onClick={() => navigate('/auth')}>
+                Back to Sign In
+              </Button>
+            </CardContent>
+          </Card>
         ) : !sessionReady ? (
           <Card className="backdrop-blur-sm bg-card/90">
             <CardHeader>
-              <CardTitle>Verifying Reset Link...</CardTitle>
+              <CardTitle>Verifying Account Link...</CardTitle>
               <CardDescription>
-                Please wait while we verify your password reset link.
+                Please wait while we verify your account setup link.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center py-4">
