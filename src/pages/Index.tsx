@@ -238,6 +238,22 @@ const Index = () => {
                           <MapPin className="h-4 w-4 mr-2" />
                           Accounts
                         </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => { setActiveTab('calendar'); setMoreMenuOpen(false); }}
+                        >
+                          <CalendarRange className="h-4 w-4 mr-2" />
+                          Calendar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => { setActiveTab('supplies'); setMoreMenuOpen(false); }}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Supplies
+                        </Button>
                         {isCrmUser() && (
                           <Button
                             variant="ghost"
