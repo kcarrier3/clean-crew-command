@@ -11,6 +11,11 @@ import { ActivitiesFeed } from './ActivitiesFeed';
 import { CompaniesList } from './CompaniesList';
 import { ContactsList } from './ContactsList';
 import { TasksList } from './TasksList';
+import { ServicesCatalog } from './ServicesCatalog';
+import { InvoicesList } from './InvoicesList';
+import { MeetingsList } from './MeetingsList';
+import { EmailLogsList } from './EmailLogsList';
+import { CRMReports } from './CRMReports';
 import type { CrmDeal, CrmLead, CrmStage } from './types';
 
 export default function CRMDashboard() {
@@ -79,12 +84,17 @@ export default function CRMDashboard() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="companies">Companies</TabsTrigger>
           <TabsTrigger value="contacts">Contacts</TabsTrigger>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
+          <TabsTrigger value="meetings">Meetings</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="services">Services</TabsTrigger>
+          <TabsTrigger value="emails">Emails</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="activities">Follow-ups</TabsTrigger>
         </TabsList>
 
@@ -112,6 +122,26 @@ export default function CRMDashboard() {
 
         <TabsContent value="tasks" className="mt-4">
           <TasksList onChanged={loadAll} />
+        </TabsContent>
+
+        <TabsContent value="meetings" className="mt-4">
+          <MeetingsList />
+        </TabsContent>
+
+        <TabsContent value="invoices" className="mt-4">
+          <InvoicesList />
+        </TabsContent>
+
+        <TabsContent value="services" className="mt-4">
+          <ServicesCatalog />
+        </TabsContent>
+
+        <TabsContent value="emails" className="mt-4">
+          <EmailLogsList />
+        </TabsContent>
+
+        <TabsContent value="reports" className="mt-4">
+          <CRMReports />
         </TabsContent>
 
         <TabsContent value="activities" className="mt-4">
