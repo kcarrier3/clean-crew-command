@@ -106,6 +106,100 @@ export type Database = {
           },
         ]
       }
+      calendar_drafts: {
+        Row: {
+          all_day: boolean
+          color: string | null
+          created_at: string
+          created_by: string
+          employee_id: string | null
+          end_at: string | null
+          id: string
+          job_site_id: string | null
+          kind: Database["public"]["Enums"]["calendar_draft_kind"]
+          notes: string | null
+          promoted_schedule_id: string | null
+          start_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          all_day?: boolean
+          color?: string | null
+          created_at?: string
+          created_by: string
+          employee_id?: string | null
+          end_at?: string | null
+          id?: string
+          job_site_id?: string | null
+          kind?: Database["public"]["Enums"]["calendar_draft_kind"]
+          notes?: string | null
+          promoted_schedule_id?: string | null
+          start_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          all_day?: boolean
+          color?: string | null
+          created_at?: string
+          created_by?: string
+          employee_id?: string | null
+          end_at?: string | null
+          id?: string
+          job_site_id?: string | null
+          kind?: Database["public"]["Enums"]["calendar_draft_kind"]
+          notes?: string | null
+          promoted_schedule_id?: string | null
+          start_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_drafts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_drafts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_drafts_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_drafts_promoted_schedule_id_fkey"
+            columns: ["promoted_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "employee_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_participants: {
         Row: {
           conversation_id: string
@@ -2281,6 +2375,7 @@ export type Database = {
         | "view_notifications"
         | "admin_settings"
       app_role: "admin" | "manager" | "employee"
+      calendar_draft_kind: "shift_draft" | "event" | "holiday" | "note"
       time_off_status: "pending" | "approved" | "declined"
       work_order_photo_type: "deficiency" | "completion"
       work_order_priority: "low" | "medium" | "high" | "urgent"
@@ -2428,6 +2523,7 @@ export const Constants = {
         "admin_settings",
       ],
       app_role: ["admin", "manager", "employee"],
+      calendar_draft_kind: ["shift_draft", "event", "holiday", "note"],
       time_off_status: ["pending", "approved", "declined"],
       work_order_photo_type: ["deficiency", "completion"],
       work_order_priority: ["low", "medium", "high", "urgent"],

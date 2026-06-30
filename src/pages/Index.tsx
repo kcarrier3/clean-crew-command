@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -33,6 +33,9 @@ import TimeOffRequests from '@/components/TimeOffRequests';
 import CRMDashboard from '@/components/crm/CRMDashboard';
 import { useToast } from '@/hooks/use-toast';
 import { useIsNativeApp } from '@/hooks/useIsNativeApp';
+import { AppSidebar, type SidebarItem } from '@/components/layout/AppSidebar';
+import CalendarPlanner from '@/components/CalendarPlanner';
+import SupplyManagement from '@/components/SupplyManagement';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -43,6 +46,18 @@ const Index = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('cc.sidebar.collapsed') === '1';
+  });
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((c) => {
+      const next = !c;
+      try { window.localStorage.setItem('cc.sidebar.collapsed', next ? '1' : '0'); } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -117,10 +132,54 @@ const Index = () => {
 
   const userDisplayName = profile ? `${profile.first_name} ${profile.last_name}` : user.email;
 
+  // Desktop sidebar items (web only — hidden on native via wrapper)
+  const sidebarItems: SidebarItem[] = isManager()
+    ? [
+        { v: 'dashboard',  label: 'Dashboard',       icon: Home },
+        { v: 'scheduling', label: 'Schedule',        icon: CalendarDays },
+        { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
+        { v: 'managerlog', label: 'Manager Log',     icon: BookOpen },
+        { v: 'jobsites',   label: 'Accounts',        icon: MapPin },
+        { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
+        ...(canManageEmployees() ? [{ v: 'team', label: 'Team', icon: UsersIcon }] : []),
+        ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
+        { v: 'supplies',   label: 'Supplies',        icon: Package },
+        { v: 'messages',   label: 'Messages',        icon: MessageSquare },
+        { v: 'onboarding', label: 'Onboarding',      icon: FileText },
+      ]
+    : [
+        { v: 'dashboard',  label: 'Dashboard',       icon: Home },
+        { v: 'myschedule', label: 'My Schedule',     icon: CalendarDays },
+        { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
+        { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
+        { v: 'messages',   label: 'Messages',        icon: MessageSquare },
+        { v: 'onboarding', label: 'Onboarding',      icon: FileText },
+      ];
+
+  const showDesktopSidebar = !isNative;
+
   return (
     <div className="min-h-screen overflow-x-hidden">
+      {showDesktopSidebar && (
+        <AppSidebar
+          items={sidebarItems}
+          active={activeTab}
+          onChange={setActiveTab}
+          collapsed={sidebarCollapsed}
+          onToggle={toggleSidebar}
+          userDisplayName={userDisplayName ?? ''}
+          userEmail={user.email ?? ''}
+          onChangePassword={handleChangePassword}
+          onSignOut={handleSignOut}
+          onDeleteAccount={() => setShowDeleteDialog(true)}
+        />
+      )}
       {/* Desktop padding, reduced mobile padding */}
-      <div className="p-3 md:p-6 pb-24 md:pb-6">
+      <div
+        className={`p-3 md:p-6 pb-24 md:pb-6 transition-[padding] duration-200 ${
+          showDesktopSidebar ? (sidebarCollapsed ? 'md:pl-[80px]' : 'md:pl-[240px]') : ''
+        }`}
+      >
         <div className="max-w-6xl mx-auto min-w-0">
           <div className="mb-8 flex justify-between items-center">
             <div>
@@ -178,6 +237,22 @@ const Index = () => {
                         >
                           <MapPin className="h-4 w-4 mr-2" />
                           Accounts
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => { setActiveTab('calendar'); setMoreMenuOpen(false); }}
+                        >
+                          <CalendarRange className="h-4 w-4 mr-2" />
+                          Calendar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start"
+                          onClick={() => { setActiveTab('supplies'); setMoreMenuOpen(false); }}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Supplies
                         </Button>
                         {isCrmUser() && (
                           <Button
@@ -265,40 +340,30 @@ const Index = () => {
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            {/* Desktop: Show tabs based on user role */}
-            {isManager() ? (
+            {/* Desktop: tabs replaced by left sidebar on web; native still uses TabsList. */}
+            {isNative && isManager() ? (
               (() => {
-                const tabs = isNative
-                  ? [
-                      { v: 'dashboard',  label: 'Dashboard' },
-                      { v: 'scheduling', label: 'Scheduling' },
-                      { v: 'managerlog', label: 'Manager Log' },
-                      { v: 'quality',    label: 'Quality Control' },
-                      { v: 'messages',   label: 'Messages' },
-                    ]
-                  : [
-                      { v: 'dashboard',  label: 'Dashboard' },
-                      { v: 'scheduling', label: 'Scheduling' },
-                      { v: 'jobsites',   label: 'Accounts' },
-                      ...(isCrmUser() ? [{ v: 'crm', label: 'CRM' }] : []),
-                      { v: 'managerlog', label: 'Manager Log' },
-                      { v: 'messages',   label: 'Messages' },
-                      ...(canManageEmployees() ? [{ v: 'team', label: 'Team' }] : []),
-                    ];
+                const tabs = [
+                  { v: 'dashboard',  label: 'Dashboard' },
+                  { v: 'scheduling', label: 'Scheduling' },
+                  { v: 'managerlog', label: 'Manager Log' },
+                  { v: 'quality',    label: 'Quality Control' },
+                  { v: 'messages',   label: 'Messages' },
+                ];
                 return (
                   <TabsList className="hidden md:grid w-full" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
                     {tabs.map(t => <TabsTrigger key={t.v} value={t.v}>{t.label}</TabsTrigger>)}
                   </TabsList>
                 );
               })()
-            ) : (
+            ) : isNative ? (
               <TabsList className="hidden md:grid w-full grid-cols-4">
                 <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
                 <TabsTrigger value="myschedule">My Schedule</TabsTrigger>
                 <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
-            )}
+            ) : null}
 
             <TabsContent value="dashboard" className="mt-6">
               {isManager() ? <ManagerDashboard /> : <EmployeeDashboard />}
@@ -307,6 +372,18 @@ const Index = () => {
             {isManager() && (
               <TabsContent value="scheduling" className="mt-6">
                 <SchedulingDashboard />
+              </TabsContent>
+            )}
+
+            {isManager() && !isNative && (
+              <TabsContent value="calendar" className="mt-6">
+                <CalendarPlanner />
+              </TabsContent>
+            )}
+
+            {!isNative && (
+              <TabsContent value="supplies" className="mt-6">
+                <SupplyManagement />
               </TabsContent>
             )}
 
