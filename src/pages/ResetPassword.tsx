@@ -78,7 +78,7 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <img
@@ -89,7 +89,7 @@ const ResetPassword = () => {
         </div>
 
         {done ? (
-          <Card>
+          <Card className="backdrop-blur-sm bg-card/90">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-600">
                 <CheckCircle className="h-5 w-5" />
@@ -101,7 +101,7 @@ const ResetPassword = () => {
             </CardHeader>
           </Card>
         ) : !sessionReady ? (
-          <Card>
+          <Card className="backdrop-blur-sm bg-card/90">
             <CardHeader>
               <CardTitle>Verifying Reset Link...</CardTitle>
               <CardDescription>
@@ -113,7 +113,7 @@ const ResetPassword = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card>
+          <Card className="backdrop-blur-sm bg-card/90">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Lock className="h-5 w-5" />
