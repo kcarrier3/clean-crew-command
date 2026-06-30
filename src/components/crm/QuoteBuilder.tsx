@@ -5,12 +5,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, FileDown } from 'lucide-react';
+import { Plus, Trash2, FileDown, PenLine, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuotePdf } from './generateQuotePdf';
-import type { CrmDeal, CrmLead, CrmQuote, CrmQuoteItem } from './types';
+import { QuoteSignatureDialog } from './QuoteSignatureDialog';
+import { convertQuoteToInvoice } from './InvoicesList';
+import type { CrmDeal, CrmLead, CrmQuote, CrmQuoteItem, CrmService } from './types';
 
 interface Props {
   open: boolean;
@@ -39,9 +41,14 @@ export function QuoteBuilder({ open, onOpenChange, deal, lead, quote, onSaved }:
   const [validUntil, setValidUntil] = useState('');
   const [terms, setTerms] = useState('');
   const [items, setItems] = useState<DraftItem[]>([{ description: '', quantity: 1, unit_price: 0 }]);
+  const [services, setServices] = useState<CrmService[]>([]);
+  const [sigOpen, setSigOpen] = useState(false);
 
   useEffect(() => {
     const loadExisting = async () => {
+      const { data: svc } = await (supabase as any)
+        .from('crm_services').select('*').eq('active', true).order('name');
+      setServices(svc || []);
       if (quote) {
         setStatus(quote.status);
         setTaxRate(Number(quote.tax_rate) || 0);
@@ -69,6 +76,24 @@ export function QuoteBuilder({ open, onOpenChange, deal, lead, quote, onSaved }:
 
   const updateItem = (idx: number, patch: Partial<DraftItem>) => {
     setItems(items.map((it, i) => i === idx ? { ...it, ...patch } : it));
+  };
+
+  const addFromService = (serviceId: string) => {
+    const s = services.find(x => x.id === serviceId);
+    if (!s) return;
+    setItems([...items, { description: s.name, quantity: 1, unit_price: Number(s.default_unit_price) }]);
+  };
+
+  const handleConvertToInvoice = async () => {
+    if (!quote) { toast({ title: 'Save the quote first', variant: 'destructive' }); return; }
+    try {
+      const inv = await convertQuoteToInvoice(quote.id, user?.id);
+      toast({ title: 'Invoice created', description: inv.invoice_number });
+      onSaved?.();
+      onOpenChange(false);
+    } catch (e: any) {
+      toast({ title: 'Failed to create invoice', description: e.message, variant: 'destructive' });
+    }
   };
 
   const save = async (alsoDownload = false) => {
@@ -169,9 +194,21 @@ export function QuoteBuilder({ open, onOpenChange, deal, lead, quote, onSaved }:
           <div>
             <div className="flex justify-between items-center mb-2">
               <Label>Line Items</Label>
-              <Button size="sm" variant="outline" onClick={() => setItems([...items, { description: '', quantity: 1, unit_price: 0 }])}>
-                <Plus className="h-3 w-3 mr-1" /> Add
-              </Button>
+              <div className="flex gap-2">
+                {services.length > 0 && (
+                  <Select value="" onValueChange={addFromService}>
+                    <SelectTrigger className="h-8 w-44 text-xs"><SelectValue placeholder="Add from catalog" /></SelectTrigger>
+                    <SelectContent>
+                      {services.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name} — ${Number(s.default_unit_price).toFixed(2)}/{s.unit}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <Button size="sm" variant="outline" onClick={() => setItems([...items, { description: '', quantity: 1, unit_price: 0 }])}>
+                  <Plus className="h-3 w-3 mr-1" /> Add
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               {items.map((item, idx) => (
@@ -202,12 +239,30 @@ export function QuoteBuilder({ open, onOpenChange, deal, lead, quote, onSaved }:
 
         <DialogFooter className="flex-wrap gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          {quote && (
+            <>
+              <Button variant="outline" onClick={() => setSigOpen(true)} disabled={saving}>
+                <PenLine className="h-4 w-4 mr-2" /> Capture Signature
+              </Button>
+              <Button variant="outline" onClick={handleConvertToInvoice} disabled={saving}>
+                <FileText className="h-4 w-4 mr-2" /> Convert to Invoice
+              </Button>
+            </>
+          )}
           <Button variant="outline" onClick={() => save(true)} disabled={saving}>
             <FileDown className="h-4 w-4 mr-2" /> Save & Download PDF
           </Button>
           <Button onClick={() => save(false)} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
         </DialogFooter>
       </DialogContent>
+      {quote && (
+        <QuoteSignatureDialog
+          open={sigOpen}
+          onOpenChange={setSigOpen}
+          quote={quote}
+          onSigned={() => onSaved?.()}
+        />
+      )}
     </Dialog>
   );
 }
