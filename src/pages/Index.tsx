@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -30,12 +30,13 @@ import MySchedule from '@/components/MySchedule';
 import { OnboardingCenter } from '@/components/OnboardingCenter';
 import { OnboardingManager } from '@/components/OnboardingManager';
 import TimeOffRequests from '@/components/TimeOffRequests';
+import CRMDashboard from '@/components/crm/CRMDashboard';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading, profile, isManager, canManageEmployees, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
+  const { user, loading, profile, isManager, canManageEmployees, isCrmUser, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -165,6 +166,16 @@ const Index = () => {
                           <MapPin className="h-4 w-4 mr-2" />
                           Accounts
                         </Button>
+                        {isCrmUser() && (
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start"
+                            onClick={() => { setActiveTab('crm'); setMoreMenuOpen(false); }}
+                          >
+                            <Briefcase className="h-4 w-4 mr-2" />
+                            CRM
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           className="w-full justify-start"
@@ -243,24 +254,22 @@ const Index = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Desktop: Show tabs based on user role */}
             {isManager() ? (
-              canManageEmployees() ? (
-                <TabsList className="hidden md:grid w-full grid-cols-6">
-                  <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
-                  <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
-                  <TabsTrigger value="jobsites">Accounts</TabsTrigger>
-                  <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
-                  <TabsTrigger value="messages">Messages</TabsTrigger>
-                  <TabsTrigger value="team">Team</TabsTrigger>
-                </TabsList>
-              ) : (
-                <TabsList className="hidden md:grid w-full grid-cols-5">
-                  <TabsTrigger value="dashboard">Manager Dashboard</TabsTrigger>
-                  <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
-                  <TabsTrigger value="jobsites">Accounts</TabsTrigger>
-                  <TabsTrigger value="managerlog">Manager Log</TabsTrigger>
-                  <TabsTrigger value="messages">Messages</TabsTrigger>
-                </TabsList>
-              )
+              (() => {
+                const tabs = [
+                  { v: 'dashboard',  label: 'Dashboard' },
+                  { v: 'scheduling', label: 'Scheduling' },
+                  { v: 'jobsites',   label: 'Accounts' },
+                  ...(isCrmUser() ? [{ v: 'crm', label: 'CRM' }] : []),
+                  { v: 'managerlog', label: 'Manager Log' },
+                  { v: 'messages',   label: 'Messages' },
+                  ...(canManageEmployees() ? [{ v: 'team', label: 'Team' }] : []),
+                ];
+                return (
+                  <TabsList className="hidden md:grid w-full" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+                    {tabs.map(t => <TabsTrigger key={t.v} value={t.v}>{t.label}</TabsTrigger>)}
+                  </TabsList>
+                );
+              })()
             ) : (
               <TabsList className="hidden md:grid w-full grid-cols-4">
                 <TabsTrigger value="dashboard">My Dashboard</TabsTrigger>
@@ -283,6 +292,12 @@ const Index = () => {
             {isManager() && (
               <TabsContent value="jobsites" className="mt-6">
                 <JobSitesManagement />
+              </TabsContent>
+            )}
+
+            {isCrmUser() && (
+              <TabsContent value="crm" className="mt-6">
+                <CRMDashboard />
               </TabsContent>
             )}
             
