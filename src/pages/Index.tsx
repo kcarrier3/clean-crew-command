@@ -152,7 +152,7 @@ const Index = () => {
         { v: 'myschedule', label: 'My Schedule',     icon: CalendarDays },
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
-        { v: 'messages',   label: 'Messages',        icon: MessageSquare },
+        { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
         { v: 'onboarding', label: 'Onboarding',      icon: FileText },
       ];
 
