@@ -8,6 +8,9 @@ import { PipelineBoard } from './PipelineBoard';
 import { LeadsList } from './LeadsList';
 import { DealDialog } from './DealDialog';
 import { ActivitiesFeed } from './ActivitiesFeed';
+import { CompaniesList } from './CompaniesList';
+import { ContactsList } from './ContactsList';
+import { TasksList } from './TasksList';
 import type { CrmDeal, CrmLead, CrmStage } from './types';
 
 export default function CRMDashboard() {
@@ -79,6 +82,9 @@ export default function CRMDashboard() {
         <TabsList>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
+          <TabsTrigger value="companies">Companies</TabsTrigger>
+          <TabsTrigger value="contacts">Contacts</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="activities">Follow-ups</TabsTrigger>
         </TabsList>
 
@@ -94,6 +100,18 @@ export default function CRMDashboard() {
 
         <TabsContent value="leads" className="mt-4">
           <LeadsList stages={stages} onChanged={loadAll} />
+        </TabsContent>
+
+        <TabsContent value="companies" className="mt-4">
+          <CompaniesList onChanged={loadAll} />
+        </TabsContent>
+
+        <TabsContent value="contacts" className="mt-4">
+          <ContactsList onChanged={loadAll} />
+        </TabsContent>
+
+        <TabsContent value="tasks" className="mt-4">
+          <TasksList onChanged={loadAll} />
         </TabsContent>
 
         <TabsContent value="activities" className="mt-4">

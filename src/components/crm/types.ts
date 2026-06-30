@@ -21,6 +21,8 @@ export interface CrmLead {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  company_id?: string | null;
+  primary_contact_id?: string | null;
 }
 
 export interface CrmDeal {
@@ -40,6 +42,8 @@ export interface CrmDeal {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  company_id?: string | null;
+  primary_contact_id?: string | null;
 }
 
 export interface CrmActivity {
@@ -96,4 +100,73 @@ export const LEAD_STATUS_LABELS: Record<CrmLead['status'], string> = {
   qualified: 'Qualified',
   unqualified: 'Unqualified',
   converted: 'Converted',
+};
+
+export interface CrmCompany {
+  id: string;
+  name: string;
+  industry: string | null;
+  website: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  notes: string | null;
+  owner_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CrmContact {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  title: string | null;
+  company_id: string | null;
+  lead_id: string | null;
+  is_primary: boolean;
+  notes: string | null;
+  owner_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CrmTaskPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type CrmTaskStatus = 'open' | 'in_progress' | 'done' | 'cancelled';
+
+export interface CrmTask {
+  id: string;
+  title: string;
+  description: string | null;
+  due_at: string | null;
+  priority: CrmTaskPriority;
+  status: CrmTaskStatus;
+  assigned_to: string | null;
+  deal_id: string | null;
+  lead_id: string | null;
+  contact_id: string | null;
+  company_id: string | null;
+  completed_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const TASK_PRIORITY_LABELS: Record<CrmTaskPriority, string> = {
+  low: 'Low',
+  normal: 'Normal',
+  high: 'High',
+  urgent: 'Urgent',
+};
+
+export const TASK_STATUS_LABELS: Record<CrmTaskStatus, string> = {
+  open: 'Open',
+  in_progress: 'In Progress',
+  done: 'Done',
+  cancelled: 'Cancelled',
 };
