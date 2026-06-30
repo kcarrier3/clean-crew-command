@@ -18,15 +18,18 @@ const ResetPassword = () => {
 
   useEffect(() => {
     let mounted = true;
+    let resolved = false;
 
     const markReady = () => {
       if (!mounted) return;
+      resolved = true;
       setLinkError(null);
       setSessionReady(true);
     };
 
     const markError = (message: string) => {
       if (!mounted) return;
+      resolved = true;
       setSessionReady(false);
       setLinkError(message);
     };
@@ -95,7 +98,7 @@ const ResetPassword = () => {
     verifyLink();
 
     const timeout = window.setTimeout(() => {
-      if (!sessionReady) {
+      if (!resolved) {
         markError('This account setup link could not be verified. Please ask your manager to resend your invite.');
       }
     }, 8000);
@@ -105,7 +108,7 @@ const ResetPassword = () => {
       window.clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, [sessionReady]);
+  }, []);
 
   const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
