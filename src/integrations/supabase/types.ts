@@ -611,6 +611,33 @@ export type Database = {
           },
         ]
       }
+      crm_lead_submission_log: {
+        Row: {
+          created_at: string
+          id: string
+          ip_hash: string
+          submission_count: number
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_hash: string
+          submission_count?: number
+          updated_at?: string
+          window_start?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_hash?: string
+          submission_count?: number
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       crm_leads: {
         Row: {
           assigned_to: string | null
@@ -625,6 +652,7 @@ export type Database = {
           phone: string | null
           primary_contact_id: string | null
           source: string | null
+          source_metadata: Json | null
           status: string
           updated_at: string
         }
@@ -641,6 +669,7 @@ export type Database = {
           phone?: string | null
           primary_contact_id?: string | null
           source?: string | null
+          source_metadata?: Json | null
           status?: string
           updated_at?: string
         }
@@ -657,6 +686,7 @@ export type Database = {
           phone?: string | null
           primary_contact_id?: string | null
           source?: string | null
+          source_metadata?: Json | null
           status?: string
           updated_at?: string
         }
