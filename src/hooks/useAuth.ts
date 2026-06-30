@@ -194,6 +194,11 @@ export const useAuth = () => {
   const isManager = () => hasRole('admin') || hasRole('manager');
   const isEmployee = () => hasRole('employee');
 
+  const isCrmUser = () =>
+    hasRole('admin') ||
+    profile?.job_title === 'Owner' ||
+    profile?.job_title === 'Administrator';
+
   const hasPermission = (permission: UserPermission['permission']) => {
     return permissions.some(p => p.permission === permission);
   };
@@ -228,6 +233,7 @@ export const useAuth = () => {
     hasPermission,
     isManager,
     isEmployee,
+    isCrmUser,
     canViewSchedules,
     canEditSchedules,
     canViewTimeTracking,
