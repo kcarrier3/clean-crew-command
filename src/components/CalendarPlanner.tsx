@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   addMonths,
@@ -98,7 +99,7 @@ const hexToRgba = (hex: string, alpha: number) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
-const colorStyle = (color: string | null | undefined): React.CSSProperties | undefined => {
+const colorStyle = (color: string | null | undefined): CSSProperties | undefined => {
   if (!color) return undefined;
   return {
     backgroundColor: hexToRgba(color, 0.18),
