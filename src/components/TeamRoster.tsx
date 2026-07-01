@@ -70,6 +70,8 @@ const TeamRoster = () => {
     attendance_incentive_enrolled: false,
     attendance_bonus_amount: '', time_bonus_amount: '',
   });
+  const [editAccessLevel, setEditAccessLevel] = useState<'admin' | 'manager' | 'employee'>('employee');
+  const [initialAccessLevel, setInitialAccessLevel] = useState<'admin' | 'manager' | 'employee'>('employee');
   const [editLoading, setEditLoading] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<RosterMember | null>(null);
@@ -169,14 +171,13 @@ const TeamRoster = () => {
     if (!canManage) return;
     setEditMember(m);
     setEditLoading(true);
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', m.id)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        setEditLoading(false);
-        if (error || !data) {
+    Promise.all([
+      supabase.from('profiles').select('*').eq('id', m.id).maybeSingle(),
+      supabase.from('user_roles').select('role').eq('user_id', m.id),
+    ]).then(([profileRes, rolesRes]) => {
+      setEditLoading(false);
+      const { data, error } = profileRes;
+      if (error || !data) {
           toast({ title: 'Error', description: error?.message ?? 'Could not load profile', variant: 'destructive' });
           return;
         }
@@ -204,7 +205,14 @@ const TeamRoster = () => {
           attendance_bonus_amount: p.attendance_bonus_amount != null ? String(p.attendance_bonus_amount) : '',
           time_bonus_amount: p.time_bonus_amount != null ? String(p.time_bonus_amount) : '',
         });
-      });
+      const roleRows = (rolesRes.data ?? []) as { role: 'admin' | 'manager' | 'employee' }[];
+      const highest: 'admin' | 'manager' | 'employee' =
+        roleRows.some(r => r.role === 'admin') ? 'admin'
+        : roleRows.some(r => r.role === 'manager') ? 'manager'
+        : 'employee';
+      setEditAccessLevel(highest);
+      setInitialAccessLevel(highest);
+    });
   };
 
   const handleSaveEdit = async () => {
@@ -237,11 +245,37 @@ const TeamRoster = () => {
         time_bonus_amount: num(editForm.time_bonus_amount),
       })
       .eq('id', editMember.id);
-    setSavingEdit(false);
     if (error) {
+      setSavingEdit(false);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       return;
     }
+    // Persist access level if it changed
+    if (editAccessLevel !== initialAccessLevel) {
+      if (editMember.job_title === 'Owner' && editAccessLevel !== 'admin') {
+        setSavingEdit(false);
+        toast({ title: 'Blocked', description: 'The Owner account must remain an Admin.', variant: 'destructive' });
+        return;
+      }
+      const { error: delErr } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', editMember.id);
+      if (delErr) {
+        setSavingEdit(false);
+        toast({ title: 'Error', description: `Could not update access level: ${delErr.message}`, variant: 'destructive' });
+        return;
+      }
+      const { error: insErr } = await supabase
+        .from('user_roles')
+        .insert({ user_id: editMember.id, role: editAccessLevel });
+      if (insErr) {
+        setSavingEdit(false);
+        toast({ title: 'Error', description: `Could not set new access level: ${insErr.message}`, variant: 'destructive' });
+        return;
+      }
+    }
+    setSavingEdit(false);
     toast({ title: 'Saved', description: 'Team member updated.' });
     setEditMember(null);
     fetchMembers();
@@ -612,6 +646,24 @@ const TeamRoster = () => {
                 </SelectContent>
               </Select>
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="ed-access">Access level</Label>
+                <Select
+                  value={editAccessLevel}
+                  onValueChange={(v) => setEditAccessLevel(v as 'admin' | 'manager' | 'employee')}
+                  disabled={editMember?.job_title === 'Owner' || !hasRole('admin')}
+                >
+                  <SelectTrigger id="ed-access"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin — full access to everything</SelectItem>
+                    <SelectItem value="manager">Manager — team and operations access</SelectItem>
+                    <SelectItem value="employee">Employee — standard worker access</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Overrides the default permissions tied to the job title. Only admins can change this.
+                </p>
               </div>
             </section>
 
