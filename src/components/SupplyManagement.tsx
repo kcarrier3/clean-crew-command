@@ -7,6 +7,7 @@ import SupplyStockTab from './supply/SupplyStockTab';
 import SupplyMovementsTab from './supply/SupplyMovementsTab';
 import SupplyRequestsTab from './supply/SupplyRequestsTab';
 import SupplyLocationsTab from './supply/SupplyLocationsTab';
+import FixedAssetsTab from './supply/FixedAssetsTab';
 
 const SupplyManagement = () => {
   const { isManager } = useAuth();
@@ -32,12 +33,14 @@ const SupplyManagement = () => {
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="stock">Stock</TabsTrigger>
           <TabsTrigger value="items">Items</TabsTrigger>
+          <TabsTrigger value="assets">Fixed Assets</TabsTrigger>
           <TabsTrigger value="movements">Movements</TabsTrigger>
           <TabsTrigger value="requests">Requests</TabsTrigger>
           {canManage && <TabsTrigger value="locations">Locations</TabsTrigger>}
         </TabsList>
         <TabsContent value="stock"><SupplyStockTab /></TabsContent>
         <TabsContent value="items"><SupplyItemsTab canManage={canManage} /></TabsContent>
+        <TabsContent value="assets"><FixedAssetsTab canManage={canManage} /></TabsContent>
         <TabsContent value="movements"><SupplyMovementsTab canManage={canManage} /></TabsContent>
         <TabsContent value="requests"><SupplyRequestsTab canManage={canManage} /></TabsContent>
         {canManage && <TabsContent value="locations"><SupplyLocationsTab /></TabsContent>}
