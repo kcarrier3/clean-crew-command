@@ -1708,6 +1708,7 @@ export type Database = {
           location_kind: string
           name: string
           notes: string | null
+          photo_urls: string[]
           purchase_cost: number | null
           purchase_date: string | null
           quantity: number
@@ -1729,6 +1730,7 @@ export type Database = {
           location_kind?: string
           name: string
           notes?: string | null
+          photo_urls?: string[]
           purchase_cost?: number | null
           purchase_date?: string | null
           quantity?: number
@@ -1750,6 +1752,7 @@ export type Database = {
           location_kind?: string
           name?: string
           notes?: string | null
+          photo_urls?: string[]
           purchase_cost?: number | null
           purchase_date?: string | null
           quantity?: number

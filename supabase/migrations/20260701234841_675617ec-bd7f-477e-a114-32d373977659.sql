@@ -1,0 +1,1 @@
+ALTER TABLE public.fixed_assets ADD COLUMN IF NOT EXISTS photo_urls text[] NOT NULL DEFAULT '{}';
