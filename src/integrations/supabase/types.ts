@@ -2591,6 +2591,345 @@ export type Database = {
         }
         Relationships: []
       }
+      supply_categories: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      supply_items: {
+        Row: {
+          active: boolean
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          name: string
+          reorder_point: number | null
+          sale_price: number | null
+          sku: string | null
+          unit: string
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          name: string
+          reorder_point?: number | null
+          sale_price?: number | null
+          sku?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          reorder_point?: number | null
+          sale_price?: number | null
+          sku?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "supply_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_locations: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          job_site_id: string | null
+          kind: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          job_site_id?: string | null
+          kind: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          job_site_id?: string | null
+          kind?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_locations_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          from_location_id: string | null
+          id: string
+          item_id: string
+          job_site_id: string | null
+          movement_type: string
+          notes: string | null
+          quantity: number
+          reference: string | null
+          to_location_id: string | null
+          total_value: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          from_location_id?: string | null
+          id?: string
+          item_id: string
+          job_site_id?: string | null
+          movement_type: string
+          notes?: string | null
+          quantity: number
+          reference?: string | null
+          to_location_id?: string | null
+          total_value?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          from_location_id?: string | null
+          id?: string
+          item_id?: string
+          job_site_id?: string | null
+          movement_type?: string
+          notes?: string | null
+          quantity?: number
+          reference?: string | null
+          to_location_id?: string | null
+          total_value?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_movements_from_location_id_fkey"
+            columns: ["from_location_id"]
+            isOneToOne: false
+            referencedRelation: "supply_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "supply_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_movements_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_movements_to_location_id_fkey"
+            columns: ["to_location_id"]
+            isOneToOne: false
+            referencedRelation: "supply_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_requests: {
+        Row: {
+          created_at: string
+          fulfilled_at: string | null
+          fulfilled_by: string | null
+          id: string
+          item_id: string | null
+          item_name_free_text: string | null
+          job_site_id: string | null
+          kind: string
+          notes: string | null
+          quantity: number
+          requested_by: string
+          status: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
+          id?: string
+          item_id?: string | null
+          item_name_free_text?: string | null
+          job_site_id?: string | null
+          kind?: string
+          notes?: string | null
+          quantity?: number
+          requested_by: string
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
+          id?: string
+          item_id?: string | null
+          item_name_free_text?: string | null
+          job_site_id?: string | null
+          kind?: string
+          notes?: string | null
+          quantity?: number
+          requested_by?: string
+          status?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_requests_fulfilled_by_fkey"
+            columns: ["fulfilled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_requests_fulfilled_by_fkey"
+            columns: ["fulfilled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_requests_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "supply_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_requests_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_stock: {
+        Row: {
+          item_id: string
+          location_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          item_id: string
+          location_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          item_id?: string
+          location_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_stock_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "supply_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_stock_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "supply_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_entries: {
         Row: {
           break_minutes: number | null
@@ -3062,6 +3401,7 @@ export type Database = {
         Returns: boolean
       }
       is_crm_user: { Args: { _user_id: string }; Returns: boolean }
+      is_supply_manager: { Args: { _user_id: string }; Returns: boolean }
       mark_conversation_read: {
         Args: { _conversation_id: string }
         Returns: undefined
