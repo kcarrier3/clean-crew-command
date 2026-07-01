@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   addMonths,
@@ -38,7 +39,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Send,
   Trash2,
   CalendarRange,
 } from 'lucide-react';
@@ -63,7 +63,6 @@ interface Draft {
   promoted_schedule_id: string | null;
 }
 
-interface EmployeeOpt { id: string; first_name: string; last_name: string }
 interface JobSiteOpt { id: string; name: string }
 
 const KIND_LABEL: Record<DraftKind, string> = {
@@ -80,6 +79,35 @@ const KIND_STYLE: Record<DraftKind, string> = {
   note: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
 };
 
+const COLOR_SWATCHES: { label: string; value: string }[] = [
+  { label: 'Default', value: '' },
+  { label: 'Blue', value: '#3b82f6' },
+  { label: 'Green', value: '#10b981' },
+  { label: 'Amber', value: '#f59e0b' },
+  { label: 'Rose', value: '#f43f5e' },
+  { label: 'Violet', value: '#8b5cf6' },
+  { label: 'Teal', value: '#14b8a6' },
+  { label: 'Slate', value: '#64748b' },
+];
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const h = hex.replace('#', '');
+  const bigint = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+};
+
+const colorStyle = (color: string | null | undefined): CSSProperties | undefined => {
+  if (!color) return undefined;
+  return {
+    backgroundColor: hexToRgba(color, 0.18),
+    borderColor: hexToRgba(color, 0.5),
+    color: color,
+  };
+};
+
 const toLocalInput = (d: Date) => {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -90,7 +118,6 @@ const CalendarPlanner = () => {
   const { toast } = useToast();
   const [cursor, setCursor] = useState(new Date());
   const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [employees, setEmployees] = useState<EmployeeOpt[]>([]);
   const [jobSites, setJobSites] = useState<JobSiteOpt[]>([]);
   const [filterKind, setFilterKind] = useState<DraftKind | 'all'>('all');
   const [editing, setEditing] = useState<Partial<Draft> | null>(null);
@@ -131,19 +158,11 @@ const CalendarPlanner = () => {
   };
 
   const loadLookups = async () => {
-    const [emp, sites] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .eq('active', true)
-        .order('first_name'),
-      supabase
-        .from('job_sites')
-        .select('id, name')
-        .eq('active', true)
-        .order('name'),
-    ]);
-    if (emp.data) setEmployees(emp.data as EmployeeOpt[]);
+    const sites = await supabase
+      .from('job_sites')
+      .select('id, name')
+      .eq('active', true)
+      .order('name');
     if (sites.data) setJobSites(sites.data as JobSiteOpt[]);
   };
 
@@ -175,7 +194,7 @@ const CalendarPlanner = () => {
       all_day: false,
       employee_id: null,
       job_site_id: null,
-      color: null,
+      color: '',
     });
   };
 
@@ -232,60 +251,6 @@ const CalendarPlanner = () => {
     await loadDrafts();
   };
 
-  const promoteDraft = async (draft: Draft) => {
-    if (draft.kind !== 'shift_draft') {
-      toast({ title: 'Only shift drafts can be promoted', variant: 'destructive' });
-      return;
-    }
-    if (draft.promoted_schedule_id) {
-      toast({ title: 'Already promoted' });
-      return;
-    }
-    if (!draft.employee_id || !draft.job_site_id) {
-      toast({
-        title: 'Missing employee or account',
-        description: 'Set both before promoting to a real schedule.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    const start = new Date(draft.start_at);
-    const end = draft.end_at ? new Date(draft.end_at) : null;
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const { data, error } = await supabase
-      .from('employee_schedules')
-      .insert({
-        employee_id: draft.employee_id,
-        job_site_id: draft.job_site_id,
-        start_date: format(start, 'yyyy-MM-dd'),
-        end_date: format(start, 'yyyy-MM-dd'),
-        days_of_week: [start.getDay()],
-        start_time: `${pad(start.getHours())}:${pad(start.getMinutes())}:00`,
-        end_time: end
-          ? `${pad(end.getHours())}:${pad(end.getMinutes())}:00`
-          : null,
-        notes: draft.notes ?? `Promoted from calendar draft: ${draft.title}`,
-        active: true,
-      })
-      .select('id')
-      .single();
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-      return;
-    }
-    await supabase
-      .from('calendar_drafts')
-      .update({ promoted_schedule_id: data.id })
-      .eq('id', draft.id);
-    toast({ title: 'Promoted', description: 'Draft is now on the schedule.' });
-    await loadDrafts();
-  };
-
-  const empName = (id: string | null) => {
-    if (!id) return '';
-    const e = employees.find((x) => x.id === id);
-    return e ? `${e.first_name} ${e.last_name}` : '';
-  };
   const siteName = (id: string | null) => {
     if (!id) return '';
     return jobSites.find((x) => x.id === id)?.name ?? '';
@@ -365,16 +330,17 @@ const CalendarPlanner = () => {
                       <button
                         key={d.id}
                         onClick={() => setEditing(d)}
+                        style={colorStyle(d.color)}
                         className={cn(
                           'w-full text-left text-[11px] leading-tight rounded border px-1.5 py-1 truncate',
-                          KIND_STYLE[d.kind],
+                          !d.color && KIND_STYLE[d.kind],
                           d.promoted_schedule_id && 'opacity-60 line-through',
                         )}
                         title={d.title}
                       >
                         <div className="font-medium truncate">{d.title}</div>
-                        {d.employee_id && (
-                          <div className="truncate opacity-80">{empName(d.employee_id)}</div>
+                        {d.job_site_id && (
+                          <div className="truncate opacity-80">{siteName(d.job_site_id)}</div>
                         )}
                       </button>
                     ))}
@@ -462,25 +428,6 @@ const CalendarPlanner = () => {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Employee</Label>
-                  <Select
-                    value={editing.employee_id ?? 'none'}
-                    onValueChange={(v) =>
-                      setEditing({ ...editing, employee_id: v === 'none' ? null : v })
-                    }
-                  >
-                    <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {employees.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.first_name} {e.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
                   <Label>Account</Label>
                   <Select
                     value={editing.job_site_id ?? 'none'}
@@ -497,6 +444,40 @@ const CalendarPlanner = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label>Color</Label>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    {COLOR_SWATCHES.map((c) => {
+                      const selected = (editing.color ?? '') === c.value;
+                      return (
+                        <button
+                          key={c.label}
+                          type="button"
+                          onClick={() => setEditing({ ...editing, color: c.value })}
+                          className={cn(
+                            'h-6 w-6 rounded-full border-2 transition',
+                            selected ? 'border-foreground ring-2 ring-offset-1 ring-foreground/30' : 'border-border',
+                          )}
+                          style={{
+                            backgroundColor: c.value || 'transparent',
+                            backgroundImage: c.value
+                              ? undefined
+                              : 'linear-gradient(45deg, transparent 45%, hsl(var(--muted-foreground)) 45%, hsl(var(--muted-foreground)) 55%, transparent 55%)',
+                          }}
+                          title={c.label}
+                          aria-label={c.label}
+                        />
+                      );
+                    })}
+                    <Input
+                      type="color"
+                      value={editing.color || '#3b82f6'}
+                      onChange={(e) => setEditing({ ...editing, color: e.target.value })}
+                      className="h-8 w-12 p-1"
+                      aria-label="Custom color"
+                    />
+                  </div>
+                </div>
               </div>
               <div>
                 <Label>Notes</Label>
@@ -506,26 +487,8 @@ const CalendarPlanner = () => {
                   onChange={(e) => setEditing({ ...editing, notes: e.target.value })}
                 />
               </div>
-              {editing.id && editing.kind === 'shift_draft' && (
-                <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2">
-                  <div className="text-xs">
-                    {editing.promoted_schedule_id
-                      ? 'Already promoted to schedule.'
-                      : 'Promote this draft into the real schedule.'}
-                  </div>
-                  <Button
-                    size="sm"
-                    disabled={!!editing.promoted_schedule_id}
-                    onClick={() => promoteDraft(editing as Draft)}
-                  >
-                    <Send className="h-4 w-4 mr-1" />
-                    Promote
-                  </Button>
-                </div>
-              )}
               {editing.id && (
                 <div className="text-xs text-muted-foreground">
-                  {editing.employee_id && <Badge variant="secondary" className="mr-2">{empName(editing.employee_id!)}</Badge>}
                   {editing.job_site_id && <Badge variant="secondary">{siteName(editing.job_site_id!)}</Badge>}
                 </div>
               )}
