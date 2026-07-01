@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Archive } from 'lucide-react';
+import { Plus, Pencil, Archive, ScanLine, X, ImagePlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import BarcodeScannerDialog from './BarcodeScannerDialog';
 
 type Asset = {
   id: string;
@@ -27,6 +28,7 @@ type Asset = {
   job_site_id: string | null;
   notes: string | null;
   active: boolean;
+  photo_urls: string[] | null;
 };
 
 type JobSite = { id: string; name: string };
@@ -35,6 +37,7 @@ const emptyForm = {
   name: '', asset_tag: '', category: '', serial_number: '',
   condition: 'good', quantity: '1', purchase_date: '', purchase_cost: '',
   location_kind: 'warehouse', job_site_id: '', notes: '',
+  photo_urls: [] as string[],
 };
 
 export default function FixedAssetsTab({ canManage }: { canManage: boolean }) {
@@ -47,6 +50,8 @@ export default function FixedAssetsTab({ canManage }: { canManage: boolean }) {
   const [loading, setLoading] = useState(true);
   const [filterSite, setFilterSite] = useState<string>('all');
   const [showInactive, setShowInactive] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -75,6 +80,7 @@ export default function FixedAssetsTab({ canManage }: { canManage: boolean }) {
       location_kind: a.location_kind,
       job_site_id: a.job_site_id || '',
       notes: a.notes || '',
+      photo_urls: a.photo_urls || [],
     });
     setOpen(true);
   };
@@ -93,6 +99,7 @@ export default function FixedAssetsTab({ canManage }: { canManage: boolean }) {
       location_kind: form.location_kind,
       job_site_id: form.location_kind === 'account' ? (form.job_site_id || null) : null,
       notes: form.notes || null,
+      photo_urls: form.photo_urls || [],
     };
     const { error } = editing
       ? await supabase.from('fixed_assets' as any).update(payload).eq('id', editing.id)
@@ -101,6 +108,29 @@ export default function FixedAssetsTab({ canManage }: { canManage: boolean }) {
     toast({ title: editing ? 'Asset updated' : 'Asset added' });
     setOpen(false);
     load();
+  };
+
+  const uploadPhoto = async (file: File) => {
+    setUploadingPhoto(true);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from('asset-photos').upload(path, file, {
+        contentType: file.type || 'image/jpeg',
+      });
+      if (error) throw error;
+      const { data } = await supabase.storage.from('asset-photos').createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+      // Store the storage path (we resolve to signed URL on display too via same call)
+      setForm((f: any) => ({ ...f, photo_urls: [...(f.photo_urls || []), data?.signedUrl || path] }));
+    } catch (e: any) {
+      toast({ title: 'Upload failed', description: e.message, variant: 'destructive' });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const removePhoto = (idx: number) => {
+    setForm((f: any) => ({ ...f, photo_urls: (f.photo_urls || []).filter((_: any, i: number) => i !== idx) }));
   };
 
   const retire = async (a: Asset) => {
@@ -154,7 +184,15 @@ export default function FixedAssetsTab({ canManage }: { canManage: boolean }) {
                 <DialogHeader><DialogTitle>{editing ? 'Edit asset' : 'Add fixed asset'}</DialogTitle></DialogHeader>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2"><Label>Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Commercial Vacuum" /></div>
-                  <div><Label>Asset tag</Label><Input value={form.asset_tag} onChange={e => setForm({ ...form, asset_tag: e.target.value })} /></div>
+                  <div>
+                    <Label>Asset tag</Label>
+                    <div className="flex gap-2">
+                      <Input value={form.asset_tag} onChange={e => setForm({ ...form, asset_tag: e.target.value })} placeholder="Scan or type" />
+                      <Button type="button" variant="outline" size="icon" onClick={() => setScanOpen(true)} title="Scan barcode">
+                        <ScanLine className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                   <div><Label>Category</Label><Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Vacuum, Cart..." /></div>
                   <div><Label>Serial #</Label><Input value={form.serial_number} onChange={e => setForm({ ...form, serial_number: e.target.value })} /></div>
                   <div><Label>Quantity</Label><Input type="number" step="1" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} /></div>
@@ -197,6 +235,39 @@ export default function FixedAssetsTab({ canManage }: { canManage: boolean }) {
                   <div><Label>Purchase date</Label><Input type="date" value={form.purchase_date} onChange={e => setForm({ ...form, purchase_date: e.target.value })} /></div>
                   <div><Label>Purchase cost</Label><Input type="number" step="0.01" value={form.purchase_cost} onChange={e => setForm({ ...form, purchase_cost: e.target.value })} /></div>
                   <div className="col-span-2"><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+                  <div className="col-span-2">
+                    <Label>Photos</Label>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {(form.photo_urls || []).map((url: string, i: number) => (
+                        <div key={i} className="relative w-20 h-20 rounded-md overflow-hidden border bg-muted">
+                          <img src={url} alt={`Asset photo ${i + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(i)}
+                            className="absolute top-0.5 right-0.5 bg-background/90 rounded-full p-0.5 border"
+                            aria-label="Remove photo"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                      <label className="w-20 h-20 rounded-md border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover:bg-muted text-xs text-muted-foreground">
+                        <ImagePlus className="h-5 w-5 mb-1" />
+                        {uploadingPhoto ? '...' : 'Add'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={e => {
+                            const f = e.target.files?.[0];
+                            if (f) uploadPhoto(f);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
@@ -207,6 +278,11 @@ export default function FixedAssetsTab({ canManage }: { canManage: boolean }) {
           )}
         </div>
       </CardHeader>
+      <BarcodeScannerDialog
+        open={scanOpen}
+        onOpenChange={setScanOpen}
+        onDetected={(code) => setForm((f: any) => ({ ...f, asset_tag: code }))}
+      />
       <CardContent>
         {loading ? <div className="text-sm text-muted-foreground">Loading…</div> : (
           <Table>
