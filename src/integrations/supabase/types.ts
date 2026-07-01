@@ -1695,6 +1695,87 @@ export type Database = {
         }
         Relationships: []
       }
+      fixed_assets: {
+        Row: {
+          active: boolean
+          asset_tag: string | null
+          category: string | null
+          condition: string
+          created_at: string
+          created_by: string | null
+          id: string
+          job_site_id: string | null
+          location_kind: string
+          name: string
+          notes: string | null
+          purchase_cost: number | null
+          purchase_date: string | null
+          quantity: number
+          retired_at: string | null
+          retired_reason: string | null
+          serial_number: string | null
+          supply_location_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          asset_tag?: string | null
+          category?: string | null
+          condition?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_site_id?: string | null
+          location_kind?: string
+          name: string
+          notes?: string | null
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          quantity?: number
+          retired_at?: string | null
+          retired_reason?: string | null
+          serial_number?: string | null
+          supply_location_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          asset_tag?: string | null
+          category?: string | null
+          condition?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_site_id?: string | null
+          location_kind?: string
+          name?: string
+          notes?: string | null
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          quantity?: number
+          retired_at?: string | null
+          retired_reason?: string | null
+          serial_number?: string | null
+          supply_location_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_assets_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_supply_location_id_fkey"
+            columns: ["supply_location_id"]
+            isOneToOne: false
+            referencedRelation: "supply_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inspection_items: {
         Row: {
           category: string
