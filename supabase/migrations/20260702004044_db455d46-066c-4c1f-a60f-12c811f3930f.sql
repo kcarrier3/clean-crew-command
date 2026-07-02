@@ -1,0 +1,17 @@
+GRANT EXECUTE ON FUNCTION public.has_permission(uuid, app_permission) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_user_all_permissions(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, app_role) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_access_job_site_sensitive_info(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_message_user(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_conversation_participant(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_supply_manager(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_crm_user(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_my_conversations() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.mark_conversation_read(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_or_create_conversation(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_group_conversation(text, text, uuid[], uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_announcement(text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_coworkers_at_shared_accounts() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_employee_managers(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_employee_department_managers(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.delete_own_account() TO authenticated;
