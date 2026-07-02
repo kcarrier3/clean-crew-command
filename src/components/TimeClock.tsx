@@ -67,6 +67,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [companyGeofencingEnabled, setCompanyGeofencingEnabled] = useState(true);
+  const [earlyClockinMinutes, setEarlyClockinMinutes] = useState<number>(15);
   const { toast } = useToast();
   const { profile, isManager } = useAuth();
   const { canAccessSensitiveInfo } = useJobSiteAccess(selectedJobSite || null);
@@ -110,11 +111,17 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const fetchCompanyGeofencingSetting = async () => {
     const { data } = await supabase
       .from('app_settings')
-      .select('value')
-      .eq('key', 'geofencing_enabled')
-      .single();
+      .select('key,value')
+      .in('key', ['geofencing_enabled', 'early_clockin_minutes']);
     if (data) {
-      setCompanyGeofencingEnabled(data.value === 'true');
+      for (const row of data) {
+        if (row.key === 'geofencing_enabled') {
+          setCompanyGeofencingEnabled(row.value === 'true');
+        } else if (row.key === 'early_clockin_minutes') {
+          const n = parseInt(row.value, 10);
+          if (!Number.isNaN(n)) setEarlyClockinMinutes(n);
+        }
+      }
     }
   };
 
@@ -310,6 +317,24 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
 
     // Manager overrides bypass geofencing
     const isManagerOverride = forManager && isManager();
+
+    // Enforce early clock-in limit against today's scheduled start (skip for manager override).
+    if (!isManagerOverride && scheduledJobSite && scheduledJobSite.job_site_id === selectedJobSite) {
+      const [h, m] = scheduledJobSite.start_time.split(':').map(Number);
+      const shiftStart = new Date();
+      shiftStart.setHours(h || 0, m || 0, 0, 0);
+      const earliestAllowed = new Date(shiftStart.getTime() - earlyClockinMinutes * 60 * 1000);
+      if (new Date() < earliestAllowed) {
+        const mins = Math.ceil((earliestAllowed.getTime() - Date.now()) / 60000);
+        toast({
+          title: 'Too Early to Clock In',
+          description: `Your shift starts at ${scheduledJobSite.start_time}. You can clock in up to ${earlyClockinMinutes} minutes early (in ${mins} min).`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     const enforceGeo = shouldEnforceGeofencing(employee, isManagerOverride);
 
     setIsGettingLocation(true);
