@@ -26,6 +26,13 @@ interface JobSite {
   address?: string;
 }
 
+interface EmployeeOption {
+  id: string;
+  first_name: string;
+  last_name: string;
+  job_title: string | null;
+}
+
 interface TemplateItem {
   id: string;
   category: string;
@@ -84,6 +91,8 @@ const RatingButton = ({
 export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartInspectionDialogProps) => {
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [selectedJobSite, setSelectedJobSite] = useState('');
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('none');
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [items, setItems] = useState<InspectionItemState[]>([]);
   const [overallNotes, setOverallNotes] = useState('');
@@ -100,6 +109,7 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
     if (open) {
       fetchJobSites();
       fetchDefaultTemplate();
+      fetchEmployees();
     }
   }, [open]);
 
@@ -110,6 +120,14 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
       .eq('active', true)
       .order('name');
     setJobSites(data || []);
+  };
+
+  const fetchEmployees = async () => {
+    const { data } = await supabase
+      .from('profiles_directory' as any)
+      .select('id, first_name, last_name, job_title')
+      .order('last_name');
+    setEmployees((data as any) || []);
   };
 
   const fetchDefaultTemplate = async () => {
