@@ -406,6 +406,34 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
               </Select>
             </div>
 
+            {/* Worker being inspected */}
+            <div className="space-y-2">
+              <Label>Worker being inspected</Label>
+              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select the worker this inspection is for" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    <span className="text-muted-foreground">— Not tied to a specific worker —</span>
+                  </SelectItem>
+                  {employees.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      <div>
+                        <div className="font-medium">{emp.first_name} {emp.last_name}</div>
+                        {emp.job_title && (
+                          <div className="text-xs text-muted-foreground">{emp.job_title}</div>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Selected worker will be able to view this inspection report on their dashboard.
+              </p>
+            </div>
+
             {/* Score Summary */}
             {ratedItems.length > 0 && (
               <Card className={`border-2 ${
