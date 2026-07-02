@@ -148,8 +148,28 @@ const TeamRoster = () => {
       });
   }, [members, filter, search]);
 
-  const resetForm = () =>
+  const resetForm = () => {
     setForm({ first_name: '', last_name: '', email: '', phone: '', job_title: '' });
+    setAddAccessLevel('employee');
+    setAddPermissions([]);
+    setAddCustomizedPerms(false);
+  };
+
+  const applyJobTitleDefaults = (jt: string) => {
+    setForm((f) => ({ ...f, job_title: jt }));
+    setAddAccessLevel(jobTitleToAccessLevel(jt));
+    if (!addCustomizedPerms) {
+      const defaults = (JOB_TITLE_PERMISSIONS as Record<string, string[]>)[jt] ?? [];
+      setAddPermissions(defaults);
+    }
+  };
+
+  const togglePermission = (key: string) => {
+    setAddCustomizedPerms(true);
+    setAddPermissions((prev) =>
+      prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]
+    );
+  };
 
   const handleInvite = async () => {
     if (!form.first_name || !form.last_name || !form.email || !form.job_title) {
@@ -182,6 +202,31 @@ const TeamRoster = () => {
         throw new Error(detail);
       }
       if (data?.error) throw new Error(data.error);
+
+      // Apply custom access level + permissions (override edge function defaults)
+      const userId = data?.userId;
+      if (userId) {
+        // Reset roles
+        await supabase.from('user_roles').delete().eq('user_id', userId);
+        const rolesToInsert: { user_id: string; role: 'admin' | 'manager' | 'employee' }[] = [
+          { user_id: userId, role: 'employee' },
+        ];
+        if (addAccessLevel === 'manager') rolesToInsert.push({ user_id: userId, role: 'manager' });
+        if (addAccessLevel === 'admin') {
+          rolesToInsert.push({ user_id: userId, role: 'manager' });
+          rolesToInsert.push({ user_id: userId, role: 'admin' });
+        }
+        await supabase.from('user_roles').upsert(rolesToInsert, { onConflict: 'user_id,role' });
+
+        // Reset permissions to the selected set
+        await supabase.from('user_permissions').delete().eq('user_id', userId);
+        if (addPermissions.length > 0) {
+          await supabase.from('user_permissions').insert(
+            addPermissions.map((p) => ({ user_id: userId, permission: p as any }))
+          );
+        }
+      }
+
       toast({ title: 'Invitation sent', description: `${form.first_name} ${form.last_name} was invited.` });
       setAddOpen(false);
       resetForm();
