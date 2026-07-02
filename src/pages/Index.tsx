@@ -162,7 +162,6 @@ const Index = () => {
         { v: 'myschedule', label: 'My Schedule',     icon: CalendarDays },
         { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
-        { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
@@ -417,9 +416,11 @@ const Index = () => {
               </TabsContent>
             )}
 
-            <TabsContent value="quality" className="mt-6">
-              <QualityControlDashboard />
-            </TabsContent>
+            {isManager() && (
+              <TabsContent value="quality" className="mt-6">
+                <QualityControlDashboard />
+              </TabsContent>
+            )}
 
             <TabsContent value="messages" className="mt-6">
               <MessagingCenter />
@@ -482,7 +483,7 @@ const Index = () => {
               <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
               <MobileTab active={activeTab === 'myschedule'} onClick={() => setActiveTab('myschedule')} icon={<CalendarDays className="h-5 w-5" />} label="Schedule" />
               <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
-              <MobileTab active={activeTab === 'quality'} onClick={() => setActiveTab('quality')} icon={<ClipboardCheck className="h-5 w-5" />} label="QC" />
+              <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
               <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
             </>
           ) : (
