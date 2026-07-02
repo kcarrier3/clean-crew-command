@@ -545,7 +545,7 @@ const TeamRoster = () => {
       )}
 
       <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) resetForm(); }}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" /> Add Team Member
@@ -579,7 +579,7 @@ const TeamRoster = () => {
             </div>
             <div>
               <Label htmlFor="tr-job">Job title *</Label>
-              <Select value={form.job_title} onValueChange={(v) => setForm({ ...form, job_title: v })}>
+              <Select value={form.job_title} onValueChange={applyJobTitleDefaults}>
                 <SelectTrigger id="tr-job"><SelectValue placeholder="Select a job title" /></SelectTrigger>
                 <SelectContent>
                   {JOB_TITLES.map((t) => (
@@ -587,6 +587,66 @@ const TeamRoster = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="tr-access">Access level *</Label>
+              <Select
+                value={addAccessLevel}
+                onValueChange={(v) => setAddAccessLevel(v as 'admin' | 'manager' | 'employee')}
+              >
+                <SelectTrigger id="tr-access"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin — full access to everything</SelectItem>
+                  <SelectItem value="manager">Manager — team and operations access</SelectItem>
+                  <SelectItem value="employee">Employee — standard worker access</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Defaults from job title. Change to grant more or less system-wide access.
+              </p>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Visible tabs & permissions</Label>
+                {form.job_title && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setAddCustomizedPerms(false);
+                      setAddPermissions(
+                        (JOB_TITLE_PERMISSIONS as Record<string, string[]>)[form.job_title] ?? []
+                      );
+                    }}
+                  >
+                    Reset to job title defaults
+                  </Button>
+                )}
+              </div>
+              <div className="border rounded-md p-3 space-y-3 max-h-60 overflow-y-auto">
+                {Array.from(new Set(ALL_PERMISSIONS.map((p) => p.category))).map((cat) => (
+                  <div key={cat}>
+                    <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                      {cat}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ALL_PERMISSIONS.filter((p) => p.category === cat).map((p) => (
+                        <label
+                          key={p.key}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={addPermissions.includes(p.key)}
+                            onCheckedChange={() => togglePermission(p.key)}
+                          />
+                          {p.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>
