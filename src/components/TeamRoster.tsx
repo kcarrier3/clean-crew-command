@@ -32,10 +32,33 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { JOB_TITLES, getJobTitleColor } from '@/lib/jobTitles';
+import { JOB_TITLES, getJobTitleColor, JOB_TITLE_PERMISSIONS, type JobTitle } from '@/lib/jobTitles';
+
+const ALL_PERMISSIONS: { key: string; label: string; category: string }[] = [
+  { key: 'view_schedules', label: 'View Schedules', category: 'Scheduling' },
+  { key: 'edit_schedules', label: 'Edit Schedules', category: 'Scheduling' },
+  { key: 'view_time_tracking', label: 'View Time Tracking', category: 'Time' },
+  { key: 'edit_time_tracking', label: 'Edit Time Tracking', category: 'Time' },
+  { key: 'view_work_orders', label: 'View Work Orders', category: 'Work Orders' },
+  { key: 'create_work_orders', label: 'Create Work Orders', category: 'Work Orders' },
+  { key: 'edit_work_orders', label: 'Edit Work Orders', category: 'Work Orders' },
+  { key: 'view_quality_control', label: 'View Quality Control', category: 'Quality Control' },
+  { key: 'edit_quality_control', label: 'Edit Quality Control', category: 'Quality Control' },
+  { key: 'view_worker_status', label: 'View Worker Status', category: 'Team' },
+  { key: 'manage_employees', label: 'Manage Employees', category: 'Team' },
+  { key: 'view_notifications', label: 'View Notifications', category: 'System' },
+  { key: 'admin_settings', label: 'Admin Settings', category: 'System' },
+];
+
+const jobTitleToAccessLevel = (jt: string): 'admin' | 'manager' | 'employee' => {
+  if (jt === 'Owner' || jt === 'Administrator') return 'admin';
+  if (['Janitorial Manager', 'Project Crew Lead', 'Supervisor'].includes(jt)) return 'manager';
+  return 'employee';
+};
 
 interface RosterMember {
   id: string;
@@ -86,6 +109,9 @@ const TeamRoster = () => {
     phone: '',
     job_title: '',
   });
+  const [addAccessLevel, setAddAccessLevel] = useState<'admin' | 'manager' | 'employee'>('employee');
+  const [addPermissions, setAddPermissions] = useState<string[]>([]);
+  const [addCustomizedPerms, setAddCustomizedPerms] = useState(false);
 
   const fetchMembers = async () => {
     setLoading(true);
@@ -122,8 +148,28 @@ const TeamRoster = () => {
       });
   }, [members, filter, search]);
 
-  const resetForm = () =>
+  const resetForm = () => {
     setForm({ first_name: '', last_name: '', email: '', phone: '', job_title: '' });
+    setAddAccessLevel('employee');
+    setAddPermissions([]);
+    setAddCustomizedPerms(false);
+  };
+
+  const applyJobTitleDefaults = (jt: string) => {
+    setForm((f) => ({ ...f, job_title: jt }));
+    setAddAccessLevel(jobTitleToAccessLevel(jt));
+    if (!addCustomizedPerms) {
+      const defaults = (JOB_TITLE_PERMISSIONS as Record<string, string[]>)[jt] ?? [];
+      setAddPermissions(defaults);
+    }
+  };
+
+  const togglePermission = (key: string) => {
+    setAddCustomizedPerms(true);
+    setAddPermissions((prev) =>
+      prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]
+    );
+  };
 
   const handleInvite = async () => {
     if (!form.first_name || !form.last_name || !form.email || !form.job_title) {
@@ -156,6 +202,31 @@ const TeamRoster = () => {
         throw new Error(detail);
       }
       if (data?.error) throw new Error(data.error);
+
+      // Apply custom access level + permissions (override edge function defaults)
+      const userId = data?.userId;
+      if (userId) {
+        // Reset roles
+        await supabase.from('user_roles').delete().eq('user_id', userId);
+        const rolesToInsert: { user_id: string; role: 'admin' | 'manager' | 'employee' }[] = [
+          { user_id: userId, role: 'employee' },
+        ];
+        if (addAccessLevel === 'manager') rolesToInsert.push({ user_id: userId, role: 'manager' });
+        if (addAccessLevel === 'admin') {
+          rolesToInsert.push({ user_id: userId, role: 'manager' });
+          rolesToInsert.push({ user_id: userId, role: 'admin' });
+        }
+        await supabase.from('user_roles').upsert(rolesToInsert, { onConflict: 'user_id,role' });
+
+        // Reset permissions to the selected set
+        await supabase.from('user_permissions').delete().eq('user_id', userId);
+        if (addPermissions.length > 0) {
+          await supabase.from('user_permissions').insert(
+            addPermissions.map((p) => ({ user_id: userId, permission: p as any }))
+          );
+        }
+      }
+
       toast({ title: 'Invitation sent', description: `${form.first_name} ${form.last_name} was invited.` });
       setAddOpen(false);
       resetForm();
@@ -474,7 +545,7 @@ const TeamRoster = () => {
       )}
 
       <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) resetForm(); }}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" /> Add Team Member
@@ -508,7 +579,7 @@ const TeamRoster = () => {
             </div>
             <div>
               <Label htmlFor="tr-job">Job title *</Label>
-              <Select value={form.job_title} onValueChange={(v) => setForm({ ...form, job_title: v })}>
+              <Select value={form.job_title} onValueChange={applyJobTitleDefaults}>
                 <SelectTrigger id="tr-job"><SelectValue placeholder="Select a job title" /></SelectTrigger>
                 <SelectContent>
                   {JOB_TITLES.map((t) => (
@@ -516,6 +587,66 @@ const TeamRoster = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="tr-access">Access level *</Label>
+              <Select
+                value={addAccessLevel}
+                onValueChange={(v) => setAddAccessLevel(v as 'admin' | 'manager' | 'employee')}
+              >
+                <SelectTrigger id="tr-access"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin — full access to everything</SelectItem>
+                  <SelectItem value="manager">Manager — team and operations access</SelectItem>
+                  <SelectItem value="employee">Employee — standard worker access</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Defaults from job title. Change to grant more or less system-wide access.
+              </p>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Visible tabs & permissions</Label>
+                {form.job_title && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setAddCustomizedPerms(false);
+                      setAddPermissions(
+                        (JOB_TITLE_PERMISSIONS as Record<string, string[]>)[form.job_title] ?? []
+                      );
+                    }}
+                  >
+                    Reset to job title defaults
+                  </Button>
+                )}
+              </div>
+              <div className="border rounded-md p-3 space-y-3 max-h-60 overflow-y-auto">
+                {Array.from(new Set(ALL_PERMISSIONS.map((p) => p.category))).map((cat) => (
+                  <div key={cat}>
+                    <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                      {cat}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ALL_PERMISSIONS.filter((p) => p.category === cat).map((p) => (
+                        <label
+                          key={p.key}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={addPermissions.includes(p.key)}
+                            onCheckedChange={() => togglePermission(p.key)}
+                          />
+                          {p.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>
