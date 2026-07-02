@@ -19,6 +19,7 @@ interface Inspection {
   id: string;
   job_site_id: string;
   inspector_id: string;
+  employee_id: string | null;
   status: string;
   overall_score: number | null;
   overall_rating: 'green' | 'yellow' | 'red' | null;
@@ -27,6 +28,7 @@ interface Inspection {
   created_at: string;
   job_sites: { name: string; address: string | null };
   profiles: { first_name: string; last_name: string };
+  employee?: { first_name: string; last_name: string } | null;
 }
 
 interface InspectionItem {
@@ -202,7 +204,11 @@ const generatePDF = async (inspection: Inspection, items: InspectionItem[]) => {
   URL.revokeObjectURL(url);
 };
 
-const InspectionHistory = () => {
+interface InspectionHistoryProps {
+  employeeId?: string;
+}
+
+const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
@@ -210,36 +216,62 @@ const InspectionHistory = () => {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [filterSite, setFilterSite] = useState('all');
   const [filterRating, setFilterRating] = useState('all');
+  const [filterWorker, setFilterWorker] = useState('all');
   const [jobSites, setJobSites] = useState<{ id: string; name: string }[]>([]);
+  const [workers, setWorkers] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchInspections();
     fetchJobSites();
-  }, []);
+    if (!employeeId) fetchWorkers();
+  }, [employeeId]);
 
   const fetchJobSites = async () => {
     const { data } = await supabase.from('job_sites').select('id, name').eq('active', true).order('name');
     setJobSites(data || []);
   };
 
+  const fetchWorkers = async () => {
+    const { data } = await supabase
+      .from('profiles_directory' as any)
+      .select('id, first_name, last_name')
+      .order('last_name');
+    setWorkers((data as any) || []);
+  };
+
   const fetchInspections = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from('inspections')
       .select(`
-        id, job_site_id, inspector_id, status, overall_score, overall_rating,
+        id, job_site_id, inspector_id, employee_id, status, overall_score, overall_rating,
         notes, completed_at, created_at,
         job_sites:job_site_id(name, address),
         profiles:inspector_id(first_name, last_name)
       `)
       .eq('status', 'completed')
       .order('completed_at', { ascending: false });
+    if (employeeId) query = query.eq('employee_id', employeeId);
+    const { data, error } = await query;
 
     if (error) {
       toast({ title: 'Error', description: 'Failed to load inspections', variant: 'destructive' });
     } else {
-      setInspections((data || []) as unknown as Inspection[]);
+      // Fetch worker names for the subject employees
+      const rows = (data || []) as any[];
+      const empIds = Array.from(new Set(rows.map(r => r.employee_id).filter(Boolean)));
+      let empMap: Record<string, { first_name: string; last_name: string }> = {};
+      if (empIds.length > 0) {
+        const { data: emps } = await supabase
+          .from('profiles_directory' as any)
+          .select('id, first_name, last_name')
+          .in('id', empIds);
+        (emps as any[] || []).forEach(e => {
+          empMap[e.id] = { first_name: e.first_name, last_name: e.last_name };
+        });
+      }
+      setInspections(rows.map(r => ({ ...r, employee: r.employee_id ? empMap[r.employee_id] || null : null })) as Inspection[]);
     }
     setLoading(false);
   };
@@ -278,6 +310,10 @@ const InspectionHistory = () => {
   const filteredInspections = inspections.filter(i => {
     if (filterSite !== 'all' && i.job_site_id !== filterSite) return false;
     if (filterRating !== 'all' && i.overall_rating !== filterRating) return false;
+    if (filterWorker !== 'all') {
+      if (filterWorker === 'unassigned') { if (i.employee_id) return false; }
+      else if (i.employee_id !== filterWorker) return false;
+    }
     return true;
   });
 
@@ -298,6 +334,20 @@ const InspectionHistory = () => {
             ))}
           </SelectContent>
         </Select>
+        {!employeeId && (
+          <Select value={filterWorker} onValueChange={setFilterWorker}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="All workers" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Workers</SelectItem>
+              <SelectItem value="unassigned">— No worker assigned —</SelectItem>
+              {workers.map(w => (
+                <SelectItem key={w.id} value={w.id}>{w.first_name} {w.last_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={filterRating} onValueChange={setFilterRating}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="All ratings" />
@@ -347,8 +397,14 @@ const InspectionHistory = () => {
                     <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                       <span className="flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        {inspection.profiles?.first_name} {inspection.profiles?.last_name}
+                        Inspector: {inspection.profiles?.first_name} {inspection.profiles?.last_name}
                       </span>
+                      {inspection.employee && (
+                        <span className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          Worker: {inspection.employee.first_name} {inspection.employee.last_name}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         {inspection.completed_at

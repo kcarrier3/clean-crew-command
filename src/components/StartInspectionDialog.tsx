@@ -26,6 +26,13 @@ interface JobSite {
   address?: string;
 }
 
+interface EmployeeOption {
+  id: string;
+  first_name: string;
+  last_name: string;
+  job_title: string | null;
+}
+
 interface TemplateItem {
   id: string;
   category: string;
@@ -84,6 +91,8 @@ const RatingButton = ({
 export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartInspectionDialogProps) => {
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [selectedJobSite, setSelectedJobSite] = useState('');
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('none');
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [items, setItems] = useState<InspectionItemState[]>([]);
   const [overallNotes, setOverallNotes] = useState('');
@@ -100,6 +109,7 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
     if (open) {
       fetchJobSites();
       fetchDefaultTemplate();
+      fetchEmployees();
     }
   }, [open]);
 
@@ -110,6 +120,14 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
       .eq('active', true)
       .order('name');
     setJobSites(data || []);
+  };
+
+  const fetchEmployees = async () => {
+    const { data } = await supabase
+      .from('profiles_directory' as any)
+      .select('id, first_name, last_name, job_title')
+      .order('last_name');
+    setEmployees((data as any) || []);
   };
 
   const fetchDefaultTemplate = async () => {
@@ -260,6 +278,7 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
           job_site_id: selectedJobSite,
           template_id: templateId,
           inspector_id: profile!.id,
+          employee_id: selectedEmployee && selectedEmployee !== 'none' ? selectedEmployee : null,
           status: 'completed',
           overall_score: score,
           overall_rating: overallRating,
@@ -325,6 +344,7 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
 
   const resetForm = () => {
     setSelectedJobSite('');
+    setSelectedEmployee('none');
     setOverallNotes('');
     items.forEach(item => item.photos.forEach(p => URL.revokeObjectURL(p.preview)));
     setItems([]);
@@ -384,6 +404,34 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Worker being inspected */}
+            <div className="space-y-2">
+              <Label>Worker being inspected</Label>
+              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select the worker this inspection is for" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    <span className="text-muted-foreground">— Not tied to a specific worker —</span>
+                  </SelectItem>
+                  {employees.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      <div>
+                        <div className="font-medium">{emp.first_name} {emp.last_name}</div>
+                        {emp.job_title && (
+                          <div className="text-xs text-muted-foreground">{emp.job_title}</div>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Selected worker will be able to view this inspection report on their dashboard.
+              </p>
             </div>
 
             {/* Score Summary */}

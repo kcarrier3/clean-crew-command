@@ -1986,6 +1986,7 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string
+          employee_id: string | null
           id: string
           inspector_id: string
           job_site_id: string
@@ -1999,6 +2000,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string
+          employee_id?: string | null
           id?: string
           inspector_id: string
           job_site_id: string
@@ -2012,6 +2014,7 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string
+          employee_id?: string | null
           id?: string
           inspector_id?: string
           job_site_id?: string
@@ -2023,6 +2026,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "inspections_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inspections_inspector_id_fkey"
             columns: ["inspector_id"]
