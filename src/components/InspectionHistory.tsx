@@ -334,6 +334,20 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
             ))}
           </SelectContent>
         </Select>
+        {!employeeId && (
+          <Select value={filterWorker} onValueChange={setFilterWorker}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="All workers" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Workers</SelectItem>
+              <SelectItem value="unassigned">— No worker assigned —</SelectItem>
+              {workers.map(w => (
+                <SelectItem key={w.id} value={w.id}>{w.first_name} {w.last_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={filterRating} onValueChange={setFilterRating}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="All ratings" />
