@@ -539,6 +539,45 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {!forManager && scheduledJobSite && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
+            /* Simplified single-button UI for employees with a scheduled shift today */
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="text-center space-y-1">
+                <p className="text-sm text-muted-foreground">Today's shift</p>
+                <p className="text-lg font-semibold">{scheduledJobSite.job_sites?.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {scheduledJobSite.start_time} – {scheduledJobSite.end_time}
+                </p>
+              </div>
+              <Button
+                onClick={clockIn}
+                disabled={isGettingLocation}
+                size="lg"
+                className="w-full max-w-xs h-16 text-lg"
+              >
+                {isGettingLocation ? (
+                  <>
+                    <MapPin className="h-5 w-5 mr-2 animate-pulse" />
+                    Getting Location...
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="h-6 w-6 mr-2" />
+                    Clock In
+                  </>
+                )}
+              </Button>
+              {willEnforceGeo && (
+                <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  Location required
+                </div>
+              )}
+              {locationError && (
+                <div className="text-xs text-destructive text-center">{locationError}</div>
+              )}
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Employee Selection (only for managers) */}
             {forManager && (
@@ -612,9 +651,10 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
               )}
             </div>
           </div>
+          )}
 
           {/* Scheduled job site info */}
-          {scheduledJobSite && (
+          {scheduledJobSite && forManager && (
             <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
               Scheduled today at {scheduledJobSite.job_sites?.name} · {scheduledJobSite.start_time} – {scheduledJobSite.end_time}
