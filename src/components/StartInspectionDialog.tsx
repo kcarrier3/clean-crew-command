@@ -278,6 +278,7 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
           job_site_id: selectedJobSite,
           template_id: templateId,
           inspector_id: profile!.id,
+          employee_id: selectedEmployee && selectedEmployee !== 'none' ? selectedEmployee : null,
           status: 'completed',
           overall_score: score,
           overall_rating: overallRating,
@@ -343,6 +344,7 @@ export const StartInspectionDialog = ({ open, onOpenChange, onSuccess }: StartIn
 
   const resetForm = () => {
     setSelectedJobSite('');
+    setSelectedEmployee('none');
     setOverallNotes('');
     items.forEach(item => item.photos.forEach(p => URL.revokeObjectURL(p.preview)));
     setItems([]);
