@@ -32,10 +32,33 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { JOB_TITLES, getJobTitleColor } from '@/lib/jobTitles';
+import { JOB_TITLES, getJobTitleColor, JOB_TITLE_PERMISSIONS, type JobTitle } from '@/lib/jobTitles';
+
+const ALL_PERMISSIONS: { key: string; label: string; category: string }[] = [
+  { key: 'view_schedules', label: 'View Schedules', category: 'Scheduling' },
+  { key: 'edit_schedules', label: 'Edit Schedules', category: 'Scheduling' },
+  { key: 'view_time_tracking', label: 'View Time Tracking', category: 'Time' },
+  { key: 'edit_time_tracking', label: 'Edit Time Tracking', category: 'Time' },
+  { key: 'view_work_orders', label: 'View Work Orders', category: 'Work Orders' },
+  { key: 'create_work_orders', label: 'Create Work Orders', category: 'Work Orders' },
+  { key: 'edit_work_orders', label: 'Edit Work Orders', category: 'Work Orders' },
+  { key: 'view_quality_control', label: 'View Quality Control', category: 'Quality Control' },
+  { key: 'edit_quality_control', label: 'Edit Quality Control', category: 'Quality Control' },
+  { key: 'view_worker_status', label: 'View Worker Status', category: 'Team' },
+  { key: 'manage_employees', label: 'Manage Employees', category: 'Team' },
+  { key: 'view_notifications', label: 'View Notifications', category: 'System' },
+  { key: 'admin_settings', label: 'Admin Settings', category: 'System' },
+];
+
+const jobTitleToAccessLevel = (jt: string): 'admin' | 'manager' | 'employee' => {
+  if (jt === 'Owner' || jt === 'Administrator') return 'admin';
+  if (['Janitorial Manager', 'Project Crew Lead', 'Supervisor'].includes(jt)) return 'manager';
+  return 'employee';
+};
 
 interface RosterMember {
   id: string;
@@ -86,6 +109,9 @@ const TeamRoster = () => {
     phone: '',
     job_title: '',
   });
+  const [addAccessLevel, setAddAccessLevel] = useState<'admin' | 'manager' | 'employee'>('employee');
+  const [addPermissions, setAddPermissions] = useState<string[]>([]);
+  const [addCustomizedPerms, setAddCustomizedPerms] = useState(false);
 
   const fetchMembers = async () => {
     setLoading(true);
