@@ -67,6 +67,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [companyGeofencingEnabled, setCompanyGeofencingEnabled] = useState(true);
+  const [earlyClockinMinutes, setEarlyClockinMinutes] = useState<number>(15);
   const { toast } = useToast();
   const { profile, isManager } = useAuth();
   const { canAccessSensitiveInfo } = useJobSiteAccess(selectedJobSite || null);
@@ -110,11 +111,17 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const fetchCompanyGeofencingSetting = async () => {
     const { data } = await supabase
       .from('app_settings')
-      .select('value')
-      .eq('key', 'geofencing_enabled')
-      .single();
+      .select('key,value')
+      .in('key', ['geofencing_enabled', 'early_clockin_minutes']);
     if (data) {
-      setCompanyGeofencingEnabled(data.value === 'true');
+      for (const row of data) {
+        if (row.key === 'geofencing_enabled') {
+          setCompanyGeofencingEnabled(row.value === 'true');
+        } else if (row.key === 'early_clockin_minutes') {
+          const n = parseInt(row.value, 10);
+          if (!Number.isNaN(n)) setEarlyClockinMinutes(n);
+        }
+      }
     }
   };
 
@@ -310,6 +317,24 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
 
     // Manager overrides bypass geofencing
     const isManagerOverride = forManager && isManager();
+
+    // Enforce early clock-in limit against today's scheduled start (skip for manager override).
+    if (!isManagerOverride && scheduledJobSite && scheduledJobSite.job_site_id === selectedJobSite) {
+      const [h, m] = scheduledJobSite.start_time.split(':').map(Number);
+      const shiftStart = new Date();
+      shiftStart.setHours(h || 0, m || 0, 0, 0);
+      const earliestAllowed = new Date(shiftStart.getTime() - earlyClockinMinutes * 60 * 1000);
+      if (new Date() < earliestAllowed) {
+        const mins = Math.ceil((earliestAllowed.getTime() - Date.now()) / 60000);
+        toast({
+          title: 'Too Early to Clock In',
+          description: `Your shift starts at ${scheduledJobSite.start_time}. You can clock in up to ${earlyClockinMinutes} minutes early (in ${mins} min).`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     const enforceGeo = shouldEnforceGeofencing(employee, isManagerOverride);
 
     setIsGettingLocation(true);
@@ -514,6 +539,45 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {!forManager && scheduledJobSite && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
+            /* Simplified single-button UI for employees with a scheduled shift today */
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="text-center space-y-1">
+                <p className="text-sm text-muted-foreground">Today's shift</p>
+                <p className="text-lg font-semibold">{scheduledJobSite.job_sites?.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {scheduledJobSite.start_time} – {scheduledJobSite.end_time}
+                </p>
+              </div>
+              <Button
+                onClick={clockIn}
+                disabled={isGettingLocation}
+                size="lg"
+                className="w-full max-w-xs h-16 text-lg"
+              >
+                {isGettingLocation ? (
+                  <>
+                    <MapPin className="h-5 w-5 mr-2 animate-pulse" />
+                    Getting Location...
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="h-6 w-6 mr-2" />
+                    Clock In
+                  </>
+                )}
+              </Button>
+              {willEnforceGeo && (
+                <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  Location required
+                </div>
+              )}
+              {locationError && (
+                <div className="text-xs text-destructive text-center">{locationError}</div>
+              )}
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Employee Selection (only for managers) */}
             {forManager && (
@@ -587,9 +651,10 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
               )}
             </div>
           </div>
+          )}
 
           {/* Scheduled job site info */}
-          {scheduledJobSite && (
+          {scheduledJobSite && forManager && (
             <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
               Scheduled today at {scheduledJobSite.job_sites?.name} · {scheduledJobSite.start_time} – {scheduledJobSite.end_time}
