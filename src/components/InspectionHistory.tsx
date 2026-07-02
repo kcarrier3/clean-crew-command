@@ -397,8 +397,14 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
                     <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                       <span className="flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        {inspection.profiles?.first_name} {inspection.profiles?.last_name}
+                        Inspector: {inspection.profiles?.first_name} {inspection.profiles?.last_name}
                       </span>
+                      {inspection.employee && (
+                        <span className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          Worker: {inspection.employee.first_name} {inspection.employee.last_name}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         {inspection.completed_at
