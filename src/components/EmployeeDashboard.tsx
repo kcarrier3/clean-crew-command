@@ -360,6 +360,21 @@ const EmployeeDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* My Inspections */}
+      {profile && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5" />
+              My Inspections
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InspectionHistory employeeId={profile.id} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
