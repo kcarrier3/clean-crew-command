@@ -34,6 +34,7 @@ import TimeOffRequests from '@/components/TimeOffRequests';
 import CRMDashboard from '@/components/crm/CRMDashboard';
 import { useToast } from '@/hooks/use-toast';
 import { useIsNativeApp } from '@/hooks/useIsNativeApp';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { AppSidebar, type SidebarItem } from '@/components/layout/AppSidebar';
 import CalendarPlanner from '@/components/CalendarPlanner';
 import SupplyManagement from '@/components/SupplyManagement';
@@ -43,7 +44,12 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading, profile, isManager, canManageEmployees, isCrmUser, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
-  const isNative = useIsNativeApp();
+  const isNativeShell = useIsNativeApp();
+  const isPhone = useIsMobile();
+  // Treat phone-sized browsers the same as the native app so the mobile web
+  // experience mirrors the phone app (hides web-only tabs like CRM, Accounts,
+  // Team, Manager reports).
+  const isNative = isNativeShell || isPhone;
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
