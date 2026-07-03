@@ -50,6 +50,7 @@ const Index = () => {
   // experience mirrors the phone app (hides web-only tabs like CRM, Accounts,
   // Team, Manager reports).
   const isNative = isNativeShell || isPhone;
+  const isSupplyStaff = profile?.job_title === 'Supply Management';
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -398,7 +399,7 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {!isNative && (
+            {(!isNative || isSupplyStaff) && (
               <TabsContent value="supplies" className="mt-6">
                 <SupplyManagement />
               </TabsContent>
@@ -473,7 +474,11 @@ const Index = () => {
                 <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
                 <MobileTab active={activeTab === 'scheduling'} onClick={() => setActiveTab('scheduling')} icon={<Calendar className="h-5 w-5" />} label="Schedule" />
                 <MobileTab active={activeTab === 'managerlog'} onClick={() => setActiveTab('managerlog')} icon={<BookOpen className="h-5 w-5" />} label="Log" />
-                <MobileTab active={activeTab === 'quality'} onClick={() => setActiveTab('quality')} icon={<ClipboardCheck className="h-5 w-5" />} label="QC" />
+                {isSupplyStaff ? (
+                  <MobileTab active={activeTab === 'supplies'} onClick={() => setActiveTab('supplies')} icon={<Package className="h-5 w-5" />} label="Supplies" />
+                ) : (
+                  <MobileTab active={activeTab === 'quality'} onClick={() => setActiveTab('quality')} icon={<ClipboardCheck className="h-5 w-5" />} label="QC" />
+                )}
                 <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
               </>
             ) : (
@@ -488,7 +493,11 @@ const Index = () => {
             <>
               <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
               <MobileTab active={activeTab === 'myschedule'} onClick={() => setActiveTab('myschedule')} icon={<CalendarDays className="h-5 w-5" />} label="Schedule" />
-              <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
+              {isSupplyStaff ? (
+                <MobileTab active={activeTab === 'supplies'} onClick={() => setActiveTab('supplies')} icon={<Package className="h-5 w-5" />} label="Supplies" />
+              ) : (
+                <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
+              )}
               <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
               <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
             </>
