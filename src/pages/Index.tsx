@@ -50,6 +50,7 @@ const Index = () => {
   // experience mirrors the phone app (hides web-only tabs like CRM, Accounts,
   // Team, Manager reports).
   const isNative = isNativeShell || isPhone;
+  const isSupplyStaff = profile?.job_title === 'Supply Management';
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
