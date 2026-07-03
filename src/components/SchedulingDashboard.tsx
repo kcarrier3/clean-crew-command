@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, Clock, Users, MapPin, Plus, List, Grid3X3, ArrowUpDown, CalendarDays } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import ScheduleListView from './ScheduleListView';
@@ -67,6 +68,7 @@ const SchedulingDashboard = () => {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'weekly'>('list');
   const [sortBy, setSortBy] = useState<'alphabetical' | 'job_title'>('alphabetical');
+  const isPhone = useIsMobile();
   const [formData, setFormData] = useState<ScheduleFormData>({
     employee_id: '',
     job_site_id: '',
@@ -502,16 +504,29 @@ const SchedulingDashboard = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <ArrowUpDown className="h-4 w-4" />
-            <Select value={sortBy} onValueChange={(value: 'alphabetical' | 'job_title') => setSortBy(value)}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="alphabetical">Sort Alphabetically</SelectItem>
-                <SelectItem value="job_title">Sort by Job Title</SelectItem>
-              </SelectContent>
-            </Select>
+            {isPhone ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortBy(prev => prev === 'alphabetical' ? 'job_title' : 'alphabetical')}
+              >
+                <ArrowUpDown className="h-4 w-4 mr-1" />
+                Sort
+              </Button>
+            ) : (
+              <>
+                <ArrowUpDown className="h-4 w-4" />
+                <Select value={sortBy} onValueChange={(value: 'alphabetical' | 'job_title') => setSortBy(value)}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="alphabetical">Sort Alphabetically</SelectItem>
+                    <SelectItem value="job_title">Sort by Job Title</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            )}
           </div>
         </div>
 
