@@ -399,7 +399,7 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {!isNative && (
+            {(!isNative || isSupplyStaff) && (
               <TabsContent value="supplies" className="mt-6">
                 <SupplyManagement />
               </TabsContent>
