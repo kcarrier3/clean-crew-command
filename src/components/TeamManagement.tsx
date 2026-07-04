@@ -18,6 +18,7 @@ import { JOB_TITLES, JOB_TITLE_PERMISSIONS, getJobTitleColor, canManageUser } fr
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RoleManagement } from '@/components/RoleManagement';
 import DepartmentManagement from '@/components/DepartmentManagement';
+import CompanyContactsAdmin from '@/components/CompanyContactsAdmin';
 
 interface Employee {
   id: string;
@@ -498,6 +499,7 @@ const TeamManagement = () => {
           </TabsTrigger>
           <TabsTrigger value="roles">Roles</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
+          <TabsTrigger value="contacts">Contacts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="employees" className="space-y-6">
@@ -837,6 +839,10 @@ const TeamManagement = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="contacts" className="space-y-6 mt-6">
+          <CompanyContactsAdmin />
         </TabsContent>
       </Tabs>
 
