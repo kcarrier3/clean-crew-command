@@ -840,6 +840,10 @@ const TeamManagement = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="contacts" className="space-y-6 mt-6">
+          <CompanyContactsAdmin />
+        </TabsContent>
       </Tabs>
 
       {/* Employee Profile Dialog */}
