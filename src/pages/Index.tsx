@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -39,6 +39,7 @@ import { AppSidebar, type SidebarItem } from '@/components/layout/AppSidebar';
 import CalendarPlanner from '@/components/CalendarPlanner';
 import SupplyManagement from '@/components/SupplyManagement';
 import TeamRoster from '@/components/TeamRoster';
+import CompanyContacts from '@/components/CompanyContacts';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -162,6 +163,7 @@ const Index = () => {
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
         ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
+        { v: 'contacts',   label: 'Contacts',        icon: Contact },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ]
     : [
@@ -171,6 +173,7 @@ const Index = () => {
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'supplies',   label: 'Supplies',        icon: Package },
+        { v: 'contacts',   label: 'Contacts',        icon: Contact },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ];
 
@@ -236,6 +239,14 @@ const Index = () => {
                         Messages
                       </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => { setActiveTab('contacts'); setMoreMenuOpen(false); }}
+                    >
+                      <Contact className="h-4 w-4 mr-2" />
+                      Contacts
+                    </Button>
                     {!isManager() && (
                       <Button
                         variant="ghost"
@@ -450,6 +461,10 @@ const Index = () => {
                 <TeamRoster />
               </TabsContent>
             )}
+
+            <TabsContent value="contacts" className="mt-6">
+              <CompanyContacts />
+            </TabsContent>
 
             {/* Onboarding: employees complete docs, managers review */}
             <TabsContent value="onboarding" className="mt-6">
