@@ -163,7 +163,6 @@ const Index = () => {
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
         ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
-        { v: 'contacts',   label: 'Contacts',        icon: Contact },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ]
     : [
@@ -173,7 +172,6 @@ const Index = () => {
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'supplies',   label: 'Supplies',        icon: Package },
-        { v: 'contacts',   label: 'Contacts',        icon: Contact },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ];
 
