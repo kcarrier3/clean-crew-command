@@ -13,6 +13,7 @@ import ResetPassword from './pages/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import LeadCapture from './pages/LeadCapture';
 import CompleteProfile from './pages/CompleteProfile';
+import ReportIssue from './pages/ReportIssue';
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const AppContent = () => {
       <Route path="/complete-profile" element={<CompleteProfile />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="/get-a-quote" element={<LeadCapture />} />
+      <Route path="/report/:jobSiteId" element={<ReportIssue />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.submit-lead]
 verify_jwt = false
+
+[functions.submit-porter-report]
+verify_jwt = false

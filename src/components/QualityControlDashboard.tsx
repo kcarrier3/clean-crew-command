@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, User, MapPin, AlertCircle, Camera, ClipboardList } from 'lucide-react';
+import { Plus, Calendar, User, MapPin, AlertCircle, Camera, ClipboardList, QrCode } from 'lucide-react';
 import InspectionHistory from './InspectionHistory';
+import PorterReports from './PorterReports';
+import PorterAssignmentsAdmin from './PorterAssignmentsAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 import { WorkOrderDetail } from './WorkOrderDetail';
@@ -157,7 +159,7 @@ const QualityControlDashboard = () => {
       </div>
 
       <Tabs defaultValue="inspections">
-        <TabsList className="grid grid-cols-2 w-full max-w-sm mb-4">
+        <TabsList className="grid grid-cols-4 w-full max-w-2xl mb-4">
           <TabsTrigger value="inspections">
             <Camera className="h-4 w-4 mr-2" />
             Inspections
@@ -166,10 +168,28 @@ const QualityControlDashboard = () => {
             <ClipboardList className="h-4 w-4 mr-2" />
             Work Orders
           </TabsTrigger>
+          <TabsTrigger value="porter">
+            <QrCode className="h-4 w-4 mr-2" />
+            Porter Reports
+          </TabsTrigger>
+          {canCreateWorkOrders() && (
+            <TabsTrigger value="porter-setup">
+              <QrCode className="h-4 w-4 mr-2" />
+              QR Setup
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="inspections">
           <InspectionHistory />
+        </TabsContent>
+
+        <TabsContent value="porter">
+          <PorterReports />
+        </TabsContent>
+
+        <TabsContent value="porter-setup">
+          <PorterAssignmentsAdmin />
         </TabsContent>
 
         <TabsContent value="workorders">
