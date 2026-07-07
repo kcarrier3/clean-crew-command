@@ -69,10 +69,10 @@ serve(async (req) => {
     if (porterIds.length > 0) {
       const { data: clockedIn } = await supabase
         .from("time_entries")
-        .select("user_id")
-        .in("user_id", porterIds)
+        .select("employee_id")
+        .in("employee_id", porterIds)
         .is("clock_out", null);
-      onDutyPorterIds = Array.from(new Set((clockedIn ?? []).map((t: any) => t.user_id)));
+      onDutyPorterIds = Array.from(new Set((clockedIn ?? []).map((t: any) => t.employee_id)));
     }
 
     // Managers + admins
