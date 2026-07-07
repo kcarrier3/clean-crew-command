@@ -2570,6 +2570,103 @@ export type Database = {
         }
         Relationships: []
       }
+      porter_assignments: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          job_site_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          job_site_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          job_site_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "porter_assignments_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      porter_reports: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          area_label: string | null
+          created_at: string
+          description: string
+          id: string
+          issue_type: string
+          job_site_id: string
+          notes_from_porter: string | null
+          reporter_contact: string | null
+          reporter_name: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          area_label?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          issue_type: string
+          job_site_id: string
+          notes_from_porter?: string | null
+          reporter_contact?: string | null
+          reporter_name?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          area_label?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          issue_type?: string
+          job_site_id?: string
+          notes_from_porter?: string | null
+          reporter_contact?: string | null
+          reporter_name?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "porter_reports_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           active: boolean
@@ -3484,6 +3581,13 @@ export type Database = {
           manager_id: string
           manager_job_title: string
           manager_name: string
+        }[]
+      }
+      get_job_site_public_name: {
+        Args: { _job_site_id: string }
+        Returns: {
+          id: string
+          name: string
         }[]
       }
       get_my_conversations: {
