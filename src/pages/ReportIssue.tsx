@@ -27,14 +27,8 @@ export default function ReportIssue() {
   useEffect(() => {
     if (!jobSiteId) return;
     (async () => {
-      const { data, error } = await supabase.functions.invoke("submit-porter-report", {
-        method: "GET",
-        headers: { "x-lookup-site": jobSiteId },
-        body: undefined as any,
-      } as any);
-      // Fallback: use fetch directly since functions.invoke doesn't easily support GET with query params
       try {
-        const base = (supabase as any).functionsUrl || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+        const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
         const res = await fetch(`${base}/submit-porter-report?action=lookup&job_site_id=${encodeURIComponent(jobSiteId)}`, {
           headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
         });
@@ -47,8 +41,6 @@ export default function ReportIssue() {
       } catch {
         setSiteError("This location code is invalid or inactive.");
       }
-      // silence unused-var warnings
-      void data; void error;
     })();
   }, [jobSiteId]);
 
