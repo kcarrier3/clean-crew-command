@@ -27,11 +27,19 @@ export default function ReportIssue() {
   useEffect(() => {
     if (!jobSiteId) return;
     (async () => {
-      const { data, error } = await supabase.rpc("get_job_site_public_name", { _job_site_id: jobSiteId });
-      if (error || !data || data.length === 0) {
+      try {
+        const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+        const res = await fetch(`${base}/submit-porter-report?action=lookup&job_site_id=${encodeURIComponent(jobSiteId)}`, {
+          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        });
+        if (!res.ok) {
+          setSiteError("This location code is invalid or inactive.");
+          return;
+        }
+        const json = await res.json();
+        setSiteName(json.name);
+      } catch {
         setSiteError("This location code is invalid or inactive.");
-      } else {
-        setSiteName(data[0].name);
       }
     })();
   }, [jobSiteId]);
