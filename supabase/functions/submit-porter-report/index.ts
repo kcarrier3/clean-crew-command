@@ -25,6 +25,30 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
+    const url = new URL(req.url);
+    // Public site-name lookup for the QR landing page
+    if (req.method === "GET" || url.searchParams.get("action") === "lookup") {
+      const jobSiteId = url.searchParams.get("job_site_id");
+      if (!jobSiteId) {
+        return new Response(JSON.stringify({ error: "job_site_id required" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: siteRow } = await supabase
+        .from("job_sites")
+        .select("id, name, active")
+        .eq("id", jobSiteId)
+        .maybeSingle();
+      if (!siteRow || !siteRow.active) {
+        return new Response(JSON.stringify({ error: "not_found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ id: siteRow.id, name: siteRow.name }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const raw = await req.json().catch(() => null);
     const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
