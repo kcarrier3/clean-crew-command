@@ -488,7 +488,7 @@ const Index = () => {
               </TabsContent>
             )}
           </Tabs>
-        </div>
+        </main>
       </div>
 
       {/* Mobile Bottom Navigation - Role-based with safe area */}
