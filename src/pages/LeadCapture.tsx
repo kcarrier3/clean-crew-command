@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle2 } from 'lucide-react';
+import { SEO } from '@/components/SEO';
 
 export default function LeadCapture() {
   const { toast } = useToast();
@@ -51,7 +52,12 @@ export default function LeadCapture() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <main className="min-h-screen flex items-center justify-center p-4">
+        <SEO
+          title="Request Received — Summit Facilities Group"
+          description="Thank you — we received your quote request and will be in touch shortly."
+          path="/get-a-quote"
+        />
         <Card className="max-w-lg w-full">
           <CardContent className="p-8 text-center space-y-4">
             <CheckCircle2 className="mx-auto h-14 w-14 text-primary" />
@@ -61,15 +67,35 @@ export default function LeadCapture() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <main className="min-h-screen flex items-center justify-center p-4">
+      <SEO
+        title="Request a Quote for Facility Services — Summit Facilities Group"
+        description="Get a tailored janitorial and facility services quote for your property. Fast response from Summit Facilities Group."
+        path="/get-a-quote"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Service',
+          serviceType: 'Janitorial and facility management services',
+          provider: {
+            '@type': 'Organization',
+            name: 'Summit Facilities Group',
+            url: 'https://clean-crew-command.lovable.app/',
+            contactPoint: {
+              '@type': 'ContactPoint',
+              contactType: 'sales',
+              email: 'privacy@summitfacilitiesgroup.com',
+            },
+          },
+        }}
+      />
       <Card className="max-w-xl w-full">
         <CardHeader>
-          <CardTitle>Request a Quote</CardTitle>
+          <h1 className="text-2xl font-semibold leading-none tracking-tight">Request a Quote for Facility Services</h1>
           <CardDescription>
             Tell us about your facility and we'll be in touch with a tailored estimate.
           </CardDescription>
@@ -119,6 +145,6 @@ export default function LeadCapture() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

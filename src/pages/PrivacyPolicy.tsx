@@ -2,13 +2,19 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { SEO } from '@/components/SEO';
 
 const PrivacyPolicy = () => {
   const navigate = useNavigate();
   const lastUpdated = 'June 5, 2026';
 
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background">
+      <SEO
+        title="Privacy Policy — Crew Compass"
+        description="How Crew Compass by Summit Facilities Group collects, uses, and protects your personal information."
+        path="/privacy-policy"
+      />
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -158,7 +164,7 @@ const PrivacyPolicy = () => {
           </p>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 
