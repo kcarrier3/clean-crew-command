@@ -40,6 +40,7 @@ import CalendarPlanner from '@/components/CalendarPlanner';
 import SupplyManagement from '@/components/SupplyManagement';
 import TeamRoster from '@/components/TeamRoster';
 import CompanyContacts from '@/components/CompanyContacts';
+import { SEO } from '@/components/SEO';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -179,6 +180,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen overflow-x-hidden">
+      <SEO
+        title="Crew Compass — Janitorial Team & Operations Management"
+        description="Crew Compass helps janitorial and facilities teams run scheduling, time clock with geofencing, quality control, supply management, and CRM in one app."
+        path="/"
+      />
       {showDesktopSidebar && (
         <AppSidebar
           items={sidebarItems}
@@ -199,12 +205,15 @@ const Index = () => {
           showDesktopSidebar ? (sidebarCollapsed ? 'md:pl-[80px]' : 'md:pl-[240px]') : ''
         }`}
       >
-        <div className="max-w-6xl mx-auto min-w-0">
+        <main className="max-w-6xl mx-auto min-w-0">
+          <h1 className="sr-only">Crew Compass — Janitorial Team & Operations Management</h1>
           <div className="mb-8 flex justify-between items-center">
             <div>
               <img
                 src="/crew-compass-logo-notag.png?v=4"
                 alt="Crew Compass"
+                width="512"
+                height="256"
                 className="h-28 md:h-32 w-auto"
               />
             </div>
