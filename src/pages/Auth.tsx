@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Mail, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { SEO } from '@/components/SEO';
 
 type AuthView = 'signin' | 'forgot_password' | 'forgot_sent';
 
@@ -80,14 +81,22 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <main className="min-h-screen bg-background flex items-center justify-center p-4">
+      <SEO
+        title="Sign In — Crew Compass"
+        description="Sign in to Crew Compass to access scheduling, time clock, quality control, and messaging for your janitorial team."
+        path="/auth"
+      />
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <img
             src="/crew-compass-logo.png?v=2"
             alt="Crew Compass"
+            width="512"
+            height="512"
             className="mx-auto mb-4 h-64 w-auto"
           />
+          <h1 className="sr-only">Sign in to Crew Compass</h1>
         </div>
 
         {/* Sign In View */}
@@ -215,7 +224,7 @@ const Auth = () => {
           </Card>
         )}
       </div>
-    </div>
+    </main>
   );
 };
 

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 export default function ReportIssue() {
   const { jobSiteId } = useParams<{ jobSiteId: string }>();
@@ -90,10 +91,15 @@ export default function ReportIssue() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6 flex items-start justify-center">
+    <main className="min-h-screen bg-background p-4 sm:p-6 flex items-start justify-center">
+      <SEO
+        title="Report a Facility Issue — Crew Compass"
+        description="Report a cleaning or supply issue at your facility. Your on-duty porter and management will be notified immediately."
+        path={`/report/${jobSiteId ?? ""}`}
+      />
       <Card className="max-w-md w-full my-6">
         <CardHeader>
-          <CardTitle className="text-2xl">Report an issue</CardTitle>
+          <CardTitle asChild><h1 className="text-2xl">Report a Facility Issue</h1></CardTitle>
           <p className="text-sm text-muted-foreground">{siteName || "Loading…"}</p>
         </CardHeader>
         <CardContent>
@@ -137,6 +143,6 @@ export default function ReportIssue() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }
