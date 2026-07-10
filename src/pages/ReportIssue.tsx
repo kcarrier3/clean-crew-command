@@ -99,7 +99,7 @@ export default function ReportIssue() {
       />
       <Card className="max-w-md w-full my-6">
         <CardHeader>
-          <CardTitle asChild><h1 className="text-2xl">Report a Facility Issue</h1></CardTitle>
+          <h1 className="text-2xl font-semibold leading-none tracking-tight">Report a Facility Issue</h1>
           <p className="text-sm text-muted-foreground">{siteName || "Loading…"}</p>
         </CardHeader>
         <CardContent>

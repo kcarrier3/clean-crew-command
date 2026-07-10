@@ -95,7 +95,7 @@ export default function LeadCapture() {
       />
       <Card className="max-w-xl w-full">
         <CardHeader>
-          <CardTitle asChild><h1>Request a Quote for Facility Services</h1></CardTitle>
+          <h1 className="text-2xl font-semibold leading-none tracking-tight">Request a Quote for Facility Services</h1>
           <CardDescription>
             Tell us about your facility and we'll be in touch with a tailored estimate.
           </CardDescription>
