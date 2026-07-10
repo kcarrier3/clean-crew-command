@@ -1,0 +1,9 @@
+# Crew Compass
+
+> Workforce management for janitorial and facilities teams — scheduling, time clock with geofencing, quality control inspections, supply management, and CRM. Built by Summit Facilities Group.
+
+## Pages
+
+- [Home](/): Overview of Crew Compass and access to the app.
+- [Request a Quote](/get-a-quote): Contact form for facility services quotes from Summit Facilities Group.
+- [Privacy Policy](/privacy-policy): How Crew Compass collects, uses, and protects user data.
