@@ -1546,6 +1546,66 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_accounts: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          job_site_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          job_site_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          job_site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_accounts_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_accounts_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_accounts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_accounts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_accounts_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_document_submissions: {
         Row: {
           acknowledged_at: string | null

@@ -71,10 +71,15 @@ interface RosterMember {
   active: boolean | null;
 }
 
+interface JobSiteOption {
+  id: string;
+  name: string;
+}
+
 type Filter = 'active' | 'inactive';
 
 const TeamRoster = () => {
-  const { canManageEmployees, isManager, isCrmUser, hasRole } = useAuth();
+  const { canManageEmployees, isManager, isCrmUser, hasRole, user } = useAuth();
   const canManage = canManageEmployees() || isManager() || isCrmUser() || hasRole('admin');
   const { toast } = useToast();
   const [members, setMembers] = useState<RosterMember[]>([]);
@@ -112,6 +117,8 @@ const TeamRoster = () => {
   const [addAccessLevel, setAddAccessLevel] = useState<'admin' | 'manager' | 'employee'>('employee');
   const [addPermissions, setAddPermissions] = useState<string[]>([]);
   const [addCustomizedPerms, setAddCustomizedPerms] = useState(false);
+  const [jobSiteOptions, setJobSiteOptions] = useState<JobSiteOption[]>([]);
+  const [addAccountIds, setAddAccountIds] = useState<string[]>([]);
 
   const fetchMembers = async () => {
     setLoading(true);
@@ -130,6 +137,15 @@ const TeamRoster = () => {
 
   useEffect(() => {
     fetchMembers();
+  }, []);
+
+  useEffect(() => {
+    supabase
+      .from('job_sites')
+      .select('id, name')
+      .eq('active', true)
+      .order('name', { ascending: true })
+      .then(({ data }) => setJobSiteOptions((data ?? []) as JobSiteOption[]));
   }, []);
 
   const filtered = useMemo(() => {
@@ -153,6 +169,7 @@ const TeamRoster = () => {
     setAddAccessLevel('employee');
     setAddPermissions([]);
     setAddCustomizedPerms(false);
+    setAddAccountIds([]);
   };
 
   const applyJobTitleDefaults = (jt: string) => {
@@ -223,6 +240,17 @@ const TeamRoster = () => {
         if (addPermissions.length > 0) {
           await supabase.from('user_permissions').insert(
             addPermissions.map((p) => ({ user_id: userId, permission: p as any }))
+          );
+        }
+
+        // Save account assignments (informational — does not affect access)
+        if (addAccountIds.length > 0) {
+          await supabase.from('employee_accounts').insert(
+            addAccountIds.map((jobSiteId) => ({
+              employee_id: userId,
+              job_site_id: jobSiteId,
+              assigned_by: user?.id ?? null,
+            }))
           );
         }
       }
@@ -604,6 +632,31 @@ const TeamRoster = () => {
               <p className="text-xs text-muted-foreground mt-1">
                 Defaults from job title. Change to grant more or less system-wide access.
               </p>
+            </div>
+            <div>
+              <Label>Assigned accounts</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Select the accounts this person was hired for. Informational only — does not affect access.
+              </p>
+              <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-1">
+                {jobSiteOptions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No active accounts.</p>
+                ) : (
+                  jobSiteOptions.map((site) => (
+                    <label key={site.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={addAccountIds.includes(site.id)}
+                        onCheckedChange={(checked) => {
+                          setAddAccountIds((prev) =>
+                            checked ? [...prev, site.id] : prev.filter((id) => id !== site.id)
+                          );
+                        }}
+                      />
+                      {site.name}
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
