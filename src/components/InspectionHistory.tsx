@@ -7,13 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import {
   CheckCircle, AlertTriangle, XCircle, Download, Eye,
-  Calendar, User, MapPin, Camera
+  Calendar, User, MapPin, Camera, Pencil, Save, X, Wrench
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 
 interface Inspection {
   id: string;
@@ -219,6 +221,11 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
   const [filterWorker, setFilterWorker] = useState('all');
   const [jobSites, setJobSites] = useState<{ id: string; name: string }[]>([]);
   const [workers, setWorkers] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editNotes, setEditNotes] = useState('');
+  const [editItems, setEditItems] = useState<InspectionItem[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [workOrderOpen, setWorkOrderOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -278,6 +285,7 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
 
   const openDetail = async (inspection: Inspection) => {
     setSelectedInspection(inspection);
+    setEditMode(false);
     setLoadingDetail(true);
     const { data, error } = await supabase
       .from('inspection_items')
@@ -307,6 +315,68 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
     setLoadingDetail(false);
   };
 
+  const startEdit = () => {
+    if (!selectedInspection) return;
+    setEditNotes(selectedInspection.notes ?? '');
+    setEditItems(inspectionItems.map(i => ({ ...i })));
+    setEditMode(true);
+  };
+
+  const cancelEdit = () => {
+    setEditMode(false);
+    setEditItems([]);
+  };
+
+  const setItemRating = (id: string, rating: 'green' | 'yellow' | 'red') => {
+    setEditItems(prev => prev.map(i => i.id === id ? { ...i, rating } : i));
+  };
+
+  const setItemNotes = (id: string, notes: string) => {
+    setEditItems(prev => prev.map(i => i.id === id ? { ...i, notes } : i));
+  };
+
+  const saveEdits = async () => {
+    if (!selectedInspection) return;
+    setSaving(true);
+    try {
+      // Update each changed item
+      for (const item of editItems) {
+        const original = inspectionItems.find(i => i.id === item.id);
+        if (!original) continue;
+        if (original.rating !== item.rating || (original.notes ?? '') !== (item.notes ?? '')) {
+          const { error } = await supabase
+            .from('inspection_items')
+            .update({ rating: item.rating, notes: item.notes })
+            .eq('id', item.id);
+          if (error) throw error;
+        }
+      }
+      // Update top-level notes
+      const { error: notesErr } = await supabase
+        .from('inspections')
+        .update({ notes: editNotes || null })
+        .eq('id', selectedInspection.id);
+      if (notesErr) throw notesErr;
+
+      // Recompute score
+      const { error: scoreErr } = await supabase.rpc('compute_inspection_score', {
+        p_inspection_id: selectedInspection.id,
+      });
+      if (scoreErr) throw scoreErr;
+
+      toast({ title: 'Saved', description: 'Inspection updated.' });
+      setEditMode(false);
+      // Refresh
+      await openDetail(selectedInspection);
+      await fetchInspections();
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'Error', description: err?.message ?? 'Failed to save.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filteredInspections = inspections.filter(i => {
     if (filterSite !== 'all' && i.job_site_id !== filterSite) return false;
     if (filterRating !== 'all' && i.overall_rating !== filterRating) return false;
@@ -317,7 +387,8 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
     return true;
   });
 
-  const categories = [...new Set(inspectionItems.map(i => i.category))];
+  const displayItems = editMode ? editItems : inspectionItems;
+  const categories = [...new Set(displayItems.map(i => i.category))];
 
   return (
     <div className="space-y-4">
@@ -434,15 +505,34 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
               <DialogHeader>
                 <div className="flex items-start justify-between">
                   <DialogTitle>Inspection Report</DialogTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => generatePDF(selectedInspection, inspectionItems)}
-                    className="mr-8"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export PDF
-                  </Button>
+                  <div className="flex flex-wrap gap-2 mr-8">
+                    {editMode ? (
+                      <>
+                        <Button variant="outline" size="sm" onClick={cancelEdit} disabled={saving}>
+                          <X className="h-4 w-4 mr-2" /> Cancel
+                        </Button>
+                        <Button size="sm" onClick={saveEdits} disabled={saving}>
+                          <Save className="h-4 w-4 mr-2" /> {saving ? 'Saving…' : 'Save Changes'}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => setWorkOrderOpen(true)}>
+                          <Wrench className="h-4 w-4 mr-2" /> Create Work Order
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={startEdit}>
+                          <Pencil className="h-4 w-4 mr-2" /> Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => generatePDF(selectedInspection, inspectionItems)}
+                        >
+                          <Download className="h-4 w-4 mr-2" /> Export PDF
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </DialogHeader>
 
@@ -490,7 +580,15 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
                       </div>
                     </div>
                     <Progress value={selectedInspection.overall_score ?? 0} className="h-2" />
-                    {selectedInspection.notes && (
+                    {editMode ? (
+                      <Textarea
+                        className="mt-3"
+                        value={editNotes}
+                        onChange={(e) => setEditNotes(e.target.value)}
+                        placeholder="Overall notes"
+                        rows={3}
+                      />
+                    ) : selectedInspection.notes && (
                       <p className="text-sm text-muted-foreground mt-2 italic">"{selectedInspection.notes}"</p>
                     )}
                   </CardContent>
@@ -501,7 +599,7 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
                   <p className="text-center text-muted-foreground py-4">Loading details...</p>
                 ) : (
                   categories.map(cat => {
-                    const catItems = inspectionItems.filter(i => i.category === cat);
+                    const catItems = displayItems.filter(i => i.category === cat);
                     return (
                       <Card key={cat}>
                         <CardHeader className="pb-2">
@@ -512,9 +610,39 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
                             <div key={item.id}>
                               <div className="flex items-start justify-between gap-2">
                                 <span className="text-sm flex-1">{item.item_name}</span>
-                                <RatingBadge rating={item.rating} />
+                                {editMode ? (
+                                  <div className="flex gap-1">
+                                    {(['green','yellow','red'] as const).map(r => (
+                                      <Button
+                                        key={r}
+                                        type="button"
+                                        size="sm"
+                                        variant={item.rating === r ? 'default' : 'outline'}
+                                        className={`h-7 px-2 text-xs capitalize ${
+                                          item.rating === r ?
+                                            (r === 'green' ? 'bg-green-600 hover:bg-green-700' :
+                                             r === 'yellow' ? 'bg-yellow-500 hover:bg-yellow-600' :
+                                             'bg-red-600 hover:bg-red-700') : ''
+                                        }`}
+                                        onClick={() => setItemRating(item.id, r)}
+                                      >
+                                        {r}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <RatingBadge rating={item.rating} />
+                                )}
                               </div>
-                              {item.notes && (
+                              {editMode ? (
+                                <Textarea
+                                  className="mt-2"
+                                  value={item.notes ?? ''}
+                                  onChange={(e) => setItemNotes(item.id, e.target.value)}
+                                  placeholder="Item notes"
+                                  rows={2}
+                                />
+                              ) : item.notes && (
                                 <p className="text-xs text-muted-foreground mt-1 ml-2">{item.notes}</p>
                               )}
                               {item.inspection_photos?.length > 0 && (
@@ -546,6 +674,16 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
           )}
         </DialogContent>
       </Dialog>
+
+      <CreateWorkOrderDialog
+        open={workOrderOpen}
+        onOpenChange={setWorkOrderOpen}
+        onSuccess={() => {
+          setWorkOrderOpen(false);
+          toast({ title: 'Work order created', description: 'Linked to this inspection\'s account.' });
+        }}
+        preSelectedJobSite={selectedInspection?.job_site_id}
+      />
     </div>
   );
 };
