@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Pencil } from 'lucide-react';
+import { Pencil, PackagePlus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,6 +22,7 @@ type Row = {
 };
 
 type Location = { id: string; name: string; kind: string };
+type Item = { id: string; name: string; unit: string; unit_cost: number | null };
 
 export default function SupplyStockTab() {
   const { isManager } = useAuth();
@@ -35,18 +36,25 @@ export default function SupplyStockTab() {
   const [newQty, setNewQty] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [items, setItems] = useState<Item[]>([]);
+  const [receiveOpen, setReceiveOpen] = useState(false);
+  const [receiveForm, setReceiveForm] = useState<any>({
+    item_id: '', to_location_id: '', quantity: '1', unit_price: '', reference: '', notes: '',
+  });
 
   const load = async () => {
     setLoading(true);
-    const [{ data: stock }, { data: locs }] = await Promise.all([
+    const [{ data: stock }, { data: locs }, { data: its }] = await Promise.all([
       supabase
         .from('supply_stock')
         .select('item_id, location_id, quantity, item:supply_items(name, sku, unit, reorder_point, kind), location:supply_locations(name, kind)')
         .order('quantity', { ascending: false }),
       supabase.from('supply_locations').select('id, name, kind').eq('active', true).order('name'),
+      supabase.from('supply_items').select('id, name, unit, unit_cost').eq('active', true).order('name'),
     ]);
     setRows((stock as any) || []);
     setLocations((locs as Location[]) || []);
+    setItems((its as any) || []);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -86,18 +94,68 @@ export default function SupplyStockTab() {
     load();
   };
 
+  const openReceive = () => {
+    const warehouse = locations.find(l => l.kind === 'warehouse');
+    setReceiveForm({
+      item_id: '',
+      to_location_id: warehouse?.id || '',
+      quantity: '1',
+      unit_price: '',
+      reference: '',
+      notes: '',
+    });
+    setReceiveOpen(true);
+  };
+
+  const submitReceive = async () => {
+    if (!receiveForm.item_id) { toast({ title: 'Choose an item', variant: 'destructive' }); return; }
+    if (!receiveForm.to_location_id) { toast({ title: 'Choose a destination', variant: 'destructive' }); return; }
+    const qty = Number(receiveForm.quantity);
+    if (isNaN(qty) || qty <= 0) { toast({ title: 'Enter a positive quantity', variant: 'destructive' }); return; }
+    setSaving(true);
+    const { data: userRes } = await supabase.auth.getUser();
+    const unitPrice = receiveForm.unit_price ? Number(receiveForm.unit_price) : null;
+    const payload: any = {
+      item_id: receiveForm.item_id,
+      movement_type: 'receive',
+      quantity: qty,
+      to_location_id: receiveForm.to_location_id,
+      unit_price: unitPrice,
+      total_value: unitPrice != null ? unitPrice * qty : null,
+      reference: receiveForm.reference || null,
+      notes: receiveForm.notes || null,
+      created_by: userRes.user?.id,
+    };
+    const { error } = await supabase.from('supply_movements').insert(payload);
+    setSaving(false);
+    if (error) { toast({ title: 'Failed', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Inventory received' });
+    setReceiveOpen(false);
+    load();
+  };
+
+  const selectedItem = items.find(i => i.id === receiveForm.item_id);
+  const warehouses = locations.filter(l => l.kind === 'warehouse');
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Stock on hand</CardTitle>
-        <div className="w-56">
-          <Select value={locFilter} onValueChange={setLocFilter}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All locations</SelectItem>
-              {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name} ({l.kind})</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-2 flex-wrap">
+          {canManage && (
+            <Button onClick={openReceive}>
+              <PackagePlus className="h-4 w-4 mr-2" />Receive Inventory
+            </Button>
+          )}
+          <div className="w-56">
+            <Select value={locFilter} onValueChange={setLocFilter}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All locations</SelectItem>
+                {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name} ({l.kind})</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -164,6 +222,84 @@ export default function SupplyStockTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditRow(null)}>Cancel</Button>
             <Button onClick={saveQty} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={receiveOpen} onOpenChange={setReceiveOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Receive Inventory</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <Label>Item</Label>
+              <Select
+                value={receiveForm.item_id}
+                onValueChange={v => {
+                  const it = items.find(i => i.id === v);
+                  setReceiveForm({
+                    ...receiveForm,
+                    item_id: v,
+                    unit_price: receiveForm.unit_price || (it?.unit_cost != null ? String(it.unit_cost) : ''),
+                  });
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Choose item" /></SelectTrigger>
+                <SelectContent>
+                  {items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Quantity {selectedItem && <span className="text-xs text-muted-foreground">({selectedItem.unit})</span>}</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={receiveForm.quantity}
+                onChange={e => setReceiveForm({ ...receiveForm, quantity: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Unit cost</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={receiveForm.unit_price}
+                onChange={e => setReceiveForm({ ...receiveForm, unit_price: e.target.value })}
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Receive into</Label>
+              <Select
+                value={receiveForm.to_location_id}
+                onValueChange={v => setReceiveForm({ ...receiveForm, to_location_id: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Choose warehouse" /></SelectTrigger>
+                <SelectContent>
+                  {(warehouses.length ? warehouses : locations).map(l => (
+                    <SelectItem key={l.id} value={l.id}>{l.name} ({l.kind})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2">
+              <Label>Reference / PO #</Label>
+              <Input
+                value={receiveForm.reference}
+                onChange={e => setReceiveForm({ ...receiveForm, reference: e.target.value })}
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Notes</Label>
+              <Textarea
+                value={receiveForm.notes}
+                onChange={e => setReceiveForm({ ...receiveForm, notes: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReceiveOpen(false)}>Cancel</Button>
+            <Button onClick={submitReceive} disabled={saving}>{saving ? 'Saving…' : 'Receive'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
