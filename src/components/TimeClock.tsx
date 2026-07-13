@@ -793,20 +793,32 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                       </div>
                     </div>
                   </div>
-                  <Button 
-                    onClick={() => clockOut(entry.id)}
-                    variant="destructive"
-                    size="sm"
-                  >
-                    <StopCircle className="h-4 w-4 mr-2" />
-                    Clock Out
-                  </Button>
+                  {isJanitorialWorker && entry.employee_id === profile?.id ? (
+                    <Button
+                      onClick={() => setScannerOpen(true)}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Scan to Clock Out
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => clockOut(entry.id)}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <StopCircle className="h-4 w-4 mr-2" />
+                      Clock Out
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+      <QRScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onScan={handleScan} />
     </div>
   );
 };
