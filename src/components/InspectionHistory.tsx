@@ -503,9 +503,8 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
           {selectedInspection && (
             <>
               <DialogHeader>
-                <div className="flex items-start justify-between">
-                  <DialogTitle>Inspection Report</DialogTitle>
-                  <div className="flex flex-wrap gap-2 mr-8">
+                <DialogTitle className="pr-8">Inspection Report</DialogTitle>
+                <div className="flex flex-wrap gap-2 pt-2">
                     {editMode ? (
                       <>
                         <Button variant="outline" size="sm" onClick={cancelEdit} disabled={saving}>
@@ -532,7 +531,6 @@ const InspectionHistory = ({ employeeId }: InspectionHistoryProps = {}) => {
                         </Button>
                       </>
                     )}
-                  </div>
                 </div>
               </DialogHeader>
 
