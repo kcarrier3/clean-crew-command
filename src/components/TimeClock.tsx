@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText, AlertTriangle } from 'lucide-react';
+import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText, AlertTriangle, QrCode } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useJobSiteAccess } from '@/hooks/useJobSiteAccess';
+import { useNavigate } from 'react-router-dom';
+import QRScanner from './QRScanner';
 
 interface Employee {
   id: string;
@@ -71,6 +73,28 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const { toast } = useToast();
   const { profile, isManager } = useAuth();
   const { canAccessSensitiveInfo } = useJobSiteAccess(selectedJobSite || null);
+  const navigate = useNavigate();
+  const [scannerOpen, setScannerOpen] = useState(false);
+
+  const isJanitorialWorker =
+    !forManager && profile?.job_title === 'Janitorial Staff' && !isManager();
+
+  const handleScan = (text: string) => {
+    setScannerOpen(false);
+    try {
+      const url = new URL(text);
+      const parts = url.pathname.split('/').filter(Boolean);
+      const idx = parts.indexOf('punch');
+      const token = idx >= 0 ? parts[idx + 1] : parts[parts.length - 1];
+      if (!token) throw new Error('Invalid code');
+      navigate(`/punch/${token}`);
+    } catch {
+      // If not a URL, treat the whole payload as the token
+      const cleaned = text.trim();
+      if (cleaned) navigate(`/punch/${cleaned}`);
+      else toast({ title: 'Invalid QR', description: 'Could not read code.', variant: 'destructive' });
+    }
+  };
 
   const selectedSite = jobSites.find(s => s.id === selectedJobSite);
 
