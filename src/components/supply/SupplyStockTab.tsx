@@ -4,6 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Pencil } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 type Row = {
   item_id: string;
@@ -16,10 +24,17 @@ type Row = {
 type Location = { id: string; name: string; kind: string };
 
 export default function SupplyStockTab() {
+  const { isManager } = useAuth();
+  const canManage = isManager();
+  const { toast } = useToast();
   const [rows, setRows] = useState<Row[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [locFilter, setLocFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [editRow, setEditRow] = useState<Row | null>(null);
+  const [newQty, setNewQty] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -37,6 +52,39 @@ export default function SupplyStockTab() {
   useEffect(() => { load(); }, []);
 
   const filtered = rows.filter(r => locFilter === 'all' || r.location_id === locFilter);
+
+  const openEdit = (r: Row) => {
+    setEditRow(r);
+    setNewQty(String(r.quantity));
+    setNotes('');
+  };
+
+  const saveQty = async () => {
+    if (!editRow) return;
+    const target = Number(newQty);
+    if (isNaN(target) || target < 0) {
+      toast({ title: 'Enter a valid quantity', variant: 'destructive' }); return;
+    }
+    const delta = target - Number(editRow.quantity);
+    if (delta === 0) { setEditRow(null); return; }
+    setSaving(true);
+    const { data: userRes } = await supabase.auth.getUser();
+    const payload: any = {
+      item_id: editRow.item_id,
+      movement_type: 'adjust',
+      quantity: Math.abs(delta),
+      notes: notes || `Manual stock set to ${target}`,
+      created_by: userRes.user?.id,
+    };
+    if (delta > 0) payload.to_location_id = editRow.location_id;
+    else payload.from_location_id = editRow.location_id;
+    const { error } = await supabase.from('supply_movements').insert(payload);
+    setSaving(false);
+    if (error) { toast({ title: 'Failed', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Stock updated' });
+    setEditRow(null);
+    load();
+  };
 
   return (
     <Card>
@@ -61,6 +109,7 @@ export default function SupplyStockTab() {
                 <TableHead>Location</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
                 <TableHead>Status</TableHead>
+                {canManage && <TableHead />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -72,16 +121,52 @@ export default function SupplyStockTab() {
                     <TableCell>{r.location?.name} <span className="text-xs text-muted-foreground">({r.location?.kind})</span></TableCell>
                     <TableCell className="text-right">{Number(r.quantity)} {r.item?.unit}</TableCell>
                     <TableCell>{r.quantity <= 0 ? <Badge variant="destructive">Out</Badge> : low ? <Badge variant="secondary">Low</Badge> : <Badge>OK</Badge>}</TableCell>
+                    {canManage && (
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                          <Pencil className="h-4 w-4 mr-1" />Set qty
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}
               {!filtered.length && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No stock recorded.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={canManage ? 5 : 4} className="text-center text-muted-foreground py-8">No stock recorded.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         )}
       </CardContent>
+      <Dialog open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set stock on hand</DialogTitle>
+          </DialogHeader>
+          {editRow && (
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground">
+                {editRow.item?.name} @ {editRow.location?.name} — current: {Number(editRow.quantity)} {editRow.item?.unit}
+              </div>
+              <div>
+                <Label>New quantity</Label>
+                <Input type="number" step="0.01" value={newQty} onChange={e => setNewQty(e.target.value)} />
+              </div>
+              <div>
+                <Label>Notes (optional)</Label>
+                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Reason for adjustment" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                An adjustment movement will be recorded for the audit trail.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditRow(null)}>Cancel</Button>
+            <Button onClick={saveQty} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
