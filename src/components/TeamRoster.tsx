@@ -634,6 +634,31 @@ const TeamRoster = () => {
               </p>
             </div>
             <div>
+              <Label>Assigned accounts</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Select the accounts this person was hired for. Informational only — does not affect access.
+              </p>
+              <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-1">
+                {jobSiteOptions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No active accounts.</p>
+                ) : (
+                  jobSiteOptions.map((site) => (
+                    <label key={site.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={addAccountIds.includes(site.id)}
+                        onCheckedChange={(checked) => {
+                          setAddAccountIds((prev) =>
+                            checked ? [...prev, site.id] : prev.filter((id) => id !== site.id)
+                          );
+                        }}
+                      />
+                      {site.name}
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+            <div>
               <div className="flex items-center justify-between mb-2">
                 <Label>Visible tabs & permissions</Label>
                 {form.job_title && (
