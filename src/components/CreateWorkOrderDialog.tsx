@@ -11,6 +11,7 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface CreateWorkOrderDialogProps {
   open: boolean;
@@ -49,6 +50,7 @@ export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open) {
@@ -99,6 +101,9 @@ export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
     setLoading(true);
 
     try {
+      if (!user?.id) {
+        throw new Error('You must be signed in to create a work order.');
+      }
       const { error } = await supabase
         .from('work_orders')
         .insert({
@@ -108,7 +113,7 @@ export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
           assigned_to: formData.assigned_to,
           priority: formData.priority,
           due_date: formData.due_date?.toISOString().split('T')[0],
-          created_by: 'temp-user-id' // TODO: Replace with actual user ID when auth is implemented
+          created_by: user.id,
         });
 
       if (error) throw error;
@@ -131,9 +136,10 @@ export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
+      console.error('Create work order failed:', error);
       toast({
         title: "Error",
-        description: "Failed to create work order",
+        description: error?.message ?? "Failed to create work order",
         variant: "destructive",
       });
     } finally {
