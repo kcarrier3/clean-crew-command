@@ -563,7 +563,25 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!forManager && scheduledJobSite && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
+          {isJanitorialWorker && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="text-center space-y-1">
+                <p className="text-sm text-muted-foreground">Punch-in method</p>
+                <p className="text-lg font-semibold">Scan account QR code</p>
+                <p className="text-xs text-muted-foreground max-w-xs">
+                  Scan the QR code posted at your assigned account to clock in or out. The code only works at that location.
+                </p>
+              </div>
+              <Button
+                onClick={() => setScannerOpen(true)}
+                size="lg"
+                className="w-full max-w-xs h-16 text-lg"
+              >
+                <QrCode className="h-6 w-6 mr-2" />
+                Scan to Clock In
+              </Button>
+            </div>
+          ) : !forManager && scheduledJobSite && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
             /* Simplified single-button UI for employees with a scheduled shift today */
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="text-center space-y-1">
