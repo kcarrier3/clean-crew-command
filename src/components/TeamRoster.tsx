@@ -79,7 +79,7 @@ interface JobSiteOption {
 type Filter = 'active' | 'inactive';
 
 const TeamRoster = () => {
-  const { canManageEmployees, isManager, isCrmUser, hasRole } = useAuth();
+  const { canManageEmployees, isManager, isCrmUser, hasRole, user } = useAuth();
   const canManage = canManageEmployees() || isManager() || isCrmUser() || hasRole('admin');
   const { toast } = useToast();
   const [members, setMembers] = useState<RosterMember[]>([]);
