@@ -14,6 +14,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import LeadCapture from './pages/LeadCapture';
 import CompleteProfile from './pages/CompleteProfile';
 import ReportIssue from './pages/ReportIssue';
+import PunchClock from './pages/PunchClock';
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const AppContent = () => {
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="/get-a-quote" element={<LeadCapture />} />
       <Route path="/report/:jobSiteId" element={<ReportIssue />} />
+      <Route path="/punch/:token" element={<PunchClock />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
