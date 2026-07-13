@@ -2189,6 +2189,7 @@ export type Database = {
           last_reset_date: string | null
           name: string
           project_manager: string | null
+          qr_code_token: string
           remaining_hours: number | null
           safety_requirements: string | null
           special_instructions: string | null
@@ -2214,6 +2215,7 @@ export type Database = {
           last_reset_date?: string | null
           name: string
           project_manager?: string | null
+          qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
           special_instructions?: string | null
@@ -2239,6 +2241,7 @@ export type Database = {
           last_reset_date?: string | null
           name?: string
           project_manager?: string | null
+          qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
           special_instructions?: string | null
@@ -3709,6 +3712,10 @@ export type Database = {
       mark_conversation_read: {
         Args: { _conversation_id: string }
         Returns: undefined
+      }
+      regenerate_job_site_qr_token: {
+        Args: { _job_site_id: string }
+        Returns: string
       }
     }
     Enums: {
