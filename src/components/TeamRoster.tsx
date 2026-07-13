@@ -71,6 +71,11 @@ interface RosterMember {
   active: boolean | null;
 }
 
+interface JobSiteOption {
+  id: string;
+  name: string;
+}
+
 type Filter = 'active' | 'inactive';
 
 const TeamRoster = () => {
@@ -112,6 +117,8 @@ const TeamRoster = () => {
   const [addAccessLevel, setAddAccessLevel] = useState<'admin' | 'manager' | 'employee'>('employee');
   const [addPermissions, setAddPermissions] = useState<string[]>([]);
   const [addCustomizedPerms, setAddCustomizedPerms] = useState(false);
+  const [jobSiteOptions, setJobSiteOptions] = useState<JobSiteOption[]>([]);
+  const [addAccountIds, setAddAccountIds] = useState<string[]>([]);
 
   const fetchMembers = async () => {
     setLoading(true);
@@ -130,6 +137,15 @@ const TeamRoster = () => {
 
   useEffect(() => {
     fetchMembers();
+  }, []);
+
+  useEffect(() => {
+    supabase
+      .from('job_sites')
+      .select('id, name')
+      .eq('active', true)
+      .order('name', { ascending: true })
+      .then(({ data }) => setJobSiteOptions((data ?? []) as JobSiteOption[]));
   }, []);
 
   const filtered = useMemo(() => {
@@ -153,6 +169,7 @@ const TeamRoster = () => {
     setAddAccessLevel('employee');
     setAddPermissions([]);
     setAddCustomizedPerms(false);
+    setAddAccountIds([]);
   };
 
   const applyJobTitleDefaults = (jt: string) => {
@@ -223,6 +240,17 @@ const TeamRoster = () => {
         if (addPermissions.length > 0) {
           await supabase.from('user_permissions').insert(
             addPermissions.map((p) => ({ user_id: userId, permission: p as any }))
+          );
+        }
+
+        // Save account assignments (informational — does not affect access)
+        if (addAccountIds.length > 0) {
+          await supabase.from('employee_accounts').insert(
+            addAccountIds.map((jobSiteId) => ({
+              employee_id: userId,
+              job_site_id: jobSiteId,
+              assigned_by: user?.id ?? null,
+            }))
           );
         }
       }
