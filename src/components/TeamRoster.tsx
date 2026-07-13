@@ -633,6 +633,7 @@ const TeamRoster = () => {
                 Defaults from job title. Change to grant more or less system-wide access.
               </p>
             </div>
+            {form.job_title === 'Janitorial Staff' && (
             <div>
               <Label>Assigned accounts</Label>
               <p className="text-xs text-muted-foreground mb-2">
@@ -658,6 +659,7 @@ const TeamRoster = () => {
                 )}
               </div>
             </div>
+            )}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label>Visible tabs & permissions</Label>
