@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { MapPin, Plus, Edit2, Building2, Users, Trash2, Phone, Mail, User, AlertTriangle, Calendar, DollarSign, FileText, Shield, Lock } from 'lucide-react';
+import { QRCodeDisplay } from './QRCodeDisplay';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -881,6 +882,13 @@ export default function JobSitesManagement() {
                               </div>
 
                               <div className="flex gap-2 md:ml-4 shrink-0">
+                                {(jobSite as any).qr_code_token && (
+                                  <QRCodeDisplay
+                                    jobSiteId={jobSite.id}
+                                    jobSiteName={jobSite.name}
+                                    token={(jobSite as any).qr_code_token}
+                                  />
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"

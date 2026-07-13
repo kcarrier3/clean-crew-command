@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText, AlertTriangle } from 'lucide-react';
+import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText, AlertTriangle, QrCode } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useJobSiteAccess } from '@/hooks/useJobSiteAccess';
+import { useNavigate } from 'react-router-dom';
+import QRScanner from './QRScanner';
 
 interface Employee {
   id: string;
@@ -71,6 +73,28 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const { toast } = useToast();
   const { profile, isManager } = useAuth();
   const { canAccessSensitiveInfo } = useJobSiteAccess(selectedJobSite || null);
+  const navigate = useNavigate();
+  const [scannerOpen, setScannerOpen] = useState(false);
+
+  const isJanitorialWorker =
+    !forManager && profile?.job_title === 'Janitorial Staff' && !isManager();
+
+  const handleScan = (text: string) => {
+    setScannerOpen(false);
+    try {
+      const url = new URL(text);
+      const parts = url.pathname.split('/').filter(Boolean);
+      const idx = parts.indexOf('punch');
+      const token = idx >= 0 ? parts[idx + 1] : parts[parts.length - 1];
+      if (!token) throw new Error('Invalid code');
+      navigate(`/punch/${token}`);
+    } catch {
+      // If not a URL, treat the whole payload as the token
+      const cleaned = text.trim();
+      if (cleaned) navigate(`/punch/${cleaned}`);
+      else toast({ title: 'Invalid QR', description: 'Could not read code.', variant: 'destructive' });
+    }
+  };
 
   const selectedSite = jobSites.find(s => s.id === selectedJobSite);
 
@@ -539,7 +563,25 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!forManager && scheduledJobSite && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
+          {isJanitorialWorker && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="text-center space-y-1">
+                <p className="text-sm text-muted-foreground">Punch-in method</p>
+                <p className="text-lg font-semibold">Scan account QR code</p>
+                <p className="text-xs text-muted-foreground max-w-xs">
+                  Scan the QR code posted at your assigned account to clock in or out. The code only works at that location.
+                </p>
+              </div>
+              <Button
+                onClick={() => setScannerOpen(true)}
+                size="lg"
+                className="w-full max-w-xs h-16 text-lg"
+              >
+                <QrCode className="h-6 w-6 mr-2" />
+                Scan to Clock In
+              </Button>
+            </div>
+          ) : !forManager && scheduledJobSite && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
             /* Simplified single-button UI for employees with a scheduled shift today */
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="text-center space-y-1">
@@ -751,20 +793,32 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                       </div>
                     </div>
                   </div>
-                  <Button 
-                    onClick={() => clockOut(entry.id)}
-                    variant="destructive"
-                    size="sm"
-                  >
-                    <StopCircle className="h-4 w-4 mr-2" />
-                    Clock Out
-                  </Button>
+                  {isJanitorialWorker && entry.employee_id === profile?.id ? (
+                    <Button
+                      onClick={() => setScannerOpen(true)}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Scan to Clock Out
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => clockOut(entry.id)}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <StopCircle className="h-4 w-4 mr-2" />
+                      Clock Out
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+      <QRScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onScan={handleScan} />
     </div>
   );
 };
