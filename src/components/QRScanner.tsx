@@ -40,7 +40,9 @@ export const QRScanner = ({ open, onClose, onScan }: Props) => {
       cancelled = true;
       const s = scannerRef.current;
       if (s) {
-        s.stop().catch(() => { /* noop */ }).finally(() => s.clear().catch(() => {}));
+        s.stop()
+          .catch(() => { /* noop */ })
+          .finally(() => { try { s.clear(); } catch { /* noop */ } });
         scannerRef.current = null;
       }
     };
