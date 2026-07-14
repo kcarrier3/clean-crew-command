@@ -303,11 +303,18 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           <div className="space-y-4">
             <Input
               type="file"
-              accept=".zip,application/zip,application/x-zip-compressed"
+              accept=".zip,.csv,application/zip,application/x-zip-compressed,text/csv"
+              multiple
               disabled={running}
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              onChange={(e) => setFiles(Array.from(e.target.files || []))}
             />
-            {file && <p className="text-sm text-muted-foreground">{file.name} — {(file.size / 1024 / 1024).toFixed(2)} MB</p>}
+            {files.length > 0 && (
+              <ul className="text-sm text-muted-foreground space-y-0.5">
+                {files.map((f, i) => (
+                  <li key={i}>{f.name} — {(f.size / 1024 / 1024).toFixed(2)} MB</li>
+                ))}
+              </ul>
+            )}
             {running && (
               <div className="space-y-2">
                 <Progress value={progress} />
@@ -342,7 +349,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           {!summary ? (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={running}>Cancel</Button>
-              <Button onClick={handleImport} disabled={!file || running}>
+              <Button onClick={handleImport} disabled={!files.length || running}>
                 <Upload className="h-4 w-4 mr-2" />{running ? 'Importing...' : 'Import'}
               </Button>
             </>
