@@ -49,9 +49,49 @@ const parseDate = (v: string): string | null => {
 async function readCsvFromZip(zip: JSZip, patterns: RegExp[]): Promise<Row[] | null> {
   const file = Object.keys(zip.files).find(name => patterns.some(p => p.test(name)));
   if (!file) return null;
-  const text = await zip.files[file].async('string');
+  const buf = await zip.files[file].async('uint8array');
+  const text = decodeCsvBytes(buf);
   const parsed = Papa.parse<Row>(text, { header: true, skipEmptyLines: true });
   return parsed.data.filter(r => r && Object.values(r).some(v => v && String(v).trim() !== ''));
+}
+
+function decodeCsvBytes(bytes: Uint8Array): string {
+  // UTF-16 LE BOM
+  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return new TextDecoder('utf-16le').decode(bytes.slice(2));
+  }
+  // UTF-16 BE BOM
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return new TextDecoder('utf-16be').decode(bytes.slice(2));
+  }
+  // UTF-8 BOM
+  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+    return new TextDecoder('utf-8').decode(bytes.slice(3));
+  }
+  // Heuristic: lots of NUL bytes in first 1KB → likely UTF-16 LE without BOM
+  const sample = bytes.slice(0, Math.min(1024, bytes.length));
+  let nulls = 0;
+  for (let i = 1; i < sample.length; i += 2) if (sample[i] === 0) nulls++;
+  if (nulls > sample.length / 4) {
+    return new TextDecoder('utf-16le').decode(bytes);
+  }
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+async function readCsvFile(file: File): Promise<Row[]> {
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const text = decodeCsvBytes(buf);
+  const parsed = Papa.parse<Row>(text, { header: true, skipEmptyLines: true });
+  return parsed.data.filter(r => r && Object.values(r).some(v => v && String(v).trim() !== ''));
+}
+
+function detectEntity(filename: string): 'accounts' | 'contacts' | 'leads' | 'opportunities' | null {
+  const n = filename.toLowerCase();
+  if (/opportunit/.test(n)) return 'opportunities';
+  if (/lead/.test(n)) return 'leads';
+  if (/contact/.test(n)) return 'contacts';
+  if (/account/.test(n)) return 'accounts';
+  return null;
 }
 
 export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props) {
