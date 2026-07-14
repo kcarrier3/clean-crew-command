@@ -2,11 +2,10 @@
 
 export const JOB_TITLES = [
   'Owner',
-  'Administrator',
+  'Office Manager',
   'Operations Manager',
   'Janitorial Manager',
   'Project Crew Lead',
-  'Supervisor',
   'Project Worker',
   'Janitorial Staff',
   'Floaters',
@@ -33,8 +32,7 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
     'manage_employees',
     'view_notifications',
   ],
-  'Administrator': [
-    // Same as owner (special logic needed to prevent removing owner)
+  'Office Manager': [
     'view_schedules',
     'edit_schedules',
     'view_time_tracking',
@@ -68,19 +66,6 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
     'edit_work_orders',
     'view_quality_control',
     'edit_quality_control',
-    'view_notifications',
-  ],
-  'Supervisor': [
-    'view_schedules',
-    'edit_schedules',
-    'view_time_tracking',
-    'edit_time_tracking',
-    'view_work_orders',
-    'create_work_orders',
-    'edit_work_orders',
-    'view_quality_control',
-    'edit_quality_control',
-    'view_worker_status',
     'view_notifications',
   ],
   'Project Worker': [
@@ -139,10 +124,9 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
 export const getJobTitleColor = (jobTitle: string) => {
   const colorMap: Record<string, { bg: string; border: string; text: string }> = {
     'Owner': { bg: 'bg-violet-100', border: 'border-violet-300', text: 'text-violet-800' },
-    'Administrator': { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' },
+    'Office Manager': { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' },
     'Janitorial Manager': { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-800' },
     'Project Crew Lead': { bg: 'bg-sky-100', border: 'border-sky-300', text: 'text-sky-800' },
-    'Supervisor': { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-800' },
     'Project Worker': { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' },
     'Janitorial Staff': { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-800' },
     'Floaters': { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-800' },
@@ -162,8 +146,8 @@ export const getJobTitleDepartment = (jobTitle: string): 'janitorial' | 'constru
     'Project Crew Lead': 'construction',
     'Project Worker': 'construction',
     'Owner': 'management',
-    'Administrator': 'management',
-    'Supervisor': 'management',
+    'Office Manager': 'management',
+    'Operations Manager': 'management',
     'Floaters': 'other',
     'Supply Management': 'other',
   };

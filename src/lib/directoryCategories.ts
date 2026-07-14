@@ -26,9 +26,9 @@ export const RULE_VIEWER_JOB_TITLES = [
   'Project Worker',
   'Janitorial Manager',
   'Project Crew Lead',
-  'Supervisor',
   'Floaters',
   'Supply Management',
   'Supply',
   'Operations Manager',
+  'Office Manager',
 ] as const;
