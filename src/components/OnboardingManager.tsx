@@ -257,7 +257,7 @@ export const OnboardingManager = () => {
                   <Label className="text-xs text-muted-foreground">Form Data</Label>
                   <div className="bg-gray-50 rounded-md p-3 text-xs space-y-1 mt-1 max-h-48 overflow-y-auto">
                     {Object.entries(viewingSubmission.form_data).map(([key, val]) => (
-                      val && (
+                      val && key !== 'id_documents' && (
                         <div key={key} className="flex gap-2">
                           <span className="font-medium capitalize text-gray-600 min-w-0 flex-shrink-0">
                             {key.replace(/_/g, ' ')}:
@@ -267,6 +267,37 @@ export const OnboardingManager = () => {
                           </span>
                         </div>
                       )
+                    ))}
+                  </div>
+                </div>
+              )}
+              {Array.isArray(viewingSubmission?.form_data?.id_documents) && viewingSubmission!.form_data.id_documents.length > 0 && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Uploaded ID Documents</Label>
+                  <div className="space-y-2 mt-1">
+                    {viewingSubmission!.form_data.id_documents.map((doc: any) => (
+                      <div key={doc.path} className="flex items-center gap-2 p-2 border rounded-md">
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{doc.name}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {((doc.size || 0) / 1024).toFixed(0)} KB
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            const { data } = await supabase.storage
+                              .from('onboarding-files')
+                              .createSignedUrl(doc.path, 300);
+                            if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                          }}
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" /> View
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 </div>
