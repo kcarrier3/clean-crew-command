@@ -230,6 +230,39 @@ export default function CRMDashboard() {
         onImported={loadAll}
       />
 
+      <AlertDialog open={resetOpen} onOpenChange={(o) => { if (!resetting) { setResetOpen(o); if (!o) setResetConfirm(''); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Reset CRM data?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  This permanently deletes <strong>all</strong> companies, contacts, leads, deals, quotes, invoices,
+                  meetings, tasks, activities, and email logs. Pipeline stages and services are kept.
+                </p>
+                <p>This cannot be undone. Type <strong>RESET</strong> below to confirm.</p>
+                <Input
+                  value={resetConfirm}
+                  onChange={(e) => setResetConfirm(e.target.value)}
+                  placeholder="Type RESET"
+                  autoFocus
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={resetConfirm !== 'RESET' || resetting}
+              onClick={(e) => { e.preventDefault(); resetCrm(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {resetting ? 'Resetting…' : 'Reset everything'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <p className="text-sm text-center mt-8">
         Won the deal? Head to the <strong>Accounts</strong> tab to create the Job Site.
       </p>
