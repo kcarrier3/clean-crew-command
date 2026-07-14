@@ -40,7 +40,11 @@ const ManagerDashboard = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [activeEntries, setActiveEntries] = useState<TimeEntry[]>([]);
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
-  const { profile, isManager } = useAuth();
+  const { profile, isManager, hasRole } = useAuth();
+  const canViewAccountCost =
+    hasRole('admin') ||
+    profile?.job_title === 'Owner' ||
+    profile?.job_title === 'Administrator';
   const { toast } = useToast();
 
   useEffect(() => {
@@ -191,12 +195,12 @@ const ManagerDashboard = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="timeclock" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className={`grid w-full ${canViewAccountCost ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="timeclock">Time Clock</TabsTrigger>
           <TabsTrigger value="active">Active Sessions</TabsTrigger>
           <TabsTrigger value="reports">Today's Report</TabsTrigger>
           <TabsTrigger value="budget">Budget Reports</TabsTrigger>
-          <TabsTrigger value="account-cost">Account Cost</TabsTrigger>
+          {canViewAccountCost && <TabsTrigger value="account-cost">Account Cost</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="timeclock">
@@ -329,9 +333,11 @@ const ManagerDashboard = () => {
           <BudgetReports />
         </TabsContent>
 
-        <TabsContent value="account-cost">
-          <AccountCostReport />
-        </TabsContent>
+        {canViewAccountCost && (
+          <TabsContent value="account-cost">
+            <AccountCostReport />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
