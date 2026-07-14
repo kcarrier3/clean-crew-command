@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { CrmCompany } from './types';
+import { CompanyDetailDialog } from './CompanyDetailDialog';
 
 interface Props { onChanged?: () => void; }
 
@@ -24,6 +25,8 @@ export function CompaniesList({ onChanged }: Props) {
   const [editing, setEditing] = useState<CrmCompany | null>(null);
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailCompany, setDetailCompany] = useState<CrmCompany | null>(null);
 
   const load = async () => {
     const { data, error } = await (supabase as any).from('crm_companies').select('*').order('name');
@@ -80,7 +83,11 @@ export function CompaniesList({ onChanged }: Props) {
       ) : (
         <div className="grid gap-2 md:grid-cols-2">
           {filtered.map(c => (
-            <Card key={c.id}>
+            <Card
+              key={c.id}
+              className="cursor-pointer hover:shadow-md transition"
+              onClick={() => { setDetailCompany(c); setDetailOpen(true); }}
+            >
               <CardContent className="p-4 flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{c.name}</p>
@@ -91,7 +98,7 @@ export function CompaniesList({ onChanged }: Props) {
                     {(c.city || c.state) && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{[c.city, c.state].filter(Boolean).join(', ')}</span>}
                   </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                   <Button size="sm" variant="ghost" onClick={() => { setEditing(c); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(c)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
@@ -125,6 +132,13 @@ export function CompaniesList({ onChanged }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CompanyDetailDialog
+        company={detailCompany}
+        open={detailOpen}
+        onOpenChange={(o) => { setDetailOpen(o); if (!o) setDetailCompany(null); }}
+        onChanged={() => { load(); onChanged?.(); }}
+      />
     </div>
   );
 }
