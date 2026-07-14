@@ -96,16 +96,16 @@ function detectEntity(filename: string): 'accounts' | 'contacts' | 'leads' | 'op
 
 export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props) {
   const { toast } = useToast();
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   const [running, setRunning] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
 
-  const reset = () => { setFile(null); setProgress(0); setStatus(''); setSummary(null); };
+  const reset = () => { setFiles([]); setProgress(0); setStatus(''); setSummary(null); };
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!files.length) return;
     setRunning(true); setSummary(null); setProgress(2);
     const s: Summary = { companies: 0, contacts: 0, leads: 0, deals: 0, skipped: [], errors: [] };
 
@@ -114,13 +114,35 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
       const uid = userData?.user?.id;
       if (!uid) throw new Error('You must be signed in.');
 
-      setStatus('Reading ZIP...');
-      const zip = await JSZip.loadAsync(file);
+      setStatus('Reading files...');
+      // Assemble entity-to-rows map from either a ZIP or one/many CSVs
+      let accounts: Row[] | null = null;
+      let contactsRows: Row[] | null = null;
+      let leadsRows: Row[] | null = null;
+      let opps: Row[] | null = null;
+
+      for (const f of files) {
+        const isZip = /\.zip$/i.test(f.name) || f.type.includes('zip');
+        if (isZip) {
+          const zip = await JSZip.loadAsync(f);
+          accounts = accounts ?? await readCsvFromZip(zip, [/(^|\/)Account(s)?\.csv$/i, /accounts?_/i]);
+          contactsRows = contactsRows ?? await readCsvFromZip(zip, [/(^|\/)Contact(s)?\.csv$/i, /contacts?_/i]);
+          leadsRows = leadsRows ?? await readCsvFromZip(zip, [/(^|\/)Lead(s)?\.csv$/i, /leads?_/i]);
+          opps = opps ?? await readCsvFromZip(zip, [/(^|\/)Opportunit(y|ies)\.csv$/i, /opportunit/i]);
+        } else {
+          const entity = detectEntity(f.name);
+          if (!entity) { s.skipped.push(`${f.name} (unrecognized)`); continue; }
+          const rows = await readCsvFile(f);
+          if (entity === 'accounts') accounts = rows;
+          else if (entity === 'contacts') contactsRows = rows;
+          else if (entity === 'leads') leadsRows = rows;
+          else if (entity === 'opportunities') opps = rows;
+        }
+      }
       setProgress(10);
 
       // Accounts -> crm_companies
       setStatus('Importing Accounts...');
-      const accounts = await readCsvFromZip(zip, [/(^|\/)Account(s)?\.csv$/i, /accounts?_/i]);
       const sfIdToCompanyId = new Map<string, string>();
       if (accounts?.length) {
         for (let i = 0; i < accounts.length; i += 200) {
@@ -150,7 +172,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
 
       // Contacts -> crm_contacts
       setStatus('Importing Contacts...');
-      const contacts = await readCsvFromZip(zip, [/(^|\/)Contact(s)?\.csv$/i, /contacts?_/i]);
+      const contacts = contactsRows;
       if (contacts?.length) {
         for (let i = 0; i < contacts.length; i += 200) {
           const chunk = contacts.slice(i, i + 200).map(r => {
@@ -177,7 +199,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
 
       // Leads -> crm_leads
       setStatus('Importing Leads...');
-      const leads = await readCsvFromZip(zip, [/(^|\/)Lead(s)?\.csv$/i, /leads?_/i]);
+      const leads = leadsRows;
       if (leads?.length) {
         for (let i = 0; i < leads.length; i += 200) {
           const chunk = leads.slice(i, i + 200).map(r => {
@@ -210,7 +232,6 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
 
       // Opportunities -> crm_deals (needs stage_id)
       setStatus('Importing Opportunities...');
-      const opps = await readCsvFromZip(zip, [/(^|\/)Opportunit(y|ies)\.csv$/i, /opportunit/i]);
       if (opps?.length) {
         const { data: stagesData } = await (supabase as any)
           .from('crm_pipeline_stages').select('*').eq('active', true).order('sort_order');
