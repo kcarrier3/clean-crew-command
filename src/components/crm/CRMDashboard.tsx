@@ -136,7 +136,7 @@ export default function CRMDashboard() {
           <p className="text-2xl font-bold mt-1">${openDealsValue.toLocaleString()}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs"><Users className="h-4 w-4" /> New Leads</div>
+          <div className="flex items-center gap-2 text-muted-foreground text-xs"><Users className="h-4 w-4" /> New Opportunities</div>
           <p className="text-2xl font-bold mt-1">{newLeads}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
@@ -148,7 +148,7 @@ export default function CRMDashboard() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-          <TabsTrigger value="leads">Leads</TabsTrigger>
+          <TabsTrigger value="leads">Opportunities</TabsTrigger>
           <TabsTrigger value="companies">Companies</TabsTrigger>
           <TabsTrigger value="contacts">Contacts</TabsTrigger>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>

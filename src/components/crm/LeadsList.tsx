@@ -38,7 +38,7 @@ export function LeadsList({ stages, onChanged }: Props) {
       .from('crm_leads')
       .select('*')
       .order('created_at', { ascending: false });
-    if (error) toast({ title: 'Failed to load leads', description: error.message, variant: 'destructive' });
+    if (error) toast({ title: 'Failed to load opportunities', description: error.message, variant: 'destructive' });
     setLeads(data || []);
     setLoading(false);
   };
@@ -63,7 +63,7 @@ export function LeadsList({ stages, onChanged }: Props) {
       return;
     }
     await (supabase as any).from('crm_leads').update({ status: 'converted' }).eq('id', lead.id);
-    toast({ title: 'Deal created from lead' });
+    toast({ title: 'Deal created from opportunity' });
     load();
     onChanged();
   };
@@ -79,20 +79,20 @@ export function LeadsList({ stages, onChanged }: Props) {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <Input
-          placeholder="Search leads…"
+          placeholder="Search opportunities…"
           value={filter}
           onChange={e => setFilter(e.target.value)}
           className="max-w-xs"
         />
         <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" /> New Lead
+          <Plus className="h-4 w-4 mr-2" /> New Opportunity
         </Button>
       </div>
 
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
       ) : filtered.length === 0 ? (
-        <Card><CardContent className="py-10 text-center text-muted-foreground">No leads yet. Add your first lead to get started.</CardContent></Card>
+        <Card><CardContent className="py-10 text-center text-muted-foreground">No opportunities yet. Add your first opportunity to get started.</CardContent></Card>
       ) : (
         <div className="space-y-2">
           {filtered.map(lead => (
