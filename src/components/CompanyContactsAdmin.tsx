@@ -210,6 +210,9 @@ export default function CompanyContactsAdmin() {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">{c.name}</p>
                   {c.title && <p className="text-xs text-muted-foreground">{c.title}</p>}
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">
+                    {categoryLabel(c.category)}
+                  </p>
                   <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                     {c.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</div>}
                     {c.email && <div className="flex items-center gap-1 break-all"><Mail className="h-3 w-3 shrink-0" />{c.email}</div>}
@@ -237,6 +240,24 @@ export default function CompanyContactsAdmin() {
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
             </div>
             <div><Label>Notes</Label><Textarea rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+            <div>
+              <Label>Category</Label>
+              <Select
+                value={form.category || 'none'}
+                onValueChange={(v) => setForm({ ...form, category: v === 'none' ? '' : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Uncategorized" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Uncategorized</SelectItem>
+                  {DIRECTORY_CATEGORIES.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Non-manager staff automatically see this contact if their job title has access to this category (Directory Access Rules).
+              </p>
+            </div>
             <div><Label>Display Order</Label><Input type="number" value={form.display_order} onChange={e => setForm({ ...form, display_order: Number(e.target.value) })} /></div>
           </div>
           <DialogFooter>
