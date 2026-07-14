@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Pencil, Trash2, Mail, Phone } from 'lucide-react';
+import { Plus, Pencil, Trash2, Mail, Phone, Users } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +24,15 @@ interface CompanyContact {
 
 const blank = { name: '', title: '', phone: '', email: '', notes: '', display_order: 0 };
 
+const MANAGER_TITLES = ['Owner', 'Administrator', 'Janitorial Manager', 'Project Crew Lead'];
+
+interface EmployeeOption {
+  id: string;
+  first_name: string;
+  last_name: string;
+  job_title: string | null;
+}
+
 export default function CompanyContactsAdmin() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -31,6 +42,12 @@ export default function CompanyContactsAdmin() {
   const [editing, setEditing] = useState<CompanyContact | null>(null);
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignContact, setAssignContact] = useState<CompanyContact | null>(null);
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
+  const [assignSaving, setAssignSaving] = useState(false);
+  const [assignSearch, setAssignSearch] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -91,6 +108,75 @@ export default function CompanyContactsAdmin() {
     load();
   };
 
+  const openAssign = async (c: CompanyContact) => {
+    setAssignContact(c);
+    setAssignOpen(true);
+    setAssignSearch('');
+
+    const [{ data: emps }, { data: existing }] = await Promise.all([
+      (supabase as any)
+        .from('profiles')
+        .select('id, first_name, last_name, job_title')
+        .eq('active', true)
+        .order('last_name'),
+      (supabase as any)
+        .from('company_contact_assignments')
+        .select('employee_id')
+        .eq('contact_id', c.id),
+    ]);
+
+    setEmployees((emps || []).filter((e: EmployeeOption) => !MANAGER_TITLES.includes(e.job_title || '')));
+    setAssignedIds(new Set((existing || []).map((r: any) => r.employee_id)));
+  };
+
+  const toggleAssigned = (empId: string) => {
+    setAssignedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(empId)) next.delete(empId); else next.add(empId);
+      return next;
+    });
+  };
+
+  const saveAssignments = async () => {
+    if (!assignContact) return;
+    setAssignSaving(true);
+    // Simple approach: replace all assignments for this contact
+    const { error: delErr } = await (supabase as any)
+      .from('company_contact_assignments')
+      .delete()
+      .eq('contact_id', assignContact.id);
+    if (delErr) {
+      setAssignSaving(false);
+      toast({ title: 'Failed to save', description: delErr.message, variant: 'destructive' });
+      return;
+    }
+    if (assignedIds.size > 0) {
+      const rows = Array.from(assignedIds).map(empId => ({
+        contact_id: assignContact.id,
+        employee_id: empId,
+        created_by: user?.id,
+      }));
+      const { error: insErr } = await (supabase as any)
+        .from('company_contact_assignments')
+        .insert(rows);
+      if (insErr) {
+        setAssignSaving(false);
+        toast({ title: 'Failed to save', description: insErr.message, variant: 'destructive' });
+        return;
+      }
+    }
+    setAssignSaving(false);
+    setAssignOpen(false);
+    setAssignContact(null);
+    toast({ title: 'Assignments updated' });
+  };
+
+  const filteredEmployees = employees.filter(e => {
+    const q = assignSearch.trim().toLowerCase();
+    if (!q) return true;
+    return `${e.first_name} ${e.last_name} ${e.job_title || ''}`.toLowerCase().includes(q);
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -98,7 +184,8 @@ export default function CompanyContactsAdmin() {
           <div>
             <CardTitle>Contacts Directory</CardTitle>
             <CardDescription>
-              Manage the points-of-contact shown to employees in the mobile app.
+              Manage the points-of-contact shown to employees. Managers and admins always see every contact.
+              For non-manager staff, assign the specific contacts each person should see.
             </CardDescription>
           </div>
           <Button onClick={() => { setEditing(null); setOpen(true); }}>
@@ -124,6 +211,7 @@ export default function CompanyContactsAdmin() {
                   </div>
                 </div>
                 <div className="flex gap-1">
+                  <Button size="sm" variant="ghost" title="Assign to employees" onClick={() => openAssign(c)}><Users className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => { setEditing(c); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(c)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
@@ -149,6 +237,63 @@ export default function CompanyContactsAdmin() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
             <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={assignOpen} onOpenChange={(o) => { setAssignOpen(o); if (!o) setAssignContact(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Assign "{assignContact?.name}" to employees</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Managers and admins always see every contact. Select which non-manager employees should see this one.
+            </p>
+            <Input
+              placeholder="Search employees…"
+              value={assignSearch}
+              onChange={(e) => setAssignSearch(e.target.value)}
+            />
+            <div className="flex justify-between text-xs">
+              <button
+                className="text-primary hover:underline"
+                onClick={() => setAssignedIds(new Set(filteredEmployees.map(e => e.id)))}
+                type="button"
+              >Select all</button>
+              <button
+                className="text-muted-foreground hover:underline"
+                onClick={() => setAssignedIds(new Set())}
+                type="button"
+              >Clear</button>
+            </div>
+            <ScrollArea className="h-72 border rounded-md">
+              <div className="p-2 space-y-1">
+                {filteredEmployees.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-6">No employees found.</p>
+                )}
+                {filteredEmployees.map(e => (
+                  <label
+                    key={e.id}
+                    className="flex items-center gap-2 p-2 rounded hover:bg-accent cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={assignedIds.has(e.id)}
+                      onCheckedChange={() => toggleAssigned(e.id)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{e.first_name} {e.last_name}</p>
+                      {e.job_title && <p className="text-xs text-muted-foreground truncate">{e.job_title}</p>}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </ScrollArea>
+            <p className="text-xs text-muted-foreground">{assignedIds.size} selected</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignOpen(false)} disabled={assignSaving}>Cancel</Button>
+            <Button onClick={saveAssignments} disabled={assignSaving}>{assignSaving ? 'Saving…' : 'Save assignments'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
