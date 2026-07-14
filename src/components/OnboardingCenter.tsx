@@ -353,7 +353,7 @@ export const OnboardingCenter = () => {
 
               {/* I-9 */}
               {activeDoc?.document_type === 'i9' && (
-                <I9Form data={formData} onChange={setFormData} />
+                <I9Form data={formData} onChange={setFormData} employeeId={profile?.id} />
               )}
 
               {/* Direct Deposit */}
