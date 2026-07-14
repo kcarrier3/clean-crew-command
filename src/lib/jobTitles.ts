@@ -2,11 +2,10 @@
 
 export const JOB_TITLES = [
   'Owner',
-  'Administrator',
+  'Office Manager',
   'Operations Manager',
   'Janitorial Manager',
   'Project Crew Lead',
-  'Supervisor',
   'Project Worker',
   'Janitorial Staff',
   'Floaters',
@@ -33,8 +32,7 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
     'manage_employees',
     'view_notifications',
   ],
-  'Administrator': [
-    // Same as owner (special logic needed to prevent removing owner)
+  'Office Manager': [
     'view_schedules',
     'edit_schedules',
     'view_time_tracking',
@@ -68,19 +66,6 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
     'edit_work_orders',
     'view_quality_control',
     'edit_quality_control',
-    'view_notifications',
-  ],
-  'Supervisor': [
-    'view_schedules',
-    'edit_schedules',
-    'view_time_tracking',
-    'edit_time_tracking',
-    'view_work_orders',
-    'create_work_orders',
-    'edit_work_orders',
-    'view_quality_control',
-    'edit_quality_control',
-    'view_worker_status',
     'view_notifications',
   ],
   'Project Worker': [
