@@ -1,6 +1,8 @@
 export const DIRECTORY_CATEGORIES = [
   { value: 'office_manager',       label: 'Office Manager' },
+  { value: 'operations_manager',   label: 'Operations Manager' },
   { value: 'supply_manager',       label: 'Supply Manager' },
+  { value: 'supply_staff',         label: 'Supply' },
   { value: 'night_manager',        label: 'Night Manager' },
   { value: 'janitorial_manager',   label: 'Janitorial Manager' },
   { value: 'construction_manager', label: 'Construction Manager' },
@@ -27,4 +29,6 @@ export const RULE_VIEWER_JOB_TITLES = [
   'Supervisor',
   'Floaters',
   'Supply Management',
+  'Supply',
+  'Operations Manager',
 ] as const;

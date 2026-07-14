@@ -3,6 +3,7 @@
 export const JOB_TITLES = [
   'Owner',
   'Administrator',
+  'Operations Manager',
   'Janitorial Manager',
   'Project Crew Lead',
   'Supervisor',
@@ -10,6 +11,7 @@ export const JOB_TITLES = [
   'Janitorial Staff',
   'Floaters',
   'Supply Management',
+  'Supply',
 ] as const;
 
 export type JobTitle = typeof JOB_TITLES[number];
@@ -110,6 +112,27 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
     'view_work_orders',
     'view_notifications',
   ],
+  'Supply': [
+    'view_schedules',
+    'view_time_tracking',
+    'edit_time_tracking',
+    'view_work_orders',
+    'view_notifications',
+  ],
+  'Operations Manager': [
+    'view_schedules',
+    'edit_schedules',
+    'view_time_tracking',
+    'edit_time_tracking',
+    'view_work_orders',
+    'create_work_orders',
+    'edit_work_orders',
+    'view_quality_control',
+    'edit_quality_control',
+    'view_worker_status',
+    'manage_employees',
+    'view_notifications',
+  ],
 };
 
 // Get the display color for a job title (matching WeeklyScheduleView)
@@ -124,6 +147,8 @@ export const getJobTitleColor = (jobTitle: string) => {
     'Janitorial Staff': { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-800' },
     'Floaters': { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-800' },
     'Supply Management': { bg: 'bg-gray-100', border: 'border-gray-300', text: 'text-gray-800' },
+    'Supply': { bg: 'bg-slate-100', border: 'border-slate-300', text: 'text-slate-800' },
+    'Operations Manager': { bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-800' },
   };
   
   return colorMap[jobTitle] || { bg: 'bg-slate-100', border: 'border-slate-300', text: 'text-slate-800' };
