@@ -205,21 +205,21 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           const chunk = leads.slice(i, i + 200).map(r => {
             const first = pick(r, 'FirstName', 'First Name');
             const last = pick(r, 'LastName', 'Last Name');
-            const name = [first, last].filter(Boolean).join(' ') || pick(r, 'Name') || 'Unknown Lead';
+            const contactName = [first, last].filter(Boolean).join(' ') || pick(r, 'Name') || null;
             const sfStatus = pick(r, 'Status').toLowerCase();
             const status = sfStatus.includes('qualified') ? 'qualified'
               : sfStatus.includes('working') || sfStatus.includes('contacted') ? 'contacted'
-              : sfStatus.includes('unqualified') || sfStatus.includes('lost') ? 'lost'
+              : sfStatus.includes('unqualified') || sfStatus.includes('lost') ? 'unqualified'
+              : sfStatus.includes('converted') ? 'converted'
               : 'new';
             return {
-              name,
+              company_name: pick(r, 'Company', 'Company / Account') || contactName || 'Unknown',
+              contact_name: contactName,
               email: pick(r, 'Email') || null,
               phone: pick(r, 'Phone', 'MobilePhone') || null,
-              company: pick(r, 'Company') || null,
               source: pick(r, 'LeadSource', 'Lead Source') || null,
               status,
               notes: pick(r, 'Description') || null,
-              owner_id: uid,
               created_by: uid,
             };
           });
