@@ -49,23 +49,63 @@ const parseDate = (v: string): string | null => {
 async function readCsvFromZip(zip: JSZip, patterns: RegExp[]): Promise<Row[] | null> {
   const file = Object.keys(zip.files).find(name => patterns.some(p => p.test(name)));
   if (!file) return null;
-  const text = await zip.files[file].async('string');
+  const buf = await zip.files[file].async('uint8array');
+  const text = decodeCsvBytes(buf);
   const parsed = Papa.parse<Row>(text, { header: true, skipEmptyLines: true });
   return parsed.data.filter(r => r && Object.values(r).some(v => v && String(v).trim() !== ''));
 }
 
+function decodeCsvBytes(bytes: Uint8Array): string {
+  // UTF-16 LE BOM
+  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return new TextDecoder('utf-16le').decode(bytes.slice(2));
+  }
+  // UTF-16 BE BOM
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return new TextDecoder('utf-16be').decode(bytes.slice(2));
+  }
+  // UTF-8 BOM
+  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+    return new TextDecoder('utf-8').decode(bytes.slice(3));
+  }
+  // Heuristic: lots of NUL bytes in first 1KB → likely UTF-16 LE without BOM
+  const sample = bytes.slice(0, Math.min(1024, bytes.length));
+  let nulls = 0;
+  for (let i = 1; i < sample.length; i += 2) if (sample[i] === 0) nulls++;
+  if (nulls > sample.length / 4) {
+    return new TextDecoder('utf-16le').decode(bytes);
+  }
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+async function readCsvFile(file: File): Promise<Row[]> {
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const text = decodeCsvBytes(buf);
+  const parsed = Papa.parse<Row>(text, { header: true, skipEmptyLines: true });
+  return parsed.data.filter(r => r && Object.values(r).some(v => v && String(v).trim() !== ''));
+}
+
+function detectEntity(filename: string): 'accounts' | 'contacts' | 'leads' | 'opportunities' | null {
+  const n = filename.toLowerCase();
+  if (/opportunit/.test(n)) return 'opportunities';
+  if (/lead/.test(n)) return 'leads';
+  if (/contact/.test(n)) return 'contacts';
+  if (/account/.test(n)) return 'accounts';
+  return null;
+}
+
 export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props) {
   const { toast } = useToast();
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   const [running, setRunning] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
 
-  const reset = () => { setFile(null); setProgress(0); setStatus(''); setSummary(null); };
+  const reset = () => { setFiles([]); setProgress(0); setStatus(''); setSummary(null); };
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!files.length) return;
     setRunning(true); setSummary(null); setProgress(2);
     const s: Summary = { companies: 0, contacts: 0, leads: 0, deals: 0, skipped: [], errors: [] };
 
@@ -74,13 +114,35 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
       const uid = userData?.user?.id;
       if (!uid) throw new Error('You must be signed in.');
 
-      setStatus('Reading ZIP...');
-      const zip = await JSZip.loadAsync(file);
+      setStatus('Reading files...');
+      // Assemble entity-to-rows map from either a ZIP or one/many CSVs
+      let accounts: Row[] | null = null;
+      let contactsRows: Row[] | null = null;
+      let leadsRows: Row[] | null = null;
+      let opps: Row[] | null = null;
+
+      for (const f of files) {
+        const isZip = /\.zip$/i.test(f.name) || f.type.includes('zip');
+        if (isZip) {
+          const zip = await JSZip.loadAsync(f);
+          accounts = accounts ?? await readCsvFromZip(zip, [/(^|\/)Account(s)?\.csv$/i, /accounts?_/i]);
+          contactsRows = contactsRows ?? await readCsvFromZip(zip, [/(^|\/)Contact(s)?\.csv$/i, /contacts?_/i]);
+          leadsRows = leadsRows ?? await readCsvFromZip(zip, [/(^|\/)Lead(s)?\.csv$/i, /leads?_/i]);
+          opps = opps ?? await readCsvFromZip(zip, [/(^|\/)Opportunit(y|ies)\.csv$/i, /opportunit/i]);
+        } else {
+          const entity = detectEntity(f.name);
+          if (!entity) { s.skipped.push(`${f.name} (unrecognized)`); continue; }
+          const rows = await readCsvFile(f);
+          if (entity === 'accounts') accounts = rows;
+          else if (entity === 'contacts') contactsRows = rows;
+          else if (entity === 'leads') leadsRows = rows;
+          else if (entity === 'opportunities') opps = rows;
+        }
+      }
       setProgress(10);
 
       // Accounts -> crm_companies
       setStatus('Importing Accounts...');
-      const accounts = await readCsvFromZip(zip, [/(^|\/)Account(s)?\.csv$/i, /accounts?_/i]);
       const sfIdToCompanyId = new Map<string, string>();
       if (accounts?.length) {
         for (let i = 0; i < accounts.length; i += 200) {
@@ -110,7 +172,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
 
       // Contacts -> crm_contacts
       setStatus('Importing Contacts...');
-      const contacts = await readCsvFromZip(zip, [/(^|\/)Contact(s)?\.csv$/i, /contacts?_/i]);
+      const contacts = contactsRows;
       if (contacts?.length) {
         for (let i = 0; i < contacts.length; i += 200) {
           const chunk = contacts.slice(i, i + 200).map(r => {
@@ -137,7 +199,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
 
       // Leads -> crm_leads
       setStatus('Importing Leads...');
-      const leads = await readCsvFromZip(zip, [/(^|\/)Lead(s)?\.csv$/i, /leads?_/i]);
+      const leads = leadsRows;
       if (leads?.length) {
         for (let i = 0; i < leads.length; i += 200) {
           const chunk = leads.slice(i, i + 200).map(r => {
@@ -170,7 +232,6 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
 
       // Opportunities -> crm_deals (needs stage_id)
       setStatus('Importing Opportunities...');
-      const opps = await readCsvFromZip(zip, [/(^|\/)Opportunit(y|ies)\.csv$/i, /opportunit/i]);
       if (opps?.length) {
         const { data: stagesData } = await (supabase as any)
           .from('crm_pipeline_stages').select('*').eq('active', true).order('sort_order');
@@ -233,8 +294,9 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><FileArchive className="h-5 w-5" /> Import from Salesforce Export</DialogTitle>
           <DialogDescription>
-            Upload the <strong>.zip</strong> file Salesforce emails you from <em>Setup → Data Export</em>.
-            We'll map Accounts → Companies, Contacts, Leads, and Opportunities → Deals.
+            Upload the <strong>.zip</strong> from <em>Setup → Data Export</em>, or drop in one or more
+            Salesforce <strong>.csv</strong> exports (Account, Contact, Lead, Opportunity). UTF-8 and UTF-16
+            files are both supported. Accounts → Companies, Opportunities → Deals.
           </DialogDescription>
         </DialogHeader>
 
@@ -242,11 +304,18 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           <div className="space-y-4">
             <Input
               type="file"
-              accept=".zip,application/zip,application/x-zip-compressed"
+              accept=".zip,.csv,application/zip,application/x-zip-compressed,text/csv"
+              multiple
               disabled={running}
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              onChange={(e) => setFiles(Array.from(e.target.files || []))}
             />
-            {file && <p className="text-sm text-muted-foreground">{file.name} — {(file.size / 1024 / 1024).toFixed(2)} MB</p>}
+            {files.length > 0 && (
+              <ul className="text-sm text-muted-foreground space-y-0.5">
+                {files.map((f, i) => (
+                  <li key={i}>{f.name} — {(f.size / 1024 / 1024).toFixed(2)} MB</li>
+                ))}
+              </ul>
+            )}
             {running && (
               <div className="space-y-2">
                 <Progress value={progress} />
@@ -281,7 +350,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           {!summary ? (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={running}>Cancel</Button>
-              <Button onClick={handleImport} disabled={!file || running}>
+              <Button onClick={handleImport} disabled={!files.length || running}>
                 <Upload className="h-4 w-4 mr-2" />{running ? 'Importing...' : 'Import'}
               </Button>
             </>
