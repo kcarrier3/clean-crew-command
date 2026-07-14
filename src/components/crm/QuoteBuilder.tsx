@@ -11,7 +11,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { generateQuotePdf } from './generateQuotePdf';
 import { QuoteSignatureDialog } from './QuoteSignatureDialog';
-import { convertQuoteToInvoice } from './InvoicesList';
 import type { CrmDeal, CrmLead, CrmQuote, CrmQuoteItem, CrmService } from './types';
 
 interface Props {
@@ -82,18 +81,6 @@ export function QuoteBuilder({ open, onOpenChange, deal, lead, quote, onSaved }:
     const s = services.find(x => x.id === serviceId);
     if (!s) return;
     setItems([...items, { description: s.name, quantity: 1, unit_price: Number(s.default_unit_price) }]);
-  };
-
-  const handleConvertToInvoice = async () => {
-    if (!quote) { toast({ title: 'Save the quote first', variant: 'destructive' }); return; }
-    try {
-      const inv = await convertQuoteToInvoice(quote.id, user?.id);
-      toast({ title: 'Invoice created', description: inv.invoice_number });
-      onSaved?.();
-      onOpenChange(false);
-    } catch (e: any) {
-      toast({ title: 'Failed to create invoice', description: e.message, variant: 'destructive' });
-    }
   };
 
   const save = async (alsoDownload = false) => {
@@ -243,9 +230,6 @@ export function QuoteBuilder({ open, onOpenChange, deal, lead, quote, onSaved }:
             <>
               <Button variant="outline" onClick={() => setSigOpen(true)} disabled={saving}>
                 <PenLine className="h-4 w-4 mr-2" /> Capture Signature
-              </Button>
-              <Button variant="outline" onClick={handleConvertToInvoice} disabled={saving}>
-                <FileText className="h-4 w-4 mr-2" /> Convert to Invoice
               </Button>
             </>
           )}
