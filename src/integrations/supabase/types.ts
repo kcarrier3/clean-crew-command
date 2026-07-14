@@ -248,6 +248,7 @@ export type Database = {
       }
       company_contacts: {
         Row: {
+          category: string | null
           created_at: string
           created_by: string | null
           display_order: number
@@ -260,6 +261,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           created_by?: string | null
           display_order?: number
@@ -272,6 +274,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           created_by?: string | null
           display_order?: number
@@ -1589,6 +1592,30 @@ export type Database = {
           token?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      directory_access_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          viewer_job_title: string
+          visible_category: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          viewer_job_title: string
+          visible_category: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          viewer_job_title?: string
+          visible_category?: string
         }
         Relationships: []
       }
