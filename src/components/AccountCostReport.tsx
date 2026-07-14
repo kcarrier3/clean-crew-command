@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -213,8 +213,8 @@ export default function AccountCostReport() {
             </TableHeader>
             <TableBody>
               {rows.map(r => (
-                <>
-                  <TableRow key={r.jobSite.id}>
+                <Fragment key={r.jobSite.id}>
+                  <TableRow>
                     <TableCell>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setExpanded(s => ({ ...s, [r.jobSite.id]: !s[r.jobSite.id] }))}>
                         {expanded[r.jobSite.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -262,7 +262,7 @@ export default function AccountCostReport() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               ))}
               {!rows.length && (
                 <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{loading ? 'Loading…' : 'No activity in this period.'}</TableCell></TableRow>
