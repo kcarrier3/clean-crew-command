@@ -294,8 +294,9 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><FileArchive className="h-5 w-5" /> Import from Salesforce Export</DialogTitle>
           <DialogDescription>
-            Upload the <strong>.zip</strong> file Salesforce emails you from <em>Setup → Data Export</em>.
-            We'll map Accounts → Companies, Contacts, Leads, and Opportunities → Deals.
+            Upload the <strong>.zip</strong> from <em>Setup → Data Export</em>, or drop in one or more
+            Salesforce <strong>.csv</strong> exports (Account, Contact, Lead, Opportunity). UTF-8 and UTF-16
+            files are both supported. Accounts → Companies, Opportunities → Deals.
           </DialogDescription>
         </DialogHeader>
 
