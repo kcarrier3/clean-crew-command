@@ -56,7 +56,7 @@ export function CompaniesList({ onChanged }: Props) {
     else { payload.created_by = user?.id; payload.owner_id = user?.id; ({ error } = await (supabase as any).from('crm_companies').insert(payload)); }
     setSaving(false);
     if (error) { toast({ title: 'Save failed', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: editing ? 'Company updated' : 'Company created' });
+    toast({ title: editing ? 'Account updated' : 'Account created' });
     setOpen(false); setEditing(null); load(); onChanged?.();
   };
 
@@ -64,7 +64,7 @@ export function CompaniesList({ onChanged }: Props) {
     if (!confirm(`Delete ${c.name}?`)) return;
     const { error } = await (supabase as any).from('crm_companies').delete().eq('id', c.id);
     if (error) { toast({ title: 'Delete failed', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: 'Company deleted' });
+    toast({ title: 'Account deleted' });
     load(); onChanged?.();
   };
 
@@ -75,11 +75,11 @@ export function CompaniesList({ onChanged }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-center justify-between">
-        <Input placeholder="Search companies…" value={filter} onChange={e => setFilter(e.target.value)} className="max-w-xs" />
-        <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> New Company</Button>
+        <Input placeholder="Search accounts…" value={filter} onChange={e => setFilter(e.target.value)} className="max-w-xs" />
+        <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> New Account</Button>
       </div>
       {filtered.length === 0 ? (
-        <Card><CardContent className="py-10 text-center text-muted-foreground">No companies yet.</CardContent></Card>
+        <Card><CardContent className="py-10 text-center text-muted-foreground">No accounts yet.</CardContent></Card>
       ) : (
         <div className="grid gap-2 md:grid-cols-2">
           {filtered.map(c => (
@@ -110,7 +110,7 @@ export function CompaniesList({ onChanged }: Props) {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editing ? 'Edit Company' : 'New Company'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? 'Edit Account' : 'New Account'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Name *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
