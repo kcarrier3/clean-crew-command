@@ -21,7 +21,7 @@ interface Summary {
   companies: number;
   contacts: number;
   leads: number;
-  deals: number;
+  opportunities: number;
   skipped: string[];
   errors: string[];
 }
@@ -107,7 +107,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
   const handleImport = async () => {
     if (!files.length) return;
     setRunning(true); setSummary(null); setProgress(2);
-    const s: Summary = { companies: 0, contacts: 0, leads: 0, deals: 0, skipped: [], errors: [] };
+    const s: Summary = { companies: 0, contacts: 0, leads: 0, opportunities: 0, skipped: [], errors: [] };
 
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -230,47 +230,40 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
         }
       } else s.skipped.push('Lead.csv');
 
-      // Opportunities -> crm_deals (needs stage_id)
+      // Opportunities -> crm_leads (Opportunities tab)
       setStatus('Importing Opportunities...');
       if (opps?.length) {
-        const { data: stagesData } = await (supabase as any)
-          .from('crm_pipeline_stages').select('*').eq('active', true).order('sort_order');
-        const stages = stagesData || [];
-        const wonStage = stages.find((s: any) => s.is_won) || stages[stages.length - 1];
-        const lostStage = stages.find((s: any) => s.is_lost) || stages[stages.length - 1];
-        const defaultStage = stages.find((s: any) => !s.is_won && !s.is_lost) || stages[0];
-
-        if (!defaultStage) {
-          s.errors.push('Opportunities: no pipeline stages configured.');
-        } else {
-          for (let i = 0; i < opps.length; i += 200) {
-            const chunk = opps.slice(i, i + 200).map(r => {
-              const sfStage = pick(r, 'StageName', 'Stage').toLowerCase();
-              const isWon = sfStage.includes('closed won') || sfStage === 'won';
-              const isLost = sfStage.includes('closed lost') || sfStage === 'lost';
-              const stage = isWon ? wonStage : isLost ? lostStage : defaultStage;
-              const sfAcctId = pick(r, 'AccountId', 'Account ID');
-              const closeDate = parseDate(pick(r, 'CloseDate', 'Close Date'));
-              return {
-                name: pick(r, 'Name', 'Opportunity Name') || 'Untitled Opportunity',
-                stage_id: stage.id,
-                value: parseNum(pick(r, 'Amount')),
-                expected_close_date: closeDate,
-                probability: Number(pick(r, 'Probability')) || null,
-                company_id: sfAcctId ? sfIdToCompanyId.get(sfAcctId) || null : null,
-                won_at: isWon ? (closeDate ? new Date(closeDate).toISOString() : new Date().toISOString()) : null,
-                lost_at: isLost ? (closeDate ? new Date(closeDate).toISOString() : new Date().toISOString()) : null,
-                lost_reason: isLost ? pick(r, 'LossReason', 'Loss Reason') || null : null,
-                notes: pick(r, 'Description') || null,
-                owner_id: uid,
-                created_by: uid,
-              };
-            });
-            const { error, count } = await (supabase as any).from('crm_deals').insert(chunk, { count: 'exact' });
-            if (error) { s.errors.push(`Opportunities: ${error.message}`); break; }
-            s.deals += count || chunk.length;
-            setProgress(75 + Math.round(((i + 200) / opps.length) * 20));
-          }
+        for (let i = 0; i < opps.length; i += 200) {
+          const chunk = opps.slice(i, i + 200).map(r => {
+            const sfStage = pick(r, 'StageName', 'Stage').toLowerCase();
+            const isWon = sfStage.includes('closed won') || sfStage === 'won';
+            const isLost = sfStage.includes('closed lost') || sfStage === 'lost';
+            const status = isWon ? 'converted'
+              : isLost ? 'unqualified'
+              : sfStage.includes('qualif') || sfStage.includes('proposal') || sfStage.includes('negotiat') ? 'qualified'
+              : sfStage.includes('prospect') || sfStage.includes('contact') ? 'contacted'
+              : 'new';
+            const sfAcctId = pick(r, 'AccountId', 'Account ID');
+            const oppName = pick(r, 'Name', 'Opportunity Name');
+            return {
+              company_name: pick(r, 'Account Name', 'AccountName') || oppName || 'Untitled Opportunity',
+              contact_name: oppName || null,
+              source: pick(r, 'LeadSource', 'Lead Source', 'Type') || null,
+              status,
+              company_id: sfAcctId ? sfIdToCompanyId.get(sfAcctId) || null : null,
+              notes: [
+                pick(r, 'Description'),
+                pick(r, 'Amount') && `Amount: ${pick(r, 'Amount')}`,
+                pick(r, 'CloseDate', 'Close Date') && `Close: ${pick(r, 'CloseDate', 'Close Date')}`,
+                pick(r, 'StageName', 'Stage') && `Stage: ${pick(r, 'StageName', 'Stage')}`,
+              ].filter(Boolean).join('\n') || null,
+              created_by: uid,
+            };
+          });
+          const { error, count } = await (supabase as any).from('crm_leads').insert(chunk, { count: 'exact' });
+          if (error) { s.errors.push(`Opportunities: ${error.message}`); break; }
+          s.opportunities += count || chunk.length;
+          setProgress(75 + Math.round(((i + 200) / opps.length) * 20));
         }
       } else s.skipped.push('Opportunity.csv');
 
@@ -278,7 +271,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
       setStatus('Done');
       setSummary(s);
       onImported();
-      toast({ title: 'Import complete', description: `${s.companies} companies, ${s.contacts} contacts, ${s.leads} leads, ${s.deals} deals` });
+      toast({ title: 'Import complete', description: `${s.companies} accounts, ${s.contacts} contacts, ${s.leads + s.opportunities} opportunities` });
     } catch (err: any) {
       s.errors.push(err.message || String(err));
       setSummary(s);
@@ -296,7 +289,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           <DialogDescription>
             Upload the <strong>.zip</strong> from <em>Setup → Data Export</em>, or drop in one or more
             Salesforce <strong>.csv</strong> exports (Account, Contact, Lead, Opportunity). UTF-8 and UTF-16
-            files are both supported. Accounts → Companies, Opportunities → Deals.
+            files are both supported. Accounts → Accounts, and both Leads and Opportunities → Opportunities tab.
           </DialogDescription>
         </DialogHeader>
 
@@ -329,10 +322,10 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-green-600"><CheckCircle2 className="h-5 w-5" /> Import finished</div>
             <ul className="text-sm space-y-1">
-              <li>Companies: <strong>{summary.companies}</strong></li>
+              <li>Accounts: <strong>{summary.companies}</strong></li>
               <li>Contacts: <strong>{summary.contacts}</strong></li>
-              <li>Leads: <strong>{summary.leads}</strong></li>
-              <li>Deals: <strong>{summary.deals}</strong></li>
+              <li>Opportunities (from Leads): <strong>{summary.leads}</strong></li>
+              <li>Opportunities (from Opportunities): <strong>{summary.opportunities}</strong></li>
             </ul>
             {summary.skipped.length > 0 && (
               <p className="text-sm text-muted-foreground">Not found in ZIP: {summary.skipped.join(', ')}</p>
