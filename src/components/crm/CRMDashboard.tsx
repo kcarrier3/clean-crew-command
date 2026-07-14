@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Briefcase, DollarSign, Bell, Users } from 'lucide-react';
+import { Briefcase, DollarSign, Bell, Users, FileArchive } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PipelineBoard } from './PipelineBoard';
@@ -16,6 +17,7 @@ import { InvoicesList } from './InvoicesList';
 import { MeetingsList } from './MeetingsList';
 import { EmailLogsList } from './EmailLogsList';
 import { CRMReports } from './CRMReports';
+import { SalesforceImportDialog } from './SalesforceImportDialog';
 import type { CrmDeal, CrmLead, CrmStage } from './types';
 
 export default function CRMDashboard() {
@@ -27,6 +29,7 @@ export default function CRMDashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<CrmDeal | null>(null);
   const [tab, setTab] = useState('pipeline');
+  const [importOpen, setImportOpen] = useState(false);
 
   const loadAll = async () => {
     const [{ data: s }, { data: d }, { data: l }, { count }] = await Promise.all([
@@ -61,6 +64,11 @@ export default function CRMDashboard() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+          <FileArchive className="h-4 w-4 mr-2" /> Import from Salesforce
+        </Button>
+      </div>
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-4">
@@ -160,6 +168,12 @@ export default function CRMDashboard() {
         stages={stages}
         leads={leads}
         onChanged={loadAll}
+      />
+
+      <SalesforceImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={loadAll}
       />
 
       <p className="text-sm text-center mt-8">
