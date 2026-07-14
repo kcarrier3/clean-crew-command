@@ -289,7 +289,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           <DialogDescription>
             Upload the <strong>.zip</strong> from <em>Setup → Data Export</em>, or drop in one or more
             Salesforce <strong>.csv</strong> exports (Account, Contact, Lead, Opportunity). UTF-8 and UTF-16
-            files are both supported. Accounts → Companies, Opportunities → Deals.
+            files are both supported. Accounts → Accounts, and both Leads and Opportunities → Opportunities tab.
           </DialogDescription>
         </DialogHeader>
 
