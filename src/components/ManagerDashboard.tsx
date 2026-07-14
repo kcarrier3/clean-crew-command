@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import TimeClock from './TimeClock';
 import BudgetReports from './BudgetReports';
+import AccountCostReport from './AccountCostReport';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Employee {
@@ -190,11 +191,12 @@ const ManagerDashboard = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="timeclock" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="timeclock">Time Clock</TabsTrigger>
           <TabsTrigger value="active">Active Sessions</TabsTrigger>
           <TabsTrigger value="reports">Today's Report</TabsTrigger>
           <TabsTrigger value="budget">Budget Reports</TabsTrigger>
+          <TabsTrigger value="account-cost">Account Cost</TabsTrigger>
         </TabsList>
 
         <TabsContent value="timeclock">
@@ -325,6 +327,10 @@ const ManagerDashboard = () => {
 
         <TabsContent value="budget">
           <BudgetReports />
+        </TabsContent>
+
+        <TabsContent value="account-cost">
+          <AccountCostReport />
         </TabsContent>
       </Tabs>
     </div>
