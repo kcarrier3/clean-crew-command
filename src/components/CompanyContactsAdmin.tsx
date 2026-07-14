@@ -11,6 +11,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { DIRECTORY_CATEGORIES, categoryLabel } from '@/lib/directoryCategories';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CompanyContact {
   id: string;
@@ -20,9 +22,10 @@ interface CompanyContact {
   email: string | null;
   notes: string | null;
   display_order: number;
+  category: string | null;
 }
 
-const blank = { name: '', title: '', phone: '', email: '', notes: '', display_order: 0 };
+const blank = { name: '', title: '', phone: '', email: '', notes: '', display_order: 0, category: '' };
 
 const MANAGER_TITLES = ['Owner', 'Administrator', 'Janitorial Manager', 'Project Crew Lead'];
 
@@ -71,6 +74,7 @@ export default function CompanyContactsAdmin() {
         email: editing.email || '',
         notes: editing.notes || '',
         display_order: editing.display_order,
+        category: editing.category || '',
       });
     } else {
       setForm(blank);
@@ -87,6 +91,7 @@ export default function CompanyContactsAdmin() {
       email: form.email || null,
       notes: form.notes || null,
       display_order: Number(form.display_order) || 0,
+      category: form.category || null,
     };
     let error;
     if (editing) {
