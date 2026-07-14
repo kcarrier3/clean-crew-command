@@ -19,6 +19,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RoleManagement } from '@/components/RoleManagement';
 import DepartmentManagement from '@/components/DepartmentManagement';
 import CompanyContactsAdmin from '@/components/CompanyContactsAdmin';
+import DirectoryAccessRules from '@/components/DirectoryAccessRules';
 
 interface Employee {
   id: string;
@@ -843,6 +844,7 @@ const TeamManagement = () => {
 
         <TabsContent value="contacts" className="space-y-6 mt-6">
           <CompanyContactsAdmin />
+          <DirectoryAccessRules />
         </TabsContent>
       </Tabs>
 
