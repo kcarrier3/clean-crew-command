@@ -71,10 +71,10 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     }
     setSaving(false);
     if (error) {
-      toast({ title: 'Failed to save lead', description: error.message, variant: 'destructive' });
+      toast({ title: 'Failed to save opportunity', description: error.message, variant: 'destructive' });
       return;
     }
-    toast({ title: lead ? 'Lead updated' : 'Lead created' });
+    toast({ title: lead ? 'Opportunity updated' : 'Opportunity created' });
     onOpenChange(false);
     onSaved?.();
   };
@@ -83,7 +83,7 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{lead ? 'Edit Lead' : 'New Lead'}</DialogTitle>
+          <DialogTitle>{lead ? 'Edit Opportunity' : 'New Opportunity'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
