@@ -200,6 +200,52 @@ export type Database = {
           },
         ]
       }
+      company_contact_assignments: {
+        Row: {
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_contact_assignments_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "company_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_contact_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_contact_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_contacts: {
         Row: {
           created_at: string
