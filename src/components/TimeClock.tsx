@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText, AlertTriangle, QrCode } from 'lucide-react';
+import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText, AlertTriangle, QrCode, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
