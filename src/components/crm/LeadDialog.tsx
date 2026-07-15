@@ -866,3 +866,149 @@ function StagePath({ stages, currentIdx, onSelect }: { stages: CrmStage[]; curre
     </div>
   );
 }
+function RightRail({
+  activities,
+  chatter,
+  setChatter,
+  onLogActivity,
+  onPostChatter,
+  stages,
+  currentIdx,
+}: {
+  activities: any[];
+  chatter: string;
+  setChatter: (v: string) => void;
+  onLogActivity: (type: string, subject: string, body?: string) => Promise<void>;
+  onPostChatter: () => Promise<void>;
+  stages: CrmStage[];
+  currentIdx: number;
+}) {
+  const [tab, setTab] = useState('activity');
+  const [logType, setLogType] = useState<'call' | 'email' | 'task' | 'meeting'>('call');
+  const [logSubject, setLogSubject] = useState('');
+
+  const ACTIVITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+    call: Phone, email: Mail, task: CheckSquare, meeting: CalendarIcon, note: MessageSquare,
+  };
+
+  return (
+    <div className="bg-background rounded border flex flex-col">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="bg-transparent p-0 h-auto border-b w-full justify-start rounded-none gap-6 px-4">
+          <SfTab value="activity">Activity</SfTab>
+          <SfTab value="chatter">Chatter</SfTab>
+          <SfTab value="history">Stage History</SfTab>
+        </TabsList>
+
+        <TabsContent value="activity" className="p-4 space-y-4">
+          <div className="flex gap-1">
+            {(['call', 'email', 'task', 'meeting'] as const).map(t => {
+              const Icon = ACTIVITY_ICONS[t];
+              return (
+                <Button
+                  key={t}
+                  type="button"
+                  size="icon"
+                  variant={logType === t ? 'default' : 'outline'}
+                  className="h-9 w-9"
+                  onClick={() => setLogType(t)}
+                  title={`Log ${t}`}
+                >
+                  <Icon className="h-4 w-4" />
+                </Button>
+              );
+            })}
+          </div>
+          <div className="space-y-2">
+            <Input
+              placeholder={`Log a ${logType}...`}
+              value={logSubject}
+              onChange={e => setLogSubject(e.target.value)}
+            />
+            <Button
+              size="sm"
+              className="w-full"
+              disabled={!logSubject.trim()}
+              onClick={async () => {
+                await onLogActivity(logType, logSubject);
+                setLogSubject('');
+              }}
+            >
+              <Plus className="h-3 w-3 mr-1" /> Log {logType}
+            </Button>
+          </div>
+
+          <div className="space-y-3 max-h-[420px] overflow-y-auto">
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Upcoming & Overdue</div>
+            {activities.filter(a => a.due_at && !a.completed_at).length === 0 && (
+              <p className="text-xs text-muted-foreground">No upcoming activities.</p>
+            )}
+            <div className="text-xs font-semibold uppercase text-muted-foreground pt-2">Past Activity</div>
+            {activities.length === 0 && (
+              <p className="text-xs text-muted-foreground">No past activity yet. Log a call, email, task, or meeting above.</p>
+            )}
+            {activities.map(a => {
+              const Icon = ACTIVITY_ICONS[a.type] || ActivityIcon;
+              return (
+                <div key={a.id} className="flex items-start gap-2 border-l-2 border-primary/40 pl-3 py-1">
+                  <Icon className="h-4 w-4 mt-0.5 text-primary" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{a.subject}</p>
+                    {a.body && <p className="text-xs text-muted-foreground whitespace-pre-wrap">{a.body}</p>}
+                    <p className="text-[10px] text-muted-foreground mt-0.5 uppercase">
+                      {a.type} · {new Date(a.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="chatter" className="p-4 space-y-3">
+          <p className="text-xs text-muted-foreground">Share an update with your team about this opportunity.</p>
+          <Textarea rows={3} placeholder="Post an update..." value={chatter} onChange={e => setChatter(e.target.value)} />
+          <Button size="sm" className="w-full" disabled={!chatter.trim()} onClick={onPostChatter}>Post</Button>
+          <div className="space-y-2 max-h-80 overflow-y-auto pt-2 border-t">
+            {activities.filter(a => a.type === 'note').length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">No posts yet.</p>
+            )}
+            {activities.filter(a => a.type === 'note').map(a => (
+              <div key={a.id} className="border rounded p-2">
+                <p className="text-sm whitespace-pre-wrap">{a.subject}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{new Date(a.created_at).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="p-4 space-y-2">
+          {stages.length === 0 && <p className="text-xs text-muted-foreground">No stages defined.</p>}
+          {stages.map((s, i) => {
+            const done = currentIdx >= 0 && i < currentIdx;
+            const current = i === currentIdx;
+            return (
+              <div key={s.id} className="flex items-center gap-3">
+                <div className={cn(
+                  'h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold',
+                  done ? 'bg-emerald-600 text-white' : current ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                )}>
+                  {done ? <Check className="h-3 w-3" /> : i + 1}
+                </div>
+                <div className="flex-1">
+                  <p className={cn('text-sm', current && 'font-semibold')}>{s.name}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">
+                    {done ? 'Completed' : current ? 'Current' : 'Upcoming'}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[10px] text-muted-foreground pt-2 border-t">
+            Detailed timestamps for stage transitions will appear here as history is captured.
+          </p>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
