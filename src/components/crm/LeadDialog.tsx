@@ -30,6 +30,7 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const [tab, setTab] = useState('details');
   const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
+  const [newNoteCategory, setNewNoteCategory] = useState<string>('general');
   const [files, setFiles] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [stages, setStages] = useState<CrmStage[]>([]);
@@ -47,7 +48,6 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     phone: '',
     source: '',
     status: 'new' as CrmLead['status'],
-    notes: '',
     close_date: '',
     amount: '',
     probability: '',
@@ -69,7 +69,6 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
         phone: lead.phone || '',
         source: lead.source || '',
         status: lead.status,
-        notes: lead.notes || '',
         close_date: lead.close_date || '',
         amount: lead.amount != null ? String(lead.amount) : '',
         probability: lead.probability != null ? String(lead.probability) : '',
@@ -81,7 +80,7 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       });
     } else {
       setForm({
-        company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new', notes: '',
+        company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new',
         close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '',
       });
     }
@@ -144,10 +143,11 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const addNote = async () => {
     if (!lead?.id || !newNote.trim()) return;
     const { error } = await (supabase as any).from('crm_lead_notes').insert({
-      lead_id: lead.id, content: newNote.trim(), created_by: user?.id,
+      lead_id: lead.id, content: newNote.trim(), category: newNoteCategory, created_by: user?.id,
     });
     if (error) { toast({ title: 'Failed to add note', description: error.message, variant: 'destructive' }); return; }
     setNewNote('');
+    setNewNoteCategory('general');
     loadNotes();
   };
 
@@ -217,7 +217,6 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       email: form.email || null,
       phone: form.phone || null,
       source: form.source || null,
-      notes: form.notes || null,
       close_date: form.close_date || null,
       amount: form.amount === '' ? null : Number(form.amount),
       probability: form.probability === '' ? null : Number(form.probability),
