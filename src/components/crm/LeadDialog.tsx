@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, FileText, Trash2, Download, Briefcase, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Upload, FileText, Trash2, Download, Briefcase, Check, ChevronDown, ChevronRight, ChevronsUpDown, Building2, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage } from './types';
+import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact } from './types';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -31,11 +33,15 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const [files, setFiles] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [stages, setStages] = useState<CrmStage[]>([]);
+  const [companies, setCompanies] = useState<CrmCompany[]>([]);
+  const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [owner, setOwner] = useState<{ full_name: string | null } | null>(null);
   const [addlOpen, setAddlOpen] = useState(true);
   const [sysOpen, setSysOpen] = useState(true);
   const [form, setForm] = useState({
+    company_id: '',
     company_name: '',
+    primary_contact_id: '',
     contact_name: '',
     email: '',
     phone: '',
@@ -55,7 +61,9 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   useEffect(() => {
     if (lead) {
       setForm({
+        company_id: lead.company_id || '',
         company_name: lead.company_name || '',
+        primary_contact_id: lead.primary_contact_id || '',
         contact_name: lead.contact_name || '',
         email: lead.email || '',
         phone: lead.phone || '',
@@ -73,14 +81,14 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       });
     } else {
       setForm({
-        company_name: '', contact_name: '', email: '', phone: '', source: '', status: 'new', notes: '',
+        company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new', notes: '',
         close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '',
       });
     }
   }, [lead, open]);
 
   useEffect(() => {
-    if (open) loadStages();
+    if (open) { loadStages(); loadCompanies(); loadContacts(); }
     if (open && lead?.id) {
       loadNotes();
       loadFiles();
@@ -97,6 +105,18 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     const { data } = await (supabase as any)
       .from('crm_pipeline_stages').select('*').eq('active', true).order('sort_order');
     setStages(data || []);
+  };
+
+  const loadCompanies = async () => {
+    const { data } = await (supabase as any)
+      .from('crm_companies').select('*').order('name');
+    setCompanies(data || []);
+  };
+
+  const loadContacts = async () => {
+    const { data } = await (supabase as any)
+      .from('crm_contacts').select('*').order('last_name', { nullsFirst: false });
+    setContacts(data || []);
   };
 
   const loadOwner = async () => {
@@ -178,14 +198,21 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   };
 
   const save = async () => {
-    if (!form.company_name.trim()) {
-      toast({ title: 'Account name required', variant: 'destructive' });
+    if (!form.company_id) {
+      toast({
+        title: 'Account required',
+        description: 'Every opportunity must be linked to an existing account. Create the account first on the Accounts tab.',
+        variant: 'destructive',
+      });
       return;
     }
+    const linkedCompany = companies.find(c => c.id === form.company_id);
     setSaving(true);
     const payload: any = {
       ...form,
-      company_name: form.company_name.trim(),
+      company_id: form.company_id,
+      company_name: (linkedCompany?.name || form.company_name || '').trim(),
+      primary_contact_id: form.primary_contact_id || null,
       contact_name: form.contact_name || null,
       email: form.email || null,
       phone: form.phone || null,
