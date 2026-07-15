@@ -592,6 +592,40 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Office punch-in shortcut for fixed-expense staff (worker view only) */}
+          {!forManager && isOfficeEligible && officeSite && !isClockedInAsSelf && (
+            <div className="mb-4 p-4 border rounded-lg bg-muted/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <div className="text-sm text-muted-foreground">Fixed-expense staff</div>
+                <div className="font-semibold flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Punch in at {officeSite.name}
+                </div>
+                {officeSite.address && (
+                  <div className="text-xs text-muted-foreground">{officeSite.address}</div>
+                )}
+              </div>
+              <Button
+                onClick={punchInAtOffice}
+                disabled={isGettingLocation}
+                size="lg"
+                className="min-w-[160px]"
+              >
+                {isGettingLocation ? (
+                  <>
+                    <MapPin className="h-4 w-4 mr-2 animate-pulse" />
+                    Getting Location...
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="h-5 w-5 mr-2" />
+                    Clock In at Office
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
           {isJanitorialWorker && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="text-center space-y-1">
