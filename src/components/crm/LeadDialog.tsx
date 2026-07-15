@@ -556,6 +556,119 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       </div>
     );
   }
+
+  function renderContactsTab() {
+    if (!form.company_id) {
+      return <p className="text-sm text-muted-foreground text-center py-8">Set an account first to see its contacts.</p>;
+    }
+    if (contactsForAccount.length === 0) {
+      return <p className="text-sm text-muted-foreground text-center py-8">No contacts yet for this account. Add one on the Contacts tab.</p>;
+    }
+    return (
+      <div className="space-y-2">
+        {contactsForAccount.map(c => {
+          const name = `${c.first_name} ${c.last_name || ''}`.trim();
+          const isPrimary = c.id === form.primary_contact_id;
+          return (
+            <div key={c.id} className="border rounded p-3 flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium truncate">{name}</p>
+                  {isPrimary && <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-primary text-primary-foreground">Primary</span>}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{c.title || '—'} · {c.email || 'no email'}</p>
+              </div>
+              {!isPrimary && (
+                <Button size="sm" variant="outline" onClick={() => updateLeadField({ primary_contact_id: c.id })}>
+                  Make primary
+                </Button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderCasesTab() {
+    return (
+      <div className="text-center py-12 border-2 border-dashed rounded">
+        <p className="text-sm font-medium">No cases yet</p>
+        <p className="text-xs text-muted-foreground mt-1">Support cases tied to this opportunity will appear here.</p>
+      </div>
+    );
+  }
+
+  function renderNotesFilesTab() {
+    return (
+      <>
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold">Notes ({notes.length})</h3>
+          <div className="space-y-2 border rounded p-3 bg-muted/30">
+            <p className="text-xs text-muted-foreground">
+              Log customer notes here — billing questions, requests, concerns, or general updates.
+            </p>
+            <Textarea rows={3} placeholder="What did the customer say?" value={newNote} onChange={e => setNewNote(e.target.value)} />
+            <div className="flex items-center gap-2">
+              <Select value={newNoteCategory} onValueChange={setNewNoteCategory}>
+                <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {NOTE_CATEGORIES.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>Add Note</Button>
+            </div>
+          </div>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {notes.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>}
+            {notes.map(n => (
+              <div key={n.id} className="border rounded p-3 group">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <NoteCategoryBadge category={n.category} />
+                    <p className="text-sm whitespace-pre-wrap">{n.content}</p>
+                  </div>
+                  <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteNote(n.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">{new Date(n.created_at).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold">Files ({files.length})</h3>
+          <label className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center gap-2 cursor-pointer hover:bg-muted/50">
+            <Upload className="h-6 w-6 text-muted-foreground" />
+            <span className="text-sm">{uploading ? 'Uploading...' : 'Click to upload a file (max 25MB)'}</span>
+            <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+          </label>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {files.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No files yet</p>}
+            {files.map(f => (
+              <div key={f.id} className="border rounded p-3 flex items-center gap-3">
+                <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{f.file_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {f.file_size ? `${(f.file_size / 1024).toFixed(1)} KB` : ''} · {new Date(f.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => deleteFile(f)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      </>
+    );
+  }
 }
 
 function HighlightField({ label, value, link, strong }: { label: string; value: string; link?: boolean; strong?: boolean }) {
