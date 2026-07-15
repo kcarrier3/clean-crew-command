@@ -379,84 +379,54 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
         )}
 
         {/* Tabs */}
-        <div className="bg-background px-6 pt-4">
+        <div className="bg-slate-100 dark:bg-slate-900 px-6 pt-4 pb-6">
         {lead?.id ? (
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="bg-transparent p-0 h-auto border-b w-full justify-start rounded-none gap-6">
-              <SfTab value="details">Details</SfTab>
-              <SfTab value="notes">Notes ({notes.length})</SfTab>
-              <SfTab value="files">Files ({files.length})</SfTab>
-            </TabsList>
-            <TabsContent value="details" className="space-y-6 pt-6 pb-6">
-              {renderDetails()}
-            </TabsContent>
-            <TabsContent value="notes" className="space-y-3 pt-6 pb-6">
-              <div className="space-y-2 border rounded p-3 bg-muted/30">
-                <p className="text-xs text-muted-foreground">
-                  Log customer notes here — billing questions, requests, concerns, or general updates.
-                </p>
-                <Textarea rows={3} placeholder="What did the customer say?" value={newNote} onChange={e => setNewNote(e.target.value)} />
-                <div className="flex items-center gap-2">
-                  <Select value={newNoteCategory} onValueChange={setNewNoteCategory}>
-                    <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {NOTE_CATEGORIES.map(c => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>Add Note</Button>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {notes.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>}
-                {notes.map(n => (
-                  <div key={n.id} className="border rounded p-3 group">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <NoteCategoryBadge category={n.category} />
-                        <p className="text-sm whitespace-pre-wrap">{n.content}</p>
-                      </div>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteNote(n.id)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">{new Date(n.created_at).toLocaleString()}</p>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-            <TabsContent value="files" className="space-y-3 pt-6 pb-6">
-              <label className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center gap-2 cursor-pointer hover:bg-muted/50">
-                <Upload className="h-6 w-6 text-muted-foreground" />
-                <span className="text-sm">{uploading ? 'Uploading...' : 'Click to upload a file (max 25MB)'}</span>
-                <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
-              </label>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {files.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No files yet</p>}
-                {files.map(f => (
-                  <div key={f.id} className="border rounded p-3 flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{f.file_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {f.file_size ? `${(f.file_size / 1024).toFixed(1)} KB` : ''} · {new Date(f.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Button size="icon" variant="ghost" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => deleteFile(f)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-4">
+            <div className="bg-background rounded border">
+              <Tabs value={tab} onValueChange={setTab}>
+                <TabsList className="bg-transparent p-0 h-auto border-b w-full justify-start rounded-none gap-6 px-4">
+                  <SfTab value="details">Details</SfTab>
+                  <SfTab value="contacts">Contacts ({contactsForAccount.length})</SfTab>
+                  <SfTab value="cases">Cases</SfTab>
+                  <SfTab value="notesfiles">Notes &amp; Files ({notes.length + files.length})</SfTab>
+                </TabsList>
+                <TabsContent value="details" className="space-y-6 pt-6 pb-6 px-4">
+                  {renderDetails()}
+                </TabsContent>
+                <TabsContent value="contacts" className="pt-6 pb-6 px-4">
+                  {renderContactsTab()}
+                </TabsContent>
+                <TabsContent value="cases" className="pt-6 pb-6 px-4">
+                  {renderCasesTab()}
+                </TabsContent>
+                <TabsContent value="notesfiles" className="space-y-8 pt-6 pb-6 px-4">
+                  {renderNotesFilesTab()}
+                </TabsContent>
+              </Tabs>
+            </div>
+            <RightRail
+              activities={activities}
+              chatter={chatter}
+              setChatter={setChatter}
+              onLogActivity={addActivity}
+              stages={stages}
+              currentIdx={currentStageIdx}
+              onPostChatter={async () => {
+                if (!chatter.trim()) return;
+                await addActivity('note', chatter.trim());
+                setChatter('');
+              }}
+            />
+          </div>
         ) : (
-          <div className="space-y-6 pt-4 pb-6">{renderDetails()}</div>
+          <div className="bg-background rounded border px-4 py-4">
+            <div className="space-y-6">{renderDetails()}</div>
+          </div>
         )}
         </div>
         <DialogFooter className="px-6 py-4 bg-background border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {(tab === 'details' || !lead?.id) && (
+          {!lead?.id && (
             <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
           )}
         </DialogFooter>
