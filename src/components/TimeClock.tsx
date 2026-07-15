@@ -337,8 +337,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     return distance <= radius;
   };
 
-  const clockIn = async () => {
-    if (!selectedEmployee || !selectedJobSite) {
+  const clockIn = async (jobSiteIdOverride?: string) => {
+    const jobSiteId = jobSiteIdOverride || selectedJobSite;
+    if (!selectedEmployee || !jobSiteId) {
       toast({ title: 'Error', description: 'Please select an employee and account', variant: 'destructive' });
       return;
     }
@@ -372,7 +373,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     const isManagerOverride = forManager && isManager();
 
     // Enforce early clock-in limit against today's scheduled start (skip for manager override).
-    if (!isManagerOverride && scheduledJobSite && scheduledJobSite.job_site_id === selectedJobSite) {
+    if (!isManagerOverride && scheduledJobSite && scheduledJobSite.job_site_id === jobSiteId) {
       const [h, m] = scheduledJobSite.start_time.split(':').map(Number);
       const shiftStart = new Date();
       shiftStart.setHours(h || 0, m || 0, 0, 0);
@@ -425,7 +426,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
         .from('time_entries')
         .insert({
           employee_id: selectedEmployee,
-          job_site_id: selectedJobSite,
+          job_site_id: jobSiteId,
           clock_in: new Date().toISOString(),
           location_lat: location?.lat ?? null,
           location_lng: location?.lng ?? null,
