@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, DollarSign, Clock, Package, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
-type JobSite = { id: string; name: string };
+type JobSite = { id: string; name: string; is_office?: boolean | null };
 type TimeEntry = {
   id: string;
   employee_id: string;
@@ -65,7 +65,7 @@ export default function AccountCostReport() {
     const endIso = new Date(endDate + 'T23:59:59').toISOString();
 
     const [{ data: js }, { data: te }, { data: pr }, { data: mv }] = await Promise.all([
-      supabase.from('job_sites').select('id, name').eq('active', true).order('name'),
+      supabase.from('job_sites').select('id, name, is_office').eq('active', true).order('name'),
       supabase.from('time_entries')
         .select('id, employee_id, job_site_id, clock_in, clock_out, break_minutes')
         .gte('clock_in', startIso).lte('clock_in', endIso)
@@ -146,6 +146,14 @@ export default function AccountCostReport() {
     { hours: 0, labor: 0, supply: 0, revenue: 0, total: 0 }
   ), [rows]);
 
+  const overhead = useMemo(() => rows
+    .filter(r => r.jobSite.is_office)
+    .reduce((acc, r) => ({
+      hours: acc.hours + r.hours,
+      labor: acc.labor + r.laborCost,
+      supply: acc.supply + r.supplyCost,
+    }), { hours: 0, labor: 0, supply: 0 }), [rows]);
+
   const exportCsv = () => {
     const lines = ['Account,Hours,Labor Cost,Supply Cost,Total Cost,Supply Revenue'];
     for (const r of rows) {
@@ -197,6 +205,18 @@ export default function AccountCostReport() {
         <Card><CardContent className="p-4"><div className="text-muted-foreground text-sm">Total cost</div><div className="text-2xl font-bold">{fmtMoney(totals.total)}</div></CardContent></Card>
       </div>
 
+      {overhead.hours > 0 && (
+        <Card className="border-amber-300 bg-amber-50/50">
+          <CardContent className="p-4 flex flex-wrap gap-6 items-center">
+            <div className="text-sm font-semibold text-amber-900">Overhead (Office)</div>
+            <div className="text-sm"><span className="text-muted-foreground">Hours: </span><span className="font-semibold">{overhead.hours.toFixed(1)}</span></div>
+            <div className="text-sm"><span className="text-muted-foreground">Labor: </span><span className="font-semibold">{fmtMoney(overhead.labor)}</span></div>
+            <div className="text-sm"><span className="text-muted-foreground">Supplies: </span><span className="font-semibold">{fmtMoney(overhead.supply)}</span></div>
+            <div className="text-xs text-muted-foreground">Fixed-expense staff (office managers, floaters, supply) punched in at the office. Construction/project managers continue to cost to their job sites.</div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -220,7 +240,12 @@ export default function AccountCostReport() {
                         {expanded[r.jobSite.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </Button>
                     </TableCell>
-                    <TableCell className="font-medium">{r.jobSite.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {r.jobSite.name}
+                      {r.jobSite.is_office && (
+                        <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">Overhead</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">{r.hours.toFixed(2)}</TableCell>
                     <TableCell className="text-right">{fmtMoney(r.laborCost)}</TableCell>
                     <TableCell className="text-right">{fmtMoney(r.supplyCost)}</TableCell>
