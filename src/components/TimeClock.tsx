@@ -11,6 +11,17 @@ import { useJobSiteAccess } from '@/hooks/useJobSiteAccess';
 import { useNavigate } from 'react-router-dom';
 import QRScanner from './QRScanner';
 
+// Job titles allowed to punch in at the internal office without a scheduled shift.
+const OFFICE_ELIGIBLE_TITLES = [
+  'Owner',
+  'Administrator',
+  'Janitorial Manager',
+  'Floaters',
+  'Supply Management',
+  'Night Manager',
+  'Office Manager',
+];
+
 interface Employee {
   id: string;
   employee_id: string;
@@ -30,6 +41,7 @@ interface JobSite {
   special_instructions?: string | null;
   access_instructions?: string | null;
   safety_requirements?: string | null;
+  is_office?: boolean;
 }
 
 interface Schedule {
@@ -60,6 +72,7 @@ interface TimeClockProps {
 const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
+  const [officeSite, setOfficeSite] = useState<JobSite | null>(null);
   const [activeEntries, setActiveEntries] = useState<TimeEntry[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [selectedJobSite, setSelectedJobSite] = useState<string>('');
@@ -173,7 +186,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     if (error) {
       toast({ title: 'Error', description: 'Failed to fetch accounts', variant: 'destructive' });
     } else {
-      setJobSites(data || []);
+      const all = data || [];
+      setOfficeSite(all.find((s: any) => s.is_office) || null);
+      setJobSites(all.filter((s: any) => !s.is_office));
     }
   };
 
