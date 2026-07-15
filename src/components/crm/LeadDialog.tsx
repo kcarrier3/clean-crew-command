@@ -426,8 +426,8 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
         </div>
         <DialogFooter className="px-6 py-4 bg-background border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {!lead?.id && (
-            <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+          {(tab === 'details' || !lead?.id) && (
+            <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
           )}
         </DialogFooter>
       </DialogContent>
