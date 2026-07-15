@@ -406,16 +406,9 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
             </div>
             <RightRail
               activities={activities}
-              chatter={chatter}
-              setChatter={setChatter}
               onLogActivity={addActivity}
               stages={stages}
               currentIdx={currentStageIdx}
-              onPostChatter={async () => {
-                if (!chatter.trim()) return;
-                await addActivity('note', chatter.trim());
-                setChatter('');
-              }}
             />
           </div>
         ) : (
@@ -869,18 +862,12 @@ function StagePath({ stages, currentIdx, onSelect }: { stages: CrmStage[]; curre
 }
 function RightRail({
   activities,
-  chatter,
-  setChatter,
   onLogActivity,
-  onPostChatter,
   stages,
   currentIdx,
 }: {
   activities: any[];
-  chatter: string;
-  setChatter: (v: string) => void;
   onLogActivity: (type: string, subject: string, body?: string) => Promise<void>;
-  onPostChatter: () => Promise<void>;
   stages: CrmStage[];
   currentIdx: number;
 }) {
@@ -897,7 +884,6 @@ function RightRail({
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="bg-transparent p-0 h-auto border-b w-full justify-start rounded-none gap-6 px-4">
           <SfTab value="activity">Activity</SfTab>
-          <SfTab value="chatter">Chatter</SfTab>
           <SfTab value="history">Stage History</SfTab>
         </TabsList>
 
@@ -963,23 +949,6 @@ function RightRail({
                 </div>
               );
             })}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="chatter" className="p-4 space-y-3">
-          <p className="text-xs text-muted-foreground">Share an update with your team about this opportunity.</p>
-          <Textarea rows={3} placeholder="Post an update..." value={chatter} onChange={e => setChatter(e.target.value)} />
-          <Button size="sm" className="w-full" disabled={!chatter.trim()} onClick={onPostChatter}>Post</Button>
-          <div className="space-y-2 max-h-80 overflow-y-auto pt-2 border-t">
-            {activities.filter(a => a.type === 'note').length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">No posts yet.</p>
-            )}
-            {activities.filter(a => a.type === 'note').map(a => (
-              <div key={a.id} className="border rounded p-2">
-                <p className="text-sm whitespace-pre-wrap">{a.subject}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">{new Date(a.created_at).toLocaleString()}</p>
-              </div>
-            ))}
           </div>
         </TabsContent>
 
