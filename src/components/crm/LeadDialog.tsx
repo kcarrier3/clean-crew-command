@@ -552,7 +552,7 @@ function StagePath({ stages, currentIdx, onSelect }: { stages: CrmStage[]; curre
           >
             <span className="flex items-center gap-1 truncate px-3">
               {isDone && <Check className="h-3 w-3" />}
-              {isCurrent || isDone ? s.name : s.name}
+              <span className="truncate">{s.name}</span>
             </span>
           </button>
         );
