@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Upload, FileText, Trash2, Download, Briefcase, Check, ChevronDown, ChevronRight, ChevronsUpDown, Building2, User } from 'lucide-react';
+import { Upload, FileText, Trash2, Download, Briefcase, Check, ChevronDown, ChevronRight, ChevronsUpDown, Building2, User, Pencil, X, Phone, Mail, CheckSquare, Calendar as CalendarIcon, MessageSquare, History, Activity as ActivityIcon, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
