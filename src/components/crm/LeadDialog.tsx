@@ -16,6 +16,23 @@ import { useToast } from '@/hooks/use-toast';
 import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact } from './types';
 import { cn } from '@/lib/utils';
 
+const NOTE_CATEGORIES: { value: string; label: string; className: string }[] = [
+  { value: 'general', label: 'General', className: 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100' },
+  { value: 'billing', label: 'Billing', className: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100' },
+  { value: 'request', label: 'Request', className: 'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-100' },
+  { value: 'concern', label: 'Concern', className: 'bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-100' },
+  { value: 'other', label: 'Other', className: 'bg-purple-100 text-purple-900 dark:bg-purple-900/40 dark:text-purple-100' },
+];
+
+function NoteCategoryBadge({ category }: { category?: string | null }) {
+  const c = NOTE_CATEGORIES.find(x => x.value === (category || 'general')) || NOTE_CATEGORIES[0];
+  return (
+    <span className={cn('inline-block text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded', c.className)}>
+      {c.label}
+    </span>
+  );
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
