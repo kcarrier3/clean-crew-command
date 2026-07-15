@@ -580,6 +580,104 @@ function SfSection({ title, open, onToggle, children }: { title: string; open: b
   );
 }
 
+function AccountPicker({ companies, value, onChange }: { companies: CrmCompany[]; value: string; onChange: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = companies.find(c => c.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className="flex items-center gap-2 truncate">
+            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+            {selected ? selected.name : <span className="text-muted-foreground">Search accounts…</span>}
+          </span>
+          <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[--radix-popover-trigger-width] min-w-[280px]" align="start">
+        <Command>
+          <CommandInput placeholder="Type an account name…" />
+          <CommandList>
+            <CommandEmpty>No accounts match. Create one on the Accounts tab.</CommandEmpty>
+            <CommandGroup>
+              {companies.map(c => (
+                <CommandItem
+                  key={c.id}
+                  value={c.name}
+                  onSelect={() => { onChange(c.id); setOpen(false); }}
+                >
+                  <Check className={cn('mr-2 h-4 w-4', value === c.id ? 'opacity-100' : 'opacity-0')} />
+                  <span className="truncate">{c.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ContactPicker({ contacts, value, onChange, disabled }: { contacts: CrmContact[]; value: string; onChange: (id: string) => void; disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const selected = contacts.find(c => c.id === value);
+  const label = selected ? `${selected.first_name} ${selected.last_name || ''}`.trim() : '';
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          disabled={disabled}
+          className="w-full justify-between font-normal"
+        >
+          <span className="flex items-center gap-2 truncate">
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            {label || <span className="text-muted-foreground">{disabled ? 'Select an account first' : 'Search contacts…'}</span>}
+          </span>
+          <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[--radix-popover-trigger-width] min-w-[280px]" align="start">
+        <Command>
+          <CommandInput placeholder="Type a contact name…" />
+          <CommandList>
+            <CommandEmpty>No contacts for this account.</CommandEmpty>
+            <CommandGroup>
+              {value && (
+                <CommandItem value="__clear__" onSelect={() => { onChange(''); setOpen(false); }}>
+                  <Check className="mr-2 h-4 w-4 opacity-0" />
+                  <span className="text-muted-foreground">Clear selection</span>
+                </CommandItem>
+              )}
+              {contacts.map(c => {
+                const name = `${c.first_name} ${c.last_name || ''}`.trim();
+                return (
+                  <CommandItem
+                    key={c.id}
+                    value={name || c.email || c.id}
+                    onSelect={() => { onChange(c.id); setOpen(false); }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', value === c.id ? 'opacity-100' : 'opacity-0')} />
+                    <span className="truncate">{name}{c.title ? ` — ${c.title}` : ''}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function StagePath({ stages, currentIdx, onSelect }: { stages: CrmStage[]; currentIdx: number; onSelect: (id: string) => void }) {
   return (
     <div className="flex w-full overflow-x-auto">
