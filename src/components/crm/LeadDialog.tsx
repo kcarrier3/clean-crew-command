@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Upload, FileText, Trash2, Download, Briefcase, Check, ChevronDown, ChevronRight, ChevronsUpDown, Building2, User } from 'lucide-react';
+import { Upload, FileText, Trash2, Download, Briefcase, Check, ChevronDown, ChevronRight, ChevronsUpDown, Building2, User, Pencil, X, Phone, Mail, CheckSquare, Calendar as CalendarIcon, MessageSquare, History, Activity as ActivityIcon, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -53,6 +53,9 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const [stages, setStages] = useState<CrmStage[]>([]);
   const [companies, setCompanies] = useState<CrmCompany[]>([]);
   const [contacts, setContacts] = useState<CrmContact[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [chatter, setChatter] = useState('');
+  const [newActivity, setNewActivity] = useState<{ type: string; subject: string }>({ type: 'note', subject: '' });
   const [owner, setOwner] = useState<{ full_name: string | null } | null>(null);
   const [addlOpen, setAddlOpen] = useState(true);
   const [sysOpen, setSysOpen] = useState(true);
@@ -109,9 +112,11 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       loadNotes();
       loadFiles();
       loadOwner();
+      loadActivities();
     } else {
       setNotes([]);
       setFiles([]);
+      setActivities([]);
       setOwner(null);
       setTab('details');
     }
@@ -155,6 +160,30 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     const { data } = await (supabase as any)
       .from('crm_lead_files').select('*').eq('lead_id', lead.id).order('created_at', { ascending: false });
     setFiles(data || []);
+  };
+
+  const loadActivities = async () => {
+    if (!lead?.id) return;
+    const { data } = await (supabase as any)
+      .from('crm_activities').select('*').eq('lead_id', lead.id).order('created_at', { ascending: false });
+    setActivities(data || []);
+  };
+
+  const addActivity = async (type: string, subject: string, body?: string) => {
+    if (!lead?.id || !subject.trim()) return;
+    const { error } = await (supabase as any).from('crm_activities').insert({
+      lead_id: lead.id, type, subject: subject.trim(), body: body || null, created_by: user?.id, owner_id: user?.id,
+    });
+    if (error) { toast({ title: 'Failed to log activity', description: error.message, variant: 'destructive' }); return; }
+    loadActivities();
+  };
+
+  const updateLeadField = async (patch: Record<string, any>) => {
+    if (!lead?.id) { setForm(f => ({ ...f, ...patch })); return; }
+    setForm(f => ({ ...f, ...patch }));
+    const { error } = await (supabase as any).from('crm_leads').update(patch).eq('id', lead.id);
+    if (error) { toast({ title: 'Failed to save', description: error.message, variant: 'destructive' }); return; }
+    onSaved?.();
   };
 
   const addNote = async () => {
@@ -304,7 +333,7 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-100 dark:bg-slate-900">
+      <DialogContent className="max-w-7xl max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-100 dark:bg-slate-900">
         {/* Salesforce-style header strip */}
         <div className="px-6 pt-5 pb-3 bg-slate-200/60 dark:bg-slate-800/60 border-b">
           <div className="flex items-start gap-3">
@@ -350,85 +379,55 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
         )}
 
         {/* Tabs */}
-        <div className="bg-background px-6 pt-4">
+        <div className="bg-slate-100 dark:bg-slate-900 px-6 pt-4 pb-6">
         {lead?.id ? (
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="bg-transparent p-0 h-auto border-b w-full justify-start rounded-none gap-6">
-              <SfTab value="details">Details</SfTab>
-              <SfTab value="notes">Notes ({notes.length})</SfTab>
-              <SfTab value="files">Files ({files.length})</SfTab>
-            </TabsList>
-            <TabsContent value="details" className="space-y-6 pt-6 pb-6">
-              {renderDetails()}
-            </TabsContent>
-            <TabsContent value="notes" className="space-y-3 pt-6 pb-6">
-              <div className="space-y-2 border rounded p-3 bg-muted/30">
-                <p className="text-xs text-muted-foreground">
-                  Log customer notes here — billing questions, requests, concerns, or general updates.
-                </p>
-                <Textarea rows={3} placeholder="What did the customer say?" value={newNote} onChange={e => setNewNote(e.target.value)} />
-                <div className="flex items-center gap-2">
-                  <Select value={newNoteCategory} onValueChange={setNewNoteCategory}>
-                    <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {NOTE_CATEGORIES.map(c => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>Add Note</Button>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {notes.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>}
-                {notes.map(n => (
-                  <div key={n.id} className="border rounded p-3 group">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <NoteCategoryBadge category={n.category} />
-                        <p className="text-sm whitespace-pre-wrap">{n.content}</p>
-                      </div>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteNote(n.id)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">{new Date(n.created_at).toLocaleString()}</p>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-            <TabsContent value="files" className="space-y-3 pt-6 pb-6">
-              <label className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center gap-2 cursor-pointer hover:bg-muted/50">
-                <Upload className="h-6 w-6 text-muted-foreground" />
-                <span className="text-sm">{uploading ? 'Uploading...' : 'Click to upload a file (max 25MB)'}</span>
-                <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
-              </label>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {files.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No files yet</p>}
-                {files.map(f => (
-                  <div key={f.id} className="border rounded p-3 flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{f.file_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {f.file_size ? `${(f.file_size / 1024).toFixed(1)} KB` : ''} · {new Date(f.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Button size="icon" variant="ghost" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => deleteFile(f)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-4">
+            <div className="bg-background rounded border">
+              <Tabs value={tab} onValueChange={setTab}>
+                <TabsList className="bg-transparent p-0 h-auto border-b w-full justify-start rounded-none gap-6 px-4">
+                  <SfTab value="details">Details</SfTab>
+                  <SfTab value="contacts">Contacts ({contactsForAccount.length})</SfTab>
+                  <SfTab value="cases">Cases</SfTab>
+                  <SfTab value="notesfiles">Notes &amp; Files ({notes.length + files.length})</SfTab>
+                </TabsList>
+                <TabsContent value="details" className="space-y-6 pt-6 pb-6 px-4">
+                  {renderDetails()}
+                </TabsContent>
+                <TabsContent value="contacts" className="pt-6 pb-6 px-4">
+                  {renderContactsTab()}
+                </TabsContent>
+                <TabsContent value="cases" className="pt-6 pb-6 px-4">
+                  {renderCasesTab()}
+                </TabsContent>
+                <TabsContent value="notesfiles" className="space-y-8 pt-6 pb-6 px-4">
+                  {renderNotesFilesTab()}
+                </TabsContent>
+              </Tabs>
+            </div>
+            <RightRail
+              activities={activities}
+              chatter={chatter}
+              setChatter={setChatter}
+              onLogActivity={addActivity}
+              stages={stages}
+              currentIdx={currentStageIdx}
+              onPostChatter={async () => {
+                if (!chatter.trim()) return;
+                await addActivity('note', chatter.trim());
+                setChatter('');
+              }}
+            />
+          </div>
         ) : (
-          <div className="space-y-6 pt-4 pb-6">{renderDetails()}</div>
+          <div className="bg-background rounded border px-4 py-4">
+            <div className="space-y-6">{renderDetails()}</div>
+          </div>
         )}
         </div>
         <DialogFooter className="px-6 py-4 bg-background border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
           {(tab === 'details' || !lead?.id) && (
-            <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+            <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
           )}
         </DialogFooter>
       </DialogContent>
@@ -557,6 +556,119 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       </div>
     );
   }
+
+  function renderContactsTab() {
+    if (!form.company_id) {
+      return <p className="text-sm text-muted-foreground text-center py-8">Set an account first to see its contacts.</p>;
+    }
+    if (contactsForAccount.length === 0) {
+      return <p className="text-sm text-muted-foreground text-center py-8">No contacts yet for this account. Add one on the Contacts tab.</p>;
+    }
+    return (
+      <div className="space-y-2">
+        {contactsForAccount.map(c => {
+          const name = `${c.first_name} ${c.last_name || ''}`.trim();
+          const isPrimary = c.id === form.primary_contact_id;
+          return (
+            <div key={c.id} className="border rounded p-3 flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium truncate">{name}</p>
+                  {isPrimary && <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-primary text-primary-foreground">Primary</span>}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{c.title || '—'} · {c.email || 'no email'}</p>
+              </div>
+              {!isPrimary && (
+                <Button size="sm" variant="outline" onClick={() => updateLeadField({ primary_contact_id: c.id })}>
+                  Make primary
+                </Button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderCasesTab() {
+    return (
+      <div className="text-center py-12 border-2 border-dashed rounded">
+        <p className="text-sm font-medium">No cases yet</p>
+        <p className="text-xs text-muted-foreground mt-1">Support cases tied to this opportunity will appear here.</p>
+      </div>
+    );
+  }
+
+  function renderNotesFilesTab() {
+    return (
+      <>
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold">Notes ({notes.length})</h3>
+          <div className="space-y-2 border rounded p-3 bg-muted/30">
+            <p className="text-xs text-muted-foreground">
+              Log customer notes here — billing questions, requests, concerns, or general updates.
+            </p>
+            <Textarea rows={3} placeholder="What did the customer say?" value={newNote} onChange={e => setNewNote(e.target.value)} />
+            <div className="flex items-center gap-2">
+              <Select value={newNoteCategory} onValueChange={setNewNoteCategory}>
+                <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {NOTE_CATEGORIES.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>Add Note</Button>
+            </div>
+          </div>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {notes.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>}
+            {notes.map(n => (
+              <div key={n.id} className="border rounded p-3 group">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <NoteCategoryBadge category={n.category} />
+                    <p className="text-sm whitespace-pre-wrap">{n.content}</p>
+                  </div>
+                  <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteNote(n.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">{new Date(n.created_at).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold">Files ({files.length})</h3>
+          <label className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center gap-2 cursor-pointer hover:bg-muted/50">
+            <Upload className="h-6 w-6 text-muted-foreground" />
+            <span className="text-sm">{uploading ? 'Uploading...' : 'Click to upload a file (max 25MB)'}</span>
+            <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+          </label>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {files.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No files yet</p>}
+            {files.map(f => (
+              <div key={f.id} className="border rounded p-3 flex items-center gap-3">
+                <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{f.file_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {f.file_size ? `${(f.file_size / 1024).toFixed(1)} KB` : ''} · {new Date(f.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => deleteFile(f)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      </>
+    );
+  }
 }
 
 function HighlightField({ label, value, link, strong }: { label: string; value: string; link?: boolean; strong?: boolean }) {
@@ -572,9 +684,10 @@ function HighlightField({ label, value, link, strong }: { label: string; value: 
 
 function FieldRow({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
-    <div className="border-b pb-2">
-      <div className="text-xs text-muted-foreground mb-1">
-        {label}{required && <span className="text-destructive"> *</span>}
+    <div className="border-b pb-2 group">
+      <div className="text-xs text-muted-foreground mb-1 flex items-center justify-between">
+        <span>{label}{required && <span className="text-destructive"> *</span>}</span>
+        <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition" />
       </div>
       {children}
     </div>
@@ -707,6 +820,7 @@ function ContactPicker({ contacts, value, onChange, disabled }: { contacts: CrmC
 }
 
 function StagePath({ stages, currentIdx, onSelect }: { stages: CrmStage[]; currentIdx: number; onSelect: (id: string) => void }) {
+  void 0;
   return (
     <div className="flex w-full overflow-x-auto">
       {stages.map((s, i) => {
@@ -750,6 +864,152 @@ function StagePath({ stages, currentIdx, onSelect }: { stages: CrmStage[]; curre
           </button>
         );
       })}
+    </div>
+  );
+}
+function RightRail({
+  activities,
+  chatter,
+  setChatter,
+  onLogActivity,
+  onPostChatter,
+  stages,
+  currentIdx,
+}: {
+  activities: any[];
+  chatter: string;
+  setChatter: (v: string) => void;
+  onLogActivity: (type: string, subject: string, body?: string) => Promise<void>;
+  onPostChatter: () => Promise<void>;
+  stages: CrmStage[];
+  currentIdx: number;
+}) {
+  const [tab, setTab] = useState('activity');
+  const [logType, setLogType] = useState<'call' | 'email' | 'task' | 'meeting'>('call');
+  const [logSubject, setLogSubject] = useState('');
+
+  const ACTIVITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+    call: Phone, email: Mail, task: CheckSquare, meeting: CalendarIcon, note: MessageSquare,
+  };
+
+  return (
+    <div className="bg-background rounded border flex flex-col">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="bg-transparent p-0 h-auto border-b w-full justify-start rounded-none gap-6 px-4">
+          <SfTab value="activity">Activity</SfTab>
+          <SfTab value="chatter">Chatter</SfTab>
+          <SfTab value="history">Stage History</SfTab>
+        </TabsList>
+
+        <TabsContent value="activity" className="p-4 space-y-4">
+          <div className="flex gap-1">
+            {(['call', 'email', 'task', 'meeting'] as const).map(t => {
+              const Icon = ACTIVITY_ICONS[t];
+              return (
+                <Button
+                  key={t}
+                  type="button"
+                  size="icon"
+                  variant={logType === t ? 'default' : 'outline'}
+                  className="h-9 w-9"
+                  onClick={() => setLogType(t)}
+                  title={`Log ${t}`}
+                >
+                  <Icon className="h-4 w-4" />
+                </Button>
+              );
+            })}
+          </div>
+          <div className="space-y-2">
+            <Input
+              placeholder={`Log a ${logType}...`}
+              value={logSubject}
+              onChange={e => setLogSubject(e.target.value)}
+            />
+            <Button
+              size="sm"
+              className="w-full"
+              disabled={!logSubject.trim()}
+              onClick={async () => {
+                await onLogActivity(logType, logSubject);
+                setLogSubject('');
+              }}
+            >
+              <Plus className="h-3 w-3 mr-1" /> Log {logType}
+            </Button>
+          </div>
+
+          <div className="space-y-3 max-h-[420px] overflow-y-auto">
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Upcoming & Overdue</div>
+            {activities.filter(a => a.due_at && !a.completed_at).length === 0 && (
+              <p className="text-xs text-muted-foreground">No upcoming activities.</p>
+            )}
+            <div className="text-xs font-semibold uppercase text-muted-foreground pt-2">Past Activity</div>
+            {activities.length === 0 && (
+              <p className="text-xs text-muted-foreground">No past activity yet. Log a call, email, task, or meeting above.</p>
+            )}
+            {activities.map(a => {
+              const Icon = ACTIVITY_ICONS[a.type] || ActivityIcon;
+              return (
+                <div key={a.id} className="flex items-start gap-2 border-l-2 border-primary/40 pl-3 py-1">
+                  <Icon className="h-4 w-4 mt-0.5 text-primary" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{a.subject}</p>
+                    {a.body && <p className="text-xs text-muted-foreground whitespace-pre-wrap">{a.body}</p>}
+                    <p className="text-[10px] text-muted-foreground mt-0.5 uppercase">
+                      {a.type} · {new Date(a.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="chatter" className="p-4 space-y-3">
+          <p className="text-xs text-muted-foreground">Share an update with your team about this opportunity.</p>
+          <Textarea rows={3} placeholder="Post an update..." value={chatter} onChange={e => setChatter(e.target.value)} />
+          <Button size="sm" className="w-full" disabled={!chatter.trim()} onClick={onPostChatter}>Post</Button>
+          <div className="space-y-2 max-h-80 overflow-y-auto pt-2 border-t">
+            {activities.filter(a => a.type === 'note').length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">No posts yet.</p>
+            )}
+            {activities.filter(a => a.type === 'note').map(a => (
+              <div key={a.id} className="border rounded p-2">
+                <p className="text-sm whitespace-pre-wrap">{a.subject}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{new Date(a.created_at).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="p-4 space-y-2">
+          {stages.length === 0 && <p className="text-xs text-muted-foreground">No stages defined.</p>}
+          {stages.map((s, i) => {
+            const done = currentIdx >= 0 && i < currentIdx;
+            const current = i === currentIdx;
+            return (
+              <div key={s.id} className="flex items-center gap-3">
+                <div className={cn(
+                  'h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold',
+                  done ? 'bg-emerald-600 text-white' : current ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                )}>
+                  {done ? <Check className="h-3 w-3" /> : i + 1}
+                </div>
+                <div className="flex-1">
+                  <p className={cn('text-sm', current && 'font-semibold')}>{s.name}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">
+                    {done ? 'Completed' : current ? 'Current' : 'Upcoming'}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[10px] text-muted-foreground pt-2 border-t">
+            Detailed timestamps for stage transitions will appear here as history is captured.
+          </p>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
