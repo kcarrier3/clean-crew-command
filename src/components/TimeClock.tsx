@@ -3,13 +3,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText, AlertTriangle, QrCode } from 'lucide-react';
+import { Clock, PlayCircle, StopCircle, MapPin, Timer, Lock, Shield, FileText, AlertTriangle, QrCode, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useJobSiteAccess } from '@/hooks/useJobSiteAccess';
 import { useNavigate } from 'react-router-dom';
 import QRScanner from './QRScanner';
+
+// Job titles allowed to punch in at the internal office without a scheduled shift.
+const OFFICE_ELIGIBLE_TITLES = [
+  'Owner',
+  'Administrator',
+  'Janitorial Manager',
+  'Floaters',
+  'Supply Management',
+  'Night Manager',
+  'Office Manager',
+];
 
 interface Employee {
   id: string;
@@ -30,6 +41,7 @@ interface JobSite {
   special_instructions?: string | null;
   access_instructions?: string | null;
   safety_requirements?: string | null;
+  is_office?: boolean;
 }
 
 interface Schedule {
@@ -60,6 +72,7 @@ interface TimeClockProps {
 const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
+  const [officeSite, setOfficeSite] = useState<JobSite | null>(null);
   const [activeEntries, setActiveEntries] = useState<TimeEntry[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [selectedJobSite, setSelectedJobSite] = useState<string>('');
@@ -78,6 +91,19 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
 
   const isJanitorialWorker =
     !forManager && profile?.job_title === 'Janitorial Staff' && !isManager();
+
+  const isOfficeEligible =
+    !!profile?.job_title && OFFICE_ELIGIBLE_TITLES.includes(profile.job_title);
+
+  // Whether the current worker view is already clocked in.
+  const isClockedInAsSelf =
+    !!profile && activeEntries.some((e) => e.employee_id === profile.id);
+
+  const punchInAtOffice = async () => {
+    if (!officeSite) return;
+    setSelectedJobSite(officeSite.id);
+    await clockIn(officeSite.id);
+  };
 
   const handleScan = (text: string) => {
     setScannerOpen(false);
@@ -173,7 +199,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     if (error) {
       toast({ title: 'Error', description: 'Failed to fetch accounts', variant: 'destructive' });
     } else {
-      setJobSites(data || []);
+      const all = data || [];
+      setOfficeSite(all.find((s: any) => s.is_office) || null);
+      setJobSites(all.filter((s: any) => !s.is_office));
     }
   };
 
@@ -308,8 +336,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     return distance <= radius;
   };
 
-  const clockIn = async () => {
-    if (!selectedEmployee || !selectedJobSite) {
+  const clockIn = async (jobSiteIdOverride?: string) => {
+    const jobSiteId = jobSiteIdOverride || selectedJobSite;
+    if (!selectedEmployee || !jobSiteId) {
       toast({ title: 'Error', description: 'Please select an employee and account', variant: 'destructive' });
       return;
     }
@@ -343,7 +372,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     const isManagerOverride = forManager && isManager();
 
     // Enforce early clock-in limit against today's scheduled start (skip for manager override).
-    if (!isManagerOverride && scheduledJobSite && scheduledJobSite.job_site_id === selectedJobSite) {
+    if (!isManagerOverride && scheduledJobSite && scheduledJobSite.job_site_id === jobSiteId) {
       const [h, m] = scheduledJobSite.start_time.split(':').map(Number);
       const shiftStart = new Date();
       shiftStart.setHours(h || 0, m || 0, 0, 0);
@@ -396,7 +425,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
         .from('time_entries')
         .insert({
           employee_id: selectedEmployee,
-          job_site_id: selectedJobSite,
+          job_site_id: jobSiteId,
           clock_in: new Date().toISOString(),
           location_lat: location?.lat ?? null,
           location_lng: location?.lng ?? null,
@@ -563,6 +592,40 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Office punch-in shortcut for fixed-expense staff (worker view only) */}
+          {!forManager && isOfficeEligible && officeSite && !isClockedInAsSelf && (
+            <div className="mb-4 p-4 border rounded-lg bg-muted/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <div className="text-sm text-muted-foreground">Fixed-expense staff</div>
+                <div className="font-semibold flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Punch in at {officeSite.name}
+                </div>
+                {officeSite.address && (
+                  <div className="text-xs text-muted-foreground">{officeSite.address}</div>
+                )}
+              </div>
+              <Button
+                onClick={punchInAtOffice}
+                disabled={isGettingLocation}
+                size="lg"
+                className="min-w-[160px]"
+              >
+                {isGettingLocation ? (
+                  <>
+                    <MapPin className="h-4 w-4 mr-2 animate-pulse" />
+                    Getting Location...
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="h-5 w-5 mr-2" />
+                    Clock In at Office
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
           {isJanitorialWorker && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="text-center space-y-1">
@@ -592,7 +655,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                 </p>
               </div>
               <Button
-                onClick={clockIn}
+                onClick={() => clockIn()}
                 disabled={isGettingLocation}
                 size="lg"
                 className="w-full max-w-xs h-16 text-lg"
@@ -648,13 +711,18 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                     {site.name} {site.client_name ? `(${site.client_name})` : ''}
                   </SelectItem>
                 ))}
+                {officeSite && (
+                  <SelectItem key={officeSite.id} value={officeSite.id}>
+                    🏢 {officeSite.name} (Internal)
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
 
             {/* Clock In Button */}
             <div className="flex flex-col gap-2">
               <Button
-                onClick={clockIn}
+                onClick={() => clockIn()}
                 disabled={!selectedEmployee || !selectedJobSite || isGettingLocation}
                 className="w-full"
               >

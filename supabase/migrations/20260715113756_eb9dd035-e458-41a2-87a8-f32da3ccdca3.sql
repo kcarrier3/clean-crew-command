@@ -1,0 +1,2 @@
+ALTER TABLE public.job_sites ADD COLUMN IF NOT EXISTS is_office boolean NOT NULL DEFAULT false;
+CREATE UNIQUE INDEX IF NOT EXISTS job_sites_single_office_idx ON public.job_sites ((is_office)) WHERE is_office = true;
