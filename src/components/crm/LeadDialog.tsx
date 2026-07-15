@@ -521,10 +521,6 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
           </div>
         </SfSection>
 
-        <div>
-          <Label className="text-xs text-muted-foreground">Internal Notes</Label>
-          <Textarea rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
-        </div>
       </div>
     );
   }
