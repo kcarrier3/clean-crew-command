@@ -819,6 +819,7 @@ function ContactPicker({ contacts, value, onChange, disabled }: { contacts: CrmC
 }
 
 function StagePath({ stages, currentIdx, onSelect }: { stages: CrmStage[]; currentIdx: number; onSelect: (id: string) => void }) {
+  void 0;
   return (
     <div className="flex w-full overflow-x-auto">
       {stages.map((s, i) => {
