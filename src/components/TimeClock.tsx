@@ -92,6 +92,20 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const isJanitorialWorker =
     !forManager && profile?.job_title === 'Janitorial Staff' && !isManager();
 
+  const isOfficeEligible =
+    !!profile?.job_title && OFFICE_ELIGIBLE_TITLES.includes(profile.job_title);
+
+  // Whether the current worker view is already clocked in.
+  const isClockedInAsSelf =
+    !!profile && activeEntries.some((e) => e.employee_id === profile.id);
+
+  const punchInAtOffice = async () => {
+    if (!officeSite) return;
+    setSelectedJobSite(officeSite.id);
+    // Defer clockIn to next tick so state is applied
+    setTimeout(() => clockIn(), 0);
+  };
+
   const handleScan = (text: string) => {
     setScannerOpen(false);
     try {
