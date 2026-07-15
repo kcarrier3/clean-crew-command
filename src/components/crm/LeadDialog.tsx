@@ -345,16 +345,32 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
               {renderDetails()}
             </TabsContent>
             <TabsContent value="notes" className="space-y-3 pt-6 pb-6">
-              <div className="space-y-2">
-                <Textarea rows={3} placeholder="Add a note..." value={newNote} onChange={e => setNewNote(e.target.value)} />
-                <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>Add Note</Button>
+              <div className="space-y-2 border rounded p-3 bg-muted/30">
+                <p className="text-xs text-muted-foreground">
+                  Log customer notes here — billing questions, requests, concerns, or general updates.
+                </p>
+                <Textarea rows={3} placeholder="What did the customer say?" value={newNote} onChange={e => setNewNote(e.target.value)} />
+                <div className="flex items-center gap-2">
+                  <Select value={newNoteCategory} onValueChange={setNewNoteCategory}>
+                    <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {NOTE_CATEGORIES.map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>Add Note</Button>
+                </div>
               </div>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {notes.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>}
                 {notes.map(n => (
                   <div key={n.id} className="border rounded p-3 group">
                     <div className="flex justify-between items-start gap-2">
-                      <p className="text-sm whitespace-pre-wrap flex-1">{n.content}</p>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <NoteCategoryBadge category={n.category} />
+                        <p className="text-sm whitespace-pre-wrap">{n.content}</p>
+                      </div>
                       <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteNote(n.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
