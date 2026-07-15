@@ -54,7 +54,6 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const [companies, setCompanies] = useState<CrmCompany[]>([]);
   const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
-  const [chatter, setChatter] = useState('');
   const [newActivity, setNewActivity] = useState<{ type: string; subject: string }>({ type: 'note', subject: '' });
   const [owner, setOwner] = useState<{ full_name: string | null } | null>(null);
   const [addlOpen, setAddlOpen] = useState(true);
