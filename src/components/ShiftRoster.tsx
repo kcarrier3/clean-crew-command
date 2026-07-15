@@ -117,14 +117,18 @@ const ShiftRoster = () => {
     const [h, m] = r.startTime.split(':').map(Number);
     const start = new Date();
     start.setHours(h, m, 0, 0);
-    const diffMin = Math.floor((start.getTime() - Date.now()) / 60000);
-    if (diffMin > 0) {
-      const hrs = Math.floor(diffMin / 60);
-      const rem = diffMin % 60;
+    const diffMin = Math.floor((Date.now() - start.getTime()) / 60000);
+    if (diffMin < 0) {
+      const until = Math.abs(diffMin);
+      const hrs = Math.floor(until / 60);
+      const rem = until % 60;
       const dur = hrs > 0 ? `${hrs} hr${hrs > 1 ? 's' : ''} ${rem} min` : `${rem} min`;
       return { label: `Starts in ${dur}`, dotClass: 'bg-muted-foreground/40', barClass: 'bg-muted' };
     }
-    return { label: `Late by ${Math.abs(diffMin)} min`, dotClass: 'bg-amber-500', barClass: 'bg-amber-500' };
+    if (diffMin > 30) {
+      return { label: `No-show (${diffMin} min late)`, dotClass: 'bg-red-500', barClass: 'bg-red-500' };
+    }
+    return { label: `Late by ${diffMin} min`, dotClass: 'bg-amber-500', barClass: 'bg-amber-500' };
   };
 
   // group by hour bucket for the timeline label column
