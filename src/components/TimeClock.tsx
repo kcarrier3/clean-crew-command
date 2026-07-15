@@ -677,6 +677,11 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                     {site.name} {site.client_name ? `(${site.client_name})` : ''}
                   </SelectItem>
                 ))}
+                {officeSite && (
+                  <SelectItem key={officeSite.id} value={officeSite.id}>
+                    🏢 {officeSite.name} (Internal)
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
 
