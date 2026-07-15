@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_lead_notes ADD COLUMN IF NOT EXISTS category text NOT NULL DEFAULT 'general';

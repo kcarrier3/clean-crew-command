@@ -16,6 +16,23 @@ import { useToast } from '@/hooks/use-toast';
 import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact } from './types';
 import { cn } from '@/lib/utils';
 
+const NOTE_CATEGORIES: { value: string; label: string; className: string }[] = [
+  { value: 'general', label: 'General', className: 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100' },
+  { value: 'billing', label: 'Billing', className: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100' },
+  { value: 'request', label: 'Request', className: 'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-100' },
+  { value: 'concern', label: 'Concern', className: 'bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-100' },
+  { value: 'other', label: 'Other', className: 'bg-purple-100 text-purple-900 dark:bg-purple-900/40 dark:text-purple-100' },
+];
+
+function NoteCategoryBadge({ category }: { category?: string | null }) {
+  const c = NOTE_CATEGORIES.find(x => x.value === (category || 'general')) || NOTE_CATEGORIES[0];
+  return (
+    <span className={cn('inline-block text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded', c.className)}>
+      {c.label}
+    </span>
+  );
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,6 +47,7 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const [tab, setTab] = useState('details');
   const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
+  const [newNoteCategory, setNewNoteCategory] = useState<string>('general');
   const [files, setFiles] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [stages, setStages] = useState<CrmStage[]>([]);
@@ -47,7 +65,6 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     phone: '',
     source: '',
     status: 'new' as CrmLead['status'],
-    notes: '',
     close_date: '',
     amount: '',
     probability: '',
@@ -69,7 +86,6 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
         phone: lead.phone || '',
         source: lead.source || '',
         status: lead.status,
-        notes: lead.notes || '',
         close_date: lead.close_date || '',
         amount: lead.amount != null ? String(lead.amount) : '',
         probability: lead.probability != null ? String(lead.probability) : '',
@@ -81,7 +97,7 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       });
     } else {
       setForm({
-        company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new', notes: '',
+        company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new',
         close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '',
       });
     }
@@ -144,10 +160,11 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const addNote = async () => {
     if (!lead?.id || !newNote.trim()) return;
     const { error } = await (supabase as any).from('crm_lead_notes').insert({
-      lead_id: lead.id, content: newNote.trim(), created_by: user?.id,
+      lead_id: lead.id, content: newNote.trim(), category: newNoteCategory, created_by: user?.id,
     });
     if (error) { toast({ title: 'Failed to add note', description: error.message, variant: 'destructive' }); return; }
     setNewNote('');
+    setNewNoteCategory('general');
     loadNotes();
   };
 
@@ -217,7 +234,6 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       email: form.email || null,
       phone: form.phone || null,
       source: form.source || null,
-      notes: form.notes || null,
       close_date: form.close_date || null,
       amount: form.amount === '' ? null : Number(form.amount),
       probability: form.probability === '' ? null : Number(form.probability),
@@ -346,16 +362,32 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
               {renderDetails()}
             </TabsContent>
             <TabsContent value="notes" className="space-y-3 pt-6 pb-6">
-              <div className="space-y-2">
-                <Textarea rows={3} placeholder="Add a note..." value={newNote} onChange={e => setNewNote(e.target.value)} />
-                <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>Add Note</Button>
+              <div className="space-y-2 border rounded p-3 bg-muted/30">
+                <p className="text-xs text-muted-foreground">
+                  Log customer notes here — billing questions, requests, concerns, or general updates.
+                </p>
+                <Textarea rows={3} placeholder="What did the customer say?" value={newNote} onChange={e => setNewNote(e.target.value)} />
+                <div className="flex items-center gap-2">
+                  <Select value={newNoteCategory} onValueChange={setNewNoteCategory}>
+                    <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {NOTE_CATEGORIES.map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>Add Note</Button>
+                </div>
               </div>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {notes.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>}
                 {notes.map(n => (
                   <div key={n.id} className="border rounded p-3 group">
                     <div className="flex justify-between items-start gap-2">
-                      <p className="text-sm whitespace-pre-wrap flex-1">{n.content}</p>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <NoteCategoryBadge category={n.category} />
+                        <p className="text-sm whitespace-pre-wrap">{n.content}</p>
+                      </div>
                       <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteNote(n.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -522,10 +554,6 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
           </div>
         </SfSection>
 
-        <div>
-          <Label className="text-xs text-muted-foreground">Internal Notes</Label>
-          <Textarea rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
-        </div>
       </div>
     );
   }
