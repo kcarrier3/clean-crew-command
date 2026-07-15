@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import TimeClock from './TimeClock';
 import BudgetReports from './BudgetReports';
 import AccountCostReport from './AccountCostReport';
+import ShiftRoster from './ShiftRoster';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Employee {
@@ -197,7 +198,7 @@ const ManagerDashboard = () => {
       <Tabs defaultValue="timeclock" className="w-full">
         <TabsList className={`grid w-full ${canViewAccountCost ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="timeclock">Time Clock</TabsTrigger>
-          <TabsTrigger value="active">Active Sessions</TabsTrigger>
+          <TabsTrigger value="active">Shift Roster</TabsTrigger>
           <TabsTrigger value="reports">Today's Report</TabsTrigger>
           <TabsTrigger value="budget">Budget Reports</TabsTrigger>
           {canViewAccountCost && <TabsTrigger value="account-cost">Account Cost</TabsTrigger>}
@@ -238,48 +239,7 @@ const ManagerDashboard = () => {
         </TabsContent>
 
         <TabsContent value="active">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Active Time Sessions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {activeEntries.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">No one is currently clocked in</p>
-              ) : (
-                <div className="space-y-4">
-                  {activeEntries.map((entry) => (
-                    <div key={entry.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">
-                            {entry.employees.first_name} {entry.employees.last_name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            Employee ID: {entry.employees.employee_id}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Location: {entry.job_sites.name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Started: {formatTime(entry.clock_in)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-mono">
-                            {calculateHours(entry.clock_in, null)} hrs
-                          </p>
-                          <p className="text-sm text-muted-foreground">Active</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ShiftRoster />
         </TabsContent>
 
         <TabsContent value="reports">
