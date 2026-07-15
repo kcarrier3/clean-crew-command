@@ -102,8 +102,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const punchInAtOffice = async () => {
     if (!officeSite) return;
     setSelectedJobSite(officeSite.id);
-    // Defer clockIn to next tick so state is applied
-    setTimeout(() => clockIn(), 0);
+    await clockIn(officeSite.id);
   };
 
   const handleScan = (text: string) => {
