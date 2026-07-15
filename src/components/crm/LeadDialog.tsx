@@ -220,6 +220,29 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     ? stages.findIndex(s => s.id === form.stage_id)
     : -1;
   const currentStage = currentStageIdx >= 0 ? stages[currentStageIdx] : null;
+
+  const persistStage = async (stageId: string) => {
+    setForm(f => ({ ...f, stage_id: stageId }));
+    if (lead?.id) {
+      const { error } = await (supabase as any)
+        .from('crm_leads').update({ stage_id: stageId }).eq('id', lead.id);
+      if (error) {
+        toast({ title: 'Failed to update stage', description: error.message, variant: 'destructive' });
+        return;
+      }
+      onSaved?.();
+    }
+  };
+
+  const markStageComplete = async () => {
+    if (!stages.length) return;
+    const nextIdx = currentStageIdx < 0 ? 0 : Math.min(currentStageIdx + 1, stages.length - 1);
+    const next = stages[nextIdx];
+    if (!next) return;
+    await persistStage(next.id);
+    toast({ title: `Stage: ${next.name}` });
+  };
+
   const amountDisplay = form.amount ? `$${Number(form.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
   const closeDateDisplay = form.close_date
     ? new Date(form.close_date + 'T00:00:00').toLocaleDateString()
@@ -254,11 +277,23 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
         {/* Pipeline path */}
         {stages.length > 0 && (
           <div className="px-6 py-4 bg-background border-b">
-            <StagePath
-              stages={stages}
-              currentIdx={currentStageIdx}
-              onSelect={(id) => setForm({ ...form, stage_id: id })}
-            />
+            <div className="flex items-stretch gap-3">
+              <div className="flex-1 min-w-0">
+                <StagePath
+                  stages={stages}
+                  currentIdx={currentStageIdx}
+                  onSelect={persistStage}
+                />
+              </div>
+              <Button
+                onClick={markStageComplete}
+                disabled={currentStageIdx >= stages.length - 1}
+                className="shrink-0 h-9 bg-primary hover:bg-primary/90"
+              >
+                <Check className="h-4 w-4 mr-1" />
+                Mark Stage as Complete
+              </Button>
+            </div>
           </div>
         )}
 
