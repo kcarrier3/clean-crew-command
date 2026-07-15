@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, FileText, Trash2, Download, Briefcase, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Upload, FileText, Trash2, Download, Briefcase, Check, ChevronDown, ChevronRight, ChevronsUpDown, Building2, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage } from './types';
+import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact } from './types';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -31,11 +33,15 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const [files, setFiles] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [stages, setStages] = useState<CrmStage[]>([]);
+  const [companies, setCompanies] = useState<CrmCompany[]>([]);
+  const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [owner, setOwner] = useState<{ full_name: string | null } | null>(null);
   const [addlOpen, setAddlOpen] = useState(true);
   const [sysOpen, setSysOpen] = useState(true);
   const [form, setForm] = useState({
+    company_id: '',
     company_name: '',
+    primary_contact_id: '',
     contact_name: '',
     email: '',
     phone: '',
@@ -55,7 +61,9 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   useEffect(() => {
     if (lead) {
       setForm({
+        company_id: lead.company_id || '',
         company_name: lead.company_name || '',
+        primary_contact_id: lead.primary_contact_id || '',
         contact_name: lead.contact_name || '',
         email: lead.email || '',
         phone: lead.phone || '',
@@ -73,14 +81,14 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       });
     } else {
       setForm({
-        company_name: '', contact_name: '', email: '', phone: '', source: '', status: 'new', notes: '',
+        company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new', notes: '',
         close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '',
       });
     }
   }, [lead, open]);
 
   useEffect(() => {
-    if (open) loadStages();
+    if (open) { loadStages(); loadCompanies(); loadContacts(); }
     if (open && lead?.id) {
       loadNotes();
       loadFiles();
@@ -97,6 +105,18 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     const { data } = await (supabase as any)
       .from('crm_pipeline_stages').select('*').eq('active', true).order('sort_order');
     setStages(data || []);
+  };
+
+  const loadCompanies = async () => {
+    const { data } = await (supabase as any)
+      .from('crm_companies').select('*').order('name');
+    setCompanies(data || []);
+  };
+
+  const loadContacts = async () => {
+    const { data } = await (supabase as any)
+      .from('crm_contacts').select('*').order('last_name', { nullsFirst: false });
+    setContacts(data || []);
   };
 
   const loadOwner = async () => {
@@ -178,14 +198,21 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   };
 
   const save = async () => {
-    if (!form.company_name.trim()) {
-      toast({ title: 'Account name required', variant: 'destructive' });
+    if (!form.company_id) {
+      toast({
+        title: 'Account required',
+        description: 'Every opportunity must be linked to an existing account. Create the account first on the Accounts tab.',
+        variant: 'destructive',
+      });
       return;
     }
+    const linkedCompany = companies.find(c => c.id === form.company_id);
     setSaving(true);
     const payload: any = {
       ...form,
-      company_name: form.company_name.trim(),
+      company_id: form.company_id,
+      company_name: (linkedCompany?.name || form.company_name || '').trim(),
+      primary_contact_id: form.primary_contact_id || null,
       contact_name: form.contact_name || null,
       email: form.email || null,
       phone: form.phone || null,
@@ -247,8 +274,17 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const closeDateDisplay = form.close_date
     ? new Date(form.close_date + 'T00:00:00').toLocaleDateString()
     : '—';
+  const selectedCompany = companies.find(c => c.id === form.company_id) || null;
+  const accountDisplay = selectedCompany?.name || form.company_name || '—';
+  const contactsForAccount = form.company_id
+    ? contacts.filter(c => c.company_id === form.company_id)
+    : [];
+  const selectedContact = contacts.find(c => c.id === form.primary_contact_id) || null;
+  const contactDisplay = selectedContact
+    ? `${selectedContact.first_name} ${selectedContact.last_name || ''}`.trim()
+    : '—';
   const ownerName = owner?.full_name || (lead ? 'Unassigned' : 'You');
-  const title = form.company_name || (lead ? 'Opportunity' : 'New Opportunity');
+  const title = accountDisplay !== '—' ? accountDisplay : (lead ? 'Opportunity' : 'New Opportunity');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -268,7 +304,7 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
 
         {/* Highlights strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-4 bg-background border-b">
-          <HighlightField label="Account Name" value={form.company_name || '—'} link />
+          <HighlightField label="Account Name" value={accountDisplay} link />
           <HighlightField label="Close Date" value={closeDateDisplay} />
           <HighlightField label="Amount" value={amountDisplay} strong />
           <HighlightField label="Opportunity Owner" value={ownerName} link />
@@ -389,7 +425,38 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
             </Select>
           </FieldRow>
           <FieldRow label="Account Name" required>
-            <Input value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })} />
+            <AccountPicker
+              companies={companies}
+              value={form.company_id}
+              onChange={(id) => {
+                const c = companies.find(x => x.id === id);
+                setForm(f => ({
+                  ...f,
+                  company_id: id,
+                  company_name: c?.name || '',
+                  // Clear contact if it doesn't belong to the new account
+                  primary_contact_id: contacts.find(ct => ct.id === f.primary_contact_id && ct.company_id === id) ? f.primary_contact_id : '',
+                }));
+              }}
+            />
+            {companies.length === 0 && (
+              <p className="text-xs text-destructive mt-1">
+                No accounts yet. Create an account on the Accounts tab first.
+              </p>
+            )}
+          </FieldRow>
+          <FieldRow label="Primary Contact">
+            <ContactPicker
+              contacts={contactsForAccount}
+              value={form.primary_contact_id}
+              onChange={(id) => setForm({ ...form, primary_contact_id: id })}
+              disabled={!form.company_id}
+            />
+            {form.company_id && contactsForAccount.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                This account has no contacts yet — add one on the Contacts tab.
+              </p>
+            )}
           </FieldRow>
           <FieldRow label="Probability (%)">
             <Input type="number" min={0} max={100} value={form.probability} onChange={e => setForm({ ...form, probability: e.target.value })} />
@@ -510,6 +577,104 @@ function SfSection({ title, open, onToggle, children }: { title: string; open: b
       </button>
       {open && <div className="pt-4">{children}</div>}
     </div>
+  );
+}
+
+function AccountPicker({ companies, value, onChange }: { companies: CrmCompany[]; value: string; onChange: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = companies.find(c => c.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className="flex items-center gap-2 truncate">
+            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+            {selected ? selected.name : <span className="text-muted-foreground">Search accounts…</span>}
+          </span>
+          <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[--radix-popover-trigger-width] min-w-[280px]" align="start">
+        <Command>
+          <CommandInput placeholder="Type an account name…" />
+          <CommandList>
+            <CommandEmpty>No accounts match. Create one on the Accounts tab.</CommandEmpty>
+            <CommandGroup>
+              {companies.map(c => (
+                <CommandItem
+                  key={c.id}
+                  value={c.name}
+                  onSelect={() => { onChange(c.id); setOpen(false); }}
+                >
+                  <Check className={cn('mr-2 h-4 w-4', value === c.id ? 'opacity-100' : 'opacity-0')} />
+                  <span className="truncate">{c.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ContactPicker({ contacts, value, onChange, disabled }: { contacts: CrmContact[]; value: string; onChange: (id: string) => void; disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const selected = contacts.find(c => c.id === value);
+  const label = selected ? `${selected.first_name} ${selected.last_name || ''}`.trim() : '';
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          disabled={disabled}
+          className="w-full justify-between font-normal"
+        >
+          <span className="flex items-center gap-2 truncate">
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            {label || <span className="text-muted-foreground">{disabled ? 'Select an account first' : 'Search contacts…'}</span>}
+          </span>
+          <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[--radix-popover-trigger-width] min-w-[280px]" align="start">
+        <Command>
+          <CommandInput placeholder="Type a contact name…" />
+          <CommandList>
+            <CommandEmpty>No contacts for this account.</CommandEmpty>
+            <CommandGroup>
+              {value && (
+                <CommandItem value="__clear__" onSelect={() => { onChange(''); setOpen(false); }}>
+                  <Check className="mr-2 h-4 w-4 opacity-0" />
+                  <span className="text-muted-foreground">Clear selection</span>
+                </CommandItem>
+              )}
+              {contacts.map(c => {
+                const name = `${c.first_name} ${c.last_name || ''}`.trim();
+                return (
+                  <CommandItem
+                    key={c.id}
+                    value={name || c.email || c.id}
+                    onSelect={() => { onChange(c.id); setOpen(false); }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', value === c.id ? 'opacity-100' : 'opacity-0')} />
+                    <span className="truncate">{name}{c.title ? ` — ${c.title}` : ''}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
