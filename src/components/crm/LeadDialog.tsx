@@ -274,8 +274,17 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const closeDateDisplay = form.close_date
     ? new Date(form.close_date + 'T00:00:00').toLocaleDateString()
     : '—';
+  const selectedCompany = companies.find(c => c.id === form.company_id) || null;
+  const accountDisplay = selectedCompany?.name || form.company_name || '—';
+  const contactsForAccount = form.company_id
+    ? contacts.filter(c => c.company_id === form.company_id)
+    : [];
+  const selectedContact = contacts.find(c => c.id === form.primary_contact_id) || null;
+  const contactDisplay = selectedContact
+    ? `${selectedContact.first_name} ${selectedContact.last_name || ''}`.trim()
+    : '—';
   const ownerName = owner?.full_name || (lead ? 'Unassigned' : 'You');
-  const title = form.company_name || (lead ? 'Opportunity' : 'New Opportunity');
+  const title = accountDisplay !== '—' ? accountDisplay : (lead ? 'Opportunity' : 'New Opportunity');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -295,7 +304,7 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
 
         {/* Highlights strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-4 bg-background border-b">
-          <HighlightField label="Account Name" value={form.company_name || '—'} link />
+          <HighlightField label="Account Name" value={accountDisplay} link />
           <HighlightField label="Close Date" value={closeDateDisplay} />
           <HighlightField label="Amount" value={amountDisplay} strong />
           <HighlightField label="Opportunity Owner" value={ownerName} link />
@@ -416,7 +425,38 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
             </Select>
           </FieldRow>
           <FieldRow label="Account Name" required>
-            <Input value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })} />
+            <AccountPicker
+              companies={companies}
+              value={form.company_id}
+              onChange={(id) => {
+                const c = companies.find(x => x.id === id);
+                setForm(f => ({
+                  ...f,
+                  company_id: id,
+                  company_name: c?.name || '',
+                  // Clear contact if it doesn't belong to the new account
+                  primary_contact_id: contacts.find(ct => ct.id === f.primary_contact_id && ct.company_id === id) ? f.primary_contact_id : '',
+                }));
+              }}
+            />
+            {companies.length === 0 && (
+              <p className="text-xs text-destructive mt-1">
+                No accounts yet. Create an account on the Accounts tab first.
+              </p>
+            )}
+          </FieldRow>
+          <FieldRow label="Primary Contact">
+            <ContactPicker
+              contacts={contactsForAccount}
+              value={form.primary_contact_id}
+              onChange={(id) => setForm({ ...form, primary_contact_id: id })}
+              disabled={!form.company_id}
+            />
+            {form.company_id && contactsForAccount.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                This account has no contacts yet — add one on the Contacts tab.
+              </p>
+            )}
           </FieldRow>
           <FieldRow label="Probability (%)">
             <Input type="number" min={0} max={100} value={form.probability} onChange={e => setForm({ ...form, probability: e.target.value })} />
