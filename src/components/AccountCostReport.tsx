@@ -205,6 +205,18 @@ export default function AccountCostReport() {
         <Card><CardContent className="p-4"><div className="text-muted-foreground text-sm">Total cost</div><div className="text-2xl font-bold">{fmtMoney(totals.total)}</div></CardContent></Card>
       </div>
 
+      {overhead.hours > 0 && (
+        <Card className="border-amber-300 bg-amber-50/50">
+          <CardContent className="p-4 flex flex-wrap gap-6 items-center">
+            <div className="text-sm font-semibold text-amber-900">Overhead (Office)</div>
+            <div className="text-sm"><span className="text-muted-foreground">Hours: </span><span className="font-semibold">{overhead.hours.toFixed(1)}</span></div>
+            <div className="text-sm"><span className="text-muted-foreground">Labor: </span><span className="font-semibold">{fmtMoney(overhead.labor)}</span></div>
+            <div className="text-sm"><span className="text-muted-foreground">Supplies: </span><span className="font-semibold">{fmtMoney(overhead.supply)}</span></div>
+            <div className="text-xs text-muted-foreground">Fixed-expense staff (office managers, floaters, supply) punched in at the office. Construction/project managers continue to cost to their job sites.</div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-0">
           <Table>
