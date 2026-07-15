@@ -112,9 +112,11 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       loadNotes();
       loadFiles();
       loadOwner();
+      loadActivities();
     } else {
       setNotes([]);
       setFiles([]);
+      setActivities([]);
       setOwner(null);
       setTab('details');
     }
@@ -158,6 +160,30 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     const { data } = await (supabase as any)
       .from('crm_lead_files').select('*').eq('lead_id', lead.id).order('created_at', { ascending: false });
     setFiles(data || []);
+  };
+
+  const loadActivities = async () => {
+    if (!lead?.id) return;
+    const { data } = await (supabase as any)
+      .from('crm_activities').select('*').eq('lead_id', lead.id).order('created_at', { ascending: false });
+    setActivities(data || []);
+  };
+
+  const addActivity = async (type: string, subject: string, body?: string) => {
+    if (!lead?.id || !subject.trim()) return;
+    const { error } = await (supabase as any).from('crm_activities').insert({
+      lead_id: lead.id, type, subject: subject.trim(), body: body || null, created_by: user?.id, owner_id: user?.id,
+    });
+    if (error) { toast({ title: 'Failed to log activity', description: error.message, variant: 'destructive' }); return; }
+    loadActivities();
+  };
+
+  const updateLeadField = async (patch: Record<string, any>) => {
+    if (!lead?.id) { setForm(f => ({ ...f, ...patch })); return; }
+    setForm(f => ({ ...f, ...patch }));
+    const { error } = await (supabase as any).from('crm_leads').update(patch).eq('id', lead.id);
+    if (error) { toast({ title: 'Failed to save', description: error.message, variant: 'destructive' }); return; }
+    onSaved?.();
   };
 
   const addNote = async () => {
