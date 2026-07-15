@@ -622,7 +622,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                 </p>
               </div>
               <Button
-                onClick={clockIn}
+                onClick={() => clockIn()}
                 disabled={isGettingLocation}
                 size="lg"
                 className="w-full max-w-xs h-16 text-lg"
@@ -684,7 +684,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
             {/* Clock In Button */}
             <div className="flex flex-col gap-2">
               <Button
-                onClick={clockIn}
+                onClick={() => clockIn()}
                 disabled={!selectedEmployee || !selectedJobSite || isGettingLocation}
                 className="w-full"
               >
