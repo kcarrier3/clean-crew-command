@@ -251,12 +251,13 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               source: pick(r, 'LeadSource', 'Lead Source', 'Type') || null,
               status,
               company_id: sfAcctId ? sfIdToCompanyId.get(sfAcctId) || null : null,
-              notes: [
-                pick(r, 'Description'),
-                pick(r, 'Amount') && `Amount: ${pick(r, 'Amount')}`,
-                pick(r, 'CloseDate', 'Close Date') && `Close: ${pick(r, 'CloseDate', 'Close Date')}`,
-                pick(r, 'StageName', 'Stage') && `Stage: ${pick(r, 'StageName', 'Stage')}`,
-              ].filter(Boolean).join('\n') || null,
+              amount: parseNum(pick(r, 'Amount')),
+              close_date: parseDate(pick(r, 'CloseDate', 'Close Date')),
+              probability: parseNum(pick(r, 'Probability', 'Probability (%)')),
+              type: pick(r, 'Type') || null,
+              next_step: pick(r, 'NextStep', 'Next Step') || null,
+              description: pick(r, 'Description') || null,
+              notes: pick(r, 'StageName', 'Stage') ? `Stage: ${pick(r, 'StageName', 'Stage')}` : null,
               created_by: uid,
             };
           });

@@ -23,6 +23,14 @@ export interface CrmLead {
   updated_at: string;
   company_id?: string | null;
   primary_contact_id?: string | null;
+  close_date?: string | null;
+  amount?: number | null;
+  probability?: number | null;
+  type?: string | null;
+  follow_up?: boolean | null;
+  description?: string | null;
+  next_step?: string | null;
+  stage_id?: string | null;
 }
 
 export interface CrmDeal {

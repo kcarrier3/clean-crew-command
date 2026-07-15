@@ -1016,54 +1016,78 @@ export type Database = {
       }
       crm_leads: {
         Row: {
+          amount: number | null
           assigned_to: string | null
+          close_date: string | null
           company_id: string | null
           company_name: string
           contact_name: string | null
           created_at: string
           created_by: string | null
+          description: string | null
           email: string | null
+          follow_up: boolean
           id: string
+          next_step: string | null
           notes: string | null
           phone: string | null
           primary_contact_id: string | null
+          probability: number | null
           source: string | null
           source_metadata: Json | null
+          stage_id: string | null
           status: string
+          type: string | null
           updated_at: string
         }
         Insert: {
+          amount?: number | null
           assigned_to?: string | null
+          close_date?: string | null
           company_id?: string | null
           company_name: string
           contact_name?: string | null
           created_at?: string
           created_by?: string | null
+          description?: string | null
           email?: string | null
+          follow_up?: boolean
           id?: string
+          next_step?: string | null
           notes?: string | null
           phone?: string | null
           primary_contact_id?: string | null
+          probability?: number | null
           source?: string | null
           source_metadata?: Json | null
+          stage_id?: string | null
           status?: string
+          type?: string | null
           updated_at?: string
         }
         Update: {
+          amount?: number | null
           assigned_to?: string | null
+          close_date?: string | null
           company_id?: string | null
           company_name?: string
           contact_name?: string | null
           created_at?: string
           created_by?: string | null
+          description?: string | null
           email?: string | null
+          follow_up?: boolean
           id?: string
+          next_step?: string | null
           notes?: string | null
           phone?: string | null
           primary_contact_id?: string | null
+          probability?: number | null
           source?: string | null
           source_metadata?: Json | null
+          stage_id?: string | null
           status?: string
+          type?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1107,6 +1131,13 @@ export type Database = {
             columns: ["primary_contact_id"]
             isOneToOne: false
             referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
             referencedColumns: ["id"]
           },
         ]
