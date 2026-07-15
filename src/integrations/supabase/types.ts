@@ -2368,6 +2368,7 @@ export type Database = {
           current_month_year: string | null
           estimated_duration: string | null
           id: string
+          is_office: boolean
           is_recurring_monthly: boolean | null
           last_reset_date: string | null
           name: string
@@ -2394,6 +2395,7 @@ export type Database = {
           current_month_year?: string | null
           estimated_duration?: string | null
           id?: string
+          is_office?: boolean
           is_recurring_monthly?: boolean | null
           last_reset_date?: string | null
           name: string
@@ -2420,6 +2422,7 @@ export type Database = {
           current_month_year?: string | null
           estimated_duration?: string | null
           id?: string
+          is_office?: boolean
           is_recurring_monthly?: boolean | null
           last_reset_date?: string | null
           name?: string
