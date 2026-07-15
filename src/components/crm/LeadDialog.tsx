@@ -684,9 +684,10 @@ function HighlightField({ label, value, link, strong }: { label: string; value: 
 
 function FieldRow({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
-    <div className="border-b pb-2">
-      <div className="text-xs text-muted-foreground mb-1">
-        {label}{required && <span className="text-destructive"> *</span>}
+    <div className="border-b pb-2 group">
+      <div className="text-xs text-muted-foreground mb-1 flex items-center justify-between">
+        <span>{label}{required && <span className="text-destructive"> *</span>}</span>
+        <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition" />
       </div>
       {children}
     </div>
