@@ -333,7 +333,7 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-100 dark:bg-slate-900">
+      <DialogContent className="max-w-7xl max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-100 dark:bg-slate-900">
         {/* Salesforce-style header strip */}
         <div className="px-6 pt-5 pb-3 bg-slate-200/60 dark:bg-slate-800/60 border-b">
           <div className="flex items-start gap-3">
