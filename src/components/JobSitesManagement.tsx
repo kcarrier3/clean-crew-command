@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import QualityControlDashboard from './QualityControlDashboard';
 import JobBudgetingWidget from './JobBudgetingWidget';
 import { AccountDetail } from './AccountDetail';
+import OfficeLocationCard from './OfficeLocationCard';
 
 interface JobSite {
   id: string;
@@ -96,6 +97,7 @@ export default function JobSitesManagement() {
       const { data, error } = await supabase
         .from('job_sites')
         .select('*')
+        .eq('is_office', false)
         .order('name');
 
       if (error) throw error;
@@ -421,6 +423,7 @@ export default function JobSitesManagement() {
         </TabsList>
 
         <TabsContent value="accounts" className="mt-6 space-y-6">
+          <OfficeLocationCard />
           <div className="flex items-center justify-end gap-4">
             <div className="flex items-center space-x-2">
               <Switch
