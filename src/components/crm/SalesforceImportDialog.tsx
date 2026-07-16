@@ -22,6 +22,7 @@ interface Summary {
   contacts: number;
   opportunities: number;
   notes: number;
+  files: number;
   skipped: string[];
   errors: string[];
 }
@@ -89,8 +90,26 @@ function detectEntity(filename: string): 'accounts' | 'contacts' | 'leads' | 'op
   const n = filename.toLowerCase();
   if (/opportunit/.test(n)) return 'opportunities';
   if (/note/.test(n)) return 'notes' as any;
+  if (/attachment|contentversion|contentdocumentlink/.test(n)) return null; // handled only from ZIP
   if (/contact/.test(n)) return 'contacts';
   if (/account/.test(n)) return 'accounts';
+  return null;
+}
+
+// Locate a file inside the Salesforce export ZIP by Salesforce Id.
+// Data Export layout: files live under `Attachments/<AttachmentId>/<filename>`
+// or `Files/<ContentVersionId>/<filename>`.
+function findZipEntryById(zip: JSZip, id: string): JSZip.JSZipObject | null {
+  if (!id) return null;
+  const id15 = id.slice(0, 15);
+  for (const name of Object.keys(zip.files)) {
+    const f = zip.files[name];
+    if (f.dir) continue;
+    if (name.includes(`/${id}/`) || name.includes(`/${id15}/`) ||
+        name.endsWith(`/${id}`) || name.endsWith(`/${id15}`)) {
+      return f;
+    }
+  }
   return null;
 }
 
@@ -107,7 +126,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
   const handleImport = async () => {
     if (!files.length) return;
     setRunning(true); setSummary(null); setProgress(2);
-    const s: Summary = { companies: 0, contacts: 0, opportunities: 0, notes: 0, skipped: [], errors: [] };
+    const s: Summary = { companies: 0, contacts: 0, opportunities: 0, notes: 0, files: 0, skipped: [], errors: [] };
 
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -120,15 +139,23 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
       let contactsRows: Row[] | null = null;
       let opps: Row[] | null = null;
       let notesRows: Row[] | null = null;
+      let attachmentsRows: Row[] | null = null;
+      let contentVersionsRows: Row[] | null = null;
+      let contentDocLinksRows: Row[] | null = null;
+      let sourceZip: JSZip | null = null;
 
       for (const f of files) {
         const isZip = /\.zip$/i.test(f.name) || f.type.includes('zip');
         if (isZip) {
           const zip = await JSZip.loadAsync(f);
+          sourceZip = zip;
           accounts = accounts ?? await readCsvFromZip(zip, [/(^|\/)Account(s)?\.csv$/i, /accounts?_/i]);
           contactsRows = contactsRows ?? await readCsvFromZip(zip, [/(^|\/)Contact(s)?\.csv$/i, /contacts?_/i]);
           opps = opps ?? await readCsvFromZip(zip, [/(^|\/)Opportunit(y|ies)\.csv$/i, /opportunit/i]);
           notesRows = notesRows ?? await readCsvFromZip(zip, [/(^|\/)Note(s)?\.csv$/i, /^notes?_/i]);
+          attachmentsRows = attachmentsRows ?? await readCsvFromZip(zip, [/(^|\/)Attachment(s)?\.csv$/i]);
+          contentVersionsRows = contentVersionsRows ?? await readCsvFromZip(zip, [/(^|\/)ContentVersion(s)?\.csv$/i]);
+          contentDocLinksRows = contentDocLinksRows ?? await readCsvFromZip(zip, [/(^|\/)ContentDocumentLink(s)?\.csv$/i]);
         } else {
           const entity = detectEntity(f.name);
           if (!entity) { s.skipped.push(`${f.name} (unrecognized)`); continue; }
@@ -264,11 +291,74 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
         }
       } else s.skipped.push('Note.csv');
 
+      // Attachments + ContentVersion -> crm_lead_files (only when uploaded via ZIP)
+      setStatus('Importing Files...');
+      if (sourceZip && (attachmentsRows?.length || contentVersionsRows?.length)) {
+        // Build ContentDocumentId -> Opportunity lead_id map from ContentDocumentLink
+        const docToLead = new Map<string, string>();
+        if (contentDocLinksRows?.length) {
+          for (const r of contentDocLinksRows) {
+            const linked = pick(r, 'LinkedEntityId', 'Linked Entity ID');
+            const docId = pick(r, 'ContentDocumentId', 'Content Document ID');
+            const leadId = linked ? sfIdToLeadId.get(linked) : null;
+            if (docId && leadId) docToLead.set(docId, leadId);
+          }
+        }
+
+        const jobs: Array<{ leadId: string; row: Row; kind: 'attachment' | 'file' }> = [];
+        for (const r of attachmentsRows || []) {
+          const parentId = pick(r, 'ParentId', 'Parent ID');
+          const leadId = parentId ? sfIdToLeadId.get(parentId) : null;
+          if (leadId) jobs.push({ leadId, row: r, kind: 'attachment' });
+        }
+        for (const r of contentVersionsRows || []) {
+          if (pick(r, 'IsLatest').toLowerCase() === 'false') continue;
+          const docId = pick(r, 'ContentDocumentId', 'Content Document ID');
+          const leadId = docId ? docToLead.get(docId) : null;
+          if (leadId) jobs.push({ leadId, row: r, kind: 'file' });
+        }
+
+        let done = 0;
+        for (const job of jobs) {
+          const sfId = pick(job.row, 'Id');
+          const zipEntry = findZipEntryById(sourceZip, sfId);
+          if (!zipEntry) { done++; continue; }
+          const fileName = job.kind === 'attachment'
+            ? (pick(job.row, 'Name') || sfId)
+            : (pick(job.row, 'PathOnClient', 'Title') || sfId);
+          const contentType = pick(job.row, 'ContentType', 'FileType') || 'application/octet-stream';
+          try {
+            const bytes = await zipEntry.async('uint8array');
+            const path = `crm-leads/${job.leadId}/${crypto.randomUUID()}-${fileName}`;
+            const { error: upErr } = await supabase.storage
+              .from('crm-files')
+              .upload(path, bytes, { contentType, upsert: false });
+            if (upErr) { s.errors.push(`File ${fileName}: ${upErr.message}`); done++; continue; }
+            const { error: insErr } = await (supabase as any).from('crm_lead_files').insert({
+              lead_id: job.leadId,
+              file_path: path,
+              file_name: fileName,
+              file_size: bytes.byteLength,
+              content_type: contentType,
+              uploaded_by: uid,
+            });
+            if (insErr) { s.errors.push(`File ${fileName}: ${insErr.message}`); done++; continue; }
+            s.files++;
+          } catch (e: any) {
+            s.errors.push(`File ${fileName}: ${e?.message || e}`);
+          }
+          done++;
+          if (done % 5 === 0 || done === jobs.length) {
+            setProgress(95 + Math.round((done / Math.max(jobs.length, 1)) * 5));
+          }
+        }
+      }
+
       setProgress(100);
       setStatus('Done');
       setSummary(s);
       onImported();
-      toast({ title: 'Import complete', description: `${s.companies} accounts, ${s.contacts} contacts, ${s.opportunities} opportunities, ${s.notes} notes` });
+      toast({ title: 'Import complete', description: `${s.companies} accounts, ${s.contacts} contacts, ${s.opportunities} opportunities, ${s.notes} notes, ${s.files} files` });
     } catch (err: any) {
       s.errors.push(err.message || String(err));
       setSummary(s);
@@ -287,7 +377,8 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
             Upload the <strong>.zip</strong> from <em>Setup → Data Export</em>, or drop in one or more
             Salesforce <strong>.csv</strong> exports (Account, Contact, Opportunity, Note). UTF-8 and UTF-16
             files are both supported. Leads are ignored — only Accounts, their Contacts, their Opportunities,
-            and Notes attached to those Opportunities are imported.
+            Notes, and file Attachments on those Opportunities are imported. Uploading the ZIP is required
+            to import file attachments (raw CSVs don't contain the file bytes).
           </DialogDescription>
         </DialogHeader>
 
@@ -324,6 +415,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               <li>Contacts: <strong>{summary.contacts}</strong></li>
               <li>Opportunities: <strong>{summary.opportunities}</strong></li>
               <li>Notes on opportunities: <strong>{summary.notes}</strong></li>
+              <li>Files on opportunities: <strong>{summary.files}</strong></li>
             </ul>
             {summary.skipped.length > 0 && (
               <p className="text-sm text-muted-foreground">Not found in ZIP: {summary.skipped.join(', ')}</p>
