@@ -291,11 +291,74 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
         }
       } else s.skipped.push('Note.csv');
 
+      // Attachments + ContentVersion -> crm_lead_files (only when uploaded via ZIP)
+      setStatus('Importing Files...');
+      if (sourceZip && (attachmentsRows?.length || contentVersionsRows?.length)) {
+        // Build ContentDocumentId -> Opportunity lead_id map from ContentDocumentLink
+        const docToLead = new Map<string, string>();
+        if (contentDocLinksRows?.length) {
+          for (const r of contentDocLinksRows) {
+            const linked = pick(r, 'LinkedEntityId', 'Linked Entity ID');
+            const docId = pick(r, 'ContentDocumentId', 'Content Document ID');
+            const leadId = linked ? sfIdToLeadId.get(linked) : null;
+            if (docId && leadId) docToLead.set(docId, leadId);
+          }
+        }
+
+        const jobs: Array<{ leadId: string; row: Row; kind: 'attachment' | 'file' }> = [];
+        for (const r of attachmentsRows || []) {
+          const parentId = pick(r, 'ParentId', 'Parent ID');
+          const leadId = parentId ? sfIdToLeadId.get(parentId) : null;
+          if (leadId) jobs.push({ leadId, row: r, kind: 'attachment' });
+        }
+        for (const r of contentVersionsRows || []) {
+          if (pick(r, 'IsLatest').toLowerCase() === 'false') continue;
+          const docId = pick(r, 'ContentDocumentId', 'Content Document ID');
+          const leadId = docId ? docToLead.get(docId) : null;
+          if (leadId) jobs.push({ leadId, row: r, kind: 'file' });
+        }
+
+        let done = 0;
+        for (const job of jobs) {
+          const sfId = pick(job.row, 'Id');
+          const zipEntry = findZipEntryById(sourceZip, sfId);
+          if (!zipEntry) { done++; continue; }
+          const fileName = job.kind === 'attachment'
+            ? (pick(job.row, 'Name') || sfId)
+            : (pick(job.row, 'PathOnClient', 'Title') || sfId);
+          const contentType = pick(job.row, 'ContentType', 'FileType') || 'application/octet-stream';
+          try {
+            const bytes = await zipEntry.async('uint8array');
+            const path = `crm-leads/${job.leadId}/${crypto.randomUUID()}-${fileName}`;
+            const { error: upErr } = await supabase.storage
+              .from('crm-files')
+              .upload(path, bytes, { contentType, upsert: false });
+            if (upErr) { s.errors.push(`File ${fileName}: ${upErr.message}`); done++; continue; }
+            const { error: insErr } = await (supabase as any).from('crm_lead_files').insert({
+              lead_id: job.leadId,
+              file_path: path,
+              file_name: fileName,
+              file_size: bytes.byteLength,
+              content_type: contentType,
+              uploaded_by: uid,
+            });
+            if (insErr) { s.errors.push(`File ${fileName}: ${insErr.message}`); done++; continue; }
+            s.files++;
+          } catch (e: any) {
+            s.errors.push(`File ${fileName}: ${e?.message || e}`);
+          }
+          done++;
+          if (done % 5 === 0 || done === jobs.length) {
+            setProgress(95 + Math.round((done / Math.max(jobs.length, 1)) * 5));
+          }
+        }
+      }
+
       setProgress(100);
       setStatus('Done');
       setSummary(s);
       onImported();
-      toast({ title: 'Import complete', description: `${s.companies} accounts, ${s.contacts} contacts, ${s.opportunities} opportunities, ${s.notes} notes` });
+      toast({ title: 'Import complete', description: `${s.companies} accounts, ${s.contacts} contacts, ${s.opportunities} opportunities, ${s.notes} notes, ${s.files} files` });
     } catch (err: any) {
       s.errors.push(err.message || String(err));
       setSummary(s);
