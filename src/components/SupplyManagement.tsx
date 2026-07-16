@@ -9,6 +9,7 @@ import SupplyRequestsTab from './supply/SupplyRequestsTab';
 import SupplyLocationsTab from './supply/SupplyLocationsTab';
 import FixedAssetsTab from './supply/FixedAssetsTab';
 import SupplyCostReport from './supply/SupplyCostReport';
+import SupplyBillingReport from './supply/SupplyBillingReport';
 
 const SupplyManagement = () => {
   const { isManager } = useAuth();
@@ -38,6 +39,7 @@ const SupplyManagement = () => {
           <TabsTrigger value="movements">Movements</TabsTrigger>
           <TabsTrigger value="requests">Requests</TabsTrigger>
           {canManage && <TabsTrigger value="cost-report">Cost Report</TabsTrigger>}
+          {canManage && <TabsTrigger value="billing-report">Billing Report</TabsTrigger>}
           {canManage && <TabsTrigger value="locations">Locations</TabsTrigger>}
         </TabsList>
         <TabsContent value="stock"><SupplyStockTab /></TabsContent>
@@ -46,6 +48,7 @@ const SupplyManagement = () => {
         <TabsContent value="movements"><SupplyMovementsTab canManage={canManage} /></TabsContent>
         <TabsContent value="requests"><SupplyRequestsTab canManage={canManage} /></TabsContent>
         {canManage && <TabsContent value="cost-report"><SupplyCostReport /></TabsContent>}
+        {canManage && <TabsContent value="billing-report"><SupplyBillingReport /></TabsContent>}
         {canManage && <TabsContent value="locations"><SupplyLocationsTab /></TabsContent>}
       </Tabs>
     </div>
