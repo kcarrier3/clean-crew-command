@@ -20,8 +20,8 @@ type Row = Record<string, string>;
 interface Summary {
   companies: number;
   contacts: number;
-  leads: number;
   opportunities: number;
+  notes: number;
   skipped: string[];
   errors: string[];
 }
@@ -88,7 +88,7 @@ async function readCsvFile(file: File): Promise<Row[]> {
 function detectEntity(filename: string): 'accounts' | 'contacts' | 'leads' | 'opportunities' | null {
   const n = filename.toLowerCase();
   if (/opportunit/.test(n)) return 'opportunities';
-  if (/lead/.test(n)) return 'leads';
+  if (/note/.test(n)) return 'notes' as any;
   if (/contact/.test(n)) return 'contacts';
   if (/account/.test(n)) return 'accounts';
   return null;
@@ -107,7 +107,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
   const handleImport = async () => {
     if (!files.length) return;
     setRunning(true); setSummary(null); setProgress(2);
-    const s: Summary = { companies: 0, contacts: 0, leads: 0, opportunities: 0, skipped: [], errors: [] };
+    const s: Summary = { companies: 0, contacts: 0, opportunities: 0, notes: 0, skipped: [], errors: [] };
 
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -118,8 +118,8 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
       // Assemble entity-to-rows map from either a ZIP or one/many CSVs
       let accounts: Row[] | null = null;
       let contactsRows: Row[] | null = null;
-      let leadsRows: Row[] | null = null;
       let opps: Row[] | null = null;
+      let notesRows: Row[] | null = null;
 
       for (const f of files) {
         const isZip = /\.zip$/i.test(f.name) || f.type.includes('zip');
@@ -127,16 +127,16 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           const zip = await JSZip.loadAsync(f);
           accounts = accounts ?? await readCsvFromZip(zip, [/(^|\/)Account(s)?\.csv$/i, /accounts?_/i]);
           contactsRows = contactsRows ?? await readCsvFromZip(zip, [/(^|\/)Contact(s)?\.csv$/i, /contacts?_/i]);
-          leadsRows = leadsRows ?? await readCsvFromZip(zip, [/(^|\/)Lead(s)?\.csv$/i, /leads?_/i]);
           opps = opps ?? await readCsvFromZip(zip, [/(^|\/)Opportunit(y|ies)\.csv$/i, /opportunit/i]);
+          notesRows = notesRows ?? await readCsvFromZip(zip, [/(^|\/)Note(s)?\.csv$/i, /^notes?_/i]);
         } else {
           const entity = detectEntity(f.name);
           if (!entity) { s.skipped.push(`${f.name} (unrecognized)`); continue; }
           const rows = await readCsvFile(f);
           if (entity === 'accounts') accounts = rows;
           else if (entity === 'contacts') contactsRows = rows;
-          else if (entity === 'leads') leadsRows = rows;
           else if (entity === 'opportunities') opps = rows;
+          else if ((entity as any) === 'notes') notesRows = rows;
         }
       }
       setProgress(10);
@@ -197,44 +197,14 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
         }
       } else s.skipped.push('Contact.csv');
 
-      // Leads -> crm_leads
-      setStatus('Importing Leads...');
-      const leads = leadsRows;
-      if (leads?.length) {
-        for (let i = 0; i < leads.length; i += 200) {
-          const chunk = leads.slice(i, i + 200).map(r => {
-            const first = pick(r, 'FirstName', 'First Name');
-            const last = pick(r, 'LastName', 'Last Name');
-            const contactName = [first, last].filter(Boolean).join(' ') || pick(r, 'Name') || null;
-            const sfStatus = pick(r, 'Status').toLowerCase();
-            const status = sfStatus.includes('qualified') ? 'qualified'
-              : sfStatus.includes('working') || sfStatus.includes('contacted') ? 'contacted'
-              : sfStatus.includes('unqualified') || sfStatus.includes('lost') ? 'unqualified'
-              : sfStatus.includes('converted') ? 'converted'
-              : 'new';
-            return {
-              company_name: pick(r, 'Company', 'Company / Account') || contactName || 'Unknown',
-              contact_name: contactName,
-              email: pick(r, 'Email') || null,
-              phone: pick(r, 'Phone', 'MobilePhone') || null,
-              source: pick(r, 'LeadSource', 'Lead Source') || null,
-              status,
-              notes: pick(r, 'Description') || null,
-              created_by: uid,
-            };
-          });
-          const { error, count } = await (supabase as any).from('crm_leads').insert(chunk, { count: 'exact' });
-          if (error) { s.errors.push(`Leads: ${error.message}`); break; }
-          s.leads += count || chunk.length;
-          setProgress(55 + Math.round(((i + 200) / leads.length) * 20));
-        }
-      } else s.skipped.push('Lead.csv');
-
       // Opportunities -> crm_leads (Opportunities tab)
       setStatus('Importing Opportunities...');
+      const sfIdToLeadId = new Map<string, string>();
       if (opps?.length) {
         for (let i = 0; i < opps.length; i += 200) {
-          const chunk = opps.slice(i, i + 200).map(r => {
+          const oppSlice = opps.slice(i, i + 200);
+          const sfOppIds = oppSlice.map(r => pick(r, 'Id', 'Opportunity ID', 'Opportunity Id', '18 Digit ID'));
+          const chunk = oppSlice.map(r => {
             const sfStage = pick(r, 'StageName', 'Stage').toLowerCase();
             const isWon = sfStage.includes('closed won') || sfStage === 'won';
             const isLost = sfStage.includes('closed lost') || sfStage === 'lost';
@@ -261,18 +231,44 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               created_by: uid,
             };
           });
-          const { error, count } = await (supabase as any).from('crm_leads').insert(chunk, { count: 'exact' });
+          const { data, error } = await (supabase as any).from('crm_leads').insert(chunk).select('id');
           if (error) { s.errors.push(`Opportunities: ${error.message}`); break; }
-          s.opportunities += count || chunk.length;
-          setProgress(75 + Math.round(((i + 200) / opps.length) * 20));
+          data?.forEach((row: any, idx: number) => {
+            if (sfOppIds[idx]) sfIdToLeadId.set(sfOppIds[idx], row.id);
+            s.opportunities++;
+          });
+          setProgress(55 + Math.round(((i + 200) / opps.length) * 25));
         }
       } else s.skipped.push('Opportunity.csv');
+
+      // Notes -> crm_lead_notes (attached to opportunities via ParentId)
+      setStatus('Importing Notes...');
+      if (notesRows?.length) {
+        const noteChunk: any[] = [];
+        for (const r of notesRows) {
+          const parentId = pick(r, 'ParentId', 'Parent ID', 'Parent Id');
+          const leadId = parentId ? sfIdToLeadId.get(parentId) : null;
+          if (!leadId) continue; // only import notes attached to imported opportunities
+          const title = pick(r, 'Title', 'Name');
+          const body = pick(r, 'Body', 'TextPreview', 'Description');
+          const content = [title, body].filter(Boolean).join('\n\n').trim();
+          if (!content) continue;
+          noteChunk.push({ lead_id: leadId, content, created_by: uid });
+        }
+        for (let i = 0; i < noteChunk.length; i += 200) {
+          const slice = noteChunk.slice(i, i + 200);
+          const { error, count } = await (supabase as any).from('crm_lead_notes').insert(slice, { count: 'exact' });
+          if (error) { s.errors.push(`Notes: ${error.message}`); break; }
+          s.notes += count || slice.length;
+          setProgress(80 + Math.round(((i + 200) / noteChunk.length) * 15));
+        }
+      } else s.skipped.push('Note.csv');
 
       setProgress(100);
       setStatus('Done');
       setSummary(s);
       onImported();
-      toast({ title: 'Import complete', description: `${s.companies} accounts, ${s.contacts} contacts, ${s.leads + s.opportunities} opportunities` });
+      toast({ title: 'Import complete', description: `${s.companies} accounts, ${s.contacts} contacts, ${s.opportunities} opportunities, ${s.notes} notes` });
     } catch (err: any) {
       s.errors.push(err.message || String(err));
       setSummary(s);
@@ -289,8 +285,9 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           <DialogTitle className="flex items-center gap-2"><FileArchive className="h-5 w-5" /> Import from Salesforce Export</DialogTitle>
           <DialogDescription>
             Upload the <strong>.zip</strong> from <em>Setup → Data Export</em>, or drop in one or more
-            Salesforce <strong>.csv</strong> exports (Account, Contact, Lead, Opportunity). UTF-8 and UTF-16
-            files are both supported. Accounts → Accounts, and both Leads and Opportunities → Opportunities tab.
+            Salesforce <strong>.csv</strong> exports (Account, Contact, Opportunity, Note). UTF-8 and UTF-16
+            files are both supported. Leads are ignored — only Accounts, their Contacts, their Opportunities,
+            and Notes attached to those Opportunities are imported.
           </DialogDescription>
         </DialogHeader>
 
@@ -325,8 +322,8 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
             <ul className="text-sm space-y-1">
               <li>Accounts: <strong>{summary.companies}</strong></li>
               <li>Contacts: <strong>{summary.contacts}</strong></li>
-              <li>Opportunities (from Leads): <strong>{summary.leads}</strong></li>
-              <li>Opportunities (from Opportunities): <strong>{summary.opportunities}</strong></li>
+              <li>Opportunities: <strong>{summary.opportunities}</strong></li>
+              <li>Notes on opportunities: <strong>{summary.notes}</strong></li>
             </ul>
             {summary.skipped.length > 0 && (
               <p className="text-sm text-muted-foreground">Not found in ZIP: {summary.skipped.join(', ')}</p>
