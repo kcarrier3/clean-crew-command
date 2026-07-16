@@ -414,6 +414,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               <li>Contacts: <strong>{summary.contacts}</strong></li>
               <li>Opportunities: <strong>{summary.opportunities}</strong></li>
               <li>Notes on opportunities: <strong>{summary.notes}</strong></li>
+              <li>Files on opportunities: <strong>{summary.files}</strong></li>
             </ul>
             {summary.skipped.length > 0 && (
               <p className="text-sm text-muted-foreground">Not found in ZIP: {summary.skipped.join(', ')}</p>
