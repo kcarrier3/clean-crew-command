@@ -22,6 +22,7 @@ interface Summary {
   contacts: number;
   opportunities: number;
   notes: number;
+  files: number;
   skipped: string[];
   errors: string[];
 }
@@ -89,8 +90,26 @@ function detectEntity(filename: string): 'accounts' | 'contacts' | 'leads' | 'op
   const n = filename.toLowerCase();
   if (/opportunit/.test(n)) return 'opportunities';
   if (/note/.test(n)) return 'notes' as any;
+  if (/attachment|contentversion|contentdocumentlink/.test(n)) return null; // handled only from ZIP
   if (/contact/.test(n)) return 'contacts';
   if (/account/.test(n)) return 'accounts';
+  return null;
+}
+
+// Locate a file inside the Salesforce export ZIP by Salesforce Id.
+// Data Export layout: files live under `Attachments/<AttachmentId>/<filename>`
+// or `Files/<ContentVersionId>/<filename>`.
+function findZipEntryById(zip: JSZip, id: string): JSZip.JSZipObject | null {
+  if (!id) return null;
+  const id15 = id.slice(0, 15);
+  for (const name of Object.keys(zip.files)) {
+    const f = zip.files[name];
+    if (f.dir) continue;
+    if (name.includes(`/${id}/`) || name.includes(`/${id15}/`) ||
+        name.endsWith(`/${id}`) || name.endsWith(`/${id15}`)) {
+      return f;
+    }
+  }
   return null;
 }
 
@@ -107,7 +126,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
   const handleImport = async () => {
     if (!files.length) return;
     setRunning(true); setSummary(null); setProgress(2);
-    const s: Summary = { companies: 0, contacts: 0, opportunities: 0, notes: 0, skipped: [], errors: [] };
+    const s: Summary = { companies: 0, contacts: 0, opportunities: 0, notes: 0, files: 0, skipped: [], errors: [] };
 
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -120,15 +139,23 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
       let contactsRows: Row[] | null = null;
       let opps: Row[] | null = null;
       let notesRows: Row[] | null = null;
+      let attachmentsRows: Row[] | null = null;
+      let contentVersionsRows: Row[] | null = null;
+      let contentDocLinksRows: Row[] | null = null;
+      let sourceZip: JSZip | null = null;
 
       for (const f of files) {
         const isZip = /\.zip$/i.test(f.name) || f.type.includes('zip');
         if (isZip) {
           const zip = await JSZip.loadAsync(f);
+          sourceZip = zip;
           accounts = accounts ?? await readCsvFromZip(zip, [/(^|\/)Account(s)?\.csv$/i, /accounts?_/i]);
           contactsRows = contactsRows ?? await readCsvFromZip(zip, [/(^|\/)Contact(s)?\.csv$/i, /contacts?_/i]);
           opps = opps ?? await readCsvFromZip(zip, [/(^|\/)Opportunit(y|ies)\.csv$/i, /opportunit/i]);
           notesRows = notesRows ?? await readCsvFromZip(zip, [/(^|\/)Note(s)?\.csv$/i, /^notes?_/i]);
+          attachmentsRows = attachmentsRows ?? await readCsvFromZip(zip, [/(^|\/)Attachment(s)?\.csv$/i]);
+          contentVersionsRows = contentVersionsRows ?? await readCsvFromZip(zip, [/(^|\/)ContentVersion(s)?\.csv$/i]);
+          contentDocLinksRows = contentDocLinksRows ?? await readCsvFromZip(zip, [/(^|\/)ContentDocumentLink(s)?\.csv$/i]);
         } else {
           const entity = detectEntity(f.name);
           if (!entity) { s.skipped.push(`${f.name} (unrecognized)`); continue; }
