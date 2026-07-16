@@ -377,7 +377,8 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
             Upload the <strong>.zip</strong> from <em>Setup → Data Export</em>, or drop in one or more
             Salesforce <strong>.csv</strong> exports (Account, Contact, Opportunity, Note). UTF-8 and UTF-16
             files are both supported. Leads are ignored — only Accounts, their Contacts, their Opportunities,
-            and Notes attached to those Opportunities are imported.
+            Notes, and file Attachments on those Opportunities are imported. Uploading the ZIP is required
+            to import file attachments (raw CSVs don't contain the file bytes).
           </DialogDescription>
         </DialogHeader>
 
