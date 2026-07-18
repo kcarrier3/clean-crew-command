@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Plus, Mail, Phone, ArrowRight, Pencil } from 'lucide-react';
+import { Plus, Mail, Phone, ArrowRight } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -123,7 +123,11 @@ export function LeadsList({ stages, onChanged }: Props) {
       ) : (
         <div className="space-y-2">
           {filtered.map(lead => (
-            <Card key={lead.id} className="hover:shadow-sm transition">
+            <Card
+              key={lead.id}
+              className="hover:shadow-md hover:border-primary/40 transition cursor-pointer"
+              onClick={() => { setEditing(lead); setDialogOpen(true); }}
+            >
               <CardContent className="p-4 flex flex-wrap items-center gap-3 justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -137,10 +141,7 @@ export function LeadsList({ stages, onChanged }: Props) {
                     {lead.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{lead.phone}</span>}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => { setEditing(lead); setDialogOpen(true); }}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                   {lead.status !== 'converted' && (
                     <Button size="sm" variant="outline" onClick={() => convertToDeal(lead)}>
                       Convert <ArrowRight className="h-3 w-3 ml-1" />
