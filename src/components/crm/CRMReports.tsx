@@ -72,6 +72,35 @@ export function CRMReports() {
     return { totalRevenue, outstanding, wonValue, conversion };
   }, [invoices, deals, stages, leads]);
 
+  // Opportunity forecast by close month (weighted by probability)
+  const forecastByMonth = useMemo(() => {
+    const map = new Map<string, { name: string; pipeline: number; forecast: number }>();
+    for (let i = 0; i < 6; i++) {
+      const m = startOfMonth(subMonths(new Date(), -i));
+      map.set(format(m, 'yyyy-MM'), { name: format(m, 'MMM'), pipeline: 0, forecast: 0 });
+    }
+    (leads as any[]).forEach(l => {
+      if (!l.close_date || l.status === 'unqualified') return;
+      const key = format(new Date(l.close_date), 'yyyy-MM');
+      const row = map.get(key);
+      if (!row) return;
+      const amt = Number(l.amount || 0);
+      const exp = l.expected_revenue != null ? Number(l.expected_revenue) : amt * (Number(l.probability || 0) / 100);
+      row.pipeline += amt;
+      row.forecast += exp;
+    });
+    return Array.from(map.values());
+  }, [leads]);
+
+  const oppsByServiceLine = useMemo(() => {
+    const m: Record<string, number> = {};
+    (leads as any[]).forEach(l => {
+      const k = l.service_line || l.type || 'Uncategorized';
+      m[k] = (m[k] || 0) + Number(l.amount || 0);
+    });
+    return Object.entries(m).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8);
+  }, [leads]);
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -150,6 +179,38 @@ export function CRMReports() {
                 <Tooltip formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
                 <Line type="monotone" dataKey="revenue" stroke="#4d7c0f" strokeWidth={2} />
               </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Opportunity Forecast by Close Month (weighted)</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={forecastByMonth}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" fontSize={11} />
+                <YAxis fontSize={11} />
+                <Tooltip formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                <Legend />
+                <Bar dataKey="pipeline" fill="#a3e635" name="Pipeline $" />
+                <Bar dataKey="forecast" fill="#4d7c0f" name="Weighted Forecast $" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Opportunity Value by Service Line</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={oppsByServiceLine} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" fontSize={11} />
+                <YAxis dataKey="name" type="category" fontSize={11} width={110} />
+                <Tooltip formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                <Bar dataKey="value" fill="#65a30d" />
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>

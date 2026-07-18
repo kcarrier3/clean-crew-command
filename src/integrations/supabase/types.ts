@@ -458,15 +458,18 @@ export type Database = {
       crm_companies: {
         Row: {
           address: string | null
+          annual_revenue: number | null
           city: string | null
           created_at: string
           created_by: string | null
+          employee_count: number | null
           id: string
           industry: string | null
           name: string
           notes: string | null
           owner_id: string | null
           phone: string | null
+          salesforce_id: string | null
           state: string | null
           updated_at: string
           website: string | null
@@ -474,15 +477,18 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          annual_revenue?: number | null
           city?: string | null
           created_at?: string
           created_by?: string | null
+          employee_count?: number | null
           id?: string
           industry?: string | null
           name: string
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          salesforce_id?: string | null
           state?: string | null
           updated_at?: string
           website?: string | null
@@ -490,15 +496,18 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          annual_revenue?: number | null
           city?: string | null
           created_at?: string
           created_by?: string | null
+          employee_count?: number | null
           id?: string
           industry?: string | null
           name?: string
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          salesforce_id?: string | null
           state?: string | null
           updated_at?: string
           website?: string | null
@@ -520,6 +529,7 @@ export type Database = {
           notes: string | null
           owner_id: string | null
           phone: string | null
+          salesforce_id: string | null
           title: string | null
           updated_at: string
         }
@@ -536,6 +546,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          salesforce_id?: string | null
           title?: string | null
           updated_at?: string
         }
@@ -552,6 +563,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          salesforce_id?: string | null
           title?: string | null
           updated_at?: string
         }
@@ -1029,13 +1041,18 @@ export type Database = {
           created_by: string | null
           description: string | null
           email: string | null
+          expected_revenue: number | null
           follow_up: boolean
           id: string
+          lead_source: string | null
           next_step: string | null
           notes: string | null
+          owner_id: string | null
           phone: string | null
           primary_contact_id: string | null
           probability: number | null
+          salesforce_id: string | null
+          service_line: string | null
           source: string | null
           source_metadata: Json | null
           stage_id: string | null
@@ -1054,13 +1071,18 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           email?: string | null
+          expected_revenue?: number | null
           follow_up?: boolean
           id?: string
+          lead_source?: string | null
           next_step?: string | null
           notes?: string | null
+          owner_id?: string | null
           phone?: string | null
           primary_contact_id?: string | null
           probability?: number | null
+          salesforce_id?: string | null
+          service_line?: string | null
           source?: string | null
           source_metadata?: Json | null
           stage_id?: string | null
@@ -1079,13 +1101,18 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           email?: string | null
+          expected_revenue?: number | null
           follow_up?: boolean
           id?: string
+          lead_source?: string | null
           next_step?: string | null
           notes?: string | null
+          owner_id?: string | null
           phone?: string | null
           primary_contact_id?: string | null
           probability?: number | null
+          salesforce_id?: string | null
+          service_line?: string | null
           source?: string | null
           source_metadata?: Json | null
           stage_id?: string | null
