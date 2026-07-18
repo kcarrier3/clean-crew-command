@@ -69,6 +69,7 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
   const [historyItem, setHistoryItem] = useState<Item | null>(null);
   const [history, setHistory] = useState<HistoryRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
@@ -133,7 +134,22 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
       .eq('item_id', it.id)
       .order('created_at', { ascending: false });
     if (error) toast({ title: 'Failed to load history', description: error.message, variant: 'destructive' });
-    setHistory((data as HistoryRow[]) || []);
+    const rows = (data as HistoryRow[]) || [];
+    setHistory(rows);
+    const ids = Array.from(new Set(rows.map(r => r.changed_by).filter(Boolean))) as string[];
+    if (ids.length) {
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', ids);
+      const map: Record<string, string> = {};
+      (profs || []).forEach((p: any) => {
+        map[p.id] = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown';
+      });
+      setUserNames(map);
+    } else {
+      setUserNames({});
+    }
     setHistoryLoading(false);
   };
 
@@ -254,6 +270,7 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
                   <TableHead>Cost</TableHead>
                   <TableHead>Markup</TableHead>
                   <TableHead>Sale price</TableHead>
+                  <TableHead>Changed by</TableHead>
                   <TableHead>Note</TableHead>
                 </TableRow>
               </TableHeader>
@@ -264,6 +281,7 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
                     <TableCell className="text-xs">{money(h.previous_unit_cost)} → <span className="font-medium">{money(h.new_unit_cost)}</span></TableCell>
                     <TableCell className="text-xs">{pct(h.previous_markup_percent)} → <span className="font-medium">{pct(h.new_markup_percent)}</span></TableCell>
                     <TableCell className="text-xs">{money(h.previous_sale_price)} → <span className="font-medium">{money(h.new_sale_price)}</span></TableCell>
+                    <TableCell className="text-xs">{h.changed_by ? (userNames[h.changed_by] || '—') : '—'}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{h.note || '—'}</TableCell>
                   </TableRow>
                 ))}
