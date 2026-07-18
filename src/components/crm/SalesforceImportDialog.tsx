@@ -436,13 +436,13 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
                 .replace(/&#39;/g, "'")
                 .replace(/\n{3,}/g, '\n\n')
                 .trim();
-              const title = pick(job.row, 'Title') || fileName.replace(/\.snote$/i, '');
-              const content = [title && title !== 'Untitled Note' ? title : '', text].filter(Boolean).join('\n\n').trim();
-              if (content) {
+              const rawTitle = pick(job.row, 'Title') || fileName.replace(/\.snote$/i, '');
+              const title = rawTitle && rawTitle !== 'Untitled Note' ? rawTitle : null;
+              if (text || title) {
                 const { error: nErr } = await (supabase as any).from('crm_lead_notes').insert({
-                  lead_id: job.leadId, content, created_by: uid,
+                  lead_id: job.leadId, title, content: text || title || '', created_by: uid,
                 });
-                if (nErr) s.errors.push(`Note ${title}: ${nErr.message}`);
+                if (nErr) s.errors.push(`Note ${title || fileName}: ${nErr.message}`);
                 else s.notes++;
               }
             } catch (e: any) {
