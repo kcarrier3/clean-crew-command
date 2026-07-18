@@ -334,8 +334,6 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
             const oppName = pick(r, 'Name', 'Opportunity Name');
             const amount = parseNum(pick(r, 'Amount', 'Opportunity Amount', 'ExpectedRevenue'));
             const prob = parseNum(pick(r, 'Probability', 'Probability (%)'));
-            const expectedRevenue = parseNum(pick(r, 'ExpectedRevenue', 'Expected Revenue'))
-              ?? (amount != null && prob != null ? Number((amount * prob / 100).toFixed(2)) : null);
             return {
               company_name: pick(r, 'Account Name', 'AccountName') || oppName || 'Untitled Opportunity',
               contact_name: oppName || null,
@@ -345,7 +343,6 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               status,
               company_id: sfAcctId ? sfIdToCompanyId.get(sfAcctId) || null : null,
               amount,
-              expected_revenue: expectedRevenue,
               close_date: parseDate(pick(r, 'CloseDate', 'Close Date')),
               probability: prob,
               type: pick(r, 'Type') || null,
