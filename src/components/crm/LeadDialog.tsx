@@ -48,10 +48,10 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState('details');
   const [notes, setNotes] = useState<any[]>([]);
-  const [newNote, setNewNote] = useState('');
-  const [newNoteCategory, setNewNoteCategory] = useState<string>('general');
   const [files, setFiles] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [noteEditor, setNoteEditor] = useState<null | { id?: string; title: string; content: string; category: string }>(null);
   const [stages, setStages] = useState<CrmStage[]>([]);
   const [companies, setCompanies] = useState<CrmCompany[]>([]);
   const [contacts, setContacts] = useState<CrmContact[]>([]);
