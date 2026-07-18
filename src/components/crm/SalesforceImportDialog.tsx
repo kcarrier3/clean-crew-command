@@ -47,6 +47,67 @@ const parseDate = (v: string): string | null => {
   return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 };
 
+const SALESFORCE_FILE_TYPE_MIME: Record<string, string> = {
+  PDF: 'application/pdf',
+  WORD: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  WORD_X: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  DOC: 'application/msword',
+  DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  EXCEL: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  XLS: 'application/vnd.ms-excel',
+  XLSX: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  PPT: 'application/vnd.ms-powerpoint',
+  PPTX: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  PNG: 'image/png',
+  JPG: 'image/jpeg',
+  JPEG: 'image/jpeg',
+  GIF: 'image/gif',
+  TXT: 'text/plain',
+  CSV: 'text/csv',
+  SNOTE: 'text/html',
+};
+
+const EXTENSION_MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  txt: 'text/plain',
+  csv: 'text/csv',
+  snote: 'text/html',
+};
+
+const isValidMimeType = (value: string) => /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*(?:\s*;.*)?$/i.test(value);
+
+const getSafeContentType = (row: Row, fileName: string): string => {
+  const contentType = pick(row, 'ContentType', 'Content Type');
+  if (contentType && isValidMimeType(contentType)) return contentType;
+
+  const sfType = pick(row, 'FileType', 'File Type').toUpperCase();
+  if (sfType && SALESFORCE_FILE_TYPE_MIME[sfType]) return SALESFORCE_FILE_TYPE_MIME[sfType];
+
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+  return EXTENSION_MIME[ext] || 'application/octet-stream';
+};
+
+const sanitizeStorageFileName = (fileName: string): string =>
+  fileName
+    .replace(/[\\/]+/g, '-')
+    .split('')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code > 31 && code !== 127;
+    })
+    .join('')
+    .trim() || 'salesforce-file';
+
 async function readCsvFromZip(zip: JSZip, patterns: RegExp[]): Promise<Row[] | null> {
   const file = Object.keys(zip.files).find(name => patterns.some(p => p.test(name)));
   if (!file) return null;
@@ -353,10 +414,10 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           const fileName = job.kind === 'attachment'
             ? (pick(job.row, 'Name') || sfId)
             : (pick(job.row, 'PathOnClient', 'Title') || sfId);
-          const contentType = pick(job.row, 'ContentType', 'FileType') || 'application/octet-stream';
+          const contentType = getSafeContentType(job.row, fileName);
           try {
             const bytes = await zipEntry.async('uint8array');
-            const path = `crm-leads/${job.leadId}/${crypto.randomUUID()}-${fileName}`;
+            const path = `crm-leads/${job.leadId}/${crypto.randomUUID()}-${sanitizeStorageFileName(fileName)}`;
             const { error: upErr } = await supabase.storage
               .from('crm-files')
               .upload(path, bytes, { contentType, upsert: false });
