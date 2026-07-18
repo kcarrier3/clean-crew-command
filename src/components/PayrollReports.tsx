@@ -138,6 +138,16 @@ const PayrollReports = () => {
           .gte('created_at', `${prevMonthStart}T00:00:00`)
           .lte('created_at', `${prevMonthEnd}T23:59:59`);
         prevMonthLateNotifications = lnData || [];
+
+        // Fetch previous month's excused shifts
+        const { data: exData } = await (supabase as any)
+          .from('excused_shifts')
+          .select('employee_id, excused_date')
+          .gte('excused_date', prevMonthStart)
+          .lte('excused_date', prevMonthEnd);
+        (globalThis as any).__excusedSet = new Set<string>(
+          (exData || []).map((r: any) => `${r.employee_id}|${r.excused_date}`)
+        );
       }
 
       // Calculate payroll for each employee
@@ -201,7 +211,10 @@ const PayrollReports = () => {
                   (!schedEnd || schedEnd >= d);
               });
 
-              if (isScheduled) {
+              const excusedSet: Set<string> = (globalThis as any).__excusedSet || new Set();
+              const isExcused = excusedSet.has(`${profile.id}|${dateStr}`);
+
+              if (isScheduled && !isExcused) {
                 scheduledDays++;
                 // Check if they clocked in on this day
                 const hasEntry = empTimeEntries.some(te => {
