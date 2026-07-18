@@ -366,9 +366,8 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           if (!leadId) continue; // only import notes attached to imported opportunities
           const title = pick(r, 'Title', 'Name');
           const body = pick(r, 'Body', 'TextPreview', 'Description');
-          const content = [title, body].filter(Boolean).join('\n\n').trim();
-          if (!content) continue;
-          noteChunk.push({ lead_id: leadId, content, created_by: uid });
+          if (!title && !body) continue;
+          noteChunk.push({ lead_id: leadId, title: title || null, content: body || title || '', created_by: uid });
         }
         for (let i = 0; i < noteChunk.length; i += 200) {
           const slice = noteChunk.slice(i, i + 200);
