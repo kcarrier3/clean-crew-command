@@ -126,7 +126,7 @@ const ShiftRoster = () => {
 
   const statusFor = (r: RosterEntry) => {
     if (r.excused) {
-      return { label: `Day off on us${r.excused.reason ? ` — ${r.excused.reason}` : ''}`, dotClass: 'bg-blue-500', barClass: 'bg-blue-500' };
+      return { label: `Excused${r.excused.reason ? ` — ${r.excused.reason}` : ''}`, dotClass: 'bg-blue-500', barClass: 'bg-blue-500' };
     }
     if (r.clockInAt && !r.clockOutAt) {
       const start = new Date(r.clockInAt);
@@ -174,7 +174,7 @@ const ShiftRoster = () => {
       toast({ title: 'Could not grant day off', description: error.message, variant: 'destructive' });
       return;
     }
-    toast({ title: 'Day off granted', description: `${excuseTarget.firstName} ${excuseTarget.lastName} won't be penalized for this shift.` });
+      toast({ title: 'Shift excused', description: `${excuseTarget.firstName} ${excuseTarget.lastName}'s missed shift won't count against attendance.` });
     setExcuseTarget(null);
     setReason('');
     load();
@@ -240,7 +240,7 @@ const ShiftRoster = () => {
                         )}
                         {r.excused && (
                           <Badge variant="secondary" className="ml-1 bg-blue-500/10 text-blue-700 border-blue-500/30">
-                            <Gift className="h-3 w-3 mr-1" /> Day off on us
+                            <Gift className="h-3 w-3 mr-1" /> Excused
                           </Badge>
                         )}
                       </div>
@@ -261,7 +261,7 @@ const ShiftRoster = () => {
                           onClick={() => { setExcuseTarget(r); setReason(''); }}
                         >
                           <Gift className="h-3.5 w-3.5 mr-1.5" />
-                          Give day off on us
+                          Excuse missed shift
                         </Button>
                       )
                     )}
@@ -276,13 +276,13 @@ const ShiftRoster = () => {
       <Dialog open={!!excuseTarget} onOpenChange={(o) => !o && setExcuseTarget(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Give day off on us</DialogTitle>
+            <DialogTitle>Excuse missed shift</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              This excuses <strong>{excuseTarget?.firstName} {excuseTarget?.lastName}</strong>'s shift today.
-              They won't get a late/no-show alert, and it won't count against attendance or bonus eligibility.
-              The shift stays on the schedule.
+              This excuses <strong>{excuseTarget?.firstName} {excuseTarget?.lastName}</strong>'s shift today so it
+              won't trigger a late/no-show alert or count against their attendance or bonus eligibility.
+              It is <strong>unpaid</strong> — no hours are added — and the shift stays on the schedule for reference.
             </p>
             <div>
               <Label>Reason (optional)</Label>
@@ -296,7 +296,7 @@ const ShiftRoster = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setExcuseTarget(null)} disabled={saving}>Cancel</Button>
             <Button onClick={grantExcuse} disabled={saving}>
-              {saving ? 'Saving…' : 'Grant day off'}
+              {saving ? 'Saving…' : 'Excuse shift'}
             </Button>
           </DialogFooter>
         </DialogContent>
