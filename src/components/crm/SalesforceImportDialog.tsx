@@ -415,6 +415,42 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
             ? (pick(job.row, 'Name') || sfId)
             : (pick(job.row, 'PathOnClient', 'Title') || sfId);
           const contentType = getSafeContentType(job.row, fileName);
+          const sfFileType = pick(job.row, 'FileType', 'File Type').toUpperCase();
+          const isSnote = sfFileType === 'SNOTE' || /\.snote$/i.test(fileName);
+          if (isSnote) {
+            try {
+              const bytes = await zipEntry.async('uint8array');
+              const html = new TextDecoder('utf-8').decode(bytes);
+              // Strip HTML tags to plain text
+              const text = html
+                .replace(/<style[\s\S]*?<\/style>/gi, '')
+                .replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/p>/gi, '\n\n')
+                .replace(/<[^>]+>/g, '')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+              const title = pick(job.row, 'Title') || fileName.replace(/\.snote$/i, '');
+              const content = [title && title !== 'Untitled Note' ? title : '', text].filter(Boolean).join('\n\n').trim();
+              if (content) {
+                const { error: nErr } = await (supabase as any).from('crm_lead_notes').insert({
+                  lead_id: job.leadId, content, created_by: uid,
+                });
+                if (nErr) s.errors.push(`Note ${title}: ${nErr.message}`);
+                else s.notes++;
+              }
+            } catch (e: any) {
+              s.errors.push(`Note ${fileName}: ${e?.message || e}`);
+            }
+            done++;
+            continue;
+          }
           try {
             const bytes = await zipEntry.async('uint8array');
             const path = `crm-leads/${job.leadId}/${crypto.randomUUID()}-${sanitizeStorageFileName(fileName)}`;
