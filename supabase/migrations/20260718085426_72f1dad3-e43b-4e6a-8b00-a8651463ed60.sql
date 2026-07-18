@@ -1,0 +1,3 @@
+CREATE UNIQUE INDEX IF NOT EXISTS crm_companies_salesforce_id_key ON public.crm_companies (salesforce_id) WHERE salesforce_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS crm_contacts_salesforce_id_key ON public.crm_contacts (salesforce_id) WHERE salesforce_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS crm_leads_salesforce_id_key ON public.crm_leads (salesforce_id) WHERE salesforce_id IS NOT NULL;
