@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Upload, FileArchive, CheckCircle2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { CrmLead } from './types';
 
 interface Props {
   open: boolean;
@@ -46,6 +47,16 @@ const parseDate = (v: string): string | null => {
   const d = new Date(v);
   return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 };
+
+const normalizeStageName = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, '')
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+const stageKey = (value: string): string => normalizeStageName(value).replace(/\s+/g, '');
 
 const SALESFORCE_FILE_TYPE_MIME: Record<string, string> = {
   PDF: 'application/pdf',
@@ -314,22 +325,57 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
         const wonStage = stages.find(st => st.is_won);
         const lostStage = stages.find(st => st.is_lost);
         const stageByName = (needle: string) => {
-          const n = needle.toLowerCase();
-          return stages.find(st => (st.name || '').toLowerCase() === n)
-              || stages.find(st => (st.name || '').toLowerCase().includes(n));
+          const normalizedNeedle = normalizeStageName(needle);
+          const compactNeedle = stageKey(needle);
+          if (!normalizedNeedle) return null;
+
+          const normalizedStages = stages.map(st => ({
+            stage: st,
+            normalized: normalizeStageName(st.name || ''),
+            compact: stageKey(st.name || ''),
+          }));
+
+          return normalizedStages.find(st => st.normalized === normalizedNeedle)?.stage
+              || normalizedStages.find(st => st.compact === compactNeedle)?.stage
+              || normalizedStages.find(st => st.normalized.includes(normalizedNeedle) || normalizedNeedle.includes(st.normalized))?.stage
+              || null;
+        };
+        const stageForSalesforceStage = (salesforceStage: string) => {
+          const n = normalizeStageName(salesforceStage);
+          const compact = n.replace(/\s+/g, '');
+
+          if (!n) return firstStage || null;
+          if (n.includes('lost')) return lostStage || stageByName('Lost') || firstStage || null;
+          if (n.includes('closed won') || n === 'won' || n === 'closed') return wonStage || stageByName('Closed') || firstStage || null;
+
+          const exact = stageByName(salesforceStage);
+          if (exact) return exact;
+
+          if (compact.includes('prequalification') || compact.includes('prequal')) return stageByName('Pre-Qualification') || firstStage || null;
+          if (n.includes('award')) return stageByName('Award Status') || firstStage || null;
+          if (n.includes('sched')) return stageByName('Scheduling') || firstStage || null;
+          if (n.includes('bill')) return stageByName('Billing') || firstStage || null;
+          if (n.includes('proposal') || n.includes('quote')) return stageByName('Proposal') || firstStage || null;
+          if (n.includes('analysis') || n.includes('analy')) return stageByName('Analysis') || firstStage || null;
+          if (n.includes('lead') || n.includes('prospect')) return stageByName('Lead') || firstStage || null;
+
+          return firstStage || null;
+        };
+        const statusForStage = (salesforceStage: string): CrmLead['status'] => {
+          const n = normalizeStageName(salesforceStage);
+          if (n.includes('lost')) return 'unqualified';
+          if (n.includes('closed won') || n === 'won' || n === 'closed') return 'converted';
+          if (n.includes('qualif') || n.includes('proposal') || n.includes('award') || n.includes('sched') || n.includes('bill')) return 'qualified';
+          if (n.includes('analysis') || n.includes('contact')) return 'contacted';
+          return 'new';
         };
         for (let i = 0; i < opps.length; i += 200) {
           const oppSlice = opps.slice(i, i + 200);
           const sfOppIds = oppSlice.map(r => pick(r, 'Id', 'Opportunity ID', 'Opportunity Id', '18 Digit ID'));
           const chunk = oppSlice.map(r => {
-            const sfStage = pick(r, 'StageName', 'Stage').toLowerCase();
-            const isWon = sfStage.includes('closed won') || sfStage === 'won';
-            const isLost = sfStage.includes('closed lost') || sfStage === 'lost';
-            const status = isWon ? 'converted'
-              : isLost ? 'unqualified'
-              : sfStage.includes('qualif') || sfStage.includes('proposal') || sfStage.includes('negotiat') ? 'qualified'
-              : sfStage.includes('prospect') || sfStage.includes('contact') ? 'contacted'
-              : 'new';
+            const sfStage = pick(r, 'StageName', 'Stage');
+            const stage = stageForSalesforceStage(sfStage);
+            const status = statusForStage(sfStage);
             const sfAcctId = pick(r, 'AccountId', 'Account ID');
             const oppName = pick(r, 'Name', 'Opportunity Name');
             const amount = parseNum(pick(r, 'Amount', 'Opportunity Amount', 'ExpectedRevenue'));
@@ -345,6 +391,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               amount,
               close_date: parseDate(pick(r, 'CloseDate', 'Close Date')),
               probability: prob,
+              stage_id: stage?.id || null,
               type: pick(r, 'Type') || null,
               next_step: pick(r, 'NextStep', 'Next Step') || null,
               description: pick(r, 'Description') || null,
@@ -377,12 +424,10 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               const leadId = sfId ? bySfId.get(sfId) : null;
               if (!leadId) continue;
               const sfStage = pick(r, 'StageName', 'Stage');
-              const sfStageLc = sfStage.toLowerCase();
-              const isWon = sfStageLc.includes('closed won') || sfStageLc === 'won';
-              const isLost = sfStageLc.includes('closed lost') || sfStageLc === 'lost';
-              const stage = isWon ? (wonStage || firstStage)
-                : isLost ? (lostStage || firstStage)
-                : (sfStage ? (stageByName(sfStage) || firstStage) : firstStage);
+              const sfStageNormalized = normalizeStageName(sfStage);
+              const isWon = sfStageNormalized.includes('closed won') || sfStageNormalized === 'won' || sfStageNormalized === 'closed';
+              const isLost = sfStageNormalized.includes('lost');
+              const stage = stageForSalesforceStage(sfStage);
               const sfAcctId = pick(r, 'AccountId', 'Account ID');
               const oppName = pick(r, 'Name', 'Opportunity Name') || pick(r, 'Account Name', 'AccountName') || 'Untitled Opportunity';
               const amount = parseNum(pick(r, 'Amount', 'Opportunity Amount', 'ExpectedRevenue'));
@@ -393,7 +438,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
                 lead_id: leadId,
                 stage_id: stage.id,
                 company_id: sfAcctId ? sfIdToCompanyId.get(sfAcctId) || null : null,
-                value: amount,
+                value: amount ?? 0,
                 probability: prob,
                 expected_close_date: closeDate,
                 won_at: isWon ? new Date().toISOString() : null,
