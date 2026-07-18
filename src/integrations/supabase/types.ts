@@ -3989,6 +3989,10 @@ export type Database = {
       }
       is_crm_user: { Args: { _user_id: string }; Returns: boolean }
       is_supply_manager: { Args: { _user_id: string }; Returns: boolean }
+      manager_can_view_profile: {
+        Args: { _employee_id: string; _manager_id: string }
+        Returns: boolean
+      }
       mark_conversation_read: {
         Args: { _conversation_id: string }
         Returns: undefined
