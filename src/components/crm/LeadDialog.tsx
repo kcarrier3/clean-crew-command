@@ -163,6 +163,28 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     setFiles(data || []);
   };
 
+  // Resolve display names for all created_by/updated_by/uploaded_by user IDs referenced
+  // by the current notes and files lists.
+  useEffect(() => {
+    const ids = new Set<string>();
+    notes.forEach(n => { if (n.created_by) ids.add(n.created_by); if (n.updated_by) ids.add(n.updated_by); });
+    files.forEach(f => { if (f.uploaded_by) ids.add(f.uploaded_by); });
+    const missing = Array.from(ids).filter(id => !(id in userNames));
+    if (!missing.length) return;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('profiles').select('id, full_name').in('id', missing);
+      if (data) {
+        setUserNames(prev => {
+          const next = { ...prev };
+          data.forEach((p: any) => { next[p.id] = p.full_name || 'Unknown'; });
+          missing.forEach(id => { if (!(id in next)) next[id] = 'Unknown'; });
+          return next;
+        });
+      }
+    })();
+  }, [notes, files]);
+
   const loadActivities = async () => {
     if (!lead?.id) return;
     const { data } = await (supabase as any)
