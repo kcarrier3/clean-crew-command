@@ -187,14 +187,28 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
     onSaved?.();
   };
 
-  const addNote = async () => {
-    if (!lead?.id || !newNote.trim()) return;
-    const { error } = await (supabase as any).from('crm_lead_notes').insert({
-      lead_id: lead.id, content: newNote.trim(), category: newNoteCategory, created_by: user?.id,
-    });
-    if (error) { toast({ title: 'Failed to add note', description: error.message, variant: 'destructive' }); return; }
-    setNewNote('');
-    setNewNoteCategory('general');
+  const saveNote = async () => {
+    if (!lead?.id || !noteEditor) return;
+    const content = noteEditor.content.trim();
+    if (!content && !noteEditor.title.trim()) return;
+    if (noteEditor.id) {
+      const { error } = await (supabase as any).from('crm_lead_notes').update({
+        title: noteEditor.title.trim() || null,
+        content,
+        category: noteEditor.category,
+      }).eq('id', noteEditor.id);
+      if (error) { toast({ title: 'Failed to save note', description: error.message, variant: 'destructive' }); return; }
+    } else {
+      const { error } = await (supabase as any).from('crm_lead_notes').insert({
+        lead_id: lead.id,
+        title: noteEditor.title.trim() || null,
+        content,
+        category: noteEditor.category,
+        created_by: user?.id,
+      });
+      if (error) { toast({ title: 'Failed to add note', description: error.message, variant: 'destructive' }); return; }
+    }
+    setNoteEditor(null);
     loadNotes();
   };
 
