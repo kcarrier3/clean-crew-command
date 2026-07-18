@@ -509,6 +509,14 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
           }
           try {
             const bytes = await zipEntry.async('uint8array');
+            // Supabase storage caps per-file uploads (typically 50MB). Skip larger files with a friendly note.
+            const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+            if (bytes.byteLength > MAX_UPLOAD_BYTES) {
+              const mb = (bytes.byteLength / (1024 * 1024)).toFixed(1);
+              s.errors.push(`File ${fileName} skipped: ${mb} MB exceeds the 50 MB upload limit.`);
+              done++;
+              continue;
+            }
             const path = `crm-leads/${job.leadId}/${crypto.randomUUID()}-${sanitizeStorageFileName(fileName)}`;
             const { error: upErr } = await supabase.storage
               .from('crm-files')
