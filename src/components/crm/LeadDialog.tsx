@@ -633,72 +633,206 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   }
 
   function renderNotesFilesTab() {
+    const nameFor = (id?: string | null) => (id ? userNames[id] || '…' : '—');
+    const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleString(undefined, { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—');
+
+    const textPreview = (n: any) => {
+      const raw = (n.content || '').replace(/\s+/g, ' ').trim();
+      return raw.length > 120 ? raw.slice(0, 120) + '…' : raw;
+    };
+
     return (
-      <>
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">Notes ({notes.length})</h3>
-          <div className="space-y-2 border rounded p-3 bg-muted/30">
-            <p className="text-xs text-muted-foreground">
-              Log customer notes here — billing questions, requests, concerns, or general updates.
-            </p>
-            <Textarea rows={3} placeholder="What did the customer say?" value={newNote} onChange={e => setNewNote(e.target.value)} />
-            <div className="flex items-center gap-2">
-              <Select value={newNoteCategory} onValueChange={setNewNoteCategory}>
-                <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {NOTE_CATEGORIES.map(c => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>Add Note</Button>
+      <div className="space-y-6">
+        {/* NOTES CARD */}
+        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+          <div className="flex items-start justify-between gap-3 px-4 py-3 border-b bg-muted/30">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="h-8 w-8 rounded flex items-center justify-center bg-pink-600 text-white shrink-0">
+                <StickyNote className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold">Notes ({notes.length})</div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {notes.length} item{notes.length === 1 ? '' : 's'} • Sorted by Last Modified
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <Button size="icon" variant="outline" className="h-8 w-8" onClick={loadNotes} title="Refresh">
+                <RefreshCw className="h-3.5 w-3.5" />
+              </Button>
+              <Button size="sm" variant="outline" className="h-8" onClick={() => setNoteEditor({ title: '', content: '', category: 'general' })}>
+                New
+              </Button>
             </div>
           </div>
-          <div className="space-y-2 max-h-80 overflow-y-auto">
-            {notes.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>}
-            {notes.map(n => (
-              <div key={n.id} className="border rounded p-3 group">
-                <div className="flex justify-between items-start gap-2">
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <NoteCategoryBadge category={n.category} />
-                    <p className="text-sm whitespace-pre-wrap">{n.content}</p>
-                  </div>
-                  <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => deleteNote(n.id)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">{new Date(n.created_at).toLocaleString()}</p>
+          {notes.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">No notes yet</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="w-10 text-xs"></TableHead>
+                    <TableHead className="text-xs">Title</TableHead>
+                    <TableHead className="text-xs">Text Preview</TableHead>
+                    <TableHead className="text-xs w-40">Created By</TableHead>
+                    <TableHead className="text-xs w-44">Last Modified</TableHead>
+                    <TableHead className="text-xs w-40">Last Modified By</TableHead>
+                    <TableHead className="w-10"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {notes.map((n, i) => (
+                    <TableRow key={n.id} className="group">
+                      <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
+                      <TableCell>
+                        <button
+                          className="text-primary hover:underline text-sm font-medium text-left"
+                          onClick={() => setNoteEditor({ id: n.id, title: n.title || '', content: n.content || '', category: n.category || 'general' })}
+                        >
+                          {n.title || (n.content || '').split('\n')[0].slice(0, 60) || 'Untitled Note'}
+                        </button>
+                        <div className="mt-1"><NoteCategoryBadge category={n.category} /></div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground max-w-md">
+                        <span className="line-clamp-1">{textPreview(n)}</span>
+                      </TableCell>
+                      <TableCell className="text-sm text-primary">{nameFor(n.created_by)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{fmtDate(n.updated_at || n.created_at)}</TableCell>
+                      <TableCell className="text-sm text-primary">{nameFor(n.updated_by || n.created_by)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => setNoteEditor({ id: n.id, title: n.title || '', content: n.content || '', category: n.category || 'general' })}>
+                              <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => navigator.clipboard?.writeText(n.content || '')}>
+                              <Copy className="h-3.5 w-3.5 mr-2" /> Copy text
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onSelect={() => deleteNote(n.id)}>
+                              <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+
+        {/* FILES CARD */}
+        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+          <div className="flex items-start justify-between gap-3 px-4 py-3 border-b bg-muted/30">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="h-8 w-8 rounded flex items-center justify-center bg-sky-600 text-white shrink-0">
+                <FileText className="h-4 w-4" />
               </div>
-            ))}
-          </div>
-        </section>
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">Files ({files.length})</h3>
-          <label className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center gap-2 cursor-pointer hover:bg-muted/50">
-            <Upload className="h-6 w-6 text-muted-foreground" />
-            <span className="text-sm">{uploading ? 'Uploading...' : 'Click to upload a file (max 25MB)'}</span>
-            <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
-          </label>
-          <div className="space-y-2 max-h-80 overflow-y-auto">
-            {files.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No files yet</p>}
-            {files.map(f => (
-              <div key={f.id} className="border rounded p-3 flex items-center gap-3">
-                <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{f.file_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {f.file_size ? `${(f.file_size / 1024).toFixed(1)} KB` : ''} · {new Date(f.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <Button size="icon" variant="ghost" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
-                <Button size="icon" variant="ghost" onClick={() => deleteFile(f)}><Trash2 className="h-4 w-4" /></Button>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold">Files ({files.length})</div>
+                <div className="text-xs text-muted-foreground truncate">Attachments on this opportunity</div>
               </div>
-            ))}
+            </div>
+            <label className="inline-flex items-center h-8 px-3 rounded-md border bg-background text-sm cursor-pointer hover:bg-accent">
+              {uploading ? 'Uploading…' : 'Add Files'}
+              <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
+            </label>
           </div>
-        </section>
-      </>
+          {files.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">No files yet</div>
+          ) : (
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {files.map(f => <FileTile key={f.id} file={f} onOpen={() => downloadFile(f)} onDelete={() => deleteFile(f)} nameFor={nameFor} />)}
+            </div>
+          )}
+        </div>
+
+        {/* NOTE EDITOR DIALOG */}
+        <Dialog open={!!noteEditor} onOpenChange={(o) => { if (!o) setNoteEditor(null); }}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{noteEditor?.id ? 'Edit Note' : 'New Note'}</DialogTitle>
+            </DialogHeader>
+            {noteEditor && (
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs">Title</Label>
+                  <Input value={noteEditor.title} onChange={e => setNoteEditor({ ...noteEditor, title: e.target.value })} placeholder="Give this note a title" />
+                </div>
+                <div>
+                  <Label className="text-xs">Category</Label>
+                  <Select value={noteEditor.category} onValueChange={(v) => setNoteEditor({ ...noteEditor, category: v })}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {NOTE_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Body</Label>
+                  <Textarea rows={10} value={noteEditor.content} onChange={e => setNoteEditor({ ...noteEditor, content: e.target.value })} placeholder="Write the note…" />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNoteEditor(null)}>Cancel</Button>
+              <Button onClick={saveNote}>Save</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     );
   }
+}
+
+function FileTile({ file, onOpen, onDelete, nameFor }: { file: any; onOpen: () => void; onDelete: () => void; nameFor: (id?: string | null) => string }) {
+  const name: string = file.file_name || '';
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  const size = file.file_size ? (file.file_size >= 1024 * 1024 ? `${(file.file_size / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(file.file_size / 1024))}KB`) : '';
+  const isImage = /^(png|jpg|jpeg|gif|webp|bmp|svg)$/.test(ext) || (file.content_type || '').startsWith('image/');
+  const isPdf = ext === 'pdf' || file.content_type === 'application/pdf';
+  const isSheet = /^(xls|xlsx|csv|numbers)$/.test(ext);
+  const isSlides = /^(ppt|pptx|key)$/.test(ext);
+  const isArchive = /^(zip|rar|7z|tar|gz)$/.test(ext);
+
+  const Icon = isImage ? ImageIcon : isPdf ? FileText : isSheet ? FileSpreadsheet : isSlides ? Presentation : isArchive ? FileArchive : FileIcon;
+  const iconBg = isPdf ? 'bg-red-100 text-red-700' : isSheet ? 'bg-emerald-100 text-emerald-700' : isSlides ? 'bg-orange-100 text-orange-700' : isArchive ? 'bg-amber-100 text-amber-700' : isImage ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-700';
+
+  const fmt = (d?: string) => d ? new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+  return (
+    <div className="group border rounded-md p-3 flex items-start gap-3 hover:shadow-sm hover:border-primary/40 transition">
+      <button className={`h-14 w-14 rounded flex items-center justify-center shrink-0 ${iconBg}`} onClick={onOpen} title="Open">
+        <Icon className="h-6 w-6" />
+      </button>
+      <div className="flex-1 min-w-0">
+        <button className="text-sm text-primary hover:underline font-medium text-left block truncate w-full" onClick={onOpen} title={name}>
+          {name}
+        </button>
+        <div className="text-xs text-muted-foreground mt-0.5 truncate">
+          {fmt(file.created_at)}{size ? ` • ${size}` : ''}{ext ? ` • ${ext}` : ''}
+        </div>
+        {file.uploaded_by && (
+          <div className="text-xs text-muted-foreground truncate">by {nameFor(file.uploaded_by)}</div>
+        )}
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100"><MoreHorizontal className="h-4 w-4" /></Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={onOpen}><Download className="h-3.5 w-3.5 mr-2" /> Open / Download</DropdownMenuItem>
+          <DropdownMenuItem className="text-destructive" onSelect={onDelete}><Trash2 className="h-3.5 w-3.5 mr-2" /> Delete</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 }
 
 function HighlightField({ label, value, link, strong }: { label: string; value: string; link?: boolean; strong?: boolean }) {
