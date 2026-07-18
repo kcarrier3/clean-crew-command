@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS crm_deals_lead_id_unique ON public.crm_deals(lead_id) WHERE lead_id IS NOT NULL;
