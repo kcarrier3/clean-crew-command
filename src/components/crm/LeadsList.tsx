@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Plus, Mail, Phone, ArrowRight, Pencil } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,6 +32,7 @@ export function LeadsList({ stages, onChanged }: Props) {
   const [filter, setFilter] = useState('');
   const [editing, setEditing] = useState<CrmLead | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [view, setView] = useState<'active' | 'lost'>('active');
 
   const load = async () => {
     setLoading(true);
@@ -68,22 +70,43 @@ export function LeadsList({ stages, onChanged }: Props) {
     onChanged();
   };
 
-  const filtered = leads.filter(l =>
-    !filter ||
-    l.company_name.toLowerCase().includes(filter.toLowerCase()) ||
-    l.contact_name?.toLowerCase().includes(filter.toLowerCase()) ||
-    l.email?.toLowerCase().includes(filter.toLowerCase())
-  );
+  const lostStageIds = new Set(stages.filter(s => s.is_lost).map(s => s.id));
+  const isLost = (l: CrmLead) =>
+    l.status === 'unqualified' || (l.stage_id ? lostStageIds.has(l.stage_id) : false);
+
+  const lostCount = leads.filter(isLost).length;
+  const activeCount = leads.length - lostCount;
+
+  const filtered = leads
+    .filter(l => (view === 'lost' ? isLost(l) : !isLost(l)))
+    .filter(l =>
+      !filter ||
+      l.company_name.toLowerCase().includes(filter.toLowerCase()) ||
+      l.contact_name?.toLowerCase().includes(filter.toLowerCase()) ||
+      l.email?.toLowerCase().includes(filter.toLowerCase())
+    );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-center justify-between">
-        <Input
-          placeholder="Search opportunities…"
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-          className="max-w-xs"
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <ToggleGroup
+            type="single"
+            value={view}
+            onValueChange={v => v && setView(v as 'active' | 'lost')}
+            variant="outline"
+            size="sm"
+          >
+            <ToggleGroupItem value="active">Active ({activeCount})</ToggleGroupItem>
+            <ToggleGroupItem value="lost">Lost ({lostCount})</ToggleGroupItem>
+          </ToggleGroup>
+          <Input
+            placeholder="Search opportunities…"
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            className="max-w-xs"
+          />
+        </div>
         <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" /> New Opportunity
         </Button>
@@ -92,7 +115,11 @@ export function LeadsList({ stages, onChanged }: Props) {
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
       ) : filtered.length === 0 ? (
-        <Card><CardContent className="py-10 text-center text-muted-foreground">No opportunities yet. Add your first opportunity to get started.</CardContent></Card>
+        <Card><CardContent className="py-10 text-center text-muted-foreground">
+          {view === 'lost'
+            ? 'No lost opportunities.'
+            : 'No active opportunities. Add your first opportunity to get started.'}
+        </CardContent></Card>
       ) : (
         <div className="space-y-2">
           {filtered.map(lead => (
