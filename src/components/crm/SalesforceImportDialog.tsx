@@ -98,7 +98,15 @@ const getSafeContentType = (row: Row, fileName: string): string => {
 };
 
 const sanitizeStorageFileName = (fileName: string): string =>
-  fileName.replace(/[\\/]+/g, '-').replace(/[\u0000-\u001f\u007f]/g, '').trim() || 'salesforce-file';
+  fileName
+    .replace(/[\\/]+/g, '-')
+    .split('')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code > 31 && code !== 127;
+    })
+    .join('')
+    .trim() || 'salesforce-file';
 
 async function readCsvFromZip(zip: JSZip, patterns: RegExp[]): Promise<Row[] | null> {
   const file = Object.keys(zip.files).find(name => patterns.some(p => p.test(name)));
