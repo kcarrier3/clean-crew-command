@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type Item = {
@@ -24,13 +24,37 @@ type Item = {
   reorder_point: number | null;
   active: boolean;
   category_id: string | null;
+  markup_percent: number | null;
 };
 
 type Category = { id: string; name: string; kind: string };
 
 const emptyItem = {
   sku: '', name: '', description: '', kind: 'resale' as const,
-  unit: 'ea', unit_cost: '', sale_price: '', reorder_point: '0', category_id: '',
+  unit: 'ea', unit_cost: '', markup_percent: '0', reorder_point: '0', category_id: '',
+};
+
+type HistoryRow = {
+  id: string;
+  previous_unit_cost: number | null;
+  new_unit_cost: number | null;
+  previous_markup_percent: number | null;
+  new_markup_percent: number | null;
+  previous_sale_price: number | null;
+  new_sale_price: number | null;
+  changed_by: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+const money = (v: number | null | undefined) =>
+  v == null ? '—' : `$${Number(v).toFixed(2)}`;
+const pct = (v: number | null | undefined) =>
+  v == null ? '—' : `${Number(v).toFixed(2)}%`;
+const computeSale = (cost: string | number, markup: string | number) => {
+  const c = Number(cost); const m = Number(markup);
+  if (!isFinite(c) || !isFinite(m)) return 0;
+  return c * (1 + m / 100);
 };
 
 export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
@@ -41,6 +65,10 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
   const [editing, setEditing] = useState<Item | null>(null);
   const [form, setForm] = useState<any>(emptyItem);
   const [loading, setLoading] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyItem, setHistoryItem] = useState<Item | null>(null);
+  const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -62,7 +90,7 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
       sku: it.sku || '', name: it.name, description: it.description || '',
       kind: it.kind, unit: it.unit,
       unit_cost: it.unit_cost?.toString() || '',
-      sale_price: it.sale_price?.toString() || '',
+      markup_percent: (it.markup_percent ?? 0).toString(),
       reorder_point: it.reorder_point?.toString() || '0',
       category_id: it.category_id || '',
     });
@@ -71,14 +99,18 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
 
   const save = async () => {
     if (!form.name) { toast({ title: 'Name required', variant: 'destructive' }); return; }
+    const cost = form.unit_cost ? Number(form.unit_cost) : null;
+    const markup = form.markup_percent ? Number(form.markup_percent) : 0;
+    const sale = cost != null ? Number((cost * (1 + markup / 100)).toFixed(2)) : null;
     const payload = {
       sku: form.sku || null,
       name: form.name,
       description: form.description || null,
       kind: form.kind,
       unit: form.unit || 'ea',
-      unit_cost: form.unit_cost ? Number(form.unit_cost) : null,
-      sale_price: form.sale_price ? Number(form.sale_price) : null,
+      unit_cost: cost,
+      markup_percent: markup,
+      sale_price: sale,
       reorder_point: form.reorder_point ? Number(form.reorder_point) : 0,
       category_id: form.category_id || null,
     };
@@ -89,6 +121,20 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
     toast({ title: editing ? 'Item updated' : 'Item created' });
     setOpen(false);
     load();
+  };
+
+  const openHistory = async (it: Item) => {
+    setHistoryItem(it);
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    const { data, error } = await supabase
+      .from('supply_item_cost_history')
+      .select('*')
+      .eq('item_id', it.id)
+      .order('created_at', { ascending: false });
+    if (error) toast({ title: 'Failed to load history', description: error.message, variant: 'destructive' });
+    setHistory((data as HistoryRow[]) || []);
+    setHistoryLoading(false);
   };
 
   return (
@@ -127,7 +173,17 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
                   </Select>
                 </div>
                 <div><Label>Unit cost</Label><Input type="number" step="0.01" value={form.unit_cost} onChange={e => setForm({ ...form, unit_cost: e.target.value })} /></div>
-                <div><Label>Sale price</Label><Input type="number" step="0.01" value={form.sale_price} onChange={e => setForm({ ...form, sale_price: e.target.value })} /></div>
+                <div>
+                  <Label>Markup %</Label>
+                  <Input type="number" step="0.01" value={form.markup_percent} onChange={e => setForm({ ...form, markup_percent: e.target.value })} />
+                </div>
+                <div className="col-span-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                  Calculated sale price:{' '}
+                  <span className="font-semibold">
+                    {form.unit_cost ? `$${computeSale(form.unit_cost, form.markup_percent || 0).toFixed(2)}` : '—'}
+                  </span>
+                  <span className="text-muted-foreground"> (cost × (1 + markup%))</span>
+                </div>
                 <div><Label>Reorder point</Label><Input type="number" step="0.01" value={form.reorder_point} onChange={e => setForm({ ...form, reorder_point: e.target.value })} /></div>
                 <div className="col-span-2"><Label>Description</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
               </div>
@@ -149,6 +205,7 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
                 <TableHead>Type</TableHead>
                 <TableHead>Unit</TableHead>
                 <TableHead className="text-right">Cost</TableHead>
+                <TableHead className="text-right">Markup</TableHead>
                 <TableHead className="text-right">Price</TableHead>
                 <TableHead className="text-right">Reorder</TableHead>
                 {canManage && <TableHead />}
@@ -162,22 +219,59 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
                   <TableCell><Badge variant={it.kind === 'resale' ? 'default' : 'secondary'}>{it.kind}</Badge></TableCell>
                   <TableCell>{it.unit}</TableCell>
                   <TableCell className="text-right">{it.unit_cost != null ? `$${Number(it.unit_cost).toFixed(2)}` : '—'}</TableCell>
+                  <TableCell className="text-right">{pct(it.markup_percent)}</TableCell>
                   <TableCell className="text-right">{it.sale_price != null ? `$${Number(it.sale_price).toFixed(2)}` : '—'}</TableCell>
                   <TableCell className="text-right">{it.reorder_point ?? 0}</TableCell>
                   {canManage && (
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(it)}><Pencil className="h-4 w-4" /></Button>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button variant="ghost" size="icon" title="Cost history" onClick={() => openHistory(it)}><History className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(it)}><Pencil className="h-4 w-4" /></Button>
                     </TableCell>
                   )}
                 </TableRow>
               ))}
               {!items.length && (
-                <TableRow><TableCell colSpan={canManage ? 8 : 7} className="text-center text-muted-foreground py-8">No items yet.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={canManage ? 9 : 8} className="text-center text-muted-foreground py-8">No items yet.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         )}
       </CardContent>
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Cost history — {historyItem?.name}</DialogTitle>
+          </DialogHeader>
+          {historyLoading ? (
+            <div className="text-sm text-muted-foreground">Loading…</div>
+          ) : history.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-6 text-center">No changes recorded yet.</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>When</TableHead>
+                  <TableHead>Cost</TableHead>
+                  <TableHead>Markup</TableHead>
+                  <TableHead>Sale price</TableHead>
+                  <TableHead>Note</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {history.map(h => (
+                  <TableRow key={h.id}>
+                    <TableCell className="whitespace-nowrap text-xs">{new Date(h.created_at).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs">{money(h.previous_unit_cost)} → <span className="font-medium">{money(h.new_unit_cost)}</span></TableCell>
+                    <TableCell className="text-xs">{pct(h.previous_markup_percent)} → <span className="font-medium">{pct(h.new_markup_percent)}</span></TableCell>
+                    <TableCell className="text-xs">{money(h.previous_sale_price)} → <span className="font-medium">{money(h.new_sale_price)}</span></TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{h.note || '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

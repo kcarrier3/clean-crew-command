@@ -3101,6 +3101,56 @@ export type Database = {
         }
         Relationships: []
       }
+      supply_item_cost_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          item_id: string
+          new_markup_percent: number | null
+          new_sale_price: number | null
+          new_unit_cost: number | null
+          note: string | null
+          previous_markup_percent: number | null
+          previous_sale_price: number | null
+          previous_unit_cost: number | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          item_id: string
+          new_markup_percent?: number | null
+          new_sale_price?: number | null
+          new_unit_cost?: number | null
+          note?: string | null
+          previous_markup_percent?: number | null
+          previous_sale_price?: number | null
+          previous_unit_cost?: number | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          new_markup_percent?: number | null
+          new_sale_price?: number | null
+          new_unit_cost?: number | null
+          note?: string | null
+          previous_markup_percent?: number | null
+          previous_sale_price?: number | null
+          previous_unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_item_cost_history_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "supply_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supply_items: {
         Row: {
           active: boolean
@@ -3109,6 +3159,7 @@ export type Database = {
           description: string | null
           id: string
           kind: string
+          markup_percent: number
           name: string
           reorder_point: number | null
           sale_price: number | null
@@ -3124,6 +3175,7 @@ export type Database = {
           description?: string | null
           id?: string
           kind?: string
+          markup_percent?: number
           name: string
           reorder_point?: number | null
           sale_price?: number | null
@@ -3139,6 +3191,7 @@ export type Database = {
           description?: string | null
           id?: string
           kind?: string
+          markup_percent?: number
           name?: string
           reorder_point?: number | null
           sale_price?: number | null
