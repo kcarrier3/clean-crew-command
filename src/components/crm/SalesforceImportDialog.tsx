@@ -306,6 +306,18 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
       setStatus('Importing Opportunities...');
       const sfIdToLeadId = new Map<string, string>();
       if (opps?.length) {
+        // Load pipeline stages once so we can also create matching deals with $ value
+        const { data: stagesData } = await (supabase as any)
+          .from('crm_pipeline_stages').select('*').eq('active', true).order('sort_order');
+        const stages: any[] = stagesData || [];
+        const firstStage = stages.find(st => !st.is_won && !st.is_lost) || stages[0];
+        const wonStage = stages.find(st => st.is_won);
+        const lostStage = stages.find(st => st.is_lost);
+        const stageByName = (needle: string) => {
+          const n = needle.toLowerCase();
+          return stages.find(st => (st.name || '').toLowerCase() === n)
+              || stages.find(st => (st.name || '').toLowerCase().includes(n));
+        };
         for (let i = 0; i < opps.length; i += 200) {
           const oppSlice = opps.slice(i, i + 200);
           const sfOppIds = oppSlice.map(r => pick(r, 'Id', 'Opportunity ID', 'Opportunity Id', '18 Digit ID'));
@@ -320,6 +332,10 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               : 'new';
             const sfAcctId = pick(r, 'AccountId', 'Account ID');
             const oppName = pick(r, 'Name', 'Opportunity Name');
+            const amount = parseNum(pick(r, 'Amount', 'Opportunity Amount', 'ExpectedRevenue'));
+            const prob = parseNum(pick(r, 'Probability', 'Probability (%)'));
+            const expectedRevenue = parseNum(pick(r, 'ExpectedRevenue', 'Expected Revenue'))
+              ?? (amount != null && prob != null ? Number((amount * prob / 100).toFixed(2)) : null);
             return {
               company_name: pick(r, 'Account Name', 'AccountName') || oppName || 'Untitled Opportunity',
               contact_name: oppName || null,
@@ -328,9 +344,10 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               service_line: pick(r, 'Service_Line__c', 'Service Line') || null,
               status,
               company_id: sfAcctId ? sfIdToCompanyId.get(sfAcctId) || null : null,
-              amount: parseNum(pick(r, 'Amount')),
+              amount,
+              expected_revenue: expectedRevenue,
               close_date: parseDate(pick(r, 'CloseDate', 'Close Date')),
-              probability: parseNum(pick(r, 'Probability', 'Probability (%)')),
+              probability: prob,
               type: pick(r, 'Type') || null,
               next_step: pick(r, 'NextStep', 'Next Step') || null,
               description: pick(r, 'Description') || null,
@@ -352,6 +369,49 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
             }
             s.opportunities++;
           });
+
+          // Also upsert matching pipeline deals so the Pipeline Value reflects Salesforce Amount
+          if (firstStage && data?.length) {
+            const bySfId = new Map<string, string>();
+            data.forEach((row: any) => { if (row.salesforce_id) bySfId.set(row.salesforce_id, row.id); });
+            const dealRows: any[] = [];
+            for (const r of oppSlice) {
+              const sfId = pick(r, 'Id', 'Opportunity ID', 'Opportunity Id', '18 Digit ID');
+              const leadId = sfId ? bySfId.get(sfId) : null;
+              if (!leadId) continue;
+              const sfStage = pick(r, 'StageName', 'Stage');
+              const sfStageLc = sfStage.toLowerCase();
+              const isWon = sfStageLc.includes('closed won') || sfStageLc === 'won';
+              const isLost = sfStageLc.includes('closed lost') || sfStageLc === 'lost';
+              const stage = isWon ? (wonStage || firstStage)
+                : isLost ? (lostStage || firstStage)
+                : (sfStage ? (stageByName(sfStage) || firstStage) : firstStage);
+              const sfAcctId = pick(r, 'AccountId', 'Account ID');
+              const oppName = pick(r, 'Name', 'Opportunity Name') || pick(r, 'Account Name', 'AccountName') || 'Untitled Opportunity';
+              const amount = parseNum(pick(r, 'Amount', 'Opportunity Amount', 'ExpectedRevenue'));
+              const prob = parseNum(pick(r, 'Probability', 'Probability (%)'));
+              const closeDate = parseDate(pick(r, 'CloseDate', 'Close Date'));
+              dealRows.push({
+                name: oppName,
+                lead_id: leadId,
+                stage_id: stage.id,
+                company_id: sfAcctId ? sfIdToCompanyId.get(sfAcctId) || null : null,
+                value: amount,
+                probability: prob,
+                expected_close_date: closeDate,
+                won_at: isWon ? new Date().toISOString() : null,
+                lost_at: isLost ? new Date().toISOString() : null,
+                owner_id: uid,
+                created_by: uid,
+              });
+            }
+            if (dealRows.length) {
+              const { error: dealErr } = await (supabase as any)
+                .from('crm_deals')
+                .upsert(dealRows, { onConflict: 'lead_id', ignoreDuplicates: false });
+              if (dealErr) s.errors.push(`Pipeline deals: ${dealErr.message}`);
+            }
+          }
           setProgress(55 + Math.round(((i + 200) / opps.length) * 25));
         }
       } else s.skipped.push('Opportunity.csv');
