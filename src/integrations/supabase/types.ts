@@ -972,7 +972,9 @@ export type Database = {
           created_by: string | null
           id: string
           lead_id: string
+          title: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           category?: string
@@ -981,7 +983,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           lead_id: string
+          title?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           category?: string
@@ -990,7 +994,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           lead_id?: string
+          title?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
