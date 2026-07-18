@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, Gift } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface RosterEntry {
@@ -15,6 +23,7 @@ interface RosterEntry {
   endTime: string;
   clockInAt: string | null;
   clockOutAt: string | null;
+  excused: { id: string; reason: string | null } | null;
 }
 
 const fmt = (t: string) => {
@@ -37,6 +46,12 @@ const initials = (f: string, l: string) =>
 const ShiftRoster = () => {
   const [rows, setRows] = useState<RosterEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isManager } = useAuth();
+  const { toast } = useToast();
+  const canManage = isManager();
+  const [excuseTarget, setExcuseTarget] = useState<RosterEntry | null>(null);
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     load();
@@ -69,6 +84,13 @@ const ShiftRoster = () => {
         .select('employee_id, clock_in, clock_out')
         .gte('clock_in', startOfDay);
 
+      const { data: excusedRows } = await (supabase as any)
+        .from('excused_shifts')
+        .select('id, schedule_id, reason')
+        .eq('excused_date', today);
+      const excusedBySchedule = new Map<string, { id: string; reason: string | null }>();
+      (excusedRows || []).forEach((e: any) => excusedBySchedule.set(e.schedule_id, { id: e.id, reason: e.reason }));
+
       const activeByEmp = new Map<string, { clock_in: string; clock_out: string | null }>();
       entries?.forEach((e: any) => {
         const cur = activeByEmp.get(e.employee_id);
@@ -91,6 +113,7 @@ const ShiftRoster = () => {
           endTime: s.end_time,
           clockInAt: punch?.clock_in ?? null,
           clockOutAt: punch?.clock_out ?? null,
+          excused: excusedBySchedule.get(s.id) || null,
         };
       });
 
@@ -102,6 +125,9 @@ const ShiftRoster = () => {
   };
 
   const statusFor = (r: RosterEntry) => {
+    if (r.excused) {
+      return { label: `Day off on us${r.excused.reason ? ` — ${r.excused.reason}` : ''}`, dotClass: 'bg-blue-500', barClass: 'bg-blue-500' };
+    }
     if (r.clockInAt && !r.clockOutAt) {
       const start = new Date(r.clockInAt);
       const mins = Math.floor((Date.now() - start.getTime()) / 60000);
@@ -129,6 +155,40 @@ const ShiftRoster = () => {
       return { label: `No-show (${diffMin} min late)`, dotClass: 'bg-red-500', barClass: 'bg-red-500' };
     }
     return { label: `Late by ${diffMin} min`, dotClass: 'bg-amber-500', barClass: 'bg-amber-500' };
+  };
+
+  const grantExcuse = async () => {
+    if (!excuseTarget) return;
+    setSaving(true);
+    const today = new Date().toISOString().split('T')[0];
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await (supabase as any).from('excused_shifts').insert({
+      schedule_id: excuseTarget.scheduleId,
+      employee_id: excuseTarget.employeeId,
+      excused_date: today,
+      reason: reason || null,
+      granted_by: user?.id ?? null,
+    });
+    setSaving(false);
+    if (error) {
+      toast({ title: 'Could not grant day off', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Day off granted', description: `${excuseTarget.firstName} ${excuseTarget.lastName} won't be penalized for this shift.` });
+    setExcuseTarget(null);
+    setReason('');
+    load();
+  };
+
+  const revokeExcuse = async (r: RosterEntry) => {
+    if (!r.excused) return;
+    const { error } = await (supabase as any).from('excused_shifts').delete().eq('id', r.excused.id);
+    if (error) {
+      toast({ title: 'Could not remove', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Excused shift removed' });
+    load();
   };
 
   // group by hour bucket for the timeline label column
@@ -178,12 +238,33 @@ const ShiftRoster = () => {
                         {r.jobTitle && (
                           <span className="text-muted-foreground truncate">• {r.jobTitle}</span>
                         )}
+                        {r.excused && (
+                          <Badge variant="secondary" className="ml-1 bg-blue-500/10 text-blue-700 border-blue-500/30">
+                            <Gift className="h-3 w-3 mr-1" /> Day off on us
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
                         {s.label} <span className="mx-1">/</span> {fmt(r.startTime)} - {fmt(r.endTime)}
                         {r.jobSiteName ? ` • ${r.jobSiteName}` : ''}
                       </div>
                     </div>
+                    {canManage && !r.clockInAt && (
+                      r.excused ? (
+                        <Button size="sm" variant="ghost" onClick={() => revokeExcuse(r)}>
+                          Undo
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => { setExcuseTarget(r); setReason(''); }}
+                        >
+                          <Gift className="h-3.5 w-3.5 mr-1.5" />
+                          Give day off on us
+                        </Button>
+                      )
+                    )}
                   </div>
                 </div>
               );
@@ -191,6 +272,35 @@ const ShiftRoster = () => {
           </div>
         )}
       </CardContent>
+
+      <Dialog open={!!excuseTarget} onOpenChange={(o) => !o && setExcuseTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Give day off on us</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              This excuses <strong>{excuseTarget?.firstName} {excuseTarget?.lastName}</strong>'s shift today.
+              They won't get a late/no-show alert, and it won't count against attendance or bonus eligibility.
+              The shift stays on the schedule.
+            </p>
+            <div>
+              <Label>Reason (optional)</Label>
+              <Textarea
+                placeholder="e.g. Customer cancelled — power outage"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExcuseTarget(null)} disabled={saving}>Cancel</Button>
+            <Button onClick={grantExcuse} disabled={saving}>
+              {saving ? 'Saving…' : 'Grant day off'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

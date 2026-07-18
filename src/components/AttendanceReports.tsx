@@ -98,6 +98,16 @@ const AttendanceReports = () => {
 
       if (timeEntriesError) throw timeEntriesError;
 
+      // Fetch excused shifts in the period so we don't count them as scheduled
+      const { data: excusedRows } = await (supabase as any)
+        .from('excused_shifts')
+        .select('employee_id, excused_date')
+        .gte('excused_date', format(start, 'yyyy-MM-dd'))
+        .lte('excused_date', format(end, 'yyyy-MM-dd'));
+      const excusedSet = new Set<string>(
+        (excusedRows || []).map((r: any) => `${r.employee_id}|${r.excused_date}`)
+      );
+
       const attendanceRecords: AttendanceRecord[] = [];
       const missedPunchDetails: MissedPunch[] = [];
 
@@ -122,6 +132,12 @@ const AttendanceReports = () => {
             const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay(); // Convert Sunday from 0 to 7
             
             if (schedule.days_of_week.includes(dayOfWeek)) {
+              const dateKey = format(currentDate, 'yyyy-MM-dd');
+              if (excusedSet.has(`${employee.id}|${dateKey}`)) {
+                // Excused ("day off on us") — skip attendance accounting entirely
+                currentDate = addDays(currentDate, 1);
+                continue;
+              }
               scheduledDays++;
               
               // Check if employee clocked in for this day

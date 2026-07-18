@@ -1977,6 +1977,47 @@ export type Database = {
         }
         Relationships: []
       }
+      excused_shifts: {
+        Row: {
+          created_at: string
+          employee_id: string
+          excused_date: string
+          granted_by: string | null
+          id: string
+          reason: string | null
+          schedule_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          excused_date: string
+          granted_by?: string | null
+          id?: string
+          reason?: string | null
+          schedule_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          excused_date?: string
+          granted_by?: string | null
+          id?: string
+          reason?: string | null
+          schedule_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "excused_shifts_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "employee_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fixed_assets: {
         Row: {
           active: boolean
