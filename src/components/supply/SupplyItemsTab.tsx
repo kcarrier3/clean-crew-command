@@ -69,6 +69,7 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
   const [historyItem, setHistoryItem] = useState<Item | null>(null);
   const [history, setHistory] = useState<HistoryRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
@@ -133,7 +134,22 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
       .eq('item_id', it.id)
       .order('created_at', { ascending: false });
     if (error) toast({ title: 'Failed to load history', description: error.message, variant: 'destructive' });
-    setHistory((data as HistoryRow[]) || []);
+    const rows = (data as HistoryRow[]) || [];
+    setHistory(rows);
+    const ids = Array.from(new Set(rows.map(r => r.changed_by).filter(Boolean))) as string[];
+    if (ids.length) {
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', ids);
+      const map: Record<string, string> = {};
+      (profs || []).forEach((p: any) => {
+        map[p.id] = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown';
+      });
+      setUserNames(map);
+    } else {
+      setUserNames({});
+    }
     setHistoryLoading(false);
   };
 
