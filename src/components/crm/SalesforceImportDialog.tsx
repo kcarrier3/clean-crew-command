@@ -183,15 +183,29 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
             state: pick(r, 'BillingState', 'Billing State', 'ShippingState') || null,
             zip: pick(r, 'BillingPostalCode', 'Billing Zip/Postal Code', 'ShippingPostalCode') || null,
             notes: pick(r, 'Description') || null,
+            annual_revenue: parseNum(pick(r, 'AnnualRevenue', 'Annual Revenue')),
+            employee_count: (() => { const n = parseNum(pick(r, 'NumberOfEmployees', 'Employees')); return n == null ? null : Math.round(n); })(),
+            salesforce_id: pick(r, 'Id', 'Account ID', 'Account Id', '18 Digit ID', '18-Digit ID') || null,
             owner_id: uid,
             created_by: uid,
           }));
           const sfIds = accounts.slice(i, i + 200).map(r => pick(r, 'Id', 'Account ID', 'Account Id', '18 Digit ID', '18-Digit ID'));
-          const { data, error } = await (supabase as any).from('crm_companies').insert(chunk).select('id');
+          const { data, error } = await (supabase as any)
+            .from('crm_companies')
+            .upsert(chunk, { onConflict: 'salesforce_id', ignoreDuplicates: false })
+            .select('id, salesforce_id');
           if (error) { s.errors.push(`Accounts: ${error.message}`); break; }
-          data?.forEach((row: any, idx: number) => {
-            if (sfIds[idx]) sfIdToCompanyId.set(sfIds[idx], row.id);
+          data?.forEach((row: any) => {
+            if (row.salesforce_id) sfIdToCompanyId.set(row.salesforce_id, row.id);
             s.companies++;
+          });
+          // Also cover 15-char/18-char id lookups
+          sfIds.forEach((id) => {
+            if (id && id.length === 18) {
+              const short = id.slice(0, 15);
+              const full = data?.find((r: any) => r.salesforce_id === id);
+              if (full) sfIdToCompanyId.set(short, full.id);
+            }
           });
           setProgress(10 + Math.round(((i + 200) / accounts.length) * 25));
         }
@@ -213,11 +227,14 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               company_id: sfAcctId ? sfIdToCompanyId.get(sfAcctId) || null : null,
               is_primary: false,
               notes: pick(r, 'Description') || null,
+              salesforce_id: pick(r, 'Id', 'Contact ID', 'Contact Id', '18 Digit ID') || null,
               owner_id: uid,
               created_by: uid,
             };
           });
-          const { error, count } = await (supabase as any).from('crm_contacts').insert(chunk, { count: 'exact' });
+          const { error, count } = await (supabase as any)
+            .from('crm_contacts')
+            .upsert(chunk, { onConflict: 'salesforce_id', ignoreDuplicates: false, count: 'exact' });
           if (error) { s.errors.push(`Contacts: ${error.message}`); break; }
           s.contacts += count || chunk.length;
           setProgress(35 + Math.round(((i + 200) / contacts.length) * 20));
@@ -246,6 +263,8 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               company_name: pick(r, 'Account Name', 'AccountName') || oppName || 'Untitled Opportunity',
               contact_name: oppName || null,
               source: pick(r, 'LeadSource', 'Lead Source', 'Type') || null,
+              lead_source: pick(r, 'LeadSource', 'Lead Source') || null,
+              service_line: pick(r, 'Service_Line__c', 'Service Line') || null,
               status,
               company_id: sfAcctId ? sfIdToCompanyId.get(sfAcctId) || null : null,
               amount: parseNum(pick(r, 'Amount')),
@@ -255,13 +274,21 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
               next_step: pick(r, 'NextStep', 'Next Step') || null,
               description: pick(r, 'Description') || null,
               notes: pick(r, 'StageName', 'Stage') ? `Stage: ${pick(r, 'StageName', 'Stage')}` : null,
+              salesforce_id: pick(r, 'Id', 'Opportunity ID', 'Opportunity Id', '18 Digit ID') || null,
+              owner_id: uid,
               created_by: uid,
             };
           });
-          const { data, error } = await (supabase as any).from('crm_leads').insert(chunk).select('id');
+          const { data, error } = await (supabase as any)
+            .from('crm_leads')
+            .upsert(chunk, { onConflict: 'salesforce_id', ignoreDuplicates: false })
+            .select('id, salesforce_id');
           if (error) { s.errors.push(`Opportunities: ${error.message}`); break; }
-          data?.forEach((row: any, idx: number) => {
-            if (sfOppIds[idx]) sfIdToLeadId.set(sfOppIds[idx], row.id);
+          data?.forEach((row: any) => {
+            if (row.salesforce_id) {
+              sfIdToLeadId.set(row.salesforce_id, row.id);
+              if (row.salesforce_id.length === 18) sfIdToLeadId.set(row.salesforce_id.slice(0, 15), row.id);
+            }
             s.opportunities++;
           });
           setProgress(55 + Math.round(((i + 200) / opps.length) * 25));
