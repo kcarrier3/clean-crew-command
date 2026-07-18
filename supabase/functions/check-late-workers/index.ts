@@ -95,6 +95,21 @@ serve(async (req) => {
       );
     }
 
+    // Skip if this shift was excused ("day off on us")
+    const { data: excused } = await supabase
+      .from('excused_shifts')
+      .select('id')
+      .eq('employee_id', employeeId)
+      .eq('excused_date', todayDate)
+      .maybeSingle();
+    if (excused) {
+      console.log('Shift is excused — skipping late check');
+      return new Response(
+        JSON.stringify({ message: 'Shift excused' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Parse scheduled start time
     const [schedHours, schedMinutes] = schedule.start_time.split(':').map(Number);
     const scheduledStart = new Date(clockInTime);
