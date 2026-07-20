@@ -11,16 +11,17 @@ import { useJobSiteAccess } from '@/hooks/useJobSiteAccess';
 import { useNavigate } from 'react-router-dom';
 import QRScanner from './QRScanner';
 
-// Job titles allowed to punch in at the internal office without a scheduled shift.
-const OFFICE_ELIGIBLE_TITLES = [
-  'Owner',
-  'Administrator',
-  'Janitorial Manager',
-  'Floaters',
-  'Supply Management',
-  'Night Manager',
+// Job titles that automatically punch in at the internal office (fixed-expense staff).
+const OFFICE_AUTO_TITLES = [
   'Office Manager',
+  'Operations Manager',
+  'Night Manager',
+  'Supply',
+  'Supply Management',
 ];
+
+// Floater job titles automatically punch in to the "Floating" account.
+const FLOATER_TITLES = ['Floaters'];
 
 interface Employee {
   id: string;
@@ -73,6 +74,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [officeSite, setOfficeSite] = useState<JobSite | null>(null);
+  const [floatingSite, setFloatingSite] = useState<JobSite | null>(null);
   const [activeEntries, setActiveEntries] = useState<TimeEntry[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [selectedJobSite, setSelectedJobSite] = useState<string>('');
@@ -92,8 +94,10 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const isJanitorialWorker =
     !forManager && profile?.job_title === 'Janitorial Staff' && !isManager();
 
-  const isOfficeEligible =
-    !!profile?.job_title && OFFICE_ELIGIBLE_TITLES.includes(profile.job_title);
+  const isOfficeAuto =
+    !!profile?.job_title && OFFICE_AUTO_TITLES.includes(profile.job_title);
+  const isFloater =
+    !!profile?.job_title && FLOATER_TITLES.includes(profile.job_title);
 
   // Whether the current worker view is already clocked in.
   const isClockedInAsSelf =
@@ -103,6 +107,12 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     if (!officeSite) return;
     setSelectedJobSite(officeSite.id);
     await clockIn(officeSite.id);
+  };
+
+  const punchInFloating = async () => {
+    if (!floatingSite) return;
+    setSelectedJobSite(floatingSite.id);
+    await clockIn(floatingSite.id);
   };
 
   const handleScan = (text: string) => {
@@ -201,7 +211,8 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     } else {
       const all = data || [];
       setOfficeSite(all.find((s: any) => s.is_office) || null);
-      setJobSites(all.filter((s: any) => !s.is_office));
+      setFloatingSite(all.find((s: any) => s.name === 'Floating') || null);
+      setJobSites(all.filter((s: any) => !s.is_office && s.name !== 'Floating'));
     }
   };
 
