@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, MapPin, Calendar, ClipboardList, CalendarDays, Camera } from 'lucide-react';
+import { Clock, MapPin, Calendar, ClipboardList, CalendarDays } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import TimeClock from '@/components/TimeClock';
-import InspectionHistory from '@/components/InspectionHistory';
 
 interface Schedule {
   id: string;
