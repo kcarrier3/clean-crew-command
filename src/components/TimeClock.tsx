@@ -603,41 +603,66 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Office punch-in shortcut for fixed-expense staff (worker view only) */}
-          {!forManager && isOfficeEligible && officeSite && !isClockedInAsSelf && (
-            <div className="mb-4 p-4 border rounded-lg bg-muted/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <div className="text-sm text-muted-foreground">Fixed-expense staff</div>
-                <div className="font-semibold flex items-center gap-2">
+          {!forManager && isOfficeAuto && officeSite && !isClockedInAsSelf ? (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="text-center space-y-1">
+                <p className="text-sm text-muted-foreground">Punching in at</p>
+                <p className="text-lg font-semibold flex items-center justify-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  Punch in at {officeSite.name}
-                </div>
+                  {officeSite.name}
+                </p>
                 {officeSite.address && (
-                  <div className="text-xs text-muted-foreground">{officeSite.address}</div>
+                  <p className="text-xs text-muted-foreground">{officeSite.address}</p>
                 )}
               </div>
               <Button
                 onClick={punchInAtOffice}
                 disabled={isGettingLocation}
                 size="lg"
-                className="min-w-[160px]"
+                className="w-full max-w-xs h-16 text-lg"
               >
                 {isGettingLocation ? (
                   <>
-                    <MapPin className="h-4 w-4 mr-2 animate-pulse" />
+                    <MapPin className="h-5 w-5 mr-2 animate-pulse" />
                     Getting Location...
                   </>
                 ) : (
                   <>
-                    <PlayCircle className="h-5 w-5 mr-2" />
-                    Clock In at Office
+                    <PlayCircle className="h-6 w-6 mr-2" />
+                    Clock In
                   </>
                 )}
               </Button>
             </div>
-          )}
-
-          {isJanitorialWorker && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
+          ) : !forManager && isFloater && floatingSite && !isClockedInAsSelf ? (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="text-center space-y-1">
+                <p className="text-sm text-muted-foreground">Punching in as</p>
+                <p className="text-lg font-semibold">Floating</p>
+                <p className="text-xs text-muted-foreground max-w-xs">
+                  You'll be clocked in to the Floating account. Your manager can reassign your hours as needed.
+                </p>
+              </div>
+              <Button
+                onClick={punchInFloating}
+                disabled={isGettingLocation}
+                size="lg"
+                className="w-full max-w-xs h-16 text-lg"
+              >
+                {isGettingLocation ? (
+                  <>
+                    <MapPin className="h-5 w-5 mr-2 animate-pulse" />
+                    Getting Location...
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="h-6 w-6 mr-2" />
+                    Clock In
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : isJanitorialWorker && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="text-center space-y-1">
                 <p className="text-sm text-muted-foreground">Punch-in method</p>
@@ -693,7 +718,15 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                 <div className="text-xs text-destructive text-center">{locationError}</div>
               )}
             </div>
-          ) : (
+          ) : !forManager && !activeEntries.some(e => e.employee_id === selectedEmployee) ? (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <Clock className="h-8 w-8 text-muted-foreground" />
+              <p className="text-lg font-semibold">No shift scheduled today</p>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                You don't have a shift scheduled right now. Contact your manager if you believe this is a mistake.
+              </p>
+            </div>
+          ) : !forManager ? null : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Employee Selection (only for managers) */}
             {forManager && (
