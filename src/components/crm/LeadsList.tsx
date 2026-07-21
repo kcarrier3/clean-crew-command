@@ -141,12 +141,10 @@ export function LeadsList({ stages, onChanged }: Props) {
                     {lead.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{lead.phone}</span>}
                   </div>
                 </div>
-                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                  {lead.status !== 'converted' && (
-                    <Button size="sm" variant="outline" onClick={() => convertToDeal(lead)}>
-                      Convert <ArrowRight className="h-3 w-3 ml-1" />
-                    </Button>
-                  )}
+                <div className="flex gap-2 items-center text-xs text-muted-foreground">
+                  {lead.status === 'converted'
+                    ? <Badge variant="outline" className="text-xs">Awarded → Deal</Badge>
+                    : <span>Deal created when awarded</span>}
                 </div>
               </CardContent>
             </Card>
