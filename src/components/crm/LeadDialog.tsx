@@ -339,8 +339,34 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
         toast({ title: 'Failed to update stage', description: error.message, variant: 'destructive' });
         return;
       }
+      const newStage = stages.find(s => s.id === stageId);
+      if (newStage?.is_won) {
+        await ensureDealForLead(newStage.id);
+      }
       onSaved?.();
     }
+  };
+
+  const ensureDealForLead = async (stageId: string) => {
+    if (!lead?.id) return;
+    const { data: existing } = await (supabase as any)
+      .from('crm_deals').select('id').eq('lead_id', lead.id).maybeSingle();
+    const payload: any = {
+      name: `${form.company_name || lead.company_name} — Award`,
+      lead_id: lead.id,
+      stage_id: stageId,
+      amount: form.amount ? Number(form.amount) : null,
+      probability: form.probability ? Number(form.probability) : 100,
+      close_date: form.close_date || null,
+      owner_id: user?.id,
+    };
+    if (existing?.id) {
+      await (supabase as any).from('crm_deals').update(payload).eq('id', existing.id);
+    } else {
+      await (supabase as any).from('crm_deals').insert({ ...payload, created_by: user?.id });
+    }
+    await (supabase as any).from('crm_leads').update({ status: 'converted' }).eq('id', lead.id);
+    toast({ title: 'Deal created', description: 'Opportunity awarded — moved into the pipeline.' });
   };
 
   const markStageComplete = async () => {
