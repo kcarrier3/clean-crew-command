@@ -33,7 +33,7 @@ type Movement = {
   total_value: number | null;
   created_at: string;
   movement_type: string;
-  item: { id: string; name: string; unit: string; unit_cost: number | null } | null;
+  item: { id: string; name: string; unit: string; unit_cost: number | null; kind: string } | null;
 };
 
 type Row = {
@@ -72,7 +72,7 @@ export default function AccountCostReport() {
         .not('clock_out', 'is', null),
       supabase.from('profiles').select('id, first_name, last_name, hourly_rate, salary_amount, pay_type'),
       supabase.from('supply_movements')
-        .select('id, job_site_id, quantity, unit_price, total_value, created_at, movement_type, item:supply_items(id, name, unit, unit_cost)')
+        .select('id, job_site_id, quantity, unit_price, total_value, created_at, movement_type, item:supply_items(id, name, unit, unit_cost, kind)')
         .not('job_site_id', 'is', null)
         .gte('created_at', startIso).lte('created_at', endIso),
     ]);
@@ -122,7 +122,9 @@ export default function AccountCostReport() {
       const js = jobSites.find(j => j.id === m.job_site_id);
       if (!js) continue;
       const qty = Number(m.quantity);
-      const unitCost = Number(m.item.unit_cost ?? 0);
+      const isResale = m.item.kind === 'resale';
+      const unitCost = isResale ? 0 : Number(m.item.unit_cost ?? 0);
+      // Resale supplies are billed to the customer, so they are not a job cost to us.
       const cost = qty * unitCost;
       const revenue = m.total_value != null ? Number(m.total_value) : (m.unit_price != null ? Number(m.unit_price) * qty : 0);
       const row = getRow(js);
