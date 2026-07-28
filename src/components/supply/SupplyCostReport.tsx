@@ -17,7 +17,7 @@ type Movement = {
   total_value: number | null;
   created_at: string;
   movement_type: string;
-  item: { id: string; name: string; unit: string; unit_cost: number | null } | null;
+  item: { id: string; name: string; unit: string; unit_cost: number | null; kind: string } | null;
 };
 
 type Row = {
@@ -45,7 +45,7 @@ export default function SupplyCostReport() {
     const [{ data: js }, { data: mv }] = await Promise.all([
       supabase.from('job_sites').select('id, name').eq('active', true).order('name'),
       supabase.from('supply_movements')
-        .select('id, job_site_id, quantity, unit_price, total_value, created_at, movement_type, item:supply_items(id, name, unit, unit_cost)')
+        .select('id, job_site_id, quantity, unit_price, total_value, created_at, movement_type, item:supply_items(id, name, unit, unit_cost, kind)')
         .not('job_site_id', 'is', null)
         .gte('created_at', startIso).lte('created_at', endIso),
     ]);
@@ -63,7 +63,9 @@ export default function SupplyCostReport() {
       const js = jobSites.find(j => j.id === m.job_site_id);
       if (!js) continue;
       const qty = Number(m.quantity);
-      const unitCost = Number(m.item.unit_cost ?? 0);
+      const isResale = m.item.kind === 'resale';
+      // Resale supplies are billed to the customer, so they are not a job cost to us.
+      const unitCost = isResale ? 0 : Number(m.item.unit_cost ?? 0);
       const cost = qty * unitCost;
       const revenue = m.total_value != null ? Number(m.total_value) : (m.unit_price != null ? Number(m.unit_price) * qty : 0);
       let r = map.get(js.id);
