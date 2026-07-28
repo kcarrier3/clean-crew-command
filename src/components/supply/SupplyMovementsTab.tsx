@@ -109,7 +109,8 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
       if (!form.from_location_id) { toast({ title: 'Source required', variant: 'destructive' }); return; }
       payload.from_location_id = form.from_location_id;
       payload.job_site_id = form.job_site_id || null;
-      payload.unit_price = form.unit_price ? Number(form.unit_price) : null;
+      // Sell price is always derived from the item's configured sale price (cost + markup)
+      payload.unit_price = selectedItem?.sale_price != null ? Number(selectedItem.sale_price) : null;
       if (payload.unit_price != null) payload.total_value = payload.unit_price * payload.quantity;
     } else if (t === 'adjust') {
       // For adjust: positive quantity adds to to_location, negative to from_location
@@ -129,9 +130,10 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
   };
 
   const t: FormType = form.movement_type;
+  const selectedItem = items.find(i => i.id === form.item_id) || null;
   const showFrom = t === 'transfer' || t === 'sell' || t === 'adjust';
   const showTo = t === 'receive' || t === 'transfer' || t === 'adjust';
-  const showPrice = t === 'receive' || t === 'sell';
+  const showPrice = t === 'receive';
   const showJobSite = t === 'sell';
 
   const badge = (mt: string) => {
@@ -165,7 +167,22 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
                 </Select>
               </div>
               <div><Label>Quantity</Label><Input type="number" step="0.01" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} /></div>
-              {showPrice && <div><Label>Unit price</Label><Input type="number" step="0.01" value={form.unit_price} onChange={e => setForm({ ...form, unit_price: e.target.value })} /></div>}
+              {showPrice && <div><Label>Price paid (per {selectedItem?.unit || 'unit'})</Label><Input type="number" step="0.01" value={form.unit_price} onChange={e => setForm({ ...form, unit_price: e.target.value })} /></div>}
+              {t === 'sell' && (
+                <div>
+                  <Label>Sell price (auto)</Label>
+                  <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm">
+                    {selectedItem?.sale_price != null
+                      ? `$${Number(selectedItem.sale_price).toFixed(2)} / ${selectedItem.unit}`
+                      : 'Not set on item'}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedItem && selectedItem.sale_price == null
+                      ? 'Set cost & markup on the item to enable pricing.'
+                      : 'Calculated from item cost + markup.'}
+                  </p>
+                </div>
+              )}
               {showFrom && (
                 <div className="col-span-2">
                   <Label>From location</Label>
