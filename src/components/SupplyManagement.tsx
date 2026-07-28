@@ -36,16 +36,17 @@ const SupplyManagement = () => {
           <TabsTrigger value="stock">Stock</TabsTrigger>
           <TabsTrigger value="items">Items</TabsTrigger>
           <TabsTrigger value="assets">Fixed Assets</TabsTrigger>
-          <TabsTrigger value="movements">Movements</TabsTrigger>
           <TabsTrigger value="requests">Requests</TabsTrigger>
           {canManage && <TabsTrigger value="cost-report">Cost Report</TabsTrigger>}
           {canManage && <TabsTrigger value="billing-report">Billing Report</TabsTrigger>}
           {canManage && <TabsTrigger value="locations">Locations</TabsTrigger>}
         </TabsList>
-        <TabsContent value="stock"><SupplyStockTab /></TabsContent>
+        <TabsContent value="stock" className="space-y-6">
+          <SupplyStockTab />
+          <SupplyMovementsTab canManage={canManage} />
+        </TabsContent>
         <TabsContent value="items"><SupplyItemsTab canManage={canManage} /></TabsContent>
         <TabsContent value="assets"><FixedAssetsTab canManage={canManage} /></TabsContent>
-        <TabsContent value="movements"><SupplyMovementsTab canManage={canManage} /></TabsContent>
         <TabsContent value="requests"><SupplyRequestsTab canManage={canManage} /></TabsContent>
         {canManage && <TabsContent value="cost-report"><SupplyCostReport /></TabsContent>}
         {canManage && <TabsContent value="billing-report"><SupplyBillingReport /></TabsContent>}

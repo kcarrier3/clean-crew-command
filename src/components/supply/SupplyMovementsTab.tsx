@@ -28,7 +28,7 @@ type Movement = {
   job_site: { name: string } | null;
 };
 
-type Item = { id: string; name: string; unit: string; unit_cost: number | null; sale_price: number | null };
+type Item = { id: string; name: string; unit: string; unit_cost: number | null; sale_price: number | null; kind: 'resale' | 'cleaning' | string };
 type Location = { id: string; name: string; kind: string };
 type JobSite = { id: string; name: string };
 
@@ -62,7 +62,7 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
       supabase.from('supply_movements')
         .select('id, movement_type, quantity, unit_price, total_value, reference, notes, created_at, item:supply_items(name, unit), from_location:supply_locations!supply_movements_from_location_id_fkey(name), to_location:supply_locations!supply_movements_to_location_id_fkey(name), job_site:job_sites(name)')
         .order('created_at', { ascending: false }).limit(200),
-      supabase.from('supply_items').select('id, name, unit, unit_cost, sale_price').eq('active', true).order('name'),
+      supabase.from('supply_items').select('id, name, unit, unit_cost, sale_price, kind').eq('active', true).order('name'),
       supabase.from('supply_locations').select('id, name, kind').eq('active', true).order('name'),
       supabase.from('job_sites').select('id, name').eq('active', true).order('name'),
     ]);
@@ -109,9 +109,16 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
       if (!form.from_location_id) { toast({ title: 'Source required', variant: 'destructive' }); return; }
       payload.from_location_id = form.from_location_id;
       payload.job_site_id = form.job_site_id || null;
-      // Sell price is always derived from the item's configured sale price (cost + markup)
-      payload.unit_price = selectedItem?.sale_price != null ? Number(selectedItem.sale_price) : null;
-      if (payload.unit_price != null) payload.total_value = payload.unit_price * payload.quantity;
+      if (selectedItem?.kind === 'cleaning') {
+        // Cleaning supplies aren't billed to the customer: no revenue.
+        // Their cost still rolls into the account's job cost via the item's unit cost.
+        payload.unit_price = 0;
+        payload.total_value = 0;
+      } else {
+        // Resale price is always derived from the item's configured sale price (cost + markup)
+        payload.unit_price = selectedItem?.sale_price != null ? Number(selectedItem.sale_price) : null;
+        if (payload.unit_price != null) payload.total_value = payload.unit_price * payload.quantity;
+      }
     } else if (t === 'adjust') {
       // For adjust: positive quantity adds to to_location, negative to from_location
       if (form.to_location_id) payload.to_location_id = form.to_location_id;
@@ -151,35 +158,41 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => openFor('receive')}><PackagePlus className="h-4 w-4 mr-2" />Receive</Button>
             <Button variant="outline" onClick={() => openFor('transfer')}><Truck className="h-4 w-4 mr-2" />Load truck</Button>
-            <Button variant="outline" onClick={() => openFor('sell')}><ShoppingCart className="h-4 w-4 mr-2" />Sell</Button>
+            <Button variant="outline" onClick={() => openFor('sell')}><ShoppingCart className="h-4 w-4 mr-2" />Drop off at account</Button>
             <Button variant="outline" onClick={() => openFor('adjust')}><Sliders className="h-4 w-4 mr-2" />Adjust</Button>
           </div>
         )}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle className="capitalize">{t}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle className="capitalize">{t === 'sell' ? 'Drop off at account' : t}</DialogTitle></DialogHeader>
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Label>Item</Label>
                 <Select value={form.item_id} onValueChange={v => setForm({ ...form, item_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Choose item" /></SelectTrigger>
-                  <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name} — {i.kind}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div><Label>Quantity</Label><Input type="number" step="0.01" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} /></div>
               {showPrice && <div><Label>Price paid (per {selectedItem?.unit || 'unit'})</Label><Input type="number" step="0.01" value={form.unit_price} onChange={e => setForm({ ...form, unit_price: e.target.value })} /></div>}
               {t === 'sell' && (
                 <div>
-                  <Label>Sell price (auto)</Label>
+                  <Label>{selectedItem?.kind === 'cleaning' ? 'Cost to us (auto)' : 'Sell price (auto)'}</Label>
                   <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm">
-                    {selectedItem?.sale_price != null
-                      ? `$${Number(selectedItem.sale_price).toFixed(2)} / ${selectedItem.unit}`
-                      : 'Not set on item'}
+                    {selectedItem?.kind === 'cleaning'
+                      ? (selectedItem.unit_cost != null
+                          ? `$${Number(selectedItem.unit_cost).toFixed(2)} / ${selectedItem.unit}`
+                          : 'No cost set on item')
+                      : selectedItem?.sale_price != null
+                        ? `$${Number(selectedItem.sale_price).toFixed(2)} / ${selectedItem.unit}`
+                        : 'Not set on item'}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {selectedItem && selectedItem.sale_price == null
-                      ? 'Set cost & markup on the item to enable pricing.'
-                      : 'Calculated from item cost + markup.'}
+                    {selectedItem?.kind === 'cleaning'
+                      ? 'Cleaning supply — not billed to the customer, but its cost is charged to the account in cost reports.'
+                      : selectedItem && selectedItem.sale_price == null
+                        ? 'Set cost & markup on the item to enable pricing.'
+                        : 'Resale item — calculated from item cost + markup.'}
                   </p>
                 </div>
               )}
@@ -203,7 +216,7 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
               )}
               {showJobSite && (
                 <div className="col-span-2">
-                  <Label>Sold to account</Label>
+                  <Label>Account</Label>
                   <Select value={form.job_site_id || 'none'} onValueChange={v => setForm({ ...form, job_site_id: v === 'none' ? '' : v })}>
                     <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
