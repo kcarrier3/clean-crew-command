@@ -168,6 +168,21 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
               </div>
               <div><Label>Quantity</Label><Input type="number" step="0.01" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} /></div>
               {showPrice && <div><Label>Unit price</Label><Input type="number" step="0.01" value={form.unit_price} onChange={e => setForm({ ...form, unit_price: e.target.value })} /></div>}
+              {t === 'sell' && (
+                <div>
+                  <Label>Sell price (auto)</Label>
+                  <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm">
+                    {selectedItem?.sale_price != null
+                      ? `$${Number(selectedItem.sale_price).toFixed(2)} / ${selectedItem.unit}`
+                      : 'Not set on item'}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedItem && selectedItem.sale_price == null
+                      ? 'Set cost & markup on the item to enable pricing.'
+                      : 'Calculated from item cost + markup.'}
+                  </p>
+                </div>
+              )}
               {showFrom && (
                 <div className="col-span-2">
                   <Label>From location</Label>
