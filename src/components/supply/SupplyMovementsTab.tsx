@@ -109,7 +109,8 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
       if (!form.from_location_id) { toast({ title: 'Source required', variant: 'destructive' }); return; }
       payload.from_location_id = form.from_location_id;
       payload.job_site_id = form.job_site_id || null;
-      payload.unit_price = form.unit_price ? Number(form.unit_price) : null;
+      // Sell price is always derived from the item's configured sale price (cost + markup)
+      payload.unit_price = selectedItem?.sale_price != null ? Number(selectedItem.sale_price) : null;
       if (payload.unit_price != null) payload.total_value = payload.unit_price * payload.quantity;
     } else if (t === 'adjust') {
       // For adjust: positive quantity adds to to_location, negative to from_location
@@ -129,9 +130,10 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
   };
 
   const t: FormType = form.movement_type;
+  const selectedItem = items.find(i => i.id === form.item_id) || null;
   const showFrom = t === 'transfer' || t === 'sell' || t === 'adjust';
   const showTo = t === 'receive' || t === 'transfer' || t === 'adjust';
-  const showPrice = t === 'receive' || t === 'sell';
+  const showPrice = t === 'receive';
   const showJobSite = t === 'sell';
 
   const badge = (mt: string) => {
