@@ -816,9 +816,9 @@ export default function JobSitesManagement() {
                                   <h3 className="text-base md:text-lg font-semibold break-words">{jobSite.name}</h3>
                                   <div className="flex gap-2">
                                     <Badge variant="default">Active</Badge>
-                                    {jobSite.is_recurring_monthly && (
-                                      <Badge variant="secondary">Recurring</Badge>
-                                    )}
+                                    <Badge variant="secondary">
+                                      {jobSite.is_recurring_monthly ? 'Recurring' : 'Project'}
+                                    </Badge>
                                   </div>
                                 </div>
 
