@@ -162,8 +162,8 @@ const CalendarPlanner = () => {
     const { data, error } = await supabase
       .from('calendar_drafts')
       .select('*')
-      .gte('start_at', gridStart.toISOString())
       .lte('start_at', gridEnd.toISOString())
+      .or(`end_at.gte.${gridStart.toISOString()},and(end_at.is.null,start_at.gte.${gridStart.toISOString()})`)
       .order('start_at');
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -188,25 +188,36 @@ const CalendarPlanner = () => {
   const draftsByDay = useMemo(() => {
     const map = new Map<string, Draft[]>();
     filteredDrafts.forEach((d) => {
-      const key = format(new Date(d.start_at), 'yyyy-MM-dd');
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(d);
+      const start = new Date(d.start_at);
+      const end = d.end_at ? new Date(d.end_at) : start;
+      const cursorDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const lastDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+      // guard against bad ranges
+      if (lastDay < cursorDay) lastDay.setTime(cursorDay.getTime());
+      let guard = 0;
+      while (cursorDay <= lastDay && guard < 400) {
+        const key = format(cursorDay, 'yyyy-MM-dd');
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(d);
+        cursorDay.setDate(cursorDay.getDate() + 1);
+        guard += 1;
+      }
     });
     return map;
   }, [filteredDrafts]);
 
   const openNew = (date?: Date) => {
     const start = date ? new Date(date) : new Date();
-    start.setHours(8, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
     const end = new Date(start);
-    end.setHours(start.getHours() + 8);
+    end.setHours(23, 59, 59, 999);
     setEditing({
       title: '',
       notes: '',
       kind: 'shift_draft',
       start_at: start.toISOString(),
       end_at: end.toISOString(),
-      all_day: false,
+      all_day: true,
       employee_id: null,
       job_site_id: null,
       color: '',
