@@ -108,9 +108,19 @@ const colorStyle = (color: string | null | undefined): CSSProperties | undefined
   };
 };
 
-const toLocalInput = (d: Date) => {
+const toDateInput = (d: Date) => {
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const startOfDayFromInput = (value: string) => {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1, 0, 0, 0, 0);
+};
+
+const endOfDayFromInput = (value: string) => {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1, 23, 59, 59, 999);
 };
 
 const CalendarPlanner = () => {
@@ -147,8 +157,8 @@ const CalendarPlanner = () => {
     const { data, error } = await supabase
       .from('calendar_drafts')
       .select('*')
-      .gte('start_at', gridStart.toISOString())
       .lte('start_at', gridEnd.toISOString())
+      .or(`end_at.gte.${gridStart.toISOString()},and(end_at.is.null,start_at.gte.${gridStart.toISOString()})`)
       .order('start_at');
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -173,25 +183,36 @@ const CalendarPlanner = () => {
   const draftsByDay = useMemo(() => {
     const map = new Map<string, Draft[]>();
     filteredDrafts.forEach((d) => {
-      const key = format(new Date(d.start_at), 'yyyy-MM-dd');
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(d);
+      const start = new Date(d.start_at);
+      const end = d.end_at ? new Date(d.end_at) : start;
+      const cursorDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const lastDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+      // guard against bad ranges
+      if (lastDay < cursorDay) lastDay.setTime(cursorDay.getTime());
+      let guard = 0;
+      while (cursorDay <= lastDay && guard < 400) {
+        const key = format(cursorDay, 'yyyy-MM-dd');
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(d);
+        cursorDay.setDate(cursorDay.getDate() + 1);
+        guard += 1;
+      }
     });
     return map;
   }, [filteredDrafts]);
 
   const openNew = (date?: Date) => {
     const start = date ? new Date(date) : new Date();
-    start.setHours(8, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
     const end = new Date(start);
-    end.setHours(start.getHours() + 8);
+    end.setHours(23, 59, 59, 999);
     setEditing({
       title: '',
       notes: '',
       kind: 'shift_draft',
       start_at: start.toISOString(),
       end_at: end.toISOString(),
-      all_day: false,
+      all_day: true,
       employee_id: null,
       job_site_id: null,
       color: '',
@@ -208,9 +229,11 @@ const CalendarPlanner = () => {
       title: editing.title!,
       notes: editing.notes ?? null,
       kind: (editing.kind ?? 'shift_draft') as DraftKind,
-      start_at: editing.start_at!,
-      end_at: editing.end_at ?? null,
-      all_day: !!editing.all_day,
+      start_at: startOfDayFromInput(toDateInput(new Date(editing.start_at!))).toISOString(),
+      end_at: endOfDayFromInput(
+        toDateInput(new Date(editing.end_at ?? editing.start_at!)),
+      ).toISOString(),
+      all_day: true,
       employee_id: editing.employee_id ?? null,
       job_site_id: editing.job_site_id ?? null,
       color: editing.color ?? null,
@@ -326,24 +349,33 @@ const CalendarPlanner = () => {
                     </button>
                   </div>
                   <div className="mt-1 space-y-1">
-                    {items.map((d) => (
-                      <button
+                    {items.map((d) => {
+                      const isStart = format(new Date(d.start_at), 'yyyy-MM-dd') === key;
+                      const isEnd =
+                        format(new Date(d.end_at ?? d.start_at), 'yyyy-MM-dd') === key;
+                      return (
+                        <button
                         key={d.id}
                         onClick={() => setEditing(d)}
                         style={colorStyle(d.color)}
                         className={cn(
-                          'w-full text-left text-[11px] leading-tight rounded border px-1.5 py-1 truncate',
+                          'w-full text-left text-[11px] leading-tight border px-1.5 py-1 truncate',
+                          isStart ? 'rounded-l' : 'rounded-l-none border-l-0',
+                          isEnd ? 'rounded-r' : 'rounded-r-none border-r-0',
                           !d.color && KIND_STYLE[d.kind],
                           d.promoted_schedule_id && 'opacity-60 line-through',
                         )}
                         title={d.title}
                       >
-                        <div className="font-medium truncate">{d.title}</div>
-                        {d.job_site_id && (
+                        <div className="font-medium truncate">
+                          {isStart ? d.title : `↳ ${d.title}`}
+                        </div>
+                        {d.job_site_id && isStart && (
                           <div className="truncate opacity-80">{siteName(d.job_site_id)}</div>
                         )}
-                      </button>
-                    ))}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -391,36 +423,44 @@ const CalendarPlanner = () => {
                   </Select>
                 </div>
                 <div className="flex items-end">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={!!editing.all_day}
-                      onChange={(e) => setEditing({ ...editing, all_day: e.target.checked })}
-                    />
-                    All day
-                  </label>
+                  <p className="text-xs text-muted-foreground pb-2">
+                    All-day entry — spans every day in the range.
+                  </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Start</Label>
+                  <Label>Start date</Label>
                   <Input
-                    type="datetime-local"
-                    value={editing.start_at ? toLocalInput(new Date(editing.start_at)) : ''}
-                    onChange={(e) =>
-                      setEditing({ ...editing, start_at: new Date(e.target.value).toISOString() })
-                    }
+                    type="date"
+                    value={editing.start_at ? toDateInput(new Date(editing.start_at)) : ''}
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      const nextStart = startOfDayFromInput(e.target.value);
+                      const currentEnd = editing.end_at ? new Date(editing.end_at) : null;
+                      setEditing({
+                        ...editing,
+                        start_at: nextStart.toISOString(),
+                        end_at:
+                          currentEnd && currentEnd >= nextStart
+                            ? currentEnd.toISOString()
+                            : endOfDayFromInput(e.target.value).toISOString(),
+                      });
+                    }}
                   />
                 </div>
                 <div>
-                  <Label>End</Label>
+                  <Label>End date</Label>
                   <Input
-                    type="datetime-local"
-                    value={editing.end_at ? toLocalInput(new Date(editing.end_at)) : ''}
+                    type="date"
+                    min={editing.start_at ? toDateInput(new Date(editing.start_at)) : undefined}
+                    value={editing.end_at ? toDateInput(new Date(editing.end_at)) : ''}
                     onChange={(e) =>
                       setEditing({
                         ...editing,
-                        end_at: e.target.value ? new Date(e.target.value).toISOString() : null,
+                        end_at: e.target.value
+                          ? endOfDayFromInput(e.target.value).toISOString()
+                          : null,
                       })
                     }
                   />
