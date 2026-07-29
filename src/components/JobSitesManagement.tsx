@@ -833,14 +833,14 @@ export default function JobSitesManagement() {
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Building2 className="h-5 w-5" />
-                    Active Accounts ({activeJobSites.length})
+                    Active {entityLabel}s ({activeJobSites.length})
                   </h3>
                   {activeJobSites.length === 0 ? (
                     <Card>
                       <CardContent className="p-8 text-center">
                         <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">No active accounts found</p>
-                        <p className="text-sm text-muted-foreground mt-1">Create your first account to get started</p>
+                        <p className="text-muted-foreground">No active {entityLabel.toLowerCase()}s found</p>
+                        <p className="text-sm text-muted-foreground mt-1">Create your first {entityLabel.toLowerCase()} to get started</p>
                       </CardContent>
                     </Card>
                   ) : (
@@ -863,15 +863,18 @@ export default function JobSitesManagement() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                   <div className="space-y-2 min-w-0">
                                     {jobSite.client_name && (
-                                      <p className="text-sm break-words"><strong>Client:</strong> {jobSite.client_name}</p>
+                                      <p className="text-sm break-words"><strong>Customer:</strong> {jobSite.client_name}</p>
                                     )}
                                     {jobSite.address && (
-                                      <p className="text-sm break-words"><strong>Address:</strong> {jobSite.address}</p>
+                                      <p className="text-sm break-words"><strong>{jobSite.is_recurring_monthly ? 'Address' : 'Site address'}:</strong> {jobSite.address}</p>
+                                    )}
+                                    {jobSite.contact_person && (
+                                      <p className="text-sm break-words"><strong>Site contact:</strong> {jobSite.contact_person}</p>
                                     )}
                                     {jobSite.contact_phone && (
                                       <p className="text-sm break-words"><strong>Phone:</strong> {jobSite.contact_phone}</p>
                                     )}
-                                    {jobSite.contact_email && (
+                                    {jobSite.is_recurring_monthly && jobSite.contact_email && (
                                       <p className="text-sm break-all"><strong>Email:</strong> {jobSite.contact_email}</p>
                                     )}
                                   </div>
@@ -993,7 +996,7 @@ export default function JobSitesManagement() {
                   <div className="space-y-4 mt-8">
                     <h3 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
                       <Building2 className="h-5 w-5" />
-                      Inactive Accounts ({inactiveJobSites.length})
+                      Inactive {entityLabel}s ({inactiveJobSites.length})
                     </h3>
                     <div className="grid gap-4">
                       {inactiveJobSites.map((jobSite) => (
