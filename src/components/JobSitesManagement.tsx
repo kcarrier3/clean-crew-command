@@ -401,8 +401,14 @@ export default function JobSitesManagement() {
     );
   }
 
-  const activeJobSites = jobSites.filter(site => site.active);
-  const inactiveJobSites = jobSites.filter(site => !site.active);
+  const isProjectsTab = activeTab === 'projects';
+  const tabSites = jobSites.filter(site =>
+    isProjectsTab ? !site.is_recurring_monthly : !!site.is_recurring_monthly
+  );
+  const activeJobSites = tabSites.filter(site => site.active);
+  const inactiveJobSites = tabSites.filter(site => !site.active);
+  const isProjectForm = !formData.is_recurring_monthly;
+  const entityLabel = isProjectsTab ? 'Project' : 'Account';
 
   // Show account detail view if a job site is selected
   if (selectedJobSite) {
@@ -418,19 +424,24 @@ export default function JobSitesManagement() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Account Management</h2>
-          <p className="text-muted-foreground">Manage your company's accounts, locations, and quality control</p>
+          <h2 className="text-2xl font-bold">{isProjectsTab ? 'Project Management' : 'Account Management'}</h2>
+          <p className="text-muted-foreground">
+            {isProjectsTab
+              ? 'Manage one-time projects, site contacts, and budgeted hours'
+              : "Manage your company's recurring accounts, locations, and quality control"}
+          </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="accounts">Accounts</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="accounts">Account Management</TabsTrigger>
+          <TabsTrigger value="projects">Project Management</TabsTrigger>
           <TabsTrigger value="quality">Quality Control</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="accounts" className="mt-6 space-y-6">
-          <OfficeLocationCard />
+        <TabsContent value={activeTab === 'quality' ? '__none' : activeTab} className="mt-6 space-y-6">
+          {!isProjectsTab && <OfficeLocationCard />}
           <div className="flex items-center justify-end gap-4">
             <div className="flex items-center space-x-2">
               <Switch
@@ -438,42 +449,46 @@ export default function JobSitesManagement() {
                 checked={showInactive}
                 onCheckedChange={setShowInactive}
               />
-              <Label htmlFor="show-inactive" className="text-sm">Show inactive accounts</Label>
+              <Label htmlFor="show-inactive" className="text-sm">Show inactive {entityLabel.toLowerCase()}s</Label>
             </div>
             
             <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
               setIsCreateDialogOpen(open);
-              if (!open) resetForm();
+              if (open) {
+                setFormData(prev => ({ ...prev, is_recurring_monthly: !isProjectsTab }));
+              } else {
+                resetForm();
+              }
             }}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Account
+                  Add {entityLabel}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create New Account</DialogTitle>
+                  <DialogTitle>Create New {entityLabel}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="name">Account Name *</Label>
+                    <Label htmlFor="name">{isProjectForm ? 'Project Name *' : 'Account Name *'}</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Enter account name..."
+                      placeholder={isProjectForm ? 'Enter project name...' : 'Enter account name...'}
                     />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="client_name">Client Name</Label>
+                      <Label htmlFor="client_name">Customer Name</Label>
                       <Input
                         id="client_name"
                         value={formData.client_name}
                         onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                        placeholder="Enter client name..."
+                        placeholder="Enter customer name..."
                       />
                     </div>
                     <div>
