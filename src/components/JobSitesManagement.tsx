@@ -24,6 +24,7 @@ interface JobSite {
   name: string;
   address: string | null;
   client_name: string | null;
+  contact_person?: string | null;
   contact_phone: string | null;
   contact_email: string | null;
   estimated_duration: string | null;
@@ -46,6 +47,7 @@ interface FormData {
   name: string;
   address: string;
   client_name: string;
+  contact_person: string;
   contact_phone: string;
   contact_email: string;
   estimated_duration: string;
@@ -75,6 +77,7 @@ export default function JobSitesManagement() {
     name: '',
     address: '',
     client_name: '',
+    contact_person: '',
     contact_phone: '',
     contact_email: '',
     estimated_duration: '',
@@ -132,6 +135,7 @@ export default function JobSitesManagement() {
           name: formData.name.trim(),
           address: formData.address.trim() || null,
           client_name: formData.client_name.trim() || null,
+          contact_person: formData.contact_person.trim() || null,
           contact_phone: formData.contact_phone.trim() || null,
           contact_email: formData.contact_email.trim() || null,
           estimated_duration: formData.estimated_duration.trim() || null,
@@ -187,6 +191,7 @@ export default function JobSitesManagement() {
           name: formData.name.trim(),
           address: formData.address.trim() || null,
           client_name: formData.client_name.trim() || null,
+          contact_person: formData.contact_person.trim() || null,
           contact_phone: formData.contact_phone.trim() || null,
           contact_email: formData.contact_email.trim() || null,
           estimated_duration: formData.estimated_duration.trim() || null,
@@ -232,6 +237,7 @@ export default function JobSitesManagement() {
       name: jobSite.name,
       address: jobSite.address || '',
       client_name: jobSite.client_name || '',
+      contact_person: jobSite.contact_person || '',
       contact_phone: jobSite.contact_phone || '',
       contact_email: jobSite.contact_email || '',
       estimated_duration: jobSite.estimated_duration || '',
@@ -251,6 +257,7 @@ export default function JobSitesManagement() {
       name: '', 
       address: '', 
       client_name: '', 
+      contact_person: '',
       contact_phone: '',
       contact_email: '',
       estimated_duration: '',
@@ -394,8 +401,14 @@ export default function JobSitesManagement() {
     );
   }
 
-  const activeJobSites = jobSites.filter(site => site.active);
-  const inactiveJobSites = jobSites.filter(site => !site.active);
+  const isProjectsTab = activeTab === 'projects';
+  const tabSites = jobSites.filter(site =>
+    isProjectsTab ? !site.is_recurring_monthly : !!site.is_recurring_monthly
+  );
+  const activeJobSites = tabSites.filter(site => site.active);
+  const inactiveJobSites = tabSites.filter(site => !site.active);
+  const isProjectForm = !formData.is_recurring_monthly;
+  const entityLabel = isProjectsTab ? 'Project' : 'Account';
 
   // Show account detail view if a job site is selected
   if (selectedJobSite) {
@@ -411,19 +424,24 @@ export default function JobSitesManagement() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Account Management</h2>
-          <p className="text-muted-foreground">Manage your company's accounts, locations, and quality control</p>
+          <h2 className="text-2xl font-bold">{isProjectsTab ? 'Project Management' : 'Account Management'}</h2>
+          <p className="text-muted-foreground">
+            {isProjectsTab
+              ? 'Manage one-time projects, site contacts, and budgeted hours'
+              : "Manage your company's recurring accounts, locations, and quality control"}
+          </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="accounts">Accounts</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="accounts">Account Management</TabsTrigger>
+          <TabsTrigger value="projects">Project Management</TabsTrigger>
           <TabsTrigger value="quality">Quality Control</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="accounts" className="mt-6 space-y-6">
-          <OfficeLocationCard />
+        <TabsContent value={activeTab === 'quality' ? '__none' : activeTab} className="mt-6 space-y-6">
+          {!isProjectsTab && <OfficeLocationCard />}
           <div className="flex items-center justify-end gap-4">
             <div className="flex items-center space-x-2">
               <Switch
@@ -431,42 +449,46 @@ export default function JobSitesManagement() {
                 checked={showInactive}
                 onCheckedChange={setShowInactive}
               />
-              <Label htmlFor="show-inactive" className="text-sm">Show inactive accounts</Label>
+              <Label htmlFor="show-inactive" className="text-sm">Show inactive {entityLabel.toLowerCase()}s</Label>
             </div>
             
             <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
               setIsCreateDialogOpen(open);
-              if (!open) resetForm();
+              if (open) {
+                setFormData(prev => ({ ...prev, is_recurring_monthly: !isProjectsTab }));
+              } else {
+                resetForm();
+              }
             }}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Account
+                  Add {entityLabel}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create New Account</DialogTitle>
+                  <DialogTitle>Create New {entityLabel}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="name">Account Name *</Label>
+                    <Label htmlFor="name">{isProjectForm ? 'Project Name *' : 'Account Name *'}</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Enter account name..."
+                      placeholder={isProjectForm ? 'Enter project name...' : 'Enter account name...'}
                     />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="client_name">Client Name</Label>
+                      <Label htmlFor="client_name">Customer Name</Label>
                       <Input
                         id="client_name"
                         value={formData.client_name}
                         onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                        placeholder="Enter client name..."
+                        placeholder="Enter customer name..."
                       />
                     </div>
                     <div>
@@ -488,29 +510,19 @@ export default function JobSitesManagement() {
                     </div>
                   </div>
 
+                  <p className="text-xs text-muted-foreground">
+                    {isProjectForm
+                      ? 'Project (one-time): billed once with a fixed hour budget that only changes with a change order.'
+                      : 'Recurring account: billed the same amount each month with the same monthly hours.'}
+                  </p>
+
                   <div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="is_recurring_monthly"
-                        checked={formData.is_recurring_monthly}
-                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring_monthly: checked })}
-                      />
-                      <Label htmlFor="is_recurring_monthly">
-                        Job type: {formData.is_recurring_monthly ? 'Recurring (monthly janitorial)' : 'Project (one-time)'}
-                      </Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Projects bill once with a fixed hour budget. Recurring accounts bill the same amount each month with the same monthly hours.
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="address">Address</Label>
+                    <Label htmlFor="address">{isProjectForm ? 'Site Address' : 'Address'}</Label>
                     <Textarea
                       id="address"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      placeholder="Enter account address..."
+                      placeholder={isProjectForm ? 'Enter site address...' : 'Enter account address...'}
                       className="min-h-[80px]"
                     />
                   </div>
@@ -519,11 +531,20 @@ export default function JobSitesManagement() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4" />
-                      <Label className="font-semibold">Contact Information</Label>
+                      <Label className="font-semibold">{isProjectForm ? 'Site Contact' : 'Contact Information'}</Label>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                       <div>
-                        <Label htmlFor="contact_phone">Phone</Label>
+                        <Label htmlFor="contact_person">{isProjectForm ? 'Site Contact Name' : 'Contact Name'}</Label>
+                        <Input
+                          id="contact_person"
+                          value={formData.contact_person}
+                          onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                          placeholder="Contact name..."
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="contact_phone">{isProjectForm ? 'Site Contact Phone' : 'Phone'}</Label>
                         <Input
                           id="contact_phone"
                           value={formData.contact_phone}
@@ -531,7 +552,8 @@ export default function JobSitesManagement() {
                           placeholder="Phone number..."
                         />
                       </div>
-                      <div>
+                      {!isProjectForm && (
+                      <div className="md:col-span-2">
                         <Label htmlFor="contact_email">Email</Label>
                         <Input
                           id="contact_email"
@@ -541,11 +563,13 @@ export default function JobSitesManagement() {
                           placeholder="Contact email..."
                         />
                       </div>
+                      )}
                     </div>
                   </div>
 
 
                   {/* Instructions & Safety Section */}
+                  {!isProjectForm && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
@@ -590,6 +614,7 @@ export default function JobSitesManagement() {
                       </div>
                     </div>
                   </div>
+                  )}
                   
                   <div className="flex gap-2 pt-4">
                     <Button 
@@ -597,7 +622,7 @@ export default function JobSitesManagement() {
                       disabled={loading || !formData.name.trim()}
                       className="flex-1"
                     >
-                      {loading ? "Creating..." : "Create Account"}
+                      {loading ? "Creating..." : `Create ${entityLabel}`}
                     </Button>
                     <Button 
                       variant="outline" 
@@ -617,27 +642,27 @@ export default function JobSitesManagement() {
             }}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Edit Account</DialogTitle>
+                  <DialogTitle>Edit {isProjectForm ? 'Project' : 'Account'}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="edit_name">Account Name *</Label>
+                    <Label htmlFor="edit_name">{isProjectForm ? 'Project Name *' : 'Account Name *'}</Label>
                     <Input
                       id="edit_name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Enter account name..."
+                      placeholder={isProjectForm ? 'Enter project name...' : 'Enter account name...'}
                     />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="edit_client_name">Client Name</Label>
+                      <Label htmlFor="edit_client_name">Customer Name</Label>
                       <Input
                         id="edit_client_name"
                         value={formData.client_name}
                         onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                        placeholder="Enter client name..."
+                        placeholder="Enter customer name..."
                       />
                     </div>
                     <div>
@@ -671,17 +696,17 @@ export default function JobSitesManagement() {
                       </Label>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Projects bill once with a fixed hour budget. Recurring accounts bill the same amount each month with the same monthly hours.
+                      Projects bill once with a fixed hour budget. Recurring accounts bill the same amount each month with the same monthly hours. Changing this moves the record between the Project and Account tabs.
                     </p>
                   </div>
                   
                   <div>
-                    <Label htmlFor="edit_address">Address</Label>
+                    <Label htmlFor="edit_address">{isProjectForm ? 'Site Address' : 'Address'}</Label>
                     <Textarea
                       id="edit_address"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      placeholder="Enter account address..."
+                      placeholder={isProjectForm ? 'Enter site address...' : 'Enter account address...'}
                       className="min-h-[80px]"
                     />
                   </div>
@@ -690,11 +715,20 @@ export default function JobSitesManagement() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4" />
-                      <Label className="font-semibold">Contact Information</Label>
+                      <Label className="font-semibold">{isProjectForm ? 'Site Contact' : 'Contact Information'}</Label>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                       <div>
-                        <Label htmlFor="edit_contact_phone">Phone</Label>
+                        <Label htmlFor="edit_contact_person">{isProjectForm ? 'Site Contact Name' : 'Contact Name'}</Label>
+                        <Input
+                          id="edit_contact_person"
+                          value={formData.contact_person}
+                          onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                          placeholder="Contact name..."
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_contact_phone">{isProjectForm ? 'Site Contact Phone' : 'Phone'}</Label>
                         <Input
                           id="edit_contact_phone"
                           value={formData.contact_phone}
@@ -702,7 +736,8 @@ export default function JobSitesManagement() {
                           placeholder="Phone number..."
                         />
                       </div>
-                      <div>
+                      {!isProjectForm && (
+                      <div className="md:col-span-2">
                         <Label htmlFor="edit_contact_email">Email</Label>
                         <Input
                           id="edit_contact_email"
@@ -712,11 +747,13 @@ export default function JobSitesManagement() {
                           placeholder="Contact email..."
                         />
                       </div>
+                      )}
                     </div>
                   </div>
 
 
                   {/* Instructions & Safety Section */}
+                  {!isProjectForm && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
@@ -761,6 +798,7 @@ export default function JobSitesManagement() {
                       </div>
                     </div>
                   </div>
+                  )}
                   
                   <div className="flex gap-2 pt-4">
                     <Button 
@@ -795,14 +833,14 @@ export default function JobSitesManagement() {
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Building2 className="h-5 w-5" />
-                    Active Accounts ({activeJobSites.length})
+                    Active {entityLabel}s ({activeJobSites.length})
                   </h3>
                   {activeJobSites.length === 0 ? (
                     <Card>
                       <CardContent className="p-8 text-center">
                         <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">No active accounts found</p>
-                        <p className="text-sm text-muted-foreground mt-1">Create your first account to get started</p>
+                        <p className="text-muted-foreground">No active {entityLabel.toLowerCase()}s found</p>
+                        <p className="text-sm text-muted-foreground mt-1">Create your first {entityLabel.toLowerCase()} to get started</p>
                       </CardContent>
                     </Card>
                   ) : (
@@ -825,15 +863,18 @@ export default function JobSitesManagement() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                   <div className="space-y-2 min-w-0">
                                     {jobSite.client_name && (
-                                      <p className="text-sm break-words"><strong>Client:</strong> {jobSite.client_name}</p>
+                                      <p className="text-sm break-words"><strong>Customer:</strong> {jobSite.client_name}</p>
                                     )}
                                     {jobSite.address && (
-                                      <p className="text-sm break-words"><strong>Address:</strong> {jobSite.address}</p>
+                                      <p className="text-sm break-words"><strong>{jobSite.is_recurring_monthly ? 'Address' : 'Site address'}:</strong> {jobSite.address}</p>
+                                    )}
+                                    {jobSite.contact_person && (
+                                      <p className="text-sm break-words"><strong>Site contact:</strong> {jobSite.contact_person}</p>
                                     )}
                                     {jobSite.contact_phone && (
                                       <p className="text-sm break-words"><strong>Phone:</strong> {jobSite.contact_phone}</p>
                                     )}
-                                    {jobSite.contact_email && (
+                                    {jobSite.is_recurring_monthly && jobSite.contact_email && (
                                       <p className="text-sm break-all"><strong>Email:</strong> {jobSite.contact_email}</p>
                                     )}
                                   </div>
@@ -955,7 +996,7 @@ export default function JobSitesManagement() {
                   <div className="space-y-4 mt-8">
                     <h3 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
                       <Building2 className="h-5 w-5" />
-                      Inactive Accounts ({inactiveJobSites.length})
+                      Inactive {entityLabel}s ({inactiveJobSites.length})
                     </h3>
                     <div className="grid gap-4">
                       {inactiveJobSites.map((jobSite) => (
