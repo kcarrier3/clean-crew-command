@@ -349,24 +349,33 @@ const CalendarPlanner = () => {
                     </button>
                   </div>
                   <div className="mt-1 space-y-1">
-                    {items.map((d) => (
-                      <button
+                    {items.map((d) => {
+                      const isStart = format(new Date(d.start_at), 'yyyy-MM-dd') === key;
+                      const isEnd =
+                        format(new Date(d.end_at ?? d.start_at), 'yyyy-MM-dd') === key;
+                      return (
+                        <button
                         key={d.id}
                         onClick={() => setEditing(d)}
                         style={colorStyle(d.color)}
                         className={cn(
-                          'w-full text-left text-[11px] leading-tight rounded border px-1.5 py-1 truncate',
+                          'w-full text-left text-[11px] leading-tight border px-1.5 py-1 truncate',
+                          isStart ? 'rounded-l' : 'rounded-l-none border-l-0',
+                          isEnd ? 'rounded-r' : 'rounded-r-none border-r-0',
                           !d.color && KIND_STYLE[d.kind],
                           d.promoted_schedule_id && 'opacity-60 line-through',
                         )}
                         title={d.title}
                       >
-                        <div className="font-medium truncate">{d.title}</div>
-                        {d.job_site_id && (
+                        <div className="font-medium truncate">
+                          {isStart ? d.title : `↳ ${d.title}`}
+                        </div>
+                        {d.job_site_id && isStart && (
                           <div className="truncate opacity-80">{siteName(d.job_site_id)}</div>
                         )}
-                      </button>
-                    ))}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
