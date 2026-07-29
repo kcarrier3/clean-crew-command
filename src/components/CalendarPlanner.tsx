@@ -414,36 +414,44 @@ const CalendarPlanner = () => {
                   </Select>
                 </div>
                 <div className="flex items-end">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={!!editing.all_day}
-                      onChange={(e) => setEditing({ ...editing, all_day: e.target.checked })}
-                    />
-                    All day
-                  </label>
+                  <p className="text-xs text-muted-foreground pb-2">
+                    All-day entry — spans every day in the range.
+                  </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Start</Label>
+                  <Label>Start date</Label>
                   <Input
-                    type="datetime-local"
-                    value={editing.start_at ? toLocalInput(new Date(editing.start_at)) : ''}
-                    onChange={(e) =>
-                      setEditing({ ...editing, start_at: new Date(e.target.value).toISOString() })
-                    }
+                    type="date"
+                    value={editing.start_at ? toDateInput(new Date(editing.start_at)) : ''}
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      const nextStart = startOfDayFromInput(e.target.value);
+                      const currentEnd = editing.end_at ? new Date(editing.end_at) : null;
+                      setEditing({
+                        ...editing,
+                        start_at: nextStart.toISOString(),
+                        end_at:
+                          currentEnd && currentEnd >= nextStart
+                            ? currentEnd.toISOString()
+                            : endOfDayFromInput(e.target.value).toISOString(),
+                      });
+                    }}
                   />
                 </div>
                 <div>
-                  <Label>End</Label>
+                  <Label>End date</Label>
                   <Input
-                    type="datetime-local"
-                    value={editing.end_at ? toLocalInput(new Date(editing.end_at)) : ''}
+                    type="date"
+                    min={editing.start_at ? toDateInput(new Date(editing.start_at)) : undefined}
+                    value={editing.end_at ? toDateInput(new Date(editing.end_at)) : ''}
                     onChange={(e) =>
                       setEditing({
                         ...editing,
-                        end_at: e.target.value ? new Date(e.target.value).toISOString() : null,
+                        end_at: e.target.value
+                          ? endOfDayFromInput(e.target.value).toISOString()
+                          : null,
                       })
                     }
                   />
