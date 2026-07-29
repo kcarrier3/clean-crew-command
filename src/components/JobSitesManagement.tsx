@@ -510,29 +510,19 @@ export default function JobSitesManagement() {
                     </div>
                   </div>
 
+                  <p className="text-xs text-muted-foreground">
+                    {isProjectForm
+                      ? 'Project (one-time): billed once with a fixed hour budget that only changes with a change order.'
+                      : 'Recurring account: billed the same amount each month with the same monthly hours.'}
+                  </p>
+
                   <div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="is_recurring_monthly"
-                        checked={formData.is_recurring_monthly}
-                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring_monthly: checked })}
-                      />
-                      <Label htmlFor="is_recurring_monthly">
-                        Job type: {formData.is_recurring_monthly ? 'Recurring (monthly janitorial)' : 'Project (one-time)'}
-                      </Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Projects bill once with a fixed hour budget. Recurring accounts bill the same amount each month with the same monthly hours.
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="address">Address</Label>
+                    <Label htmlFor="address">{isProjectForm ? 'Site Address' : 'Address'}</Label>
                     <Textarea
                       id="address"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      placeholder="Enter account address..."
+                      placeholder={isProjectForm ? 'Enter site address...' : 'Enter account address...'}
                       className="min-h-[80px]"
                     />
                   </div>
@@ -541,11 +531,20 @@ export default function JobSitesManagement() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4" />
-                      <Label className="font-semibold">Contact Information</Label>
+                      <Label className="font-semibold">{isProjectForm ? 'Site Contact' : 'Contact Information'}</Label>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                       <div>
-                        <Label htmlFor="contact_phone">Phone</Label>
+                        <Label htmlFor="contact_person">{isProjectForm ? 'Site Contact Name' : 'Contact Name'}</Label>
+                        <Input
+                          id="contact_person"
+                          value={formData.contact_person}
+                          onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                          placeholder="Contact name..."
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="contact_phone">{isProjectForm ? 'Site Contact Phone' : 'Phone'}</Label>
                         <Input
                           id="contact_phone"
                           value={formData.contact_phone}
@@ -553,7 +552,8 @@ export default function JobSitesManagement() {
                           placeholder="Phone number..."
                         />
                       </div>
-                      <div>
+                      {!isProjectForm && (
+                      <div className="md:col-span-2">
                         <Label htmlFor="contact_email">Email</Label>
                         <Input
                           id="contact_email"
@@ -563,11 +563,13 @@ export default function JobSitesManagement() {
                           placeholder="Contact email..."
                         />
                       </div>
+                      )}
                     </div>
                   </div>
 
 
                   {/* Instructions & Safety Section */}
+                  {!isProjectForm && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
@@ -612,6 +614,7 @@ export default function JobSitesManagement() {
                       </div>
                     </div>
                   </div>
+                  )}
                   
                   <div className="flex gap-2 pt-4">
                     <Button 
@@ -619,7 +622,7 @@ export default function JobSitesManagement() {
                       disabled={loading || !formData.name.trim()}
                       className="flex-1"
                     >
-                      {loading ? "Creating..." : "Create Account"}
+                      {loading ? "Creating..." : `Create ${entityLabel}`}
                     </Button>
                     <Button 
                       variant="outline" 
