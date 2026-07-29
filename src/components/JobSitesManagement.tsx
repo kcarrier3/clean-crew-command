@@ -642,27 +642,27 @@ export default function JobSitesManagement() {
             }}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Edit Account</DialogTitle>
+                  <DialogTitle>Edit {isProjectForm ? 'Project' : 'Account'}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="edit_name">Account Name *</Label>
+                    <Label htmlFor="edit_name">{isProjectForm ? 'Project Name *' : 'Account Name *'}</Label>
                     <Input
                       id="edit_name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Enter account name..."
+                      placeholder={isProjectForm ? 'Enter project name...' : 'Enter account name...'}
                     />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="edit_client_name">Client Name</Label>
+                      <Label htmlFor="edit_client_name">Customer Name</Label>
                       <Input
                         id="edit_client_name"
                         value={formData.client_name}
                         onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                        placeholder="Enter client name..."
+                        placeholder="Enter customer name..."
                       />
                     </div>
                     <div>
