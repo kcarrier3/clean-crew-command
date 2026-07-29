@@ -24,6 +24,7 @@ interface JobSite {
   name: string;
   address: string | null;
   client_name: string | null;
+  contact_person?: string | null;
   contact_phone: string | null;
   contact_email: string | null;
   estimated_duration: string | null;
@@ -46,6 +47,7 @@ interface FormData {
   name: string;
   address: string;
   client_name: string;
+  contact_person: string;
   contact_phone: string;
   contact_email: string;
   estimated_duration: string;
@@ -75,6 +77,7 @@ export default function JobSitesManagement() {
     name: '',
     address: '',
     client_name: '',
+    contact_person: '',
     contact_phone: '',
     contact_email: '',
     estimated_duration: '',
