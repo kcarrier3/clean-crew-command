@@ -113,6 +113,21 @@ const toLocalInput = (d: Date) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+const toDateInput = (d: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const startOfDayFromInput = (value: string) => {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1, 0, 0, 0, 0);
+};
+
+const endOfDayFromInput = (value: string) => {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1, 23, 59, 59, 999);
+};
+
 const CalendarPlanner = () => {
   const { user } = useAuth();
   const { toast } = useToast();
