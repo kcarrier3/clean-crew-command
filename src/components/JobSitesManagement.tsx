@@ -478,11 +478,12 @@ export default function JobSitesManagement() {
                         step="0.25"
                         value={formData.budgeted_hours}
                         onChange={(e) => setFormData({ ...formData, budgeted_hours: e.target.value })}
-                        placeholder="Enter budgeted hours..."
-                        disabled={formData.is_recurring_monthly}
+                        placeholder={formData.is_recurring_monthly ? 'Hours per month...' : 'Total hours for the job...'}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Hours will be deducted from this budget when employees clock in (disabled for recurring accounts)
+                        {formData.is_recurring_monthly
+                          ? 'Monthly hour allotment. Usage resets at the start of each month.'
+                          : 'Total hours for this one-time project. Only changes with a change order.'}
                       </p>
                     </div>
                   </div>
@@ -492,12 +493,14 @@ export default function JobSitesManagement() {
                       <Switch
                         id="is_recurring_monthly"
                         checked={formData.is_recurring_monthly}
-                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring_monthly: checked, budgeted_hours: checked ? '' : formData.budgeted_hours })}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring_monthly: checked })}
                       />
-                      <Label htmlFor="is_recurring_monthly">Recurring Monthly Account</Label>
+                      <Label htmlFor="is_recurring_monthly">
+                        Job type: {formData.is_recurring_monthly ? 'Recurring (monthly janitorial)' : 'Project (one-time)'}
+                      </Label>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Recurring accounts don't track budgeted hours - hours are not deducted from a budget
+                      Projects bill once with a fixed hour budget. Recurring accounts bill the same amount each month with the same monthly hours.
                     </p>
                   </div>
                   
@@ -646,11 +649,12 @@ export default function JobSitesManagement() {
                         step="0.25"
                         value={formData.budgeted_hours}
                         onChange={(e) => setFormData({ ...formData, budgeted_hours: e.target.value })}
-                        placeholder="Enter budgeted hours..."
-                        disabled={formData.is_recurring_monthly}
+                        placeholder={formData.is_recurring_monthly ? 'Hours per month...' : 'Total hours for the job...'}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Hours will be deducted from this budget when employees clock in (disabled for recurring accounts)
+                        {formData.is_recurring_monthly
+                          ? 'Monthly hour allotment. Usage resets at the start of each month.'
+                          : 'Total hours for this one-time project. Only changes with a change order.'}
                       </p>
                     </div>
                   </div>
@@ -660,12 +664,14 @@ export default function JobSitesManagement() {
                       <Switch
                         id="edit_is_recurring_monthly"
                         checked={formData.is_recurring_monthly}
-                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring_monthly: checked, budgeted_hours: checked ? '' : formData.budgeted_hours })}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_recurring_monthly: checked })}
                       />
-                      <Label htmlFor="edit_is_recurring_monthly">Recurring Monthly Account</Label>
+                      <Label htmlFor="edit_is_recurring_monthly">
+                        Job type: {formData.is_recurring_monthly ? 'Recurring (monthly janitorial)' : 'Project (one-time)'}
+                      </Label>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Recurring accounts don't track budgeted hours - hours are not deducted from a budget
+                      Projects bill once with a fixed hour budget. Recurring accounts bill the same amount each month with the same monthly hours.
                     </p>
                   </div>
                   
@@ -810,9 +816,9 @@ export default function JobSitesManagement() {
                                   <h3 className="text-base md:text-lg font-semibold break-words">{jobSite.name}</h3>
                                   <div className="flex gap-2">
                                     <Badge variant="default">Active</Badge>
-                                    {jobSite.is_recurring_monthly && (
-                                      <Badge variant="secondary">Recurring</Badge>
-                                    )}
+                                    <Badge variant="secondary">
+                                      {jobSite.is_recurring_monthly ? 'Recurring' : 'Project'}
+                                    </Badge>
                                   </div>
                                 </div>
 
