@@ -4413,6 +4413,12 @@ export type Database = {
         | "manage_employees"
         | "view_notifications"
         | "admin_settings"
+        | "view_crm"
+        | "view_supplies"
+        | "use_estimating"
+        | "view_team_directory"
+        | "view_calendar"
+        | "use_messaging"
       app_role: "admin" | "manager" | "employee"
       calendar_draft_kind: "shift_draft" | "event" | "holiday" | "note"
       time_off_status: "pending" | "approved" | "declined"
@@ -4560,6 +4566,12 @@ export const Constants = {
         "manage_employees",
         "view_notifications",
         "admin_settings",
+        "view_crm",
+        "view_supplies",
+        "use_estimating",
+        "view_team_directory",
+        "view_calendar",
+        "use_messaging",
       ],
       app_role: ["admin", "manager", "employee"],
       calendar_draft_kind: ["shift_draft", "event", "holiday", "note"],
