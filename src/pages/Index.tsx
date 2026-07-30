@@ -164,7 +164,7 @@ const Index = () => {
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
         ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
-        ...(canEstimate() ? [{ v: 'estimates', label: 'Sales Estimator', icon: Calculator }] : []),
+        ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ]
@@ -182,8 +182,8 @@ const Index = () => {
 
   // Routed sections live outside the tab shell.
   const handleNavChange = (v: string) => {
-    if (v === 'estimates') {
-      navigate('/estimates');
+    if (v === 'estimating') {
+      navigate('/estimating');
       return;
     }
     setActiveTab(v);
@@ -281,10 +281,10 @@ const Index = () => {
                       <Button
                         variant="ghost"
                         className="w-full justify-start"
-                        onClick={() => { setMoreMenuOpen(false); navigate('/estimates'); }}
+                        onClick={() => { setMoreMenuOpen(false); navigate('/estimating'); }}
                       >
                         <Calculator className="h-4 w-4 mr-2" />
-                        Sales Estimator
+                        Estimating
                       </Button>
                     )}
                     {isManager() && !isNative && (
