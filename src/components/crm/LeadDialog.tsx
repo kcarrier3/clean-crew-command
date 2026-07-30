@@ -401,9 +401,8 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const ownerName = owner?.full_name || (lead ? 'Unassigned' : 'You');
   const title = accountDisplay !== '—' ? accountDisplay : (lead ? 'Opportunity' : 'New Opportunity');
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-100 dark:bg-slate-900">
+  const body = (
+      <>
         {/* Salesforce-style header strip */}
         <div className="px-6 pt-5 pb-3 bg-slate-200/60 dark:bg-slate-800/60 border-b">
           <div className="flex items-start gap-3">
@@ -412,7 +411,9 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
             </div>
             <div className="min-w-0">
               <div className="text-xs text-muted-foreground uppercase tracking-wide">Opportunity</div>
-              <DialogTitle className="text-lg font-bold truncate">{title}</DialogTitle>
+              {asPage
+                ? <h1 className="text-lg font-bold truncate">{title}</h1>
+                : <DialogTitle className="text-lg font-bold truncate">{title}</DialogTitle>}
             </div>
           </div>
         </div>
