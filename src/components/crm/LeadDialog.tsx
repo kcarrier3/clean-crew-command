@@ -488,12 +488,27 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
           </div>
         )}
         </div>
-        <DialogFooter className="px-6 py-4 bg-background border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {(tab === 'details' || !lead?.id) && (
-            <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
-          )}
-        </DialogFooter>
+        {(!asPage || editMode) && (
+          <div className="px-6 py-4 bg-background border-t flex justify-end gap-2">
+            {!asPage && (
+              <Button variant="outline" onClick={() => onOpenChange?.(false)} disabled={saving}>Close</Button>
+            )}
+            {(tab === 'details' || !lead?.id) && editMode && (
+              <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
+            )}
+          </div>
+        )}
+      </>
+  );
+
+  if (asPage) {
+    return <div className="bg-slate-100 dark:bg-slate-900 rounded-lg border overflow-hidden">{body}</div>;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-7xl max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-100 dark:bg-slate-900">
+        {body}
       </DialogContent>
     </Dialog>
   );
