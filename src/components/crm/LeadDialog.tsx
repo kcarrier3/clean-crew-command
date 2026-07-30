@@ -148,11 +148,11 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   };
 
   const loadOwner = async () => {
-    const ownerId = lead?.assigned_to || lead?.created_by;
+    const ownerId = (lead as any)?.owner_id || lead?.assigned_to || lead?.created_by;
     if (!ownerId) { setOwner(null); return; }
     const { data } = await (supabase as any)
-      .from('profiles').select('full_name').eq('id', ownerId).maybeSingle();
-    setOwner(data);
+      .from('profiles').select('first_name, last_name').eq('id', ownerId).maybeSingle();
+    setOwner(data ? { full_name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || null } : null);
   };
 
   const loadNotes = async () => {
@@ -319,6 +319,8 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       ({ error } = await (supabase as any).from('crm_leads').update(payload).eq('id', lead.id));
     } else {
       payload.created_by = user?.id;
+      payload.owner_id = user?.id;
+      payload.assigned_to = user?.id;
       ({ error } = await (supabase as any).from('crm_leads').insert(payload));
     }
     setSaving(false);
