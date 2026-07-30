@@ -88,12 +88,26 @@ export default function CRMDashboard() {
     loadAll();
   };
 
-  const openDealsValue = deals
-    .filter(d => {
-      const st = stages.find(s => s.id === d.stage_id);
-      return st && !st.is_won && !st.is_lost;
-    })
+  // Pipeline value = open opportunities' amounts + open deals not tied to an opportunity
+  const isOpenStage = (stageId?: string | null) => {
+    const st = stages.find(s => s.id === stageId);
+    return !!st && !st.is_won && !st.is_lost;
+  };
+
+  const openLeads = leads.filter(
+    l => l.status !== 'unqualified' && (l.stage_id ? isOpenStage(l.stage_id) : true)
+  );
+  const openLeadIds = new Set(openLeads.map(l => l.id));
+
+  const openLeadsValue = openLeads.reduce((s, l) => s + (Number(l.amount) || 0), 0);
+
+  const openDeals = deals.filter(d => isOpenStage(d.stage_id));
+  const standaloneDealsValue = openDeals
+    .filter(d => !d.lead_id || !openLeadIds.has(d.lead_id))
     .reduce((s, d) => s + (Number(d.value) || 0), 0);
+
+  const openDealsValue = openLeadsValue + standaloneDealsValue;
+  const openPipelineCount = openLeads.length + openDeals.filter(d => !d.lead_id || !openLeadIds.has(d.lead_id)).length;
 
   const wonThisMonth = deals.filter(d => {
     if (!d.won_at) return false;
@@ -123,9 +137,7 @@ export default function CRMDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs"><Briefcase className="h-4 w-4" /> Open Deals</div>
-          <p className="text-2xl font-bold mt-1">{deals.filter(d => {
-            const st = stages.find(s => s.id === d.stage_id); return st && !st.is_won && !st.is_lost;
-          }).length}</p>
+          <p className="text-2xl font-bold mt-1">{openPipelineCount}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs"><DollarSign className="h-4 w-4" /> Pipeline Value</div>
