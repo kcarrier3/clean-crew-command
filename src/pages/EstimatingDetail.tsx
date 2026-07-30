@@ -1,0 +1,508 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Copy, Save, CheckCircle2, Files, AlertTriangle, Building2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { SEO } from '@/components/SEO';
+import { EstimatorShell } from '@/components/estimator/EstimatorShell';
+import { PricingSummary, buildSummaryText } from '@/components/estimator/PricingSummary';
+import {
+  DEFAULT_INPUTS, SUPPLY_PRESETS, calculateEstimate, isPricingSolvable,
+  supplyRateForPreset, money, hoursFmt, pct,
+  type EstimateInputs, type SupplyPreset,
+} from '@/components/estimator/calc';
+
+const OUTPUT_COLUMNS = (o: ReturnType<typeof calculateEstimate>) => ({
+  labor_hours_per_visit: o.labor_hours_per_visit,
+  monthly_labor_hours: o.monthly_labor_hours,
+  loaded_labor_rate: o.loaded_labor_rate,
+  monthly_labor_cost: o.monthly_labor_cost,
+  monthly_supply_cost: o.monthly_supply_cost,
+  total_direct_cost: o.total_direct_cost,
+  overhead_amount: o.overhead_amount,
+  price_per_visit: o.price_per_visit,
+  monthly_price: o.monthly_price,
+  annual_price: o.annual_price,
+  price_per_sqft: o.price_per_sqft,
+  gross_margin_percent: o.gross_margin_percent,
+  markup_percent: o.markup_on_direct_percent,
+});
+
+function NumField({
+  id, label, value, onChange, suffix, step = 'any', disabled,
+}: {
+  id: string; label: string; value: number; onChange: (v: number) => void;
+  suffix?: string; step?: string; disabled?: boolean;
+}) {
+  const [text, setText] = useState(String(value ?? ''));
+  useEffect(() => { setText(value === 0 ? '' : String(value)); }, [value]);
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-xs">{label}</Label>
+      <div className="relative">
+        <Input
+          id={id}
+          type="number"
+          inputMode="decimal"
+          step={step}
+          value={text}
+          disabled={disabled}
+          onChange={e => { setText(e.target.value); onChange(parseFloat(e.target.value) || 0); }}
+          className={suffix ? 'pr-10 h-11 text-base' : 'h-11 text-base'}
+        />
+        {suffix && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{suffix}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function EstimatingDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user, loading, canEstimate } = useAuth();
+
+  const [estimate, setEstimate] = useState<any>(null);
+  const [revision, setRevision] = useState<any>(null);
+  const [lead, setLead] = useState<any>(null);
+  const [ownerName, setOwnerName] = useState('—');
+  const [name, setName] = useState('');
+  const [notes, setNotes] = useState('');
+  const [inputs, setInputs] = useState<EstimateInputs>(DEFAULT_INPUTS);
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [confirmComplete, setConfirmComplete] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const dirtyRef = useRef(false);
+
+  const readOnly = estimate?.status === 'completed';
+  const outputs = useMemo(() => calculateEstimate(inputs), [inputs]);
+  const solvable = isPricingSolvable(inputs.overhead_percent, inputs.target_margin_percent);
+
+  useEffect(() => { if (!loading && !user) navigate('/auth'); }, [loading, user, navigate]);
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    const { data: est } = await (supabase as any).from('estimates').select('*').eq('id', id).maybeSingle();
+    if (!est) { setEstimate(null); return; }
+    setEstimate(est);
+    setName(est.name || '');
+
+    const { data: rev } = await (supabase as any)
+      .from('estimate_revisions').select('*').eq('id', est.current_revision_id).maybeSingle();
+    if (rev) {
+      setRevision(rev);
+      setNotes(rev.notes || '');
+      setInputs({
+        square_feet: Number(rev.square_feet) || 0,
+        cleanings_per_week: Number(rev.cleanings_per_week) || 0,
+        weeks_per_month: Number(rev.weeks_per_month) || 4.33,
+        production_rate_sqft_hour: Number(rev.production_rate_sqft_hour) || 3500,
+        base_wage: Number(rev.base_wage) || 0,
+        labor_burden_percent: Number(rev.labor_burden_percent) || 0,
+        supply_preset: (rev.supply_preset as SupplyPreset) || 'standard',
+        supply_rate_per_hour: Number(rev.supply_rate_per_hour) || 0,
+        overhead_percent: Number(rev.overhead_percent) || 0,
+        target_margin_percent: Number(rev.target_margin_percent) || 0,
+      });
+    }
+
+    if (est.lead_id) {
+      const { data: l } = await (supabase as any)
+        .from('crm_leads').select('id,company_name,contact_name').eq('id', est.lead_id).maybeSingle();
+      setLead(l || null);
+    }
+    if (est.owner_id) {
+      const { data: p } = await (supabase as any)
+        .from('profiles').select('first_name,last_name').eq('id', est.owner_id).maybeSingle();
+      if (p) setOwnerName(`${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || '—');
+    }
+    setDirty(false);
+    dirtyRef.current = false;
+  }, [id]);
+
+  useEffect(() => { if (user) load(); }, [user, load]);
+
+  const setInput = (patch: Partial<EstimateInputs>) => {
+    setInputs(prev => ({ ...prev, ...patch }));
+    setDirty(true);
+    dirtyRef.current = true;
+  };
+
+  const saveDraft = useCallback(async (silent = false) => {
+    if (!estimate || !revision || estimate.status === 'completed') return;
+    setSaving(true);
+    const o = calculateEstimate(inputs);
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+      (supabase as any).from('estimates').update({ name: name || 'Untitled estimate', updated_at: new Date().toISOString() }).eq('id', estimate.id),
+      (supabase as any).from('estimate_revisions').update({
+        ...inputs, notes, updated_at: new Date().toISOString(), ...OUTPUT_COLUMNS(o),
+      }).eq('id', revision.id),
+    ]);
+    setSaving(false);
+    if (e1 || e2) {
+      toast({ title: 'Save failed', description: (e1 || e2)?.message, variant: 'destructive' });
+      return;
+    }
+    setDirty(false);
+    dirtyRef.current = false;
+    if (!silent) toast({ title: 'Draft saved' });
+  }, [estimate, revision, inputs, notes, name, toast]);
+
+  // Autosave drafts a couple of seconds after the last edit.
+  useEffect(() => {
+    if (!dirty || readOnly) return;
+    const t = setTimeout(() => { saveDraft(true); }, 1500);
+    return () => clearTimeout(t);
+  }, [dirty, inputs, notes, name, readOnly, saveDraft]);
+
+  const markComplete = async () => {
+    if (!estimate || !revision || !user) return;
+    setBusy(true);
+    const o = calculateEstimate(inputs);
+    const now = new Date().toISOString();
+    const { error: revErr } = await (supabase as any).from('estimate_revisions').update({
+      ...inputs, notes, status: 'completed', updated_at: now, ...OUTPUT_COLUMNS(o),
+    }).eq('id', revision.id);
+    if (revErr) {
+      setBusy(false);
+      toast({ title: 'Could not complete', description: revErr.message, variant: 'destructive' });
+      return;
+    }
+    const { error } = await (supabase as any).from('estimates').update({
+      name: name || 'Untitled estimate', status: 'completed', completed_at: now, completed_by: user.id, updated_at: now,
+    }).eq('id', estimate.id);
+    setBusy(false);
+    setConfirmComplete(false);
+    if (error) {
+      toast({ title: 'Could not complete', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Estimate completed', description: 'It is now read-only.' });
+    load();
+  };
+
+  const duplicateAsDraft = async () => {
+    if (!estimate || !revision || !user) return;
+    setBusy(true);
+    const { data: est, error } = await (supabase as any).from('estimates').insert({
+      name: `${estimate.name} (copy)`,
+      lead_id: estimate.lead_id,
+      company_id: estimate.company_id,
+      contact_id: estimate.contact_id,
+      status: 'draft',
+      created_by: user.id,
+      owner_id: user.id,
+    }).select().single();
+    if (error || !est) {
+      setBusy(false);
+      toast({ title: 'Could not duplicate', description: error?.message, variant: 'destructive' });
+      return;
+    }
+    const o = calculateEstimate(inputs);
+    const { data: rev, error: revErr } = await (supabase as any).from('estimate_revisions').insert({
+      estimate_id: est.id,
+      revision_number: (revision.revision_number || 1) + 1,
+      status: 'draft',
+      created_by: user.id,
+      ...inputs,
+      notes,
+      ...OUTPUT_COLUMNS(o),
+    }).select().single();
+    if (revErr) {
+      setBusy(false);
+      toast({ title: 'Could not duplicate', description: revErr.message, variant: 'destructive' });
+      return;
+    }
+    await (supabase as any).from('estimates').update({ current_revision_id: rev.id }).eq('id', est.id);
+    setBusy(false);
+    navigate(`/estimating/${est.id}`);
+  };
+
+  const copySummary = async () => {
+    const text = buildSummaryText(inputs, outputs, {
+      estimateName: name || 'Untitled estimate',
+      opportunityName: lead?.company_name || 'Opportunity',
+      ownerName,
+      completedAt: estimate?.completed_at,
+      notes,
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: 'Pricing summary copied' });
+    } catch {
+      toast({ title: 'Copy failed', description: 'Select and copy the summary manually.', variant: 'destructive' });
+    }
+  };
+
+  const validationError = (() => {
+    if (!name.trim()) return 'Add an estimate name.';
+    if (!(inputs.square_feet > 0)) return 'Building square feet must be greater than zero.';
+    if (!(inputs.cleanings_per_week > 0)) return 'Cleanings per week must be greater than zero.';
+    if (!(inputs.production_rate_sqft_hour > 0)) return 'Production rate must be greater than zero.';
+    if (!solvable) return 'Overhead % + target profit % must be under 100%.';
+    return null;
+  })();
+
+  if (loading) return null;
+  if (!canEstimate()) {
+    return (
+      <EstimatorShell title="Estimating" backTo="/estimating">
+        <Card><CardContent className="py-10 text-center text-muted-foreground">You do not have access to Estimating.</CardContent></Card>
+      </EstimatorShell>
+    );
+  }
+  if (estimate === null && revision === null) {
+    return (
+      <EstimatorShell title="Estimate" backTo="/estimating">
+        <Card><CardContent className="py-10 text-center text-muted-foreground">Estimate not found.</CardContent></Card>
+      </EstimatorShell>
+    );
+  }
+
+  return (
+    <>
+      <SEO
+        title={`${name || 'Estimate'} — Estimating`}
+        description="Janitorial estimate pricing worksheet with labor, supply, overhead and margin detail."
+        path={`/estimating/${id ?? ''}`}
+      />
+      <EstimatorShell
+        title={name || 'Estimate'}
+        subtitle={lead?.company_name}
+        backTo="/estimating"
+        actions={
+          readOnly ? (
+            <>
+              <Button size="sm" variant="outline" onClick={copySummary}>
+                <Copy className="h-4 w-4 mr-1" /> Copy
+              </Button>
+              <Button size="sm" onClick={duplicateAsDraft} disabled={busy}>
+                <Files className="h-4 w-4 mr-1" /> Duplicate
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={() => saveDraft()} disabled={saving}>
+                <Save className="h-4 w-4 mr-1" /> {saving ? 'Saving…' : 'Save'}
+              </Button>
+              <Button size="sm" onClick={() => setConfirmComplete(true)} disabled={busy}>
+                <CheckCircle2 className="h-4 w-4 mr-1" /> Complete
+              </Button>
+            </>
+          )
+        }
+      >
+        {readOnly ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge>Completed</Badge>
+              <span className="text-xs text-muted-foreground">Read-only. Duplicate as a draft to revise.</span>
+            </div>
+            <PricingSummary
+              inputs={inputs}
+              outputs={outputs}
+              meta={{
+                estimateName: name,
+                opportunityName: lead?.company_name || 'Opportunity',
+                ownerName,
+                completedAt: estimate?.completed_at,
+                notes,
+              }}
+            />
+            <Button variant="outline" className="w-full" onClick={copySummary}>
+              <Copy className="h-4 w-4 mr-2" /> Copy Pricing Summary
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-[1fr_320px] items-start">
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-sm">Estimate</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="est-name" className="text-xs">Estimate name</Label>
+                    <Input
+                      id="est-name"
+                      value={name}
+                      className="h-11 text-base"
+                      onChange={e => { setName(e.target.value); setDirty(true); }}
+                      placeholder="e.g. Nightly janitorial — 5x/week"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Building2 className="h-4 w-4" />
+                    <span className="truncate">{lead?.company_name || 'Opportunity'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-sm">Production</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-2 gap-3">
+                  <NumField id="sqft" label="Building square feet" value={inputs.square_feet} suffix="sq ft" onChange={v => setInput({ square_feet: v })} />
+                  <NumField id="cpw" label="Cleanings per week" value={inputs.cleanings_per_week} onChange={v => setInput({ cleanings_per_week: v })} />
+                  <NumField id="wpm" label="Weeks per month" value={inputs.weeks_per_month} onChange={v => setInput({ weeks_per_month: v })} />
+                  <NumField id="rate" label="Production rate" value={inputs.production_rate_sqft_hour} suffix="/hr" onChange={v => setInput({ production_rate_sqft_hour: v })} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-sm">Labor &amp; supplies</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <NumField id="wage" label="Base wage" value={inputs.base_wage} suffix="$/hr" onChange={v => setInput({ base_wage: v })} />
+                    <NumField id="burden" label="Labor burden" value={inputs.labor_burden_percent} suffix="%" onChange={v => setInput({ labor_burden_percent: v })} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Loaded labor rate: <span className="font-medium text-foreground">{money(outputs.loaded_labor_rate)}/hr</span>
+                  </p>
+                  <Separator />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Supply cost per productive labor hour</Label>
+                    <ToggleGroup
+                      type="single"
+                      value={inputs.supply_preset}
+                      onValueChange={v => {
+                        if (!v) return;
+                        const preset = v as SupplyPreset;
+                        setInput({
+                          supply_preset: preset,
+                          supply_rate_per_hour: preset === 'custom' ? inputs.supply_rate_per_hour : supplyRateForPreset(preset),
+                        });
+                      }}
+                      className="justify-start flex-wrap"
+                    >
+                      {SUPPLY_PRESETS.map(p => (
+                        <ToggleGroupItem key={p.value} value={p.value} size="sm" className="text-xs">
+                          {p.label} ${p.rate.toFixed(2)}
+                        </ToggleGroupItem>
+                      ))}
+                      <ToggleGroupItem value="custom" size="sm" className="text-xs">Custom</ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                  {inputs.supply_preset === 'custom' && (
+                    <NumField id="supply" label="Custom supply rate" value={inputs.supply_rate_per_hour} suffix="$/hr" onChange={v => setInput({ supply_rate_per_hour: v })} />
+                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    Consumables only — vacuums, machines and other fixed assets are not included here.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-sm">Overhead &amp; profit</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <NumField id="oh" label="Overhead" value={inputs.overhead_percent} suffix="%" onChange={v => setInput({ overhead_percent: v })} />
+                    <NumField id="profit" label="Target profit margin" value={inputs.target_margin_percent} suffix="%" onChange={v => setInput({ target_margin_percent: v })} />
+                  </div>
+                  {!solvable && (
+                    <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      Overhead % plus target profit % must be less than 100%. Pricing cannot be calculated.
+                    </div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    Price = monthly direct cost ÷ (1 − overhead% − profit%). Both are true margins of the selling price, not markups on cost.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-sm">Internal notes &amp; assumptions</CardTitle></CardHeader>
+                <CardContent>
+                  <Textarea
+                    value={notes}
+                    onChange={e => { setNotes(e.target.value); setDirty(true); }}
+                    rows={4}
+                    placeholder="Scope assumptions, walkthrough notes, exclusions…"
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-3 md:sticky md:top-20">
+              <Card className="border-brand-orange/40">
+                <CardContent className="pt-6 text-center">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Monthly price</p>
+                  <p className="text-3xl font-bold text-brand-orange tabular-nums">{money(outputs.monthly_price)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {money(outputs.price_per_visit)}/visit · {money(outputs.annual_price, 0)}/yr
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4 space-y-1 text-sm">
+                  <Line label="Hours / visit" value={hoursFmt(outputs.labor_hours_per_visit)} />
+                  <Line label="Monthly hours" value={hoursFmt(outputs.monthly_labor_hours)} />
+                  <Line label="Visits / month" value={outputs.visits_per_month.toFixed(2)} />
+                  <Separator className="my-2" />
+                  <Line label="Loaded labor / visit" value={money(outputs.loaded_labor_cost_per_visit)} />
+                  <Line label="Supply / visit" value={money(outputs.supply_cost_per_visit)} />
+                  <Line label="Direct cost / visit" value={money(outputs.direct_cost_per_visit)} />
+                  <Line label="Monthly direct cost" value={money(outputs.total_direct_cost)} />
+                  <Separator className="my-2" />
+                  <Line label="Overhead $" value={money(outputs.overhead_amount)} />
+                  <Line label="Profit $" value={money(outputs.profit_amount)} />
+                  <Line label="Gross margin" value={pct(outputs.gross_margin_percent)} />
+                  <Line label="Markup on direct cost" value={pct(outputs.markup_on_direct_percent)} />
+                  <Line label="Price / sq ft / mo" value={`$${outputs.price_per_sqft.toFixed(4)}`} />
+                </CardContent>
+              </Card>
+              <Button variant="outline" className="w-full" onClick={copySummary}>
+                <Copy className="h-4 w-4 mr-2" /> Copy Pricing Summary
+              </Button>
+            </div>
+          </div>
+        )}
+      </EstimatorShell>
+
+      <AlertDialog open={confirmComplete} onOpenChange={setConfirmComplete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark this estimate complete?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {validationError
+                ? validationError
+                : 'Completed estimates are read-only. To change anything later you will duplicate it as a new draft.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={e => { if (validationError) { e.preventDefault(); return; } markComplete(); }}
+              disabled={!!validationError || busy}
+            >
+              Mark Complete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+function Line({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="tabular-nums">{value}</span>
+    </div>
+  );
+}
