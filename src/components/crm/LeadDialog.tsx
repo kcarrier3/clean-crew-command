@@ -327,7 +327,8 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       return;
     }
     toast({ title: lead ? 'Opportunity updated' : 'Opportunity created' });
-    onOpenChange(false);
+    setEditMode(false);
+    if (!asPage) onOpenChange?.(false);
     onSaved?.();
   };
 
