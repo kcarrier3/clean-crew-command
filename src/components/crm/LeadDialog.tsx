@@ -670,6 +670,58 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   }
 
   function renderContactsTab() {
+    return renderContactsTabInner();
+  }
+
+  function renderDetailsReadOnly() {
+    const yn = (v: boolean) => (v ? 'Yes' : 'No');
+    const stageName = stages.find(s => s.id === form.stage_id)?.name || '—';
+    const rows: { label: string; value: string }[] = [
+      { label: 'Opportunity Owner', value: ownerName },
+      { label: 'Close Date', value: closeDateDisplay },
+      { label: 'Opportunity Name', value: form.contact_name || '—' },
+      { label: 'Stage', value: stageName },
+      { label: 'Account Name', value: accountDisplay },
+      { label: 'Primary Contact', value: contactDisplay },
+      { label: 'Probability (%)', value: form.probability !== '' ? `${form.probability}%` : '—' },
+      { label: 'Type', value: form.type || '—' },
+      { label: 'Amount', value: amountDisplay },
+      { label: 'Follow Up?', value: yn(form.follow_up) },
+      { label: 'Status', value: LEAD_STATUS_LABELS[form.status] },
+      { label: 'Lead Source', value: form.source || '—' },
+      { label: 'Next Step', value: form.next_step || '—' },
+      { label: 'Email', value: form.email || '—' },
+      { label: 'Phone', value: form.phone || '—' },
+      { label: 'Created', value: lead?.created_at ? new Date(lead.created_at).toLocaleString() : '—' },
+      { label: 'Last Modified', value: lead?.updated_at ? new Date(lead.updated_at).toLocaleString() : '—' },
+    ];
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">Opportunity details</p>
+          <Button size="sm" onClick={() => setEditMode(true)}>
+            <Pencil className="h-4 w-4 mr-1" /> Edit
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+          {rows.map(r => (
+            <div key={r.label} className="border-b py-2">
+              <p className="text-xs font-semibold text-muted-foreground">{r.label}</p>
+              <p className="text-sm mt-0.5 break-words">{r.value}</p>
+            </div>
+          ))}
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground">Description</p>
+          <p className="text-sm mt-1 whitespace-pre-wrap border rounded p-3 bg-muted/30 min-h-[60px]">
+            {form.description || '—'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  function renderContactsTabInner() {
     if (!form.company_id) {
       return <p className="text-sm text-muted-foreground text-center py-8">Set an account first to see its contacts.</p>;
     }
