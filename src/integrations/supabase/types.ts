@@ -2010,6 +2010,370 @@ export type Database = {
         }
         Relationships: []
       }
+      estimate_line_adders: {
+        Row: {
+          cost: number
+          created_at: string
+          description: string
+          frequency: string
+          hours: number
+          id: string
+          kind: string
+          price: number
+          revision_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          cost?: number
+          created_at?: string
+          description: string
+          frequency?: string
+          hours?: number
+          id?: string
+          kind?: string
+          price?: number
+          revision_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          description?: string
+          frequency?: string
+          hours?: number
+          id?: string
+          kind?: string
+          price?: number
+          revision_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_line_adders_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estimate_production_rates: {
+        Row: {
+          active: boolean
+          area_type: string
+          building_type: string
+          created_at: string
+          id: string
+          notes: string | null
+          sqft_per_hour: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          area_type?: string
+          building_type?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sqft_per_hour?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          area_type?: string
+          building_type?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sqft_per_hour?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      estimate_revisions: {
+        Row: {
+          annual_price: number
+          base_wage: number
+          building_type: string | null
+          cleanings_per_week: number
+          created_at: string
+          created_by: string | null
+          day_porter_hours_per_week: number
+          estimate_id: string
+          fixture_count: number
+          floor_mix: Json
+          gross_margin_percent: number
+          id: string
+          labor_burden_percent: number
+          labor_hours_per_visit: number
+          loaded_labor_rate: number
+          markup_percent: number
+          monthly_labor_cost: number
+          monthly_labor_hours: number
+          monthly_price: number
+          monthly_supply_cost: number
+          notes: string | null
+          occupancy_level: string | null
+          overhead_amount: number
+          overhead_percent: number
+          periodic_floor_care: Json
+          price_per_sqft: number
+          price_per_visit: number
+          pricing_mode: string
+          production_rate_sqft_hour: number
+          restroom_count: number
+          revision_number: number
+          service_window: string
+          square_feet: number
+          status: string
+          supply_preset: string
+          supply_rate_per_hour: number
+          target_margin_percent: number
+          total_direct_cost: number
+          traffic_level: string | null
+          updated_at: string
+          weeks_per_month: number
+          windows_hours_per_month: number
+        }
+        Insert: {
+          annual_price?: number
+          base_wage?: number
+          building_type?: string | null
+          cleanings_per_week?: number
+          created_at?: string
+          created_by?: string | null
+          day_porter_hours_per_week?: number
+          estimate_id: string
+          fixture_count?: number
+          floor_mix?: Json
+          gross_margin_percent?: number
+          id?: string
+          labor_burden_percent?: number
+          labor_hours_per_visit?: number
+          loaded_labor_rate?: number
+          markup_percent?: number
+          monthly_labor_cost?: number
+          monthly_labor_hours?: number
+          monthly_price?: number
+          monthly_supply_cost?: number
+          notes?: string | null
+          occupancy_level?: string | null
+          overhead_amount?: number
+          overhead_percent?: number
+          periodic_floor_care?: Json
+          price_per_sqft?: number
+          price_per_visit?: number
+          pricing_mode?: string
+          production_rate_sqft_hour?: number
+          restroom_count?: number
+          revision_number?: number
+          service_window?: string
+          square_feet?: number
+          status?: string
+          supply_preset?: string
+          supply_rate_per_hour?: number
+          target_margin_percent?: number
+          total_direct_cost?: number
+          traffic_level?: string | null
+          updated_at?: string
+          weeks_per_month?: number
+          windows_hours_per_month?: number
+        }
+        Update: {
+          annual_price?: number
+          base_wage?: number
+          building_type?: string | null
+          cleanings_per_week?: number
+          created_at?: string
+          created_by?: string | null
+          day_porter_hours_per_week?: number
+          estimate_id?: string
+          fixture_count?: number
+          floor_mix?: Json
+          gross_margin_percent?: number
+          id?: string
+          labor_burden_percent?: number
+          labor_hours_per_visit?: number
+          loaded_labor_rate?: number
+          markup_percent?: number
+          monthly_labor_cost?: number
+          monthly_labor_hours?: number
+          monthly_price?: number
+          monthly_supply_cost?: number
+          notes?: string | null
+          occupancy_level?: string | null
+          overhead_amount?: number
+          overhead_percent?: number
+          periodic_floor_care?: Json
+          price_per_sqft?: number
+          price_per_visit?: number
+          pricing_mode?: string
+          production_rate_sqft_hour?: number
+          restroom_count?: number
+          revision_number?: number
+          service_window?: string
+          square_feet?: number
+          status?: string
+          supply_preset?: string
+          supply_rate_per_hour?: number
+          target_margin_percent?: number
+          total_direct_cost?: number
+          traffic_level?: string | null
+          updated_at?: string
+          weeks_per_month?: number
+          windows_hours_per_month?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_revisions_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estimate_settings: {
+        Row: {
+          base_wage: number
+          created_at: string
+          default_overhead_percent: number
+          default_production_rate: number
+          default_target_margin_percent: number
+          id: string
+          labor_burden_percent: number
+          supply_high: number
+          supply_low: number
+          supply_standard: number
+          updated_at: string
+          updated_by: string | null
+          weeks_per_month: number
+        }
+        Insert: {
+          base_wage?: number
+          created_at?: string
+          default_overhead_percent?: number
+          default_production_rate?: number
+          default_target_margin_percent?: number
+          id?: string
+          labor_burden_percent?: number
+          supply_high?: number
+          supply_low?: number
+          supply_standard?: number
+          updated_at?: string
+          updated_by?: string | null
+          weeks_per_month?: number
+        }
+        Update: {
+          base_wage?: number
+          created_at?: string
+          default_overhead_percent?: number
+          default_production_rate?: number
+          default_target_margin_percent?: number
+          id?: string
+          labor_burden_percent?: number
+          supply_high?: number
+          supply_low?: number
+          supply_standard?: number
+          updated_at?: string
+          updated_by?: string | null
+          weeks_per_month?: number
+        }
+        Relationships: []
+      }
+      estimates: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          current_revision_id: string | null
+          id: string
+          job_site_id: string | null
+          lead_id: string | null
+          name: string
+          owner_id: string | null
+          rejection_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_revision_id?: string | null
+          id?: string
+          job_site_id?: string | null
+          lead_id?: string | null
+          name: string
+          owner_id?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_revision_id?: string | null
+          id?: string
+          job_site_id?: string | null
+          lead_id?: string | null
+          name?: string
+          owner_id?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_current_revision_fk"
+            columns: ["current_revision_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       excused_shifts: {
         Row: {
           created_at: string
@@ -3910,6 +4274,8 @@ export type Database = {
         Args: { _job_site_id: string; _user_id: string }
         Returns: boolean
       }
+      can_approve_estimate: { Args: { _user_id: string }; Returns: boolean }
+      can_estimate: { Args: { _user_id: string }; Returns: boolean }
       can_message_user: {
         Args: { _recipient_id: string; _sender_id: string }
         Returns: boolean
