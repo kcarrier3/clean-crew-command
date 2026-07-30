@@ -15,6 +15,7 @@ import LeadCapture from './pages/LeadCapture';
 import CompleteProfile from './pages/CompleteProfile';
 import ReportIssue from './pages/ReportIssue';
 import PunchClock from './pages/PunchClock';
+import OpportunityDetail from './pages/OpportunityDetail';
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const AppContent = () => {
       <Route path="/get-a-quote" element={<LeadCapture />} />
       <Route path="/report/:jobSiteId" element={<ReportIssue />} />
       <Route path="/punch/:token" element={<PunchClock />} />
+      <Route path="/crm/opportunities/:id" element={<OpportunityDetail />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
