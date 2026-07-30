@@ -277,6 +277,16 @@ const Index = () => {
                         Onboarding & Docs
                       </Button>
                     )}
+                    {canEstimate() && (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => { setMoreMenuOpen(false); navigate('/estimates'); }}
+                      >
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Sales Estimator
+                      </Button>
+                    )}
                     {isManager() && !isNative && (
                       <>
                         <Button
