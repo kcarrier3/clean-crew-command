@@ -103,11 +103,13 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
         next_step: lead.next_step || '',
         stage_id: lead.stage_id || '',
       });
+      setEditMode(false);
     } else {
       setForm({
         company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new',
         close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '',
       });
+      setEditMode(true);
     }
   }, [lead, open]);
 
