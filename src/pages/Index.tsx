@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact, Calculator } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -45,7 +45,7 @@ import { SEO } from '@/components/SEO';
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading, profile, isManager, canManageEmployees, isCrmUser, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
+  const { user, loading, profile, isManager, canManageEmployees, isCrmUser, canEstimate, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
   const isNativeShell = useIsNativeApp();
   const isPhone = useIsMobile();
   // Treat phone-sized browsers the same as the native app so the mobile web
@@ -164,6 +164,7 @@ const Index = () => {
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
         ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
+        ...(canEstimate() ? [{ v: 'estimates', label: 'Sales Estimator', icon: Calculator }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ]
@@ -179,6 +180,15 @@ const Index = () => {
 
   const showDesktopSidebar = !isNative;
 
+  // Routed sections live outside the tab shell.
+  const handleNavChange = (v: string) => {
+    if (v === 'estimates') {
+      navigate('/estimates');
+      return;
+    }
+    setActiveTab(v);
+  };
+
   return (
     <div className="min-h-screen overflow-x-hidden">
       <SEO
@@ -190,7 +200,7 @@ const Index = () => {
         <AppSidebar
           items={sidebarItems}
           active={activeTab}
-          onChange={setActiveTab}
+          onChange={handleNavChange}
           collapsed={sidebarCollapsed}
           onToggle={toggleSidebar}
           userDisplayName={userDisplayName ?? ''}
@@ -265,6 +275,16 @@ const Index = () => {
                       >
                         <FileText className="h-4 w-4 mr-2" />
                         Onboarding & Docs
+                      </Button>
+                    )}
+                    {canEstimate() && (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => { setMoreMenuOpen(false); navigate('/estimates'); }}
+                      >
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Sales Estimator
                       </Button>
                     )}
                     {isManager() && !isNative && (

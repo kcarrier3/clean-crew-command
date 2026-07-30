@@ -199,6 +199,23 @@ export const useAuth = () => {
     profile?.job_title === 'Owner' ||
     profile?.job_title === 'Administrator';
 
+  // Sales Estimator access — mirrors public.can_estimate() / can_approve_estimate()
+  const ESTIMATOR_JOB_TITLES = [
+    'Owner',
+    'Office Manager',
+    'Operations Manager',
+    'Janitorial Manager',
+    'Night Manager',
+    'Project Crew Lead',
+  ];
+
+  const canEstimate = () =>
+    hasRole('admin') ||
+    hasRole('manager') ||
+    (!!profile?.job_title && ESTIMATOR_JOB_TITLES.includes(profile.job_title));
+
+  const canApproveEstimate = () => hasRole('admin') || profile?.job_title === 'Owner';
+
   const hasPermission = (permission: UserPermission['permission']) => {
     return permissions.some(p => p.permission === permission);
   };
@@ -234,6 +251,8 @@ export const useAuth = () => {
     isManager,
     isEmployee,
     isCrmUser,
+    canEstimate,
+    canApproveEstimate,
     canViewSchedules,
     canEditSchedules,
     canViewTimeTracking,
