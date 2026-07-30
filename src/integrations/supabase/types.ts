@@ -2286,53 +2286,50 @@ export type Database = {
       }
       estimates: {
         Row: {
-          approved_at: string | null
-          approved_by: string | null
           company_id: string | null
+          completed_at: string | null
+          completed_by: string | null
           contact_id: string | null
           created_at: string
           created_by: string | null
           current_revision_id: string | null
           id: string
           job_site_id: string | null
-          lead_id: string | null
+          lead_id: string
           name: string
           owner_id: string | null
-          rejection_reason: string | null
           status: string
           updated_at: string
         }
         Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
           company_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
           current_revision_id?: string | null
           id?: string
           job_site_id?: string | null
-          lead_id?: string | null
+          lead_id: string
           name: string
           owner_id?: string | null
-          rejection_reason?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
-          approved_at?: string | null
-          approved_by?: string | null
           company_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
           current_revision_id?: string | null
           id?: string
           job_site_id?: string | null
-          lead_id?: string | null
+          lead_id?: string
           name?: string
           owner_id?: string | null
-          rejection_reason?: string | null
           status?: string
           updated_at?: string
         }
