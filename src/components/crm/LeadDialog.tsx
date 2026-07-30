@@ -36,16 +36,20 @@ function NoteCategoryBadge({ category }: { category?: string | null }) {
 }
 
 interface Props {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   lead?: CrmLead | null;
   onSaved?: () => void;
+  /** Render as a full page instead of a modal dialog. */
+  asPage?: boolean;
 }
 
-export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
+export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage = false }: Props) {
+  const open = asPage ? true : !!openProp;
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(!lead?.id);
   const [tab, setTab] = useState('details');
   const [notes, setNotes] = useState<any[]>([]);
   const [files, setFiles] = useState<any[]>([]);
