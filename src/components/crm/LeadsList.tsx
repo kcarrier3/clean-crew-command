@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ interface Props {
 
 export function LeadsList({ stages, onChanged }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [leads, setLeads] = useState<CrmLead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +128,7 @@ export function LeadsList({ stages, onChanged }: Props) {
             <Card
               key={lead.id}
               className="hover:shadow-md hover:border-primary/40 transition cursor-pointer"
-              onClick={() => { setEditing(lead); setDialogOpen(true); }}
+              onClick={() => navigate(`/crm/opportunities/${lead.id}`)}
             >
               <CardContent className="p-4 flex flex-wrap items-center gap-3 justify-between">
                 <div className="min-w-0 flex-1">
