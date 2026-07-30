@@ -36,16 +36,20 @@ function NoteCategoryBadge({ category }: { category?: string | null }) {
 }
 
 interface Props {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   lead?: CrmLead | null;
   onSaved?: () => void;
+  /** Render as a full page instead of a modal dialog. */
+  asPage?: boolean;
 }
 
-export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
+export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage = false }: Props) {
+  const open = asPage ? true : !!openProp;
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(!lead?.id);
   const [tab, setTab] = useState('details');
   const [notes, setNotes] = useState<any[]>([]);
   const [files, setFiles] = useState<any[]>([]);
@@ -99,11 +103,13 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
         next_step: lead.next_step || '',
         stage_id: lead.stage_id || '',
       });
+      setEditMode(false);
     } else {
       setForm({
         company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new',
         close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '',
       });
+      setEditMode(true);
     }
   }, [lead, open]);
 
@@ -321,7 +327,8 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
       return;
     }
     toast({ title: lead ? 'Opportunity updated' : 'Opportunity created' });
-    onOpenChange(false);
+    setEditMode(false);
+    if (!asPage) onOpenChange?.(false);
     onSaved?.();
   };
 
@@ -394,9 +401,8 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   const ownerName = owner?.full_name || (lead ? 'Unassigned' : 'You');
   const title = accountDisplay !== '—' ? accountDisplay : (lead ? 'Opportunity' : 'New Opportunity');
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-100 dark:bg-slate-900">
+  const body = (
+      <>
         {/* Salesforce-style header strip */}
         <div className="px-6 pt-5 pb-3 bg-slate-200/60 dark:bg-slate-800/60 border-b">
           <div className="flex items-start gap-3">
@@ -405,7 +411,9 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
             </div>
             <div className="min-w-0">
               <div className="text-xs text-muted-foreground uppercase tracking-wide">Opportunity</div>
-              <DialogTitle className="text-lg font-bold truncate">{title}</DialogTitle>
+              {asPage
+                ? <h1 className="text-lg font-bold truncate">{title}</h1>
+                : <DialogTitle className="text-lg font-bold truncate">{title}</DialogTitle>}
             </div>
           </div>
         </div>
@@ -480,19 +488,67 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
           </div>
         )}
         </div>
-        <DialogFooter className="px-6 py-4 bg-background border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {(tab === 'details' || !lead?.id) && (
-            <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
-          )}
-        </DialogFooter>
+        {(!asPage || editMode) && (
+          <div className="px-6 py-4 bg-background border-t flex justify-end gap-2">
+            {!asPage && (
+              <Button variant="outline" onClick={() => onOpenChange?.(false)} disabled={saving}>Close</Button>
+            )}
+            {(tab === 'details' || !lead?.id) && editMode && (
+              <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
+            )}
+          </div>
+        )}
+      </>
+  );
+
+  if (asPage) {
+    return <div className="bg-slate-100 dark:bg-slate-900 rounded-lg border overflow-hidden">{body}</div>;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-7xl max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-100 dark:bg-slate-900">
+        {body}
       </DialogContent>
     </Dialog>
   );
 
   function renderDetails() {
+    if (lead?.id && !editMode) return renderDetailsReadOnly();
     return (
       <div className="space-y-6">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">Editing opportunity details</p>
+          {lead?.id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setForm({
+                  company_id: lead.company_id || '',
+                  company_name: lead.company_name || '',
+                  primary_contact_id: lead.primary_contact_id || '',
+                  contact_name: lead.contact_name || '',
+                  email: lead.email || '',
+                  phone: lead.phone || '',
+                  source: lead.source || '',
+                  status: lead.status,
+                  close_date: lead.close_date || '',
+                  amount: lead.amount != null ? String(lead.amount) : '',
+                  probability: lead.probability != null ? String(lead.probability) : '',
+                  type: lead.type || '',
+                  follow_up: !!lead.follow_up,
+                  description: lead.description || '',
+                  next_step: lead.next_step || '',
+                  stage_id: lead.stage_id || '',
+                });
+                setEditMode(false);
+              }}
+            >
+              <X className="h-4 w-4 mr-1" /> Cancel
+            </Button>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
           <FieldRow label="Opportunity Owner">
             <div className="text-sm py-2">{ownerName}</div>
@@ -614,6 +670,58 @@ export function LeadDialog({ open, onOpenChange, lead, onSaved }: Props) {
   }
 
   function renderContactsTab() {
+    return renderContactsTabInner();
+  }
+
+  function renderDetailsReadOnly() {
+    const yn = (v: boolean) => (v ? 'Yes' : 'No');
+    const stageName = stages.find(s => s.id === form.stage_id)?.name || '—';
+    const rows: { label: string; value: string }[] = [
+      { label: 'Opportunity Owner', value: ownerName },
+      { label: 'Close Date', value: closeDateDisplay },
+      { label: 'Opportunity Name', value: form.contact_name || '—' },
+      { label: 'Stage', value: stageName },
+      { label: 'Account Name', value: accountDisplay },
+      { label: 'Primary Contact', value: contactDisplay },
+      { label: 'Probability (%)', value: form.probability !== '' ? `${form.probability}%` : '—' },
+      { label: 'Type', value: form.type || '—' },
+      { label: 'Amount', value: amountDisplay },
+      { label: 'Follow Up?', value: yn(form.follow_up) },
+      { label: 'Status', value: LEAD_STATUS_LABELS[form.status] },
+      { label: 'Lead Source', value: form.source || '—' },
+      { label: 'Next Step', value: form.next_step || '—' },
+      { label: 'Email', value: form.email || '—' },
+      { label: 'Phone', value: form.phone || '—' },
+      { label: 'Created', value: lead?.created_at ? new Date(lead.created_at).toLocaleString() : '—' },
+      { label: 'Last Modified', value: lead?.updated_at ? new Date(lead.updated_at).toLocaleString() : '—' },
+    ];
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">Opportunity details</p>
+          <Button size="sm" onClick={() => setEditMode(true)}>
+            <Pencil className="h-4 w-4 mr-1" /> Edit
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+          {rows.map(r => (
+            <div key={r.label} className="border-b py-2">
+              <p className="text-xs font-semibold text-muted-foreground">{r.label}</p>
+              <p className="text-sm mt-0.5 break-words">{r.value}</p>
+            </div>
+          ))}
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground">Description</p>
+          <p className="text-sm mt-1 whitespace-pre-wrap border rounded p-3 bg-muted/30 min-h-[60px]">
+            {form.description || '—'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  function renderContactsTabInner() {
     if (!form.company_id) {
       return <p className="text-sm text-muted-foreground text-center py-8">Set an account first to see its contacts.</p>;
     }
