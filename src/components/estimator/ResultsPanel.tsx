@@ -12,12 +12,12 @@ const Row = ({ label, value, strong }: { label: string; value: string; strong?: 
 export function ResultsPanel({ inputs, out }: { inputs: EstimateInputs; out: EstimateOutputs }) {
   return (
     <div className="space-y-4">
-      <Card className="border-[hsl(var(--brand-orange))]/40">
+      <Card className="border-brand-orange/40">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm text-muted-foreground font-medium">Price</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          <div className="text-3xl font-bold text-[hsl(var(--brand-orange))] tabular-nums">
+          <div className="text-3xl font-bold text-brand-orange tabular-nums">
             {money(out.monthly_price)}
             <span className="text-sm font-normal text-muted-foreground"> / month</span>
           </div>
