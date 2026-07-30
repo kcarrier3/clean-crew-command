@@ -27,6 +27,7 @@ export default function OpportunityDetail() {
       <SEO
         title={lead ? `${lead.company_name} | Opportunity` : 'Opportunity'}
         description="View and manage opportunity details, notes, files, and activity."
+        path={`/crm/opportunities/${id ?? ''}`}
       />
       <div className="max-w-7xl mx-auto p-4 space-y-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
