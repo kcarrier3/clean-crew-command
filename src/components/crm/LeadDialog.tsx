@@ -514,8 +514,41 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   );
 
   function renderDetails() {
+    if (lead?.id && !editMode) return renderDetailsReadOnly();
     return (
       <div className="space-y-6">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">Editing opportunity details</p>
+          {lead?.id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setForm({
+                  company_id: lead.company_id || '',
+                  company_name: lead.company_name || '',
+                  primary_contact_id: lead.primary_contact_id || '',
+                  contact_name: lead.contact_name || '',
+                  email: lead.email || '',
+                  phone: lead.phone || '',
+                  source: lead.source || '',
+                  status: lead.status,
+                  close_date: lead.close_date || '',
+                  amount: lead.amount != null ? String(lead.amount) : '',
+                  probability: lead.probability != null ? String(lead.probability) : '',
+                  type: lead.type || '',
+                  follow_up: !!lead.follow_up,
+                  description: lead.description || '',
+                  next_step: lead.next_step || '',
+                  stage_id: lead.stage_id || '',
+                });
+                setEditMode(false);
+              }}
+            >
+              <X className="h-4 w-4 mr-1" /> Cancel
+            </Button>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
           <FieldRow label="Opportunity Owner">
             <div className="text-sm py-2">{ownerName}</div>
