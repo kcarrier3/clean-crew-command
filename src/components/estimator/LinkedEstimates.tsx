@@ -94,9 +94,11 @@ export function LinkedEstimates({ leadId, companyName, companyId, contactId }: P
   if (!canEstimate()) return null;
   if (rows.length === 0) {
     return (
-      <Button variant="outline" size="sm" onClick={create} disabled={busy}>
-        <Calculator className="h-4 w-4 mr-2" /> Create Estimate
-      </Button>
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={create} disabled={busy}>
+          <Calculator className="h-4 w-4 mr-2" /> Create Estimate
+        </Button>
+      </div>
     );
   }
 

@@ -40,14 +40,12 @@ export default function OpportunityDetail() {
           <p className="text-sm text-muted-foreground">Opportunity not found.</p>
         ) : (
           <>
-            <div className="flex justify-end">
-              <LinkedEstimates
+            <LinkedEstimates
                 leadId={lead.id}
                 companyName={lead.company_name}
                 companyId={lead.company_id}
                 contactId={lead.primary_contact_id}
-              />
-            </div>
+            />
             <LeadDialog asPage lead={lead} onSaved={load} />
           </>
         )}
