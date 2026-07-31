@@ -42,7 +42,6 @@ const ManagerDashboard = () => {
 
   useEffect(() => {
     if (isManager()) {
-      fetchEmployees();
       fetchActiveEntries();
     }
   }, []);
