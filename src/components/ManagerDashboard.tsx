@@ -220,12 +220,12 @@ const ManagerDashboard = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="timeclock" className="w-full">
-        <TabsList className={`grid w-full ${canViewAccountCost ? 'grid-cols-5' : 'grid-cols-4'}`}>
-          <TabsTrigger value="timeclock">Time Clock</TabsTrigger>
-          <TabsTrigger value="active">Shift Roster</TabsTrigger>
-          <TabsTrigger value="reports">Weekly Report</TabsTrigger>
-          <TabsTrigger value="budget">Budget Reports</TabsTrigger>
-          {canViewAccountCost && <TabsTrigger value="account-cost">Account Cost</TabsTrigger>}
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto gap-1">
+          <TabsTrigger value="timeclock" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Time Clock</TabsTrigger>
+          <TabsTrigger value="active" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Shift Roster</TabsTrigger>
+          <TabsTrigger value="reports" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Weekly Report</TabsTrigger>
+          <TabsTrigger value="budget" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Budget Reports</TabsTrigger>
+          {canViewAccountCost && <TabsTrigger value="account-cost" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Account Cost</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="timeclock">
