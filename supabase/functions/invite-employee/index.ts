@@ -24,54 +24,44 @@ const InviteEmployeeSchema = z.object({
 });
 
 // Permission mappings — must match jobTitles.ts in the frontend exactly
+const ALL_PERMISSIONS = [
+  'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
+  'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
+  'edit_quality_control', 'view_worker_status', 'manage_employees', 'view_notifications',
+  'admin_settings', 'view_crm', 'view_supplies', 'use_estimating', 'view_team_directory',
+  'view_calendar', 'use_messaging',
+];
+const without = (...omit: string[]) => ALL_PERMISSIONS.filter((p) => !omit.includes(p));
+
 const jobTitlePermissions: Record<string, string[]> = {
-  'Owner': [
-    'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
-    'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
-    'edit_quality_control', 'view_worker_status', 'manage_employees', 'view_notifications',
-    'admin_settings'
-  ],
-  'Administrator': [
-    'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
-    'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
-    'edit_quality_control', 'view_worker_status', 'manage_employees', 'view_notifications',
-    'admin_settings'
-  ],
-  'Janitorial Manager': [
-    'view_schedules', 'edit_schedules', 'view_work_orders', 'create_work_orders',
-    'edit_work_orders', 'view_quality_control', 'edit_quality_control', 'view_notifications'
-  ],
-  'Project Crew Lead': [
-    'view_schedules', 'edit_schedules', 'view_work_orders', 'create_work_orders',
-    'edit_work_orders', 'view_quality_control', 'edit_quality_control', 'view_notifications'
-  ],
-  'Supervisor': [
-    'view_schedules', 'edit_schedules', 'view_time_tracking', 'edit_time_tracking',
-    'view_work_orders', 'create_work_orders', 'edit_work_orders', 'view_quality_control',
-    'edit_quality_control', 'view_worker_status', 'view_notifications'
-  ],
+  'Owner': [...ALL_PERMISSIONS],
+  'Office Manager': [...ALL_PERMISSIONS],
+  'Operations Manager': [...ALL_PERMISSIONS],
+  'Janitorial Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
+  'Project Crew Lead': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
+  'Night Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
   'Project Worker': [
-    'view_schedules', 'view_time_tracking', 'edit_time_tracking',
-    'view_work_orders', 'view_notifications'
+    'view_schedules', 'view_time_tracking', 'edit_time_tracking', 'view_notifications', 'use_messaging'
   ],
   'Janitorial Staff': [
-    'view_schedules', 'view_time_tracking', 'edit_time_tracking',
-    'view_work_orders', 'view_notifications'
+    'view_schedules', 'view_time_tracking', 'edit_time_tracking', 'view_work_orders',
+    'view_notifications', 'use_messaging'
   ],
   'Floaters': [
-    'view_schedules', 'view_time_tracking', 'edit_time_tracking',
-    'view_work_orders', 'view_notifications', 'view_quality_control'
+    'view_schedules', 'view_time_tracking', 'edit_time_tracking', 'view_work_orders',
+    'view_worker_status', 'view_notifications', 'use_messaging'
   ],
-  'Supply Management': [
-    'view_schedules', 'view_time_tracking', 'edit_time_tracking',
-    'view_work_orders', 'view_notifications'
+  'Supply Management': without('view_crm', 'use_estimating', 'admin_settings', 'view_calendar'),
+  'Supply': [
+    'view_schedules', 'view_time_tracking', 'edit_time_tracking', 'view_supplies',
+    'view_notifications', 'use_messaging'
   ],
 };
 
 // Titles that get the 'manager' system role
-const managerTitles = ['Owner', 'Administrator', 'Janitorial Manager', 'Project Crew Lead', 'Supervisor'];
+const managerTitles = ['Owner', 'Office Manager', 'Operations Manager', 'Janitorial Manager', 'Project Crew Lead', 'Night Manager'];
 // Titles that get the 'admin' system role
-const adminTitles = ['Owner', 'Administrator'];
+const adminTitles = ['Owner', 'Office Manager', 'Operations Manager'];
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
