@@ -404,6 +404,12 @@ export async function runSalesforceImport(
       const sfId = pick(r, 'Id', 'Opportunity ID', 'Opportunity Id', '18 Digit ID');
       const oppName = pick(r, 'Name', 'Opportunity Name');
       if (!sfId) { st.skipped.push({ sfId: '', label: oppName, reason: 'No Salesforce Id column' }); continue; }
+      // Real Opportunity records always start with the 006 key prefix. Anything
+      // else (008 history, 00k line items, …) is a child object, not an opportunity.
+      if (!/^006/i.test(sfId)) {
+        st.skipped.push({ sfId, label: oppName || sfId, reason: 'Not an Opportunity record (unexpected Salesforce Id prefix)' });
+        continue;
+      }
       const sfStage = pick(r, 'StageName', 'Stage');
       const sfAcct = pick(r, 'AccountId', 'Account ID');
       const account = sfAcct ? resolver.get(sfAcct) : null;
