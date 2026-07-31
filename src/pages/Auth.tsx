@@ -77,20 +77,20 @@ const Auth = () => {
   };
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-4">
+    <main className="min-h-[100dvh] bg-background flex items-center justify-center p-4 overflow-x-hidden">
       <SEO
         title="Sign In — Crew Compass"
         description="Sign in to Crew Compass to access scheduling, time clock, quality control, and messaging for your janitorial team."
         path="/auth"
       />
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
+      <div className="max-w-md w-full py-2">
+        <div className="text-center mb-4 sm:mb-6">
           <img
             src="/crew-compass-logo.png?v=2"
             alt="Crew Compass"
             width="512"
             height="512"
-            className="mx-auto mb-4 h-64 w-auto"
+            className="mx-auto mb-2 h-28 sm:h-40 md:h-56 w-auto"
           />
           <h1 className="sr-only">Sign in to Crew Compass</h1>
         </div>

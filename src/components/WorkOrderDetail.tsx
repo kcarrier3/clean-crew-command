@@ -280,8 +280,8 @@ export const WorkOrderDetail: React.FC<WorkOrderDetailProps> = ({
             </TabsList>
 
             <TabsContent value="photos" className="space-y-4">
-              <div className="flex gap-2">
-                <div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="w-full sm:w-auto">
                   <input
                     type="file"
                     accept="image/*"
@@ -289,15 +289,15 @@ export const WorkOrderDetail: React.FC<WorkOrderDetailProps> = ({
                     className="hidden"
                     id="deficiency-upload"
                   />
-                  <Button asChild variant="outline" disabled={uploading}>
-                    <label htmlFor="deficiency-upload" className="cursor-pointer">
+                  <Button asChild variant="outline" disabled={uploading} className="w-full sm:w-auto">
+                    <label htmlFor="deficiency-upload" className="cursor-pointer w-full justify-center">
                       <Camera className="h-4 w-4 mr-2" />
                       Add Deficiency Photo
                     </label>
                   </Button>
                 </div>
                 
-                <div>
+                <div className="w-full sm:w-auto">
                   <input
                     type="file"
                     accept="image/*"
@@ -305,8 +305,8 @@ export const WorkOrderDetail: React.FC<WorkOrderDetailProps> = ({
                     className="hidden"
                     id="completion-upload"
                   />
-                  <Button asChild variant="outline" disabled={uploading}>
-                    <label htmlFor="completion-upload" className="cursor-pointer">
+                  <Button asChild variant="outline" disabled={uploading} className="w-full sm:w-auto">
+                    <label htmlFor="completion-upload" className="cursor-pointer w-full justify-center">
                       <Upload className="h-4 w-4 mr-2" />
                       Add Completion Photo
                     </label>
