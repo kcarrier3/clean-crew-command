@@ -273,103 +273,20 @@ const Index = () => {
                     <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">
                       {user.email}
                     </div>
-                    {/* On native app, surface Messages + Onboarding here since they're not in the bottom bar */}
-                    {isNative && (
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => { setActiveTab('messages'); setMoreMenuOpen(false); }}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Messages
-                      </Button>
-                    )}
-                    {isNative && (
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => { setActiveTab('contacts'); setMoreMenuOpen(false); }}
-                      >
-                        <Contact className="h-4 w-4 mr-2" />
-                        Contacts
-                      </Button>
-                    )}
-                    {!isManager() && (
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => { setActiveTab('onboarding'); setMoreMenuOpen(false); }}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Onboarding & Docs
-                      </Button>
-                    )}
-                    {canEstimate() && (
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => { setMoreMenuOpen(false); navigate('/estimating'); }}
-                      >
-                        <Calculator className="h-4 w-4 mr-2" />
-                        Estimating
-                      </Button>
-                    )}
-                    {isManager() && !isNative && (
-                      <>
+                    {mobileMenuItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
                         <Button
-                          variant="ghost"
+                          key={item.v}
+                          variant={activeTab === item.v ? 'secondary' : 'ghost'}
                           className="w-full justify-start"
-                          onClick={() => { setActiveTab('jobsites'); setMoreMenuOpen(false); }}
+                          onClick={() => { handleNavChange(item.v); setMoreMenuOpen(false); }}
                         >
-                          <MapPin className="h-4 w-4 mr-2" />
-                          Accounts
+                          <Icon className="h-4 w-4 mr-2" />
+                          {item.label}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          className="w-full justify-start"
-                          onClick={() => { setActiveTab('calendar'); setMoreMenuOpen(false); }}
-                        >
-                          <CalendarRange className="h-4 w-4 mr-2" />
-                          Calendar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="w-full justify-start"
-                          onClick={() => { setActiveTab('supplies'); setMoreMenuOpen(false); }}
-                        >
-                          <Package className="h-4 w-4 mr-2" />
-                          Supplies
-                        </Button>
-                        {isCrmUser() && (
-                          <Button
-                            variant="ghost"
-                            className="w-full justify-start"
-                            onClick={() => { setActiveTab('crm'); setMoreMenuOpen(false); }}
-                          >
-                            <Briefcase className="h-4 w-4 mr-2" />
-                            CRM
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          className="w-full justify-start"
-                          onClick={() => { setActiveTab('managerlog'); setMoreMenuOpen(false); }}
-                        >
-                          <BookOpen className="h-4 w-4 mr-2" />
-                          Manager Log
-                        </Button>
-                        {canManageEmployees() && (
-                          <Button
-                            variant="ghost"
-                            className="w-full justify-start"
-                            onClick={() => { setActiveTab('team'); setMoreMenuOpen(false); }}
-                          >
-                            <User className="h-4 w-4 mr-2" />
-                            Team
-                          </Button>
-                        )}
-                      </>
-                    )}
+                      );
+                    })}
                     <DropdownMenuSeparator />
                     <Button variant="ghost" className="w-full justify-start" onClick={() => { setMoreMenuOpen(false); navigate('/settings'); }}>
                       <SettingsIcon className="h-4 w-4 mr-2" />
