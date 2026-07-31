@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { LeadDialog } from './LeadDialog';
+import { RelatedNotesFiles } from './RelatedNotesFiles';
 import { LEAD_STATUS_LABELS, type CrmCompany, type CrmContact, type CrmLead, type CrmStage } from './types';
 
 const STATUS_COLORS: Record<CrmLead['status'], string> = {
@@ -99,6 +100,7 @@ export function CompanyDetailDialog({ company, open, onOpenChange, onChanged }: 
             <TabsList>
               <TabsTrigger value="contacts">Contacts ({contacts.length})</TabsTrigger>
               <TabsTrigger value="opportunities">Opportunities ({leads.length})</TabsTrigger>
+              <TabsTrigger value="notes">Notes &amp; Files</TabsTrigger>
             </TabsList>
 
             <TabsContent value="contacts" className="mt-3 overflow-y-auto flex-1">
@@ -165,6 +167,10 @@ export function CompanyDetailDialog({ company, open, onOpenChange, onChanged }: 
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="notes" className="mt-3 overflow-y-auto flex-1">
+              <RelatedNotesFiles parentType="account" parentId={company.id} />
             </TabsContent>
           </Tabs>
         </DialogContent>
