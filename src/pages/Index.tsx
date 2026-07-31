@@ -265,11 +265,11 @@ const Index = () => {
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-72">
-                  <SheetHeader>
+                <SheetContent side="right" className="w-72 flex flex-col overflow-y-auto max-h-screen pb-safe">
+                  <SheetHeader className="shrink-0">
                     <SheetTitle>Menu</SheetTitle>
                   </SheetHeader>
-                  <div className="mt-6 space-y-1">
+                  <div className="mt-6 space-y-1 overflow-y-auto flex-1 -mr-2 pr-2">
                     <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">
                       {user.email}
                     </div>
