@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Clock, Calendar, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -10,6 +10,7 @@ import TimeClock from './TimeClock';
 import BudgetReports from './BudgetReports';
 import AccountCostReport from './AccountCostReport';
 import ShiftRoster from './ShiftRoster';
+import PayPeriodHoursReport from './PayPeriodHoursReport';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Employee {
@@ -179,52 +180,14 @@ const ManagerDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Users className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-2xl font-bold">{employees.length}</p>
-                <p className="text-sm text-muted-foreground">Active Employees</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Clock className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold">{activeEntries.length}</p>
-                <p className="text-sm text-muted-foreground">Currently Clocked In</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <BarChart3 className="h-8 w-8 text-orange-500" />
-              <div>
-                <p className="text-2xl font-bold">{totalHours.toFixed(1)}</p>
-                <p className="text-sm text-muted-foreground">Pay Period Hours</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main Content Tabs */}
       <Tabs defaultValue="timeclock" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto gap-1">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto gap-1">
           <TabsTrigger value="timeclock" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Time Clock</TabsTrigger>
           <TabsTrigger value="active" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Shift Roster</TabsTrigger>
           <TabsTrigger value="reports" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Weekly Report</TabsTrigger>
           <TabsTrigger value="budget" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Budget Reports</TabsTrigger>
+          <TabsTrigger value="pay-period" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Pay Period Hours</TabsTrigger>
           {canViewAccountCost && <TabsTrigger value="account-cost" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Account Cost</TabsTrigger>}
         </TabsList>
 
@@ -263,7 +226,41 @@ const ManagerDashboard = () => {
         </TabsContent>
 
         <TabsContent value="active">
-          <ShiftRoster />
+          <div className="space-y-6">
+            <ShiftRoster />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-green-600" />
+                  Currently Clocked In ({activeEntries.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {activeEntries.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-6">No one is currently clocked in.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {activeEntries.map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between border rounded-lg p-3 gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">
+                            {entry.employees?.first_name} {entry.employees?.last_name}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {entry.job_sites?.name}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-mono">{calculateHours(entry.clock_in, null)} hrs</p>
+                          <p className="text-xs text-muted-foreground">since {formatTime(entry.clock_in)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="reports">
@@ -349,6 +346,10 @@ const ManagerDashboard = () => {
 
         <TabsContent value="budget">
           <BudgetReports />
+        </TabsContent>
+
+        <TabsContent value="pay-period">
+          <PayPeriodHoursReport />
         </TabsContent>
 
         {canViewAccountCost && (
