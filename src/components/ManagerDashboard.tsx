@@ -81,26 +81,6 @@ const ManagerDashboard = () => {
     }
   };
 
-  const fetchEmployees = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('active', true)
-        .order('first_name');
-
-      if (error) throw error;
-      setEmployees(data || []);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load employees",
-        variant: "destructive"
-      });
-    }
-  };
-
   const fetchActiveEntries = async () => {
     try {
       const { data, error } = await supabase
