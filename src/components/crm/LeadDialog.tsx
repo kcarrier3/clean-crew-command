@@ -179,11 +179,13 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     if (!missing.length) return;
     (async () => {
       const { data } = await (supabase as any)
-        .from('profiles').select('id, full_name').in('id', missing);
+        .from('profiles').select('id, first_name, last_name').in('id', missing);
       if (data) {
         setUserNames(prev => {
           const next = { ...prev };
-          data.forEach((p: any) => { next[p.id] = p.full_name || 'Unknown'; });
+          data.forEach((p: any) => {
+            next[p.id] = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown';
+          });
           missing.forEach(id => { if (!(id in next)) next[id] = 'Unknown'; });
           return next;
         });

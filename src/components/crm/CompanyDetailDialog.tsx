@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mail, Phone, Star, Plus, ArrowRight, Pencil, Globe, MapPin } from 'lucide-react';
+import { Mail, Phone, Star, Plus, ArrowRight, Globe, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +31,7 @@ interface Props {
 export function CompanyDetailDialog({ company, open, onOpenChange, onChanged }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [leads, setLeads] = useState<CrmLead[]>([]);
   const [stages, setStages] = useState<CrmStage[]>([]);
@@ -142,7 +144,11 @@ export function CompanyDetailDialog({ company, open, onOpenChange, onChanged }: 
               ) : (
                 <div className="space-y-2">
                   {leads.map(lead => (
-                    <Card key={lead.id}>
+                    <Card
+                      key={lead.id}
+                      className="cursor-pointer hover:bg-accent/50 transition-colors"
+                      onClick={() => { onOpenChange(false); navigate(`/crm/opportunities/${lead.id}`); }}
+                    >
                       <CardContent className="p-3 flex flex-wrap items-center gap-3 justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -153,11 +159,8 @@ export function CompanyDetailDialog({ company, open, onOpenChange, onChanged }: 
                           {lead.contact_name && <p className="text-xs text-muted-foreground">{lead.contact_name}</p>}
                         </div>
                         <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => { setLeadEditing(lead); setLeadDialogOpen(true); }}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
                           {lead.status !== 'converted' && (
-                            <Button size="sm" variant="outline" onClick={() => convertToDeal(lead)}>
+                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); convertToDeal(lead); }}>
                               Convert <ArrowRight className="h-3 w-3 ml-1" />
                             </Button>
                           )}
