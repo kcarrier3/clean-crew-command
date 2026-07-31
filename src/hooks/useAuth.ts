@@ -24,9 +24,11 @@ export interface UserRole {
 }
 
 export interface UserPermission {
-  permission: 'view_schedules' | 'edit_schedules' | 'view_time_tracking' | 'edit_time_tracking' | 
-              'view_work_orders' | 'create_work_orders' | 'edit_work_orders' | 'view_quality_control' | 
-              'edit_quality_control' | 'view_worker_status' | 'manage_employees' | 'view_notifications' | 'admin_settings';
+  permission: 'view_schedules' | 'edit_schedules' | 'view_time_tracking' | 'edit_time_tracking' |
+              'view_work_orders' | 'create_work_orders' | 'edit_work_orders' | 'view_quality_control' |
+              'edit_quality_control' | 'view_worker_status' | 'manage_employees' | 'view_notifications' |
+              'admin_settings' | 'view_crm' | 'view_supplies' | 'use_estimating' |
+              'view_team_directory' | 'view_calendar' | 'use_messaging';
 }
 
 export const useAuth = () => {
