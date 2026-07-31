@@ -177,6 +177,8 @@ const Index = () => {
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'supplies',   label: 'Supplies',        icon: Package },
+        ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
+        ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ];
 
