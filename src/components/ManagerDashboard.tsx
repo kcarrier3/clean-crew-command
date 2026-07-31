@@ -179,16 +179,6 @@ const ManagerDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold">
-          Manager Dashboard
-        </h2>
-        <p className="text-muted-foreground">
-          Welcome, {profile?.first_name} {profile?.last_name} • Manage your team's time and schedules
-        </p>
-      </div>
-
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>

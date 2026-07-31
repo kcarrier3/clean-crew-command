@@ -49,10 +49,6 @@ const Auth = () => {
         variant: "destructive"
       });
     } else {
-      toast({
-        title: "Welcome back!",
-        description: "You have been signed in successfully."
-      });
       navigate('/');
     }
 

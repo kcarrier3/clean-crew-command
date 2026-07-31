@@ -192,16 +192,6 @@ const EmployeeDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold">
-          Welcome, {profile.first_name} {profile.last_name}
-        </h2>
-        <p className="text-muted-foreground">
-          Employee ID: {profile.employee_id || 'Not assigned'} • {profile.job_title}
-        </p>
-      </div>
-
       {/* Time Clock */}
       <Card>
         <CardHeader>
