@@ -2,6 +2,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { getSupplyAccess } from '@/lib/supplyPermissions';
 import SupplyItemsTab from './supply/SupplyItemsTab';
 import SupplyStockTab from './supply/SupplyStockTab';
 import SupplyMovementsTab from './supply/SupplyMovementsTab';
@@ -12,8 +13,8 @@ import SupplyCostReport from './supply/SupplyCostReport';
 import SupplyBillingReport from './supply/SupplyBillingReport';
 
 const SupplyManagement = () => {
-  const { isManager } = useAuth();
-  const canManage = isManager();
+  const { isManager, profile } = useAuth();
+  const { canManage, canViewReports } = getSupplyAccess(isManager(), profile?.job_title);
 
   return (
     <div className="space-y-6">
@@ -37,8 +38,8 @@ const SupplyManagement = () => {
           <TabsTrigger value="items">Items</TabsTrigger>
           <TabsTrigger value="assets">Fixed Assets</TabsTrigger>
           <TabsTrigger value="requests">Requests</TabsTrigger>
-          {canManage && <TabsTrigger value="cost-report">Cost Report</TabsTrigger>}
-          {canManage && <TabsTrigger value="billing-report">Billing Report</TabsTrigger>}
+          {canViewReports && <TabsTrigger value="cost-report">Cost Report</TabsTrigger>}
+          {canViewReports && <TabsTrigger value="billing-report">Billing Report</TabsTrigger>}
           {canManage && <TabsTrigger value="locations">Locations</TabsTrigger>}
         </TabsList>
         <TabsContent value="stock" className="space-y-6">
@@ -48,8 +49,8 @@ const SupplyManagement = () => {
         <TabsContent value="items"><SupplyItemsTab canManage={canManage} /></TabsContent>
         <TabsContent value="assets"><FixedAssetsTab canManage={canManage} /></TabsContent>
         <TabsContent value="requests"><SupplyRequestsTab canManage={canManage} /></TabsContent>
-        {canManage && <TabsContent value="cost-report"><SupplyCostReport /></TabsContent>}
-        {canManage && <TabsContent value="billing-report"><SupplyBillingReport /></TabsContent>}
+        {canViewReports && <TabsContent value="cost-report"><SupplyCostReport /></TabsContent>}
+        {canViewReports && <TabsContent value="billing-report"><SupplyBillingReport /></TabsContent>}
         {canManage && <TabsContent value="locations"><SupplyLocationsTab /></TabsContent>}
       </Tabs>
     </div>

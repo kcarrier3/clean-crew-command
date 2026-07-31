@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Pencil, PackagePlus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { getSupplyAccess } from '@/lib/supplyPermissions';
 import { useToast } from '@/hooks/use-toast';
 
 type Row = {
@@ -26,8 +27,7 @@ type Item = { id: string; name: string; unit: string; unit_cost: number | null }
 
 export default function SupplyStockTab() {
   const { isManager, profile } = useAuth();
-  const managerTitles = ['Owner', 'Administrator', 'Office Manager', 'Operations Manager', 'Janitorial Manager', 'Project Crew Lead', 'Supply Management', 'Supply'];
-  const canManage = isManager() || (profile?.job_title ? managerTitles.includes(profile.job_title) : false);
+  const { canManage } = getSupplyAccess(isManager(), profile?.job_title);
   const { toast } = useToast();
   const [rows, setRows] = useState<Row[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
