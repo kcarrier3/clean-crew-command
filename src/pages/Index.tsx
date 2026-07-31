@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact, Calculator } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact, Calculator, Settings as SettingsIcon } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -230,6 +230,14 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-3">
               <NotificationBell />
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Settings"
+                onClick={() => navigate('/settings')}
+              >
+                <SettingsIcon className="h-5 w-5" />
+              </Button>
 
               {/* Mobile hamburger menu for lesser-used functions */}
               <Sheet open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
@@ -344,6 +352,10 @@ const Index = () => {
                       </>
                     )}
                     <DropdownMenuSeparator />
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => { setMoreMenuOpen(false); navigate('/settings'); }}>
+                      <SettingsIcon className="h-4 w-4 mr-2" />
+                      Settings
+                    </Button>
                     <Button variant="ghost" className="w-full justify-start" onClick={() => { handleChangePassword(); setMoreMenuOpen(false); }}>
                       <KeyRound className="h-4 w-4 mr-2" />
                       Change Password
@@ -377,6 +389,10 @@ const Index = () => {
                     {user.email}
                   </div>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/settings')}>
+                    <SettingsIcon className="h-4 w-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleChangePassword}>
                     <KeyRound className="h-4 w-4 mr-2" />
                     Change Password
@@ -488,7 +504,22 @@ const Index = () => {
 
             {!isNative && (
               <TabsContent value="team" className="mt-6">
-                <TeamRoster />
+                {canManageEmployees() ? (
+                  <Tabs defaultValue="directory" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-grid md:grid-flow-col">
+                      <TabsTrigger value="directory">Directory</TabsTrigger>
+                      <TabsTrigger value="manage">Manage Employees</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="directory" className="mt-6">
+                      <TeamRoster />
+                    </TabsContent>
+                    <TabsContent value="manage" className="mt-6">
+                      <TeamManagement />
+                    </TabsContent>
+                  </Tabs>
+                ) : (
+                  <TeamRoster />
+                )}
               </TabsContent>
             )}
 
