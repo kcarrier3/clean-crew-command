@@ -4,23 +4,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+
 import { useAuth } from '@/hooks/useAuth';
 import TimeClock from './TimeClock';
 import BudgetReports from './BudgetReports';
 import AccountCostReport from './AccountCostReport';
 import ShiftRoster from './ShiftRoster';
 import PayPeriodHoursReport from './PayPeriodHoursReport';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-interface Employee {
-  id: string;
-  employee_id: string;
-  first_name: string;
-  last_name: string;
-  job_title: string;
-  active: boolean;
-}
 
 interface TimeEntry {
   id: string;
@@ -39,8 +30,6 @@ interface TimeEntry {
 }
 
 const ManagerDashboard = () => {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [activeEntries, setActiveEntries] = useState<TimeEntry[]>([]);
   const [weekEntries, setWeekEntries] = useState<TimeEntry[]>([]);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -49,11 +38,9 @@ const ManagerDashboard = () => {
     hasRole('admin') ||
     profile?.job_title === 'Owner' ||
     profile?.job_title === 'Administrator';
-  const { toast } = useToast();
 
   useEffect(() => {
     if (isManager()) {
-      fetchEmployees();
       fetchActiveEntries();
     }
   }, []);
@@ -90,26 +77,6 @@ const ManagerDashboard = () => {
       setWeekEntries(data || []);
     } catch (error) {
       console.error('Error fetching week entries:', error);
-    }
-  };
-
-  const fetchEmployees = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('active', true)
-        .order('first_name');
-
-      if (error) throw error;
-      setEmployees(data || []);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load employees",
-        variant: "destructive"
-      });
     }
   };
 
@@ -192,37 +159,7 @@ const ManagerDashboard = () => {
         </TabsList>
 
         <TabsContent value="timeclock">
-          <div className="space-y-6">
-            {/* Employee Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Select Employee for Time Clock</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Select value={selectedEmployee?.id || ''} onValueChange={(value) => {
-                  const employee = employees.find(emp => emp.id === value);
-                  setSelectedEmployee(employee || null);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an employee to manage their time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.first_name} {employee.last_name} ({employee.employee_id}) - {employee.job_title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-
-            {/* Time Clock Component */}
-            <TimeClock 
-              forManager={true} 
-              selectedEmployeeId={selectedEmployee?.id}
-            />
-          </div>
+          <TimeClock forManager={true} />
         </TabsContent>
 
         <TabsContent value="active">
