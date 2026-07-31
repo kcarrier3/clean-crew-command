@@ -160,37 +160,7 @@ const ManagerDashboard = () => {
         </TabsList>
 
         <TabsContent value="timeclock">
-          <div className="space-y-6">
-            {/* Employee Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Select Employee for Time Clock</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Select value={selectedEmployee?.id || ''} onValueChange={(value) => {
-                  const employee = employees.find(emp => emp.id === value);
-                  setSelectedEmployee(employee || null);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an employee to manage their time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employees.map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
-                        {employee.first_name} {employee.last_name} ({employee.employee_id}) - {employee.job_title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-
-            {/* Time Clock Component */}
-            <TimeClock 
-              forManager={true} 
-              selectedEmployeeId={selectedEmployee?.id}
-            />
-          </div>
+          <TimeClock forManager={true} />
         </TabsContent>
 
         <TabsContent value="active">
