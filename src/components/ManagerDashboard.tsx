@@ -38,7 +38,6 @@ const ManagerDashboard = () => {
     hasRole('admin') ||
     profile?.job_title === 'Owner' ||
     profile?.job_title === 'Administrator';
-  const { toast } = useToast();
 
   useEffect(() => {
     if (isManager()) {
