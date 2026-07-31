@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { CrmCompany, CrmContact } from './types';
+import { RelatedNotesFiles } from './RelatedNotesFiles';
 
 const blank = { first_name: '', last_name: '', email: '', phone: '', title: '', company_id: '', notes: '', is_primary: false };
 
@@ -148,6 +149,11 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
             </label>
             <div><Label>Notes</Label><Textarea rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
           </div>
+          {editing && (
+            <div className="border-t pt-3 mt-1 max-h-[45vh] overflow-y-auto">
+              <RelatedNotesFiles parentType="contact" parentId={editing.id} />
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
             <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
