@@ -85,6 +85,10 @@ class BinaryIndex {
 
 // Which CSV inside the export maps to which Salesforce object.
 const CSV_MATCHERS: Array<{ object: string; test: RegExp }> = [
+  // Related/child objects that are NOT real records — must be checked before the
+  // broad /opportunit/ matcher or history snapshots become "Untitled Opportunity".
+  { object: '__ignore__', test: /opportunity(history|fieldhistory|lineitem|share|teammember|competitor|partner|stage|split|tag|feed)/i },
+  { object: '__ignore__', test: /(accounthistory|contacthistory|leadhistory|casehistory|_history)\b/i },
   { object: 'ContentDocumentLink', test: /contentdocumentlink/i },
   { object: 'ContentDocument', test: /contentdocument(?!link)/i },
   { object: 'ContentVersion', test: /contentversion/i },
@@ -99,7 +103,8 @@ const CSV_MATCHERS: Array<{ object: string; test: RegExp }> = [
 
 function classifyCsv(name: string): string | null {
   const base = name.split(/[\\/]/).pop() || name;
-  return CSV_MATCHERS.find((m) => m.test.test(base))?.object ?? null;
+  const object = CSV_MATCHERS.find((m) => m.test.test(base))?.object ?? null;
+  return object === '__ignore__' ? null : object;
 }
 
 // ------------------------------------------------------------ upsert plumbing
