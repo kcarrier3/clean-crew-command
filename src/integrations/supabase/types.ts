@@ -106,6 +106,81 @@ export type Database = {
           },
         ]
       }
+      attendance_points: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          notes: string | null
+          occurred_on: string
+          point_type: string
+          points: number
+          recorded_by: string | null
+          schedule_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          occurred_on: string
+          point_type: string
+          points?: number
+          recorded_by?: string | null
+          schedule_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          occurred_on?: string
+          point_type?: string
+          points?: number
+          recorded_by?: string | null
+          schedule_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_points_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_points_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_points_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_points_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_points_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "employee_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_drafts: {
         Row: {
           all_day: boolean
@@ -3685,6 +3760,85 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      shift_call_offs: {
+        Row: {
+          call_off_date: string
+          created_at: string
+          employee_id: string
+          id: string
+          point_id: string | null
+          reason: string | null
+          recorded_by: string | null
+          schedule_id: string
+          updated_at: string
+        }
+        Insert: {
+          call_off_date: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          point_id?: string | null
+          reason?: string | null
+          recorded_by?: string | null
+          schedule_id: string
+          updated_at?: string
+        }
+        Update: {
+          call_off_date?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          point_id?: string | null
+          reason?: string | null
+          recorded_by?: string | null
+          schedule_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_call_offs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_call_offs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_call_offs_point_id_fkey"
+            columns: ["point_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_call_offs_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_call_offs_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_call_offs_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "employee_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       supply_categories: {
         Row: {
