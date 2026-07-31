@@ -139,18 +139,19 @@ const QualityControlDashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Quality Control</h1>
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+        <h1 className="text-2xl sm:text-3xl font-bold">Quality Control</h1>
+        <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row">
           <Button 
             variant="orange" 
+            className="w-full sm:w-auto"
             onClick={() => setInspectionDialogOpen(true)}
           >
             <Camera className="h-4 w-4 mr-2" />
             Start an Inspection
           </Button>
           {canCreateWorkOrders() && (
-            <Button onClick={() => setCreateDialogOpen(true)}>
+            <Button className="w-full sm:w-auto" onClick={() => setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Work Order
             </Button>
@@ -159,21 +160,21 @@ const QualityControlDashboard = () => {
       </div>
 
       <Tabs defaultValue="inspections">
-        <TabsList className="grid grid-cols-4 w-full max-w-2xl mb-4">
-          <TabsTrigger value="inspections">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-4 h-auto w-full max-w-2xl mb-4">
+          <TabsTrigger value="inspections" className="whitespace-normal text-xs sm:text-sm py-2">
             <Camera className="h-4 w-4 mr-2" />
             Inspections
           </TabsTrigger>
-          <TabsTrigger value="workorders">
+          <TabsTrigger value="workorders" className="whitespace-normal text-xs sm:text-sm py-2">
             <ClipboardList className="h-4 w-4 mr-2" />
             Work Orders
           </TabsTrigger>
-          <TabsTrigger value="porter">
+          <TabsTrigger value="porter" className="whitespace-normal text-xs sm:text-sm py-2">
             <QrCode className="h-4 w-4 mr-2" />
             Porter Reports
           </TabsTrigger>
           {canCreateWorkOrders() && (
-            <TabsTrigger value="porter-setup">
+            <TabsTrigger value="porter-setup" className="whitespace-normal text-xs sm:text-sm py-2">
               <QrCode className="h-4 w-4 mr-2" />
               QR Setup
             </TabsTrigger>
@@ -194,12 +195,12 @@ const QualityControlDashboard = () => {
 
         <TabsContent value="workorders">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-5 w-full max-w-lg">
-          <TabsTrigger value="all">All ({counts.all})</TabsTrigger>
-          <TabsTrigger value="open">Open ({counts.open})</TabsTrigger>
-          <TabsTrigger value="in_progress">In Progress ({counts.in_progress})</TabsTrigger>
-          <TabsTrigger value="completed">Completed ({counts.completed})</TabsTrigger>
-          <TabsTrigger value="reviewed">Reviewed ({counts.reviewed})</TabsTrigger>
+        <TabsList className="grid grid-cols-2 sm:grid-cols-5 h-auto w-full max-w-lg">
+          <TabsTrigger value="all" className="whitespace-normal text-xs sm:text-sm py-2">All ({counts.all})</TabsTrigger>
+          <TabsTrigger value="open" className="whitespace-normal text-xs sm:text-sm py-2">Open ({counts.open})</TabsTrigger>
+          <TabsTrigger value="in_progress" className="whitespace-normal text-xs sm:text-sm py-2">In Progress ({counts.in_progress})</TabsTrigger>
+          <TabsTrigger value="completed" className="whitespace-normal text-xs sm:text-sm py-2">Completed ({counts.completed})</TabsTrigger>
+          <TabsTrigger value="reviewed" className="whitespace-normal text-xs sm:text-sm py-2">Reviewed ({counts.reviewed})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab}>
