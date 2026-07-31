@@ -475,7 +475,6 @@ const Index = () => {
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 pb-safe safe-x">
         <div className="flex justify-around items-center max-w-md mx-auto">
           {isManager() ? (
-            isNative ? (
               <>
                 <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
                 <MobileTab active={activeTab === 'scheduling'} onClick={() => setActiveTab('scheduling')} icon={<Calendar className="h-5 w-5" />} label="Schedule" />
@@ -487,15 +486,7 @@ const Index = () => {
                 )}
                 <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
               </>
-            ) : (
-            <>
-              <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
-              <MobileTab active={activeTab === 'scheduling'} onClick={() => setActiveTab('scheduling')} icon={<Calendar className="h-5 w-5" />} label="Schedule" />
-              <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
-              <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
-            </>
-            )
-          ) : isNative ? (
+          ) : (
             <>
               <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
               <MobileTab active={activeTab === 'myschedule'} onClick={() => setActiveTab('myschedule')} icon={<CalendarDays className="h-5 w-5" />} label="Schedule" />
@@ -504,14 +495,6 @@ const Index = () => {
               ) : (
                 <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
               )}
-              <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
-              <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
-            </>
-          ) : (
-            <>
-              <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
-              <MobileTab active={activeTab === 'myschedule'} onClick={() => setActiveTab('myschedule')} icon={<CalendarDays className="h-5 w-5" />} label="Schedule" />
-              <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
               <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
               <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
             </>
