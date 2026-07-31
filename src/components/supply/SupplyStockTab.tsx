@@ -26,8 +26,7 @@ type Item = { id: string; name: string; unit: string; unit_cost: number | null }
 
 export default function SupplyStockTab() {
   const { isManager, profile } = useAuth();
-  const managerTitles = ['Owner', 'Administrator', 'Office Manager', 'Operations Manager', 'Janitorial Manager', 'Project Crew Lead', 'Supply Management', 'Supply'];
-  const canManage = isManager() || (profile?.job_title ? managerTitles.includes(profile.job_title) : false);
+  const { canManage } = getSupplyAccess(isManager(), profile?.job_title);
   const { toast } = useToast();
   const [rows, setRows] = useState<Row[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
