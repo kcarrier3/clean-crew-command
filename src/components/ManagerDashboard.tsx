@@ -13,15 +13,6 @@ import ShiftRoster from './ShiftRoster';
 import PayPeriodHoursReport from './PayPeriodHoursReport';
 
 
-interface Employee {
-  id: string;
-  employee_id: string;
-  first_name: string;
-  last_name: string;
-  job_title: string;
-  active: boolean;
-}
-
 interface TimeEntry {
   id: string;
   employee_id: string;
