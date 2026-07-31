@@ -386,25 +386,21 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {!isNative && (
-              <TabsContent value="calendar" className="mt-6">
-                <CalendarPlanner />
-              </TabsContent>
-            )}
+            <TabsContent value="calendar" className="mt-6">
+              <CalendarPlanner />
+            </TabsContent>
 
-            {(!isNative || isSupplyStaff) && (
-              <TabsContent value="supplies" className="mt-6">
-                <SupplyManagement />
-              </TabsContent>
-            )}
+            <TabsContent value="supplies" className="mt-6">
+              <SupplyManagement />
+            </TabsContent>
 
-            {isManager() && !isNative && (
+            {isManager() && (
               <TabsContent value="jobsites" className="mt-6">
                 <JobSitesManagement />
               </TabsContent>
             )}
 
-            {isCrmUser() && !isNative && (
+            {isCrmUser() && (
               <TabsContent value="crm" className="mt-6">
                 <CRMDashboard />
               </TabsContent>
@@ -438,8 +434,7 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {!isNative && (
-              <TabsContent value="team" className="mt-6">
+            <TabsContent value="team" className="mt-6">
                 {canManageEmployees() ? (
                   <Tabs defaultValue="directory" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-grid md:grid-flow-col">
@@ -456,21 +451,18 @@ const Index = () => {
                 ) : (
                   <TeamRoster />
                 )}
-              </TabsContent>
-            )}
+            </TabsContent>
 
-            {isNative && (
-              <TabsContent value="contacts" className="mt-6">
-                <CompanyContacts />
-              </TabsContent>
-            )}
+            <TabsContent value="contacts" className="mt-6">
+              <CompanyContacts />
+            </TabsContent>
 
             {/* Onboarding: employees complete docs, managers review */}
             <TabsContent value="onboarding" className="mt-6">
               {isManager() ? <OnboardingManager /> : <OnboardingCenter />}
             </TabsContent>
 
-            {isManager() && !isNative && (
+            {isManager() && (
               <TabsContent value="documents" className="mt-6">
                 <DocumentsAdmin />
               </TabsContent>
