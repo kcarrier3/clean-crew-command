@@ -16,119 +16,82 @@ export const JOB_TITLES = [
 
 export type JobTitle = typeof JOB_TITLES[number];
 
+// Every permission available in the app
+export const ALL_PERMISSIONS = [
+  'view_schedules',
+  'edit_schedules',
+  'view_time_tracking',
+  'edit_time_tracking',
+  'view_work_orders',
+  'create_work_orders',
+  'edit_work_orders',
+  'view_quality_control',
+  'edit_quality_control',
+  'view_worker_status',
+  'manage_employees',
+  'view_notifications',
+  'admin_settings',
+  'view_crm',
+  'view_supplies',
+  'use_estimating',
+  'view_team_directory',
+  'view_calendar',
+  'use_messaging',
+] as const;
+
+const without = (...omit: string[]) => ALL_PERMISSIONS.filter(p => !omit.includes(p));
+
 // Permission mapping for each job title
 export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
-  'Owner': [
-    // Full access to everything
-    'view_schedules',
-    'edit_schedules',
-    'view_time_tracking',
-    'edit_time_tracking',
-    'view_work_orders',
-    'create_work_orders',
-    'edit_work_orders',
-    'view_quality_control',
-    'edit_quality_control',
-    'view_worker_status',
-    'manage_employees',
-    'view_notifications',
-  ],
-  'Office Manager': [
-    'view_schedules',
-    'edit_schedules',
-    'view_time_tracking',
-    'edit_time_tracking',
-    'view_work_orders',
-    'create_work_orders',
-    'edit_work_orders',
-    'view_quality_control',
-    'edit_quality_control',
-    'view_worker_status',
-    'manage_employees',
-    'view_notifications',
-  ],
-  'Janitorial Manager': [
-    // Manages janitorial staff - can view/edit schedules, work orders, quality control
-    'view_schedules',
-    'edit_schedules',
-    'view_work_orders',
-    'create_work_orders',
-    'edit_work_orders',
-    'view_quality_control',
-    'edit_quality_control',
-    'view_notifications',
-  ],
-  'Project Crew Lead': [
-    // Manages project workers - can view/edit schedules, work orders, quality control
-    'view_schedules',
-    'edit_schedules',
-    'view_work_orders',
-    'create_work_orders',
-    'edit_work_orders',
-    'view_quality_control',
-    'edit_quality_control',
-    'view_notifications',
-  ],
+  // Full access
+  'Owner': [...ALL_PERMISSIONS],
+  'Office Manager': [...ALL_PERMISSIONS],
+  'Operations Manager': [...ALL_PERMISSIONS],
+
+  // Everything except CRM, supplies, estimating, calendar, admin settings
+  'Janitorial Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
+  'Project Crew Lead': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
+  'Night Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
+
+  // Own schedule (view only), time clock, messaging
   'Project Worker': [
     'view_schedules',
     'view_time_tracking',
     'edit_time_tracking',
-    'view_work_orders',
     'view_notifications',
+    'use_messaging',
   ],
+  // + work orders
   'Janitorial Staff': [
     'view_schedules',
     'view_time_tracking',
     'edit_time_tracking',
     'view_work_orders',
     'view_notifications',
+    'use_messaging',
   ],
+  // Same as janitorial staff, plus visibility of open shifts
   'Floaters': [
     'view_schedules',
     'view_time_tracking',
     'edit_time_tracking',
     'view_work_orders',
+    'view_worker_status',
     'view_notifications',
-    'view_quality_control', // Floaters can access job site details even if not scheduled
+    'use_messaging',
   ],
-  'Supply Management': [
-    'view_schedules',
-    'view_time_tracking',
-    'edit_time_tracking',
-    'view_work_orders',
-    'view_notifications',
-  ],
+
+  // Everything except CRM, estimating, admin settings, calendar
+  'Supply Management': without('view_crm', 'use_estimating', 'admin_settings', 'view_calendar'),
+
+  // Own schedule (view only), time clock, supplies, messaging
   'Supply': [
     'view_schedules',
     'view_time_tracking',
     'edit_time_tracking',
-    'view_work_orders',
+    'view_supplies',
     'view_notifications',
-  ],
-  'Operations Manager': [
-    'view_schedules',
-    'edit_schedules',
-    'view_time_tracking',
-    'edit_time_tracking',
-    'view_work_orders',
-    'create_work_orders',
-    'edit_work_orders',
-    'view_quality_control',
-    'edit_quality_control',
-    'view_worker_status',
-    'manage_employees',
-    'view_notifications',
-  ],
-  'Night Manager': [
-    'view_schedules',
-    'edit_schedules',
-    'view_time_tracking',
-    'edit_time_tracking',
-    'view_work_orders',
-    'create_work_orders',
-    'edit_work_orders',
-    'view_worker_status',
-    'view_notifications',
+    'use_messaging',
   ],
 };
 
