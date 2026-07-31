@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Pencil, PackagePlus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { getSupplyAccess } from '@/lib/supplyPermissions';
 import { useToast } from '@/hooks/use-toast';
 
 type Row = {
