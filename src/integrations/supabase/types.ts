@@ -470,6 +470,9 @@ export type Database = {
           owner_id: string | null
           phone: string | null
           salesforce_id: string | null
+          sf_created_date: string | null
+          sf_last_modified_date: string | null
+          sf_owner_id: string | null
           state: string | null
           updated_at: string
           website: string | null
@@ -489,6 +492,9 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           salesforce_id?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
           state?: string | null
           updated_at?: string
           website?: string | null
@@ -508,6 +514,9 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           salesforce_id?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
           state?: string | null
           updated_at?: string
           website?: string | null
@@ -530,6 +539,9 @@ export type Database = {
           owner_id: string | null
           phone: string | null
           salesforce_id: string | null
+          sf_created_date: string | null
+          sf_last_modified_date: string | null
+          sf_owner_id: string | null
           title: string | null
           updated_at: string
         }
@@ -547,6 +559,9 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           salesforce_id?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
           title?: string | null
           updated_at?: string
         }
@@ -564,6 +579,9 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           salesforce_id?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
           title?: string | null
           updated_at?: string
         }
@@ -925,36 +943,92 @@ export type Database = {
       }
       crm_lead_files: {
         Row: {
+          body_missing: boolean
+          company_id: string | null
+          contact_id: string | null
           content_type: string | null
           created_at: string
           file_name: string
           file_path: string
           file_size: number | null
           id: string
-          lead_id: string
+          lead_id: string | null
+          parent_type: string | null
+          salesforce_id: string | null
+          sf_content_document_id: string | null
+          sf_content_version_id: string | null
+          sf_created_by_id: string | null
+          sf_created_date: string | null
+          sf_last_modified_date: string | null
+          sf_owner_id: string | null
+          sf_parent_id: string | null
+          sf_source_object: string | null
+          task_id: string | null
           uploaded_by: string | null
         }
         Insert: {
+          body_missing?: boolean
+          company_id?: string | null
+          contact_id?: string | null
           content_type?: string | null
           created_at?: string
           file_name: string
           file_path: string
           file_size?: number | null
           id?: string
-          lead_id: string
+          lead_id?: string | null
+          parent_type?: string | null
+          salesforce_id?: string | null
+          sf_content_document_id?: string | null
+          sf_content_version_id?: string | null
+          sf_created_by_id?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
+          sf_parent_id?: string | null
+          sf_source_object?: string | null
+          task_id?: string | null
           uploaded_by?: string | null
         }
         Update: {
+          body_missing?: boolean
+          company_id?: string | null
+          contact_id?: string | null
           content_type?: string | null
           created_at?: string
           file_name?: string
           file_path?: string
           file_size?: number | null
           id?: string
-          lead_id?: string
+          lead_id?: string | null
+          parent_type?: string | null
+          salesforce_id?: string | null
+          sf_content_document_id?: string | null
+          sf_content_version_id?: string | null
+          sf_created_by_id?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
+          sf_parent_id?: string | null
+          sf_source_object?: string | null
+          task_id?: string | null
           uploaded_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_lead_files_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_lead_files_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_lead_files_lead_id_fkey"
             columns: ["lead_id"]
@@ -962,48 +1036,112 @@ export type Database = {
             referencedRelation: "crm_leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "crm_lead_files_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "crm_tasks"
+            referencedColumns: ["id"]
+          },
         ]
       }
       crm_lead_notes: {
         Row: {
           category: string
+          company_id: string | null
+          contact_id: string | null
           content: string
+          content_html: string | null
           created_at: string
           created_by: string | null
           id: string
-          lead_id: string
+          lead_id: string | null
+          parent_type: string | null
+          salesforce_id: string | null
+          sf_created_by_id: string | null
+          sf_created_date: string | null
+          sf_last_modified_date: string | null
+          sf_owner_id: string | null
+          sf_parent_id: string | null
+          sf_source_object: string | null
+          task_id: string | null
           title: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           category?: string
+          company_id?: string | null
+          contact_id?: string | null
           content: string
+          content_html?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
-          lead_id: string
+          lead_id?: string | null
+          parent_type?: string | null
+          salesforce_id?: string | null
+          sf_created_by_id?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
+          sf_parent_id?: string | null
+          sf_source_object?: string | null
+          task_id?: string | null
           title?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           category?: string
+          company_id?: string | null
+          contact_id?: string | null
           content?: string
+          content_html?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
-          lead_id?: string
+          lead_id?: string | null
+          parent_type?: string | null
+          salesforce_id?: string | null
+          sf_created_by_id?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
+          sf_parent_id?: string | null
+          sf_source_object?: string | null
+          task_id?: string | null
           title?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "crm_lead_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_lead_notes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_lead_notes_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_lead_notes_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "crm_tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -1059,6 +1197,9 @@ export type Database = {
           probability: number | null
           salesforce_id: string | null
           service_line: string | null
+          sf_created_date: string | null
+          sf_last_modified_date: string | null
+          sf_owner_id: string | null
           source: string | null
           source_metadata: Json | null
           stage_id: string | null
@@ -1089,6 +1230,9 @@ export type Database = {
           probability?: number | null
           salesforce_id?: string | null
           service_line?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
           source?: string | null
           source_metadata?: Json | null
           stage_id?: string | null
@@ -1119,6 +1263,9 @@ export type Database = {
           probability?: number | null
           salesforce_id?: string | null
           service_line?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
           source?: string | null
           source_metadata?: Json | null
           stage_id?: string | null
@@ -1526,6 +1673,15 @@ export type Database = {
           id: string
           lead_id: string | null
           priority: string
+          salesforce_id: string | null
+          sf_created_by_id: string | null
+          sf_created_date: string | null
+          sf_last_modified_date: string | null
+          sf_owner_id: string | null
+          sf_priority: string | null
+          sf_status: string | null
+          sf_what_id: string | null
+          sf_who_id: string | null
           status: string
           title: string
           updated_at: string
@@ -1543,6 +1699,15 @@ export type Database = {
           id?: string
           lead_id?: string | null
           priority?: string
+          salesforce_id?: string | null
+          sf_created_by_id?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
+          sf_priority?: string | null
+          sf_status?: string | null
+          sf_what_id?: string | null
+          sf_who_id?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -1560,6 +1725,15 @@ export type Database = {
           id?: string
           lead_id?: string | null
           priority?: string
+          salesforce_id?: string | null
+          sf_created_by_id?: string | null
+          sf_created_date?: string | null
+          sf_last_modified_date?: string | null
+          sf_owner_id?: string | null
+          sf_priority?: string | null
+          sf_status?: string | null
+          sf_what_id?: string | null
+          sf_who_id?: string | null
           status?: string
           title?: string
           updated_at?: string
