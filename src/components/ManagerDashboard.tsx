@@ -30,8 +30,6 @@ interface TimeEntry {
 }
 
 const ManagerDashboard = () => {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [activeEntries, setActiveEntries] = useState<TimeEntry[]>([]);
   const [weekEntries, setWeekEntries] = useState<TimeEntry[]>([]);
   const [weekOffset, setWeekOffset] = useState(0);
