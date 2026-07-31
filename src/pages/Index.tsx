@@ -152,8 +152,10 @@ const Index = () => {
 
   const userDisplayName = profile ? `${profile.first_name} ${profile.last_name}` : user.email;
 
-  // Desktop sidebar items (web only — hidden on native via wrapper)
-  const sidebarItems: SidebarItem[] = isManager()
+  // Single source of truth for navigation. The desktop sidebar and the mobile
+  // "More" menu are both built from this list so phone users get every area
+  // they have on the computer browser.
+  const navItems: SidebarItem[] = isManager()
     ? [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
         { v: 'scheduling', label: 'Schedule',        icon: CalendarDays },
@@ -177,6 +179,23 @@ const Index = () => {
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ];
+
+  // Extra destinations that only make sense outside the sidebar.
+  const extraNavItems: SidebarItem[] = [
+    ...(!isManager() ? [{ v: 'onboarding', label: 'Onboarding & Docs', icon: FileText }] : []),
+    { v: 'contacts', label: 'Contacts', icon: Contact },
+  ];
+
+  const sidebarItems = navItems;
+
+  // Keys shown in the mobile bottom bar — everything else lands in the menu.
+  const bottomBarKeys = isManager()
+    ? ['dashboard', 'scheduling', 'managerlog', isSupplyStaff ? 'supplies' : 'quality']
+    : ['dashboard', 'myschedule', isSupplyStaff ? 'supplies' : 'timeoff', 'messages'];
+
+  const mobileMenuItems = [...navItems, ...extraNavItems].filter(
+    (item) => !bottomBarKeys.includes(item.v),
+  );
 
   const showDesktopSidebar = !isNative;
 
