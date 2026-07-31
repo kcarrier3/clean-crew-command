@@ -18,6 +18,7 @@ import PunchClock from './pages/PunchClock';
 import OpportunityDetail from './pages/OpportunityDetail';
 import Estimating from './pages/Estimating';
 import EstimatingDetail from './pages/EstimatingDetail';
+import Settings from './pages/Settings';
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const AppContent = () => {
       <Route path="/crm/opportunities/:id" element={<OpportunityDetail />} />
       <Route path="/estimating" element={<Estimating />} />
       <Route path="/estimating/:id" element={<EstimatingDetail />} />
+      <Route path="/settings" element={<Settings />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
