@@ -10,6 +10,7 @@ import { CalendarDays, Download, AlertTriangle, Clock, UserX } from 'lucide-reac
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, subDays, addDays, isAfter, isBefore, parseISO } from 'date-fns';
+import { POINTS, LATE_GRACE_MINUTES, TERMINATION_POINTS, WARNING_POINTS } from '@/lib/attendancePoints';
 
 interface AttendanceRecord {
   employee_id: string;
@@ -17,6 +18,7 @@ interface AttendanceRecord {
   attendance_tracking_type: string;
   missed_punches: number;
   late_punches: number;
+  call_offs: number;
   total_points: number;
   scheduled_days: number;
   worked_days: number;
@@ -27,7 +29,7 @@ interface MissedPunch {
   date: string;
   employee_name: string;
   scheduled_start: string;
-  punch_type: 'missed' | 'late';
+  punch_type: 'missed' | 'late' | 'call_off';
   minutes_late?: number;
 }
 
@@ -67,13 +69,24 @@ const AttendanceReports = () => {
     try {
       const { start, end } = getDateRange();
       
-      // Fetch employees with their attendance tracking preferences
-      const { data: employees, error: employeesError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, attendance_tracking_type')
+      // Fetch employee records used by the schedule, plus tracking prefs from their profile
+      const { data: employeeRows, error: employeesError } = await supabase
+        .from('employees')
+        .select('id, first_name, last_name, user_id')
         .eq('active', true);
 
       if (employeesError) throw employeesError;
+
+      const { data: profileRows } = await supabase
+        .from('profiles')
+        .select('id, attendance_tracking_type');
+      const trackingByUser = new Map<string, string>(
+        (profileRows || []).map((p: any) => [p.id, p.attendance_tracking_type || 'attendance_only']),
+      );
+      const employees = (employeeRows || []).map((e: any) => ({
+        ...e,
+        attendance_tracking_type: (e.user_id && trackingByUser.get(e.user_id)) || 'attendance_only',
+      }));
 
       // Fetch schedules for the period
       const { data: schedules, error: schedulesError } = await supabase
@@ -108,6 +121,16 @@ const AttendanceReports = () => {
         (excusedRows || []).map((r: any) => `${r.employee_id}|${r.excused_date}`)
       );
 
+      // Recorded call offs in the period (2 points each, shift became an open shift)
+      const { data: callOffRows } = await (supabase as any)
+        .from('shift_call_offs')
+        .select('employee_id, call_off_date')
+        .gte('call_off_date', format(start, 'yyyy-MM-dd'))
+        .lte('call_off_date', format(end, 'yyyy-MM-dd'));
+      const callOffSet = new Set<string>(
+        (callOffRows || []).map((r: any) => `${r.employee_id}|${r.call_off_date}`)
+      );
+
       const attendanceRecords: AttendanceRecord[] = [];
       const missedPunchDetails: MissedPunch[] = [];
 
@@ -119,6 +142,7 @@ const AttendanceReports = () => {
         let workedDays = 0;
         let missedPunches = 0;
         let latePunches = 0;
+        let callOffCount = 0;
 
         // Calculate scheduled days in the period
         for (const schedule of employeeSchedules) {
@@ -139,6 +163,19 @@ const AttendanceReports = () => {
                 continue;
               }
               scheduledDays++;
+
+              if (callOffSet.has(`${employee.id}|${dateKey}`)) {
+                // Recorded call off — counted once, no separate missed punch
+                callOffCount++;
+                missedPunchDetails.push({
+                  date: dateKey,
+                  employee_name: `${employee.first_name} ${employee.last_name}`,
+                  scheduled_start: schedule.start_time,
+                  punch_type: 'call_off',
+                });
+                currentDate = addDays(currentDate, 1);
+                continue;
+              }
               
               // Check if employee clocked in for this day
               const dayStart = new Date(currentDate);
@@ -162,7 +199,7 @@ const AttendanceReports = () => {
                   scheduledStart.setHours(scheduleHour, scheduleMinute, 0, 0);
                   
                   const lateness = clockIn.getTime() - scheduledStart.getTime();
-                  if (lateness > 5 * 60 * 1000) { // More than 5 minutes late
+                  if (lateness > LATE_GRACE_MINUTES * 60 * 1000) {
                     latePunches++;
                     missedPunchDetails.push({
                       date: format(currentDate, 'yyyy-MM-dd'),
@@ -189,8 +226,12 @@ const AttendanceReports = () => {
           }
         }
 
-        // Calculate points (missed punch = 1 point, late punch = 0.5 points for punctuality tracking)
-        const totalPoints = missedPunches + (employee.attendance_tracking_type === 'attendance_and_punctuality' ? latePunches * 0.5 : 0);
+        // Points: call off / missed punch = 2, late punch (>5 min) = 0.5. Resets each quarter.
+        const totalPoints =
+          (missedPunches + callOffCount) * POINTS.missed_punch +
+          (employee.attendance_tracking_type === 'attendance_and_punctuality'
+            ? latePunches * POINTS.late_punch
+            : 0);
         const attendanceRate = scheduledDays > 0 ? (workedDays / scheduledDays) * 100 : 0;
 
         attendanceRecords.push({
@@ -199,6 +240,7 @@ const AttendanceReports = () => {
           attendance_tracking_type: employee.attendance_tracking_type || 'attendance_only',
           missed_punches: missedPunches,
           late_punches: latePunches,
+          call_offs: callOffCount,
           total_points: totalPoints,
           scheduled_days: scheduledDays,
           worked_days: workedDays,
@@ -226,6 +268,7 @@ const AttendanceReports = () => {
       'Tracking Type',
       'Scheduled Days',
       'Worked Days',
+      'Call Offs',
       'Missed Punches',
       'Late Punches',
       'Total Points',
@@ -237,6 +280,7 @@ const AttendanceReports = () => {
       record.attendance_tracking_type === 'attendance_and_punctuality' ? 'Attendance & Punctuality' : 'Attendance Only',
       record.scheduled_days,
       record.worked_days,
+      record.call_offs,
       record.missed_punches,
       record.late_punches,
       record.total_points,
@@ -275,7 +319,10 @@ const AttendanceReports = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Attendance Reports</h2>
-          <p className="text-muted-foreground">Track employee attendance and punctuality for bonus calculations</p>
+          <p className="text-muted-foreground">
+            Call off / missed punch = {POINTS.call_off} pts · late punch (&gt;{LATE_GRACE_MINUTES} min) = {POINTS.late_punch} pts ·
+            points reset each quarter · {TERMINATION_POINTS} pts = termination
+          </p>
         </div>
         <Button onClick={exportToCSV} disabled={loading || attendanceData.length === 0}>
           <Download className="h-4 w-4 mr-2" />
@@ -426,9 +473,11 @@ const AttendanceReports = () => {
                   <TableHead>Tracking Type</TableHead>
                   <TableHead className="text-center">Scheduled</TableHead>
                   <TableHead className="text-center">Worked</TableHead>
+                  <TableHead className="text-center">Call Offs</TableHead>
                   <TableHead className="text-center">Missed</TableHead>
                   <TableHead className="text-center">Late</TableHead>
                   <TableHead className="text-center">Points</TableHead>
+                  <TableHead className="text-center">Standing</TableHead>
                   <TableHead className="text-center">Attendance %</TableHead>
                 </TableRow>
               </TableHeader>
@@ -439,6 +488,13 @@ const AttendanceReports = () => {
                     <TableCell>{getTrackingBadge(record.attendance_tracking_type)}</TableCell>
                     <TableCell className="text-center">{record.scheduled_days}</TableCell>
                     <TableCell className="text-center">{record.worked_days}</TableCell>
+                    <TableCell className="text-center">
+                      {record.call_offs > 0 ? (
+                        <Badge variant="destructive">{record.call_offs}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">0</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-center">
                       {record.missed_punches > 0 ? (
                         <Badge variant="destructive">{record.missed_punches}</Badge>
@@ -456,9 +512,18 @@ const AttendanceReports = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={record.total_points > 0 ? "secondary" : "outline"}>
+                      <Badge variant={record.total_points >= TERMINATION_POINTS ? "destructive" : record.total_points > 0 ? "secondary" : "outline"}>
                         {record.total_points}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {record.total_points >= TERMINATION_POINTS ? (
+                        <Badge variant="destructive">Termination</Badge>
+                      ) : record.total_points >= WARNING_POINTS ? (
+                        <Badge variant="outline" className="text-orange-600">Warning</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">Good</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={record.attendance_rate >= 95 ? "default" : record.attendance_rate >= 85 ? "secondary" : "destructive"}>
@@ -497,14 +562,16 @@ const AttendanceReports = () => {
                     <TableCell>{punch.employee_name}</TableCell>
                     <TableCell>{format(new Date(`2000-01-01T${punch.scheduled_start}`), 'h:mm a')}</TableCell>
                     <TableCell>
-                      <Badge variant={punch.punch_type === 'missed' ? 'destructive' : 'outline'}>
-                        {punch.punch_type === 'missed' ? 'Missed' : 'Late'}
+                      <Badge variant={punch.punch_type === 'late' ? 'outline' : 'destructive'}>
+                        {punch.punch_type === 'missed' ? 'Missed' : punch.punch_type === 'call_off' ? 'Call Off' : 'Late'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {punch.punch_type === 'late' && punch.minutes_late 
+                      {punch.punch_type === 'late' && punch.minutes_late
                         ? `${punch.minutes_late} minutes late`
-                        : 'No clock-in recorded'
+                        : punch.punch_type === 'call_off'
+                          ? `Called off — ${POINTS.call_off} points, shift went to open shifts`
+                          : 'No clock-in recorded'
                       }
                     </TableCell>
                   </TableRow>
