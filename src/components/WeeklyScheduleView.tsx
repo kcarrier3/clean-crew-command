@@ -449,6 +449,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                   );
                 })}
               </div>
+              </div>
             );
           })}
 
