@@ -27,7 +27,7 @@ interface Holiday {
   name: string;
   rule: string;
   active: boolean;
-  paid_only_if_scheduled: boolean;
+  paid_only_if_weekday: boolean;
 }
 
 const DEPT_LABEL: Record<string, string> = {
@@ -79,7 +79,7 @@ const TimeOffPolicySettings = () => {
       for (const h of holidays) {
         const { error } = await supabase
           .from('paid_holidays')
-          .update({ active: h.active, paid_only_if_scheduled: h.paid_only_if_scheduled })
+          .update({ active: h.active, paid_only_if_weekday: h.paid_only_if_weekday })
           .eq('id', h.id);
         if (error) throw error;
       }
@@ -187,7 +187,7 @@ const TimeOffPolicySettings = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Paid holidays</CardTitle>
-          <CardDescription>Paid only when the holiday falls on a day the employee is scheduled to work.</CardDescription>
+          <CardDescription>Paid only when the holiday falls Monday through Friday.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {holidays.map((h) => (
@@ -199,12 +199,12 @@ const TimeOffPolicySettings = () => {
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Switch
-                    checked={h.paid_only_if_scheduled}
+                    checked={h.paid_only_if_weekday}
                     onCheckedChange={(v) =>
-                      setHolidays((prev) => prev.map((x) => (x.id === h.id ? { ...x, paid_only_if_scheduled: v } : x)))
+                      setHolidays((prev) => prev.map((x) => (x.id === h.id ? { ...x, paid_only_if_weekday: v } : x)))
                     }
                   />
-                  <span className="text-sm">Only if scheduled</span>
+                  <span className="text-sm">Only if Mon–Fri</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch
