@@ -79,7 +79,18 @@ serve(async (req) => {
       .or(`end_date.is.null,end_date.gte.${todayDate}`)
       .contains('days_of_week', [dayOfWeek]);
 
-    if (!schedules || schedules.length === 0) {
+    let matchedSchedules = schedules;
+    if ((!matchedSchedules || matchedSchedules.length === 0) && timeEntry.schedule_id) {
+      // The punch was matched to a shift at clock-in (possibly an overnight one)
+      const { data: matched } = await supabase
+        .from('employee_schedules')
+        .select('*')
+        .eq('id', timeEntry.schedule_id)
+        .maybeSingle();
+      if (matched) matchedSchedules = [matched];
+    }
+
+    if (!matchedSchedules || matchedSchedules.length === 0) {
       console.log('No schedule found for employee on this day — no late check needed');
       return new Response(
         JSON.stringify({ message: 'No schedule found for this day' }),
@@ -87,7 +98,7 @@ serve(async (req) => {
       );
     }
 
-    const schedule = schedules[0];
+    const schedule = matchedSchedules[0];
     if (!schedule.start_time) {
       return new Response(
         JSON.stringify({ message: 'No start time in schedule' }),
@@ -110,10 +121,16 @@ serve(async (req) => {
       );
     }
 
-    // Parse scheduled start time
-    const [schedHours, schedMinutes] = schedule.start_time.split(':').map(Number);
-    const scheduledStart = new Date(clockInTime);
-    scheduledStart.setHours(schedHours, schedMinutes, 0, 0);
+    // Prefer the scheduled start the time clock matched at punch time (handles
+    // early/late punches and overnight shifts); fall back to today's schedule.
+    let scheduledStart: Date;
+    if (timeEntry.scheduled_start) {
+      scheduledStart = new Date(timeEntry.scheduled_start);
+    } else {
+      const [schedHours, schedMinutes] = schedule.start_time.split(':').map(Number);
+      scheduledStart = new Date(clockInTime);
+      scheduledStart.setHours(schedHours, schedMinutes, 0, 0);
+    }
 
     const minutesLate = Math.floor((clockInTime.getTime() - scheduledStart.getTime()) / (1000 * 60));
 

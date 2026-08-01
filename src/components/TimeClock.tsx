@@ -10,6 +10,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useJobSiteAccess } from '@/hooks/useJobSiteAccess';
 import { useNavigate } from 'react-router-dom';
 import QRScanner from './QRScanner';
+import { matchPunchToShift, type ShiftMatch } from '@/lib/shiftMatching';
+
+// How long before the scheduled end we warn the worker their shift is wrapping up.
+const END_OF_SHIFT_WARNING_MINUTES = 15;
 
 // Job titles that automatically punch in at the internal office (fixed-expense staff).
 const OFFICE_AUTO_TITLES = [
@@ -61,6 +65,10 @@ interface TimeEntry {
   clock_in: string;
   clock_out: string | null;
   manager_override: boolean;
+  schedule_id?: string | null;
+  scheduled_start?: string | null;
+  scheduled_end?: string | null;
+  exceeded_scheduled?: boolean | null;
   employees: Employee;
   job_sites: JobSite;
 }
@@ -79,6 +87,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [selectedJobSite, setSelectedJobSite] = useState<string>('');
   const [scheduledJobSite, setScheduledJobSite] = useState<Schedule | null>(null);
+  const [shiftMatch, setShiftMatch] = useState<ShiftMatch | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -241,9 +250,10 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   };
 
   const fetchEmployeeSchedule = async (employeeId: string) => {
-    const currentDay = new Date().getDay();
-    const adjustedDay = currentDay === 0 ? 7 : currentDay;
-    
+    const today = new Date().toISOString().split('T')[0];
+
+    // Pull every active schedule for this employee and let the matcher decide
+    // which shift the punch belongs to (handles early/late punches + overnight).
     const { data, error } = await supabase
       .from('employee_schedules')
       .select(`
@@ -252,17 +262,18 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       `)
       .eq('employee_id', employeeId)
       .eq('active', true)
-      .contains('days_of_week', [adjustedDay])
-      .lte('start_date', new Date().toISOString().split('T')[0])
-      .or(`end_date.is.null,end_date.gte.${new Date().toISOString().split('T')[0]}`)
-      .single();
+      .lte('start_date', today)
+      .or(`end_date.is.null,end_date.gte.${today}`);
 
-    if (error) {
+    const match = error ? null : matchPunchToShift((data as any[]) || [], new Date());
+
+    setShiftMatch(match);
+    if (match) {
+      setScheduledJobSite(match.schedule as unknown as Schedule);
+      setSelectedJobSite(match.schedule.job_site_id);
+    } else {
       setScheduledJobSite(null);
       setSelectedJobSite('');
-    } else if (data) {
-      setScheduledJobSite(data);
-      setSelectedJobSite(data.job_site_id);
     }
   };
 
@@ -382,17 +393,16 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     // Manager overrides bypass geofencing
     const isManagerOverride = forManager && isManager();
 
-    // Enforce early clock-in limit against today's scheduled start (skip for manager override).
-    if (!isManagerOverride && scheduledJobSite && scheduledJobSite.job_site_id === jobSiteId) {
-      const [h, m] = scheduledJobSite.start_time.split(':').map(Number);
-      const shiftStart = new Date();
-      shiftStart.setHours(h || 0, m || 0, 0, 0);
-      const earliestAllowed = new Date(shiftStart.getTime() - earlyClockinMinutes * 60 * 1000);
+    // Enforce early clock-in limit against the matched shift (skip for manager override).
+    if (!isManagerOverride && shiftMatch && shiftMatch.schedule.job_site_id === jobSiteId) {
+      const earliestAllowed = new Date(
+        shiftMatch.scheduledStart.getTime() - earlyClockinMinutes * 60 * 1000,
+      );
       if (new Date() < earliestAllowed) {
         const mins = Math.ceil((earliestAllowed.getTime() - Date.now()) / 60000);
         toast({
           title: 'Too Early to Clock In',
-          description: `Your shift starts at ${scheduledJobSite.start_time}. You can clock in up to ${earlyClockinMinutes} minutes early (in ${mins} min).`,
+          description: `Your shift starts at ${shiftMatch.scheduledStart.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. You can clock in up to ${earlyClockinMinutes} minutes early (in ${mins} min).`,
           variant: 'destructive',
         });
         return;
@@ -432,6 +442,11 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
         }
       }
 
+      // Attach the matched scheduled shift so an early/late punch still counts
+      // toward that shift instead of looking like a no-show.
+      const matchedForThisSite =
+        shiftMatch && shiftMatch.schedule.job_site_id === jobSiteId ? shiftMatch : null;
+
       const { data, error } = await supabase
         .from('time_entries')
         .insert({
@@ -442,6 +457,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           location_lng: location?.lng ?? null,
           manager_override: isManagerOverride,
           override_by: isManagerOverride ? profile?.id : null,
+          schedule_id: matchedForThisSite?.schedule.id ?? null,
+          scheduled_start: matchedForThisSite?.scheduledStart.toISOString() ?? null,
+          scheduled_end: matchedForThisSite?.scheduledEnd.toISOString() ?? null,
         })
         .select()
         .single();
@@ -495,6 +513,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           clock_out: new Date().toISOString(),
           location_lat: location?.lat ?? null,
           location_lng: location?.lng ?? null,
+          ...(entry?.scheduled_end
+            ? { exceeded_scheduled: Date.now() > new Date(entry.scheduled_end).getTime() }
+            : {}),
           ...(isManagerOverride && !entry?.manager_override ? {
             manager_override: true,
             override_by: profile?.id
@@ -533,6 +554,46 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
+
+  /** Minutes remaining on the matched scheduled shift (negative = over). */
+  const minutesRemaining = (entry: TimeEntry): number | null => {
+    if (!entry.scheduled_end) return null;
+    return Math.round((new Date(entry.scheduled_end).getTime() - currentTime.getTime()) / 60000);
+  };
+
+  // Warn the worker as their scheduled end approaches, and flag going over.
+  const [notifiedEnding, setNotifiedEnding] = useState<Record<string, 'soon' | 'over'>>({});
+  useEffect(() => {
+    activeEntries.forEach((entry) => {
+      if (!profile || entry.employee_id !== profile.id) return;
+      const remaining = minutesRemaining(entry);
+      if (remaining === null) return;
+      const state = notifiedEnding[entry.id];
+
+      if (remaining < 0 && state !== 'over') {
+        setNotifiedEnding((prev) => ({ ...prev, [entry.id]: 'over' }));
+        toast({
+          title: 'Over Scheduled Hours',
+          description: `You are past your scheduled end time at ${entry.job_sites.name}. Please clock out or let your manager know.`,
+          variant: 'destructive',
+        });
+        if (!entry.exceeded_scheduled) {
+          supabase
+            .from('time_entries')
+            .update({ exceeded_scheduled: true })
+            .eq('id', entry.id)
+            .then(() => {});
+        }
+      } else if (remaining >= 0 && remaining <= END_OF_SHIFT_WARNING_MINUTES && !state) {
+        setNotifiedEnding((prev) => ({ ...prev, [entry.id]: 'soon' }));
+        toast({
+          title: 'Shift Ending Soon',
+          description: `Your scheduled shift ends in ${remaining} minute${remaining === 1 ? '' : 's'}.`,
+        });
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTime, activeEntries, profile?.id]);
 
   const currentEmployee = forManager && selectedEmployee 
     ? employees.find(emp => emp.id === selectedEmployee) 
@@ -877,7 +938,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
             </p>
           ) : (
             <div className="space-y-4">
-              {activeEntries.map((entry) => (
+              {activeEntries.map((entry) => {
+                const remaining = minutesRemaining(entry);
+                return (
                 <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -889,6 +952,17 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                         <Badge variant="outline" className="text-blue-600 border-blue-300 text-xs">
                           <Shield className="h-3 w-3 mr-1" />
                           Override
+                        </Badge>
+                      )}
+                      {remaining !== null && remaining < 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Over by {Math.abs(remaining)}m
+                        </Badge>
+                      )}
+                      {remaining !== null && remaining >= 0 && remaining <= END_OF_SHIFT_WARNING_MINUTES && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs">
+                          Ends in {remaining}m
                         </Badge>
                       )}
                     </div>
@@ -903,6 +977,12 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                       <div className="font-mono text-lg text-foreground">
                         {formatDuration(entry.clock_in)}
                       </div>
+                      {entry.scheduled_end && (
+                        <div>
+                          Scheduled end:{' '}
+                          {new Date(entry.scheduled_end).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                        </div>
+                      )}
                     </div>
                   </div>
                   {isJanitorialWorker && entry.employee_id === profile?.id ? (
@@ -925,7 +1005,8 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                     </Button>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
