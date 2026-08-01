@@ -99,6 +99,17 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
 
   const weekEnd = weekDays[6];
 
+  const workWeekSunday = useMemo(() => workWeekStart(weekDays[0]), [weekDays]);
+  const janitorialDeadline = useMemo(
+    () => schedulePostingDeadline(workWeekSunday, 'janitorial'),
+    [workWeekSunday],
+  );
+  const projectDeadline = useMemo(
+    () => schedulePostingDeadline(workWeekSunday, 'project'),
+    [workWeekSunday],
+  );
+  const postingOverdue = new Date() > janitorialDeadline;
+
   const loadCallOffs = async () => {
     const { data } = await (supabase as any)
       .from('shift_call_offs')
