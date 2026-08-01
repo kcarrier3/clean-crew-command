@@ -126,18 +126,38 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
     
     try {
       const late = formData.start_date ? isPastTimeOffCutoff(formData.start_date) : false;
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('time_off_requests')
-        .insert([formData]);
+        .insert([{
+          employee_id: formData.employee_id,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          reason: formData.reason || null,
+          use_pto: formData.use_pto,
+          pto_hours: formData.use_pto ? Number(formData.pto_hours || 0) : 0,
+        }])
+        .select('status, manager_notes')
+        .single();
 
       if (error) throw error;
 
+      const status = inserted?.status;
       toast({
-        title: late ? 'Request auto-declined' : 'Success',
-        description: late
-          ? 'Submitted after the Wednesday 12:00 PM deadline for that work week, so it was automatically declined. Talk to your manager if you need an exception.'
-          : 'Time off request submitted successfully',
-        variant: late ? 'destructive' : undefined,
+        title:
+          status === 'declined'
+            ? 'Request auto-declined'
+            : status === 'approved'
+              ? 'Request approved'
+              : 'Request submitted',
+        description:
+          status === 'declined'
+            ? (late
+                ? 'Submitted after the Wednesday 12:00 PM deadline for that work week, so it was automatically declined. Talk to your manager if you need an exception.'
+                : inserted?.manager_notes || 'Request declined.')
+            : status === 'approved'
+              ? 'Coverage was available, so this request was approved automatically.'
+              : inserted?.manager_notes || 'Submitted for manager review.',
+        variant: status === 'declined' ? 'destructive' : undefined,
       });
 
       setIsDialogOpen(false);
@@ -145,7 +165,9 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
         employee_id: currentEmployeeId || '',
         start_date: '',
         end_date: '',
-        reason: ''
+        reason: '',
+        use_pto: false,
+        pto_hours: ''
       });
       
       fetchRequests();
