@@ -409,26 +409,42 @@ const SchedulingDashboard = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                    required
-                  />
+              {dateLocked ? (
+                <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Week of </span>
+                  <span className="font-medium">
+                    {formData.start_date
+                      ? new Date(`${formData.start_date}T00:00:00`).toLocaleDateString(undefined, {
+                          weekday: 'long', month: 'short', day: 'numeric', year: 'numeric',
+                        })
+                      : ''}
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Select additional days above to apply this shift to those days as well.
+                  </p>
                 </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="startDate">Start Date</Label>
+                    <Input
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <Label htmlFor="endDate">End Date (Optional)</Label>
-                  <Input
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
-                  />
+                  <div>
+                    <Label htmlFor="endDate">End Date (Optional)</Label>
+                    <Input
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <Label>Repeats</Label>
