@@ -196,7 +196,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
 
   const fetchEmployees = async () => {
     const { data, error } = await supabase
-      .from('employees')
+      .from('profiles')
       .select('*')
       .eq('active', true)
       .order('first_name');

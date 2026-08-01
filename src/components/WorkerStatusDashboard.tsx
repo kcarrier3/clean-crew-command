@@ -77,7 +77,7 @@ const WorkerStatusDashboard = () => {
 
       // Fetch all employees
       const { data: employees, error: employeesError } = await supabase
-        .from('employees')
+        .from('profiles')
         .select('*')
         .eq('active', true)
         .order('first_name');
