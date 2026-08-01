@@ -96,6 +96,20 @@ const MySchedule = () => {
     }
   }, [profile?.id]);
 
+  const fetchWeekStatus = async () => {
+    // Monday of the current week
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const iso = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+    const { data } = await (supabase as any)
+      .from('schedule_weeks')
+      .select('published')
+      .eq('week_start', iso)
+      .maybeSingle();
+    setWeekPublished(!!data?.published);
+  };
+
   const fetchSchedules = async () => {
     if (!profile?.id) return;
     setLoading(true);
