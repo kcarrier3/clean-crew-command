@@ -370,6 +370,14 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
         </div>
 
         <div className="flex items-center gap-2">
+          <span className="hidden md:inline text-xs text-muted-foreground">
+            Post by {formatDeadline(janitorialDeadline)} (janitorial) · {formatDeadline(projectDeadline)} (project)
+          </span>
+          {!weekPublished && postingOverdue && (
+            <span className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">
+              Posting overdue
+            </span>
+          )}
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
               weekPublished
