@@ -61,19 +61,22 @@ interface Schedule {
   end_date: string | null;
   notes: string | null;
   active: boolean;
+  week_interval?: number | null;
+  recurrence_anchor_date?: string | null;
   employees: Employee;
   job_sites: JobSite;
 }
 
 interface WeeklyScheduleViewProps {
   schedules: Schedule[];
+  allEmployees?: Employee[];
   sortBy: 'alphabetical' | 'job_title';
   onEdit: (schedule: Schedule) => void;
   onDelete: (scheduleId: string) => void;
   onAddShift?: (employeeId: string, isoDate: string) => void;
 }
 
-const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete, onAddShift }: WeeklyScheduleViewProps) => {
+const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDelete, onAddShift }: WeeklyScheduleViewProps) => {
   // Week anchor = Monday of the currently viewed week
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeekMon(new Date()));
   const [rateByUserId, setRateByUserId] = useState<Record<string, number>>({});
@@ -197,16 +200,19 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete, onAddShift }:
   // Unique employees sorted
   const employees = useMemo(() => {
     const list = Array.from(
-      new Map(schedules.map((s) => [s.employee_id, s.employees])).values(),
+      new Map([
+        ...allEmployees.map((e) => [e.id, e] as [string, Employee]),
+        ...schedules.map((s) => [s.employee_id, s.employees] as [string, Employee]),
+      ]).values(),
     );
     return list.sort((a, b) => {
       if (sortBy === 'job_title') {
-        const t = a.job_title.localeCompare(b.job_title);
+        const t = (a.job_title || '').localeCompare(b.job_title || '');
         if (t !== 0) return t;
       }
-      return a.first_name.localeCompare(b.first_name);
+      return (a.first_name || '').localeCompare(b.first_name || '');
     });
-  }, [schedules, sortBy]);
+  }, [schedules, allEmployees, sortBy]);
 
   // Determine which shifts fall on a given date for a given employee
   const getShiftsFor = (employeeId: string, date: Date) => {
@@ -217,6 +223,7 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete, onAddShift }:
       if (!s.days_of_week.includes(dayNum)) return false;
       if (s.start_date && s.start_date > iso) return false;
       if (s.end_date && s.end_date < iso) return false;
+      if (!isDueThisWeek(s, date)) return false;
       return true;
     });
   };
@@ -528,6 +535,11 @@ function ShiftBlock({
               <MapPin className="h-2.5 w-2.5 shrink-0" />
               <span className="truncate">{schedule.job_sites.name}</span>
             </div>
+            {Number(schedule.week_interval ?? 1) > 1 && (
+              <div className="text-[10px] leading-tight opacity-90">
+                Every {schedule.week_interval} wks
+              </div>
+            )}
             {schedule.notes && (
               <div className="text-[10px] leading-tight opacity-90 flex items-center gap-1">
                 <FileText className="h-2.5 w-2.5" /> Notes
@@ -570,6 +582,20 @@ function startOfWeekMon(d: Date) {
   const diff = (day + 6) % 7; // days since Monday
   x.setDate(x.getDate() - diff);
   return x;
+}
+/** Every-other-week / every-3rd-week support */
+function isDueThisWeek(
+  s: { week_interval?: number | null; recurrence_anchor_date?: string | null; start_date: string },
+  date: Date,
+) {
+  const interval = Number(s.week_interval ?? 1);
+  if (!interval || interval <= 1) return true;
+  const anchorIso = s.recurrence_anchor_date || s.start_date;
+  if (!anchorIso) return true;
+  const anchorWeek = startOfWeekMon(new Date(`${anchorIso}T00:00:00`));
+  const thisWeek = startOfWeekMon(date);
+  const weeks = Math.round((thisWeek.getTime() - anchorWeek.getTime()) / (7 * 24 * 60 * 60 * 1000));
+  return ((weeks % interval) + interval) % interval === 0;
 }
 function addDays(d: Date, n: number) {
   const x = new Date(d);

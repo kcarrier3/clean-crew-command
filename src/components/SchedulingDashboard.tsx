@@ -25,6 +25,7 @@ interface Employee {
   first_name: string;
   last_name: string;
   job_title: string;
+  user_id?: string | null;
 }
 
 interface JobSite {
@@ -45,6 +46,8 @@ interface Schedule {
   end_date: string | null;
   notes: string | null;
   active: boolean;
+  week_interval?: number | null;
+  recurrence_anchor_date?: string | null;
   employees: Employee;
   job_sites: JobSite;
 }
@@ -58,6 +61,7 @@ interface ScheduleFormData {
   start_date: string;
   end_date: string;
   notes: string;
+  week_interval: number;
 }
 
 const SchedulingDashboard = () => {
@@ -77,7 +81,8 @@ const SchedulingDashboard = () => {
     days_of_week: [],
     start_date: '',
     end_date: '',
-    notes: ''
+    notes: '',
+    week_interval: 1
   });
   const { toast } = useToast();
 
@@ -151,6 +156,8 @@ const SchedulingDashboard = () => {
             start_date: formData.start_date,
             end_date: formData.end_date || null,
             notes: formData.notes || null,
+            week_interval: formData.week_interval,
+            recurrence_anchor_date: formData.start_date,
             updated_at: new Date().toISOString()
           })
           .eq('id', editingSchedule.id);
@@ -173,7 +180,9 @@ const SchedulingDashboard = () => {
             days_of_week: formData.days_of_week,
             start_date: formData.start_date,
             end_date: formData.end_date || null,
-            notes: formData.notes || null
+            notes: formData.notes || null,
+            week_interval: formData.week_interval,
+            recurrence_anchor_date: formData.start_date
           });
 
         if (error) throw error;
@@ -210,7 +219,8 @@ const SchedulingDashboard = () => {
       days_of_week: schedule.days_of_week,
       start_date: schedule.start_date,
       end_date: schedule.end_date || '',
-      notes: schedule.notes || ''
+      notes: schedule.notes || '',
+      week_interval: Number(schedule.week_interval ?? 1)
     });
     setIsDialogOpen(true);
   };
@@ -252,7 +262,8 @@ const SchedulingDashboard = () => {
       days_of_week: [dayNumber],
       start_date: isoDate,
       end_date: '',
-      notes: ''
+      notes: '',
+      week_interval: 1
     });
     setIsDialogOpen(true);
   };
@@ -266,7 +277,8 @@ const SchedulingDashboard = () => {
       days_of_week: [],
       start_date: '',
       end_date: '',
-      notes: ''
+      notes: '',
+      week_interval: 1
     });
   };
 
@@ -417,6 +429,29 @@ const SchedulingDashboard = () => {
               </div>
 
               <div>
+                <Label>Repeats</Label>
+                <Select
+                  value={String(formData.week_interval)}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, week_interval: Number(value) }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Every week</SelectItem>
+                    <SelectItem value="2">Every 2 weeks</SelectItem>
+                    <SelectItem value="3">Every 3 weeks</SelectItem>
+                    <SelectItem value="4">Every 4 weeks</SelectItem>
+                    <SelectItem value="6">Every 6 weeks</SelectItem>
+                    <SelectItem value="8">Every 8 weeks</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  The week of the start date is week 1. The shift only appears on weeks it's due.
+                </p>
+              </div>
+
+              <div>
                 <Label htmlFor="notes">Shift Notes</Label>
                 <Textarea
                   id="notes"
@@ -558,6 +593,7 @@ const SchedulingDashboard = () => {
         ) : (
           <WeeklyScheduleView
             schedules={schedules}
+            allEmployees={employees}
             sortBy={sortBy}
             onEdit={handleEdit}
             onDelete={handleDelete}
