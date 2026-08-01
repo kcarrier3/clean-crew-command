@@ -253,6 +253,10 @@ const SchedulingDashboard = () => {
   const handleAddShift = (employeeId: string, isoDate: string) => {
     const d = new Date(`${isoDate}T00:00:00`);
     const dayNumber = ((d.getDay() + 6) % 7) + 1; // Mon=1..Sun=7
+    // Anchor to the Monday of the selected week so any selected weekday applies that same week
+    const weekStart = new Date(d);
+    weekStart.setDate(d.getDate() - (dayNumber - 1));
+    const weekStartIso = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
     setEditingSchedule(null);
     setDateLocked(true);
     setFormData({
@@ -261,7 +265,7 @@ const SchedulingDashboard = () => {
       start_time: '',
       end_time: '',
       days_of_week: [dayNumber],
-      start_date: isoDate,
+      start_date: weekStartIso,
       end_date: '',
       notes: '',
       week_interval: 1
