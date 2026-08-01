@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { Calendar, Clock, Plus, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +14,7 @@ import { timeOffCutoffFor, isPastTimeOffCutoff, formatCutoff } from '@/lib/sched
 
 interface Employee {
   id: string;
-  employee_id: string;
+  employee_id: string | null;
   first_name: string;
   last_name: string;
   job_title: string;
@@ -30,6 +31,9 @@ interface TimeOffRequest {
   reviewed_at: string | null;
   reviewed_by: string | null;
   manager_notes: string | null;
+  auto_approved?: boolean;
+  use_pto?: boolean;
+  pto_hours?: number;
   employees: Employee;
   reviewer?: Employee;
 }
@@ -47,7 +51,9 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
     employee_id: currentEmployeeId || '',
     start_date: '',
     end_date: '',
-    reason: ''
+    reason: '',
+    use_pto: false,
+    pto_hours: ''
   });
   const { toast } = useToast();
 
