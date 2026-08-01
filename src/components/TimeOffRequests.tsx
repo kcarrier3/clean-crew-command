@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { Calendar, Clock, Plus, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +14,7 @@ import { timeOffCutoffFor, isPastTimeOffCutoff, formatCutoff } from '@/lib/sched
 
 interface Employee {
   id: string;
-  employee_id: string;
+  employee_id: string | null;
   first_name: string;
   last_name: string;
   job_title: string;
@@ -30,6 +31,9 @@ interface TimeOffRequest {
   reviewed_at: string | null;
   reviewed_by: string | null;
   manager_notes: string | null;
+  auto_approved?: boolean;
+  use_pto?: boolean;
+  pto_hours?: number;
   employees: Employee;
   reviewer?: Employee;
 }
@@ -47,7 +51,9 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
     employee_id: currentEmployeeId || '',
     start_date: '',
     end_date: '',
-    reason: ''
+    reason: '',
+    use_pto: false,
+    pto_hours: ''
   });
   const { toast } = useToast();
 
@@ -71,7 +77,7 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
         .from('time_off_requests')
         .select(`
           *,
-          employees!time_off_requests_employee_id_fkey (
+          employees:profiles!time_off_requests_employee_id_fkey (
             id,
             employee_id,
             first_name,
@@ -103,13 +109,13 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
   const fetchEmployees = async () => {
     try {
       const { data, error } = await supabase
-        .from('employees')
-        .select('*')
+        .from('profiles')
+        .select('id, employee_id, first_name, last_name, job_title')
         .eq('active', true)
         .order('first_name');
 
       if (error) throw error;
-      setEmployees(data || []);
+      setEmployees((data as Employee[]) || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
     }
@@ -120,18 +126,38 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
     
     try {
       const late = formData.start_date ? isPastTimeOffCutoff(formData.start_date) : false;
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('time_off_requests')
-        .insert([formData]);
+        .insert([{
+          employee_id: formData.employee_id,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          reason: formData.reason || null,
+          use_pto: formData.use_pto,
+          pto_hours: formData.use_pto ? Number(formData.pto_hours || 0) : 0,
+        }])
+        .select('status, manager_notes')
+        .single();
 
       if (error) throw error;
 
+      const status = inserted?.status;
       toast({
-        title: late ? 'Request auto-declined' : 'Success',
-        description: late
-          ? 'Submitted after the Wednesday 12:00 PM deadline for that work week, so it was automatically declined. Talk to your manager if you need an exception.'
-          : 'Time off request submitted successfully',
-        variant: late ? 'destructive' : undefined,
+        title:
+          status === 'declined'
+            ? 'Request auto-declined'
+            : status === 'approved'
+              ? 'Request approved'
+              : 'Request submitted',
+        description:
+          status === 'declined'
+            ? (late
+                ? 'Submitted after the Wednesday 12:00 PM deadline for that work week, so it was automatically declined. Talk to your manager if you need an exception.'
+                : inserted?.manager_notes || 'Request declined.')
+            : status === 'approved'
+              ? 'Coverage was available, so this request was approved automatically.'
+              : inserted?.manager_notes || 'Submitted for manager review.',
+        variant: status === 'declined' ? 'destructive' : undefined,
       });
 
       setIsDialogOpen(false);
@@ -139,7 +165,9 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
         employee_id: currentEmployeeId || '',
         start_date: '',
         end_date: '',
-        reason: ''
+        reason: '',
+        use_pto: false,
+        pto_hours: ''
       });
       
       fetchRequests();
@@ -282,6 +310,30 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
                     </div>
                   )}
                   
+                  <div className="flex items-center justify-between rounded-md border p-3">
+                    <div>
+                      <Label className="text-sm">Use paid vacation (PTO)</Label>
+                      <p className="text-xs text-muted-foreground">Deducts from the accrued PTO balance.</p>
+                    </div>
+                    <Switch
+                      checked={formData.use_pto}
+                      onCheckedChange={(v) => setFormData({ ...formData, use_pto: v })}
+                    />
+                  </div>
+                  {formData.use_pto && (
+                    <div>
+                      <Label htmlFor="pto_hours">PTO hours to use</Label>
+                      <Input
+                        id="pto_hours"
+                        type="number"
+                        min="0"
+                        step="0.25"
+                        value={formData.pto_hours}
+                        onChange={(e) => setFormData({ ...formData, pto_hours: e.target.value })}
+                        placeholder="e.g. 40"
+                      />
+                    </div>
+                  )}
                   <div>
                     <Label htmlFor="reason">Reason (Optional)</Label>
                     <Textarea
@@ -346,6 +398,16 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
                     <p className="text-sm text-muted-foreground">{request.reason}</p>
                   </div>
                 )}
+
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {request.use_pto && (
+                    <Badge variant="outline">PTO {Number(request.pto_hours || 0).toFixed(2)}h</Badge>
+                  )}
+                  {request.auto_approved && <Badge variant="outline">Auto-approved</Badge>}
+                  {request.status === 'pending' && (
+                    <Badge variant="outline">Needs manager override</Badge>
+                  )}
+                </div>
                 
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
                   <Clock className="h-3 w-3" />

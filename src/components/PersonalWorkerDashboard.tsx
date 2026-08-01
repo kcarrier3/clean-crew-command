@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import TimeClock from './TimeClock';
 import TimeOffRequests from './TimeOffRequests';
+import PtoBalanceCard from './PtoBalanceCard';
 
 interface Employee {
   id: string;
@@ -185,10 +186,13 @@ const PersonalWorkerDashboard = ({ selectedEmployee }: PersonalWorkerDashboardPr
         </TabsContent>
         
         <TabsContent value="timeoff">
-          <TimeOffRequests 
-            isManager={false} 
-            currentEmployeeId={selectedEmployee.id} 
-          />
+          <div className="space-y-6">
+            <PtoBalanceCard employeeId={selectedEmployee.id} />
+            <TimeOffRequests
+              isManager={false}
+              currentEmployeeId={selectedEmployee.id}
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
