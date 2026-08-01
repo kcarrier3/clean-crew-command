@@ -287,6 +287,16 @@ const MySchedule = () => {
         <TabsContent value="schedule" className="space-y-4 mt-4">
           {loading ? (
             <p className="text-center text-muted-foreground py-8">Loading schedule...</p>
+          ) : !weekPublished ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold text-lg mb-1">Schedule not yet posted</h3>
+                <p className="text-sm text-muted-foreground">
+                  This week's schedule is still being reviewed. Check back once your manager posts it.
+                </p>
+              </CardContent>
+            </Card>
           ) : schedules.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
