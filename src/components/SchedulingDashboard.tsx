@@ -257,31 +257,6 @@ const SchedulingDashboard = () => {
     setIsDialogOpen(true);
   };
 
-  const legacyHandleDelete = async (scheduleId: string) => {
-    try {
-      const { error } = await supabase
-        .from('employee_schedules')
-        .update({ active: false })
-        .eq('id', scheduleId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Schedule deleted successfully'
-      });
-      
-      fetchData();
-    } catch (error) {
-      console.error('Error deleting schedule:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete schedule',
-        variant: 'destructive'
-      });
-    }
-  };
-
   const resetForm = () => {
     setFormData({
       employee_id: '',
