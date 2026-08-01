@@ -3481,7 +3481,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
-          paid_only_if_scheduled: boolean
+          paid_only_if_weekday: boolean
           rule: string
           updated_at: string
         }
@@ -3490,7 +3490,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
-          paid_only_if_scheduled?: boolean
+          paid_only_if_weekday?: boolean
           rule: string
           updated_at?: string
         }
@@ -3499,7 +3499,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
-          paid_only_if_scheduled?: boolean
+          paid_only_if_weekday?: boolean
           rule?: string
           updated_at?: string
         }
