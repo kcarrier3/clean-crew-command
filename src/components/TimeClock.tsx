@@ -250,9 +250,10 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   };
 
   const fetchEmployeeSchedule = async (employeeId: string) => {
-    const currentDay = new Date().getDay();
-    const adjustedDay = currentDay === 0 ? 7 : currentDay;
-    
+    const today = new Date().toISOString().split('T')[0];
+
+    // Pull every active schedule for this employee and let the matcher decide
+    // which shift the punch belongs to (handles early/late punches + overnight).
     const { data, error } = await supabase
       .from('employee_schedules')
       .select(`
@@ -261,17 +262,18 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       `)
       .eq('employee_id', employeeId)
       .eq('active', true)
-      .contains('days_of_week', [adjustedDay])
-      .lte('start_date', new Date().toISOString().split('T')[0])
-      .or(`end_date.is.null,end_date.gte.${new Date().toISOString().split('T')[0]}`)
-      .single();
+      .lte('start_date', today)
+      .or(`end_date.is.null,end_date.gte.${today}`);
 
-    if (error) {
+    const match = error ? null : matchPunchToShift((data as any[]) || [], new Date());
+
+    setShiftMatch(match);
+    if (match) {
+      setScheduledJobSite(match.schedule as unknown as Schedule);
+      setSelectedJobSite(match.schedule.job_site_id);
+    } else {
       setScheduledJobSite(null);
       setSelectedJobSite('');
-    } else if (data) {
-      setScheduledJobSite(data);
-      setSelectedJobSite(data.job_site_id);
     }
   };
 
