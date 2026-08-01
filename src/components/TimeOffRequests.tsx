@@ -77,7 +77,7 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
         .from('time_off_requests')
         .select(`
           *,
-          employees!time_off_requests_employee_id_fkey (
+          employees:profiles!time_off_requests_employee_id_fkey (
             id,
             employee_id,
             first_name,
@@ -109,13 +109,13 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
   const fetchEmployees = async () => {
     try {
       const { data, error } = await supabase
-        .from('employees')
-        .select('*')
+        .from('profiles')
+        .select('id, employee_id, first_name, last_name, job_title')
         .eq('active', true)
         .order('first_name');
 
       if (error) throw error;
-      setEmployees(data || []);
+      setEmployees((data as Employee[]) || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
     }
