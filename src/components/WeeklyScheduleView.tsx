@@ -61,19 +61,22 @@ interface Schedule {
   end_date: string | null;
   notes: string | null;
   active: boolean;
+  week_interval?: number | null;
+  recurrence_anchor_date?: string | null;
   employees: Employee;
   job_sites: JobSite;
 }
 
 interface WeeklyScheduleViewProps {
   schedules: Schedule[];
+  allEmployees?: Employee[];
   sortBy: 'alphabetical' | 'job_title';
   onEdit: (schedule: Schedule) => void;
   onDelete: (scheduleId: string) => void;
   onAddShift?: (employeeId: string, isoDate: string) => void;
 }
 
-const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete, onAddShift }: WeeklyScheduleViewProps) => {
+const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDelete, onAddShift }: WeeklyScheduleViewProps) => {
   // Week anchor = Monday of the currently viewed week
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeekMon(new Date()));
   const [rateByUserId, setRateByUserId] = useState<Record<string, number>>({});
@@ -197,16 +200,19 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete, onAddShift }:
   // Unique employees sorted
   const employees = useMemo(() => {
     const list = Array.from(
-      new Map(schedules.map((s) => [s.employee_id, s.employees])).values(),
+      new Map([
+        ...allEmployees.map((e) => [e.id, e] as [string, Employee]),
+        ...schedules.map((s) => [s.employee_id, s.employees] as [string, Employee]),
+      ]).values(),
     );
     return list.sort((a, b) => {
       if (sortBy === 'job_title') {
-        const t = a.job_title.localeCompare(b.job_title);
+        const t = (a.job_title || '').localeCompare(b.job_title || '');
         if (t !== 0) return t;
       }
-      return a.first_name.localeCompare(b.first_name);
+      return (a.first_name || '').localeCompare(b.first_name || '');
     });
-  }, [schedules, sortBy]);
+  }, [schedules, allEmployees, sortBy]);
 
   // Determine which shifts fall on a given date for a given employee
   const getShiftsFor = (employeeId: string, date: Date) => {
@@ -217,6 +223,7 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete, onAddShift }:
       if (!s.days_of_week.includes(dayNum)) return false;
       if (s.start_date && s.start_date > iso) return false;
       if (s.end_date && s.end_date < iso) return false;
+      if (!isDueThisWeek(s, date)) return false;
       return true;
     });
   };
