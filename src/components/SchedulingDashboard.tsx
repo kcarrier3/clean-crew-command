@@ -13,7 +13,6 @@ import { Calendar, Clock, Users, MapPin, Plus, List, Grid3X3, ArrowUpDown, Calen
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import ScheduleListView from './ScheduleListView';
 import WeeklyScheduleView from './WeeklyScheduleView';
 import ManagerTimeOffReview from './ManagerTimeOffReview';
 import PayrollReports from './PayrollReports';
@@ -70,8 +69,7 @@ const SchedulingDashboard = () => {
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'weekly'>('list');
-  const [sortBy, setSortBy] = useState<'alphabetical' | 'job_title'>('alphabetical');
+  const [sortBy, setSortBy] = useState<'alphabetical' | 'department'>('alphabetical');
   const isPhone = useIsMobile();
   const [formData, setFormData] = useState<ScheduleFormData>({
     employee_id: '',
@@ -535,46 +533,27 @@ const SchedulingDashboard = () => {
         </div>
 
         {/* View Controls */}
-        <div className="flex justify-between items-center">
-          <div className="flex gap-2">
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-            >
-              <List className="h-4 w-4 mr-2" />
-              List View
-            </Button>
-            <Button
-              variant={viewMode === 'weekly' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('weekly')}
-            >
-              <Grid3X3 className="h-4 w-4 mr-2" />
-              Weekly View
-            </Button>
-          </div>
-          
+        <div className="flex justify-end items-center">
           <div className="flex items-center gap-2">
             {isPhone ? (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSortBy(prev => prev === 'alphabetical' ? 'job_title' : 'alphabetical')}
+                onClick={() => setSortBy(prev => prev === 'alphabetical' ? 'department' : 'alphabetical')}
               >
                 <ArrowUpDown className="h-4 w-4 mr-1" />
-                Sort
+                {sortBy === 'alphabetical' ? 'Name' : 'Department'}
               </Button>
             ) : (
               <>
                 <ArrowUpDown className="h-4 w-4" />
-                <Select value={sortBy} onValueChange={(value: 'alphabetical' | 'job_title') => setSortBy(value)}>
+                <Select value={sortBy} onValueChange={(value: 'alphabetical' | 'department') => setSortBy(value)}>
                   <SelectTrigger className="w-48">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="alphabetical">Sort Alphabetically</SelectItem>
-                    <SelectItem value="job_title">Sort by Job Title</SelectItem>
+                    <SelectItem value="alphabetical">Sort by Name</SelectItem>
+                    <SelectItem value="department">Sort by Department</SelectItem>
                   </SelectContent>
                 </Select>
               </>
@@ -583,23 +562,14 @@ const SchedulingDashboard = () => {
         </div>
 
         {/* Schedule Views */}
-        {viewMode === 'list' ? (
-          <ScheduleListView
-            schedules={schedules}
-            sortBy={sortBy}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-        ) : (
-          <WeeklyScheduleView
-            schedules={schedules}
-            allEmployees={employees}
-            sortBy={sortBy}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onAddShift={handleAddShift}
-          />
-        )}
+        <WeeklyScheduleView
+          schedules={schedules}
+          allEmployees={employees}
+          sortBy={sortBy}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onAddShift={handleAddShift}
+        />
       </TabsContent>
 
       <TabsContent value="payroll">
