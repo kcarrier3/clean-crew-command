@@ -70,7 +70,7 @@ interface Schedule {
 interface WeeklyScheduleViewProps {
   schedules: Schedule[];
   allEmployees?: Employee[];
-  sortBy: 'alphabetical' | 'job_title';
+  sortBy: 'alphabetical' | 'department';
   onEdit: (schedule: Schedule) => void;
   onDelete: (scheduleId: string) => void;
   onAddShift?: (employeeId: string, isoDate: string) => void;
@@ -206,13 +206,15 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
       ]).values(),
     );
     return list.sort((a, b) => {
-      if (sortBy === 'job_title') {
-        const t = (a.job_title || '').localeCompare(b.job_title || '');
+      if (sortBy === 'department') {
+        const t = (deptByEmployee[a.id] || 'Unassigned').localeCompare(
+          deptByEmployee[b.id] || 'Unassigned',
+        );
         if (t !== 0) return t;
       }
       return (a.first_name || '').localeCompare(b.first_name || '');
     });
-  }, [schedules, allEmployees, sortBy]);
+  }, [schedules, allEmployees, sortBy, deptByEmployee]);
 
   // Determine which shifts fall on a given date for a given employee
   const getShiftsFor = (employeeId: string, date: Date) => {
