@@ -939,6 +939,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           ) : (
             <div className="space-y-4">
               {activeEntries.map((entry) => (
+                (() => null)(),
                 <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
