@@ -429,6 +429,29 @@ const SchedulingDashboard = () => {
               </div>
 
               <div>
+                <Label>Repeats</Label>
+                <Select
+                  value={String(formData.week_interval)}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, week_interval: Number(value) }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Every week</SelectItem>
+                    <SelectItem value="2">Every 2 weeks</SelectItem>
+                    <SelectItem value="3">Every 3 weeks</SelectItem>
+                    <SelectItem value="4">Every 4 weeks</SelectItem>
+                    <SelectItem value="6">Every 6 weeks</SelectItem>
+                    <SelectItem value="8">Every 8 weeks</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  The week of the start date is week 1. The shift only appears on weeks it's due.
+                </p>
+              </div>
+
+              <div>
                 <Label htmlFor="notes">Shift Notes</Label>
                 <Textarea
                   id="notes"
@@ -570,6 +593,7 @@ const SchedulingDashboard = () => {
         ) : (
           <WeeklyScheduleView
             schedules={schedules}
+            allEmployees={employees}
             sortBy={sortBy}
             onEdit={handleEdit}
             onDelete={handleDelete}
