@@ -48,6 +48,7 @@ const MySchedule = () => {
   const { toast } = useToast();
 
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [weekPublished, setWeekPublished] = useState(true);
   const [timeOffRequests, setTimeOffRequests] = useState<TimeOffRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -61,6 +62,7 @@ const MySchedule = () => {
   useEffect(() => {
     if (profile?.id) {
       fetchSchedules();
+      fetchWeekStatus();
       fetchTimeOffRequests();
 
       // Real-time subscription for time off request status updates
@@ -93,6 +95,20 @@ const MySchedule = () => {
       };
     }
   }, [profile?.id]);
+
+  const fetchWeekStatus = async () => {
+    // Monday of the current week
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const iso = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+    const { data } = await (supabase as any)
+      .from('schedule_weeks')
+      .select('published')
+      .eq('week_start', iso)
+      .maybeSingle();
+    setWeekPublished(!!data?.published);
+  };
 
   const fetchSchedules = async () => {
     if (!profile?.id) return;
@@ -271,6 +287,16 @@ const MySchedule = () => {
         <TabsContent value="schedule" className="space-y-4 mt-4">
           {loading ? (
             <p className="text-center text-muted-foreground py-8">Loading schedule...</p>
+          ) : !weekPublished ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold text-lg mb-1">Schedule not yet posted</h3>
+                <p className="text-sm text-muted-foreground">
+                  This week's schedule is still being reviewed. Check back once your manager posts it.
+                </p>
+              </CardContent>
+            </Card>
           ) : schedules.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">

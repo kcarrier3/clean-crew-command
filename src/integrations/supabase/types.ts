@@ -3760,6 +3760,39 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_weeks: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          published: boolean
+          published_at: string | null
+          published_by: string | null
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          published?: boolean
+          published_at?: string | null
+          published_by?: string | null
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          published?: boolean
+          published_at?: string | null
+          published_by?: string | null
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
       shift_call_offs: {
         Row: {
           call_off_date: string
@@ -4616,6 +4649,7 @@ export type Database = {
         Args: { _recipient_id: string; _sender_id: string }
         Returns: boolean
       }
+      can_publish_schedules: { Args: { _user_id: string }; Returns: boolean }
       compute_inspection_score: {
         Args: { p_inspection_id: string }
         Returns: undefined
@@ -4758,6 +4792,7 @@ export type Database = {
         | "view_team_directory"
         | "view_calendar"
         | "use_messaging"
+        | "publish_schedules"
       app_role: "admin" | "manager" | "employee"
       calendar_draft_kind: "shift_draft" | "event" | "holiday" | "note"
       time_off_status: "pending" | "approved" | "declined"
@@ -4911,6 +4946,7 @@ export const Constants = {
         "view_team_directory",
         "view_calendar",
         "use_messaging",
+        "publish_schedules",
       ],
       app_role: ["admin", "manager", "employee"],
       calendar_draft_kind: ["shift_draft", "event", "holiday", "note"],

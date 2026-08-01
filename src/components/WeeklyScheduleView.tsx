@@ -18,6 +18,8 @@ import {
   UserX,
   Undo2,
   Plus,
+  CheckCircle2,
+  PencilRuler,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -85,8 +87,11 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const { isManager } = useAuth();
+  const { isManager, canPublishSchedules } = useAuth();
   const canManage = isManager();
+  const canPublish = canPublishSchedules();
+  const [weekPublished, setWeekPublished] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -105,8 +110,47 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
 
   useEffect(() => {
     loadCallOffs();
+    loadWeekStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart]);
+
+  const loadWeekStatus = async () => {
+    const { data } = await (supabase as any)
+      .from('schedule_weeks')
+      .select('published')
+      .eq('week_start', toISODate(weekStart))
+      .maybeSingle();
+    setWeekPublished(!!data?.published);
+  };
+
+  const togglePublish = async () => {
+    setPublishing(true);
+    const next = !weekPublished;
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await (supabase as any)
+      .from('schedule_weeks')
+      .upsert(
+        {
+          week_start: toISODate(weekStart),
+          published: next,
+          published_at: next ? new Date().toISOString() : null,
+          published_by: next ? user?.id ?? null : null,
+        },
+        { onConflict: 'week_start' },
+      );
+    setPublishing(false);
+    if (error) {
+      toast({ title: 'Could not update week', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setWeekPublished(next);
+    toast({
+      title: next ? 'Schedule published' : 'Schedule moved back to draft',
+      description: next
+        ? 'Workers can now see this week’s shifts.'
+        : 'This week is hidden from workers until you publish it again.',
+    });
+  };
 
   const callOffFor = (scheduleId: string, iso: string) =>
     callOffs.find((c) => c.schedule_id === scheduleId && c.call_off_date === iso) || null;
@@ -323,6 +367,29 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
           <div className="text-sm text-muted-foreground border rounded-md px-3 py-1.5 ml-1">
             Week
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+              weekPublished
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                : 'bg-amber-100 text-amber-800 border border-amber-200'
+            }`}
+          >
+            {weekPublished ? <CheckCircle2 className="h-3.5 w-3.5" /> : <PencilRuler className="h-3.5 w-3.5" />}
+            {weekPublished ? 'Published' : 'Draft'}
+          </span>
+          {canPublish && (
+            <Button
+              size="sm"
+              variant={weekPublished ? 'outline' : 'default'}
+              disabled={publishing}
+              onClick={togglePublish}
+            >
+              {publishing ? 'Saving…' : weekPublished ? 'Unpublish' : 'Publish week'}
+            </Button>
+          )}
         </div>
       </div>
 
