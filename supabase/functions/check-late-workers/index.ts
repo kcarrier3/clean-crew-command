@@ -110,10 +110,16 @@ serve(async (req) => {
       );
     }
 
-    // Parse scheduled start time
-    const [schedHours, schedMinutes] = schedule.start_time.split(':').map(Number);
-    const scheduledStart = new Date(clockInTime);
-    scheduledStart.setHours(schedHours, schedMinutes, 0, 0);
+    // Prefer the scheduled start the time clock matched at punch time (handles
+    // early/late punches and overnight shifts); fall back to today's schedule.
+    let scheduledStart: Date;
+    if (timeEntry.scheduled_start) {
+      scheduledStart = new Date(timeEntry.scheduled_start);
+    } else {
+      const [schedHours, schedMinutes] = schedule.start_time.split(':').map(Number);
+      scheduledStart = new Date(clockInTime);
+      scheduledStart.setHours(schedHours, schedMinutes, 0, 0);
+    }
 
     const minutesLate = Math.floor((clockInTime.getTime() - scheduledStart.getTime()) / (1000 * 60));
 
