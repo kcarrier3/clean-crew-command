@@ -938,8 +938,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
             </p>
           ) : (
             <div className="space-y-4">
-              {activeEntries.map((entry) => (
-                (() => null)(),
+              {activeEntries.map((entry) => {
+                const remaining = minutesRemaining(entry);
+                return (
                 <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -951,6 +952,17 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                         <Badge variant="outline" className="text-blue-600 border-blue-300 text-xs">
                           <Shield className="h-3 w-3 mr-1" />
                           Override
+                        </Badge>
+                      )}
+                      {remaining !== null && remaining < 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Over by {Math.abs(remaining)}m
+                        </Badge>
+                      )}
+                      {remaining !== null && remaining >= 0 && remaining <= END_OF_SHIFT_WARNING_MINUTES && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs">
+                          Ends in {remaining}m
                         </Badge>
                       )}
                     </div>
@@ -965,6 +977,12 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                       <div className="font-mono text-lg text-foreground">
                         {formatDuration(entry.clock_in)}
                       </div>
+                      {entry.scheduled_end && (
+                        <div>
+                          Scheduled end:{' '}
+                          {new Date(entry.scheduled_end).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                        </div>
+                      )}
                     </div>
                   </div>
                   {isJanitorialWorker && entry.employee_id === profile?.id ? (
@@ -987,7 +1005,8 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
                     </Button>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
