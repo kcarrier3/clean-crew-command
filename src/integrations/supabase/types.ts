@@ -3475,6 +3475,36 @@ export type Database = {
         }
         Relationships: []
       }
+      paid_holidays: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          paid_only_if_scheduled: boolean
+          rule: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          paid_only_if_scheduled?: boolean
+          rule: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          paid_only_if_scheduled?: boolean
+          rule?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       permissions: {
         Row: {
           category: string
@@ -3701,6 +3731,78 @@ export type Database = {
           state?: string | null
           time_bonus_amount?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      pto_adjustments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          employee_id: string
+          hours: number
+          id: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string
+          employee_id: string
+          hours: number
+          id?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string
+          employee_id?: string
+          hours?: number
+          id?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pto_adjustments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pto_adjustments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pto_tiers: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          weeks: number
+          years_of_service: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          weeks: number
+          years_of_service: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          weeks?: number
+          years_of_service?: number
         }
         Relationships: []
       }
@@ -4353,13 +4455,42 @@ export type Database = {
           },
         ]
       }
+      time_off_policies: {
+        Row: {
+          auto_approve: boolean
+          created_at: string
+          department: string
+          id: string
+          max_off_per_day: number
+          updated_at: string
+        }
+        Insert: {
+          auto_approve?: boolean
+          created_at?: string
+          department: string
+          id?: string
+          max_off_per_day?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_approve?: boolean
+          created_at?: string
+          department?: string
+          id?: string
+          max_off_per_day?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       time_off_requests: {
         Row: {
+          auto_approved: boolean
           created_at: string
           employee_id: string
           end_date: string
           id: string
           manager_notes: string | null
+          pto_hours: number
           reason: string | null
           requested_at: string
           reviewed_at: string | null
@@ -4367,13 +4498,16 @@ export type Database = {
           start_date: string
           status: Database["public"]["Enums"]["time_off_status"]
           updated_at: string
+          use_pto: boolean
         }
         Insert: {
+          auto_approved?: boolean
           created_at?: string
           employee_id: string
           end_date: string
           id?: string
           manager_notes?: string | null
+          pto_hours?: number
           reason?: string | null
           requested_at?: string
           reviewed_at?: string | null
@@ -4381,13 +4515,16 @@ export type Database = {
           start_date: string
           status?: Database["public"]["Enums"]["time_off_status"]
           updated_at?: string
+          use_pto?: boolean
         }
         Update: {
+          auto_approved?: boolean
           created_at?: string
           employee_id?: string
           end_date?: string
           id?: string
           manager_notes?: string | null
+          pto_hours?: number
           reason?: string | null
           requested_at?: string
           reviewed_at?: string | null
@@ -4395,8 +4532,24 @@ export type Database = {
           start_date?: string
           status?: Database["public"]["Enums"]["time_off_status"]
           updated_at?: string
+          use_pto?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "time_off_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_off_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_custom_roles: {
         Row: {
@@ -4720,6 +4873,23 @@ export type Database = {
         Args: { _user1_id: string; _user2_id: string }
         Returns: string
       }
+      get_pto_summary: {
+        Args: { _as_of?: string; _employee_id: string }
+        Returns: {
+          adjustment_hours: number
+          avg_weekly_hours: number
+          eligible: boolean
+          employee_id: string
+          entitled_hours: number
+          hire_date: string
+          remaining_hours: number
+          used_hours: number
+          weeks: number
+          year_end: string
+          year_start: string
+          years_of_service: number
+        }[]
+      }
       get_user_all_permissions: {
         Args: { _user_id: string }
         Returns: {
@@ -4757,6 +4927,7 @@ export type Database = {
         Returns: boolean
       }
       is_crm_user: { Args: { _user_id: string }; Returns: boolean }
+      is_pto_manager_title: { Args: { _job_title: string }; Returns: boolean }
       is_supply_manager: { Args: { _user_id: string }; Returns: boolean }
       manager_can_view_profile: {
         Args: { _employee_id: string; _manager_id: string }
@@ -4770,6 +4941,7 @@ export type Database = {
         Args: { _job_site_id: string }
         Returns: string
       }
+      time_off_department: { Args: { _job_title: string }; Returns: string }
     }
     Enums: {
       app_permission:
