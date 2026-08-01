@@ -10,6 +10,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useJobSiteAccess } from '@/hooks/useJobSiteAccess';
 import { useNavigate } from 'react-router-dom';
 import QRScanner from './QRScanner';
+import { matchPunchToShift, type ShiftMatch } from '@/lib/shiftMatching';
+
+// How long before the scheduled end we warn the worker their shift is wrapping up.
+const END_OF_SHIFT_WARNING_MINUTES = 15;
 
 // Job titles that automatically punch in at the internal office (fixed-expense staff).
 const OFFICE_AUTO_TITLES = [
@@ -61,6 +65,10 @@ interface TimeEntry {
   clock_in: string;
   clock_out: string | null;
   manager_override: boolean;
+  schedule_id?: string | null;
+  scheduled_start?: string | null;
+  scheduled_end?: string | null;
+  exceeded_scheduled?: boolean | null;
   employees: Employee;
   job_sites: JobSite;
 }
@@ -79,6 +87,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [selectedJobSite, setSelectedJobSite] = useState<string>('');
   const [scheduledJobSite, setScheduledJobSite] = useState<Schedule | null>(null);
+  const [shiftMatch, setShiftMatch] = useState<ShiftMatch | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
