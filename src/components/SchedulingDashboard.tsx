@@ -70,6 +70,7 @@ const SchedulingDashboard = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [sortBy, setSortBy] = useState<'alphabetical' | 'department'>('alphabetical');
+  const [dateLocked, setDateLocked] = useState(false);
   const isPhone = useIsMobile();
   const [formData, setFormData] = useState<ScheduleFormData>({
     employee_id: '',
@@ -209,6 +210,7 @@ const SchedulingDashboard = () => {
 
   const handleEdit = (schedule: Schedule) => {
     setEditingSchedule(schedule);
+    setDateLocked(false);
     setFormData({
       employee_id: schedule.employee_id,
       job_site_id: schedule.job_site_id,
@@ -252,6 +254,7 @@ const SchedulingDashboard = () => {
     const d = new Date(`${isoDate}T00:00:00`);
     const dayNumber = ((d.getDay() + 6) % 7) + 1; // Mon=1..Sun=7
     setEditingSchedule(null);
+    setDateLocked(true);
     setFormData({
       employee_id: employeeId,
       job_site_id: '',
@@ -267,6 +270,7 @@ const SchedulingDashboard = () => {
   };
 
   const resetForm = () => {
+    setDateLocked(false);
     setFormData({
       employee_id: '',
       job_site_id: '',
