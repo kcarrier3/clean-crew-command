@@ -174,6 +174,25 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
     loadCallOffs();
   };
 
+  // Department assignments (for grouping)
+  const [deptByEmployee, setDeptByEmployee] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const load = async () => {
+      const [{ data: depts }, { data: links }] = await Promise.all([
+        supabase.from('departments').select('id, name'),
+        supabase.from('department_employees').select('department_id, employee_id'),
+      ]);
+      const nameById: Record<string, string> = {};
+      (depts || []).forEach((d: any) => { nameById[d.id] = d.name; });
+      const map: Record<string, string> = {};
+      (links || []).forEach((l: any) => {
+        if (nameById[l.department_id]) map[l.employee_id] = nameById[l.department_id];
+      });
+      setDeptByEmployee(map);
+    };
+    load();
+  }, []);
+
   // Fetch hourly rates from profiles for wage totals
   useEffect(() => {
     const userIds = Array.from(
@@ -313,7 +332,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
           {/* Header row */}
           <div className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b bg-muted/30">
             <div className="px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground">
-              View by <span className="font-semibold text-foreground">{sortBy === 'alphabetical' ? 'First name' : 'Job title'}</span>
+              View by <span className="font-semibold text-foreground">{sortBy === 'alphabetical' ? 'First name' : 'Department'}</span>
             </div>
             {weekDays.map((d) => (
               <div
@@ -346,9 +365,19 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
             </div>
           )}
 
-          {employees.map((emp) => {
+          {employees.map((emp, idx) => {
             const stats = employeeStats(emp.id);
+            const deptName = deptByEmployee[emp.id] || 'Unassigned';
+            const showDeptHeader =
+              sortBy === 'department' &&
+              (idx === 0 || (deptByEmployee[employees[idx - 1].id] || 'Unassigned') !== deptName);
             return (
+              <div key={`g-${emp.id}`}>
+                {showDeptHeader && (
+                  <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b bg-muted/40">
+                    {deptName}
+                  </div>
+                )}
               <div
                 key={emp.id}
                 className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b transition"
