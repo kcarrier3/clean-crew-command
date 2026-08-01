@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CalendarClock, Gift } from 'lucide-react';
+import { CalendarClock, Gift, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { POINTS } from '@/lib/attendancePoints';
 
 interface RosterEntry {
   scheduleId: string;
@@ -24,6 +25,7 @@ interface RosterEntry {
   clockInAt: string | null;
   clockOutAt: string | null;
   excused: { id: string; reason: string | null } | null;
+  calledOff: { id: string; reason: string | null } | null;
 }
 
 const fmt = (t: string) => {
@@ -52,6 +54,8 @@ const ShiftRoster = () => {
   const [excuseTarget, setExcuseTarget] = useState<RosterEntry | null>(null);
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
+  const [callOffTarget, setCallOffTarget] = useState<RosterEntry | null>(null);
+  const [callOffReason, setCallOffReason] = useState('');
 
   useEffect(() => {
     load();
@@ -91,6 +95,13 @@ const ShiftRoster = () => {
       const excusedBySchedule = new Map<string, { id: string; reason: string | null }>();
       (excusedRows || []).forEach((e: any) => excusedBySchedule.set(e.schedule_id, { id: e.id, reason: e.reason }));
 
+      const { data: callOffRows } = await (supabase as any)
+        .from('shift_call_offs')
+        .select('id, schedule_id, reason')
+        .eq('call_off_date', today);
+      const callOffBySchedule = new Map<string, { id: string; reason: string | null }>();
+      (callOffRows || []).forEach((c: any) => callOffBySchedule.set(c.schedule_id, { id: c.id, reason: c.reason }));
+
       const activeByEmp = new Map<string, { clock_in: string; clock_out: string | null }>();
       entries?.forEach((e: any) => {
         const cur = activeByEmp.get(e.employee_id);
@@ -114,6 +125,7 @@ const ShiftRoster = () => {
           clockInAt: punch?.clock_in ?? null,
           clockOutAt: punch?.clock_out ?? null,
           excused: excusedBySchedule.get(s.id) || null,
+          calledOff: callOffBySchedule.get(s.id) || null,
         };
       });
 
@@ -125,6 +137,9 @@ const ShiftRoster = () => {
   };
 
   const statusFor = (r: RosterEntry) => {
+    if (r.calledOff) {
+      return { label: `Called off — open shift${r.calledOff.reason ? ` (${r.calledOff.reason})` : ''}`, dotClass: 'bg-destructive', barClass: 'bg-destructive' };
+    }
     if (r.excused) {
       return { label: `Excused${r.excused.reason ? ` — ${r.excused.reason}` : ''}`, dotClass: 'bg-blue-500', barClass: 'bg-blue-500' };
     }
@@ -191,6 +206,66 @@ const ShiftRoster = () => {
     load();
   };
 
+  const recordCallOff = async () => {
+    if (!callOffTarget) return;
+    setSaving(true);
+    const today = new Date().toISOString().split('T')[0];
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: point, error: pointError } = await (supabase as any)
+      .from('attendance_points')
+      .insert({
+        employee_id: callOffTarget.employeeId,
+        schedule_id: callOffTarget.scheduleId,
+        occurred_on: today,
+        point_type: 'call_off',
+        points: POINTS.call_off,
+        notes: callOffReason || null,
+        recorded_by: user?.id ?? null,
+      })
+      .select('id')
+      .single();
+    if (pointError) {
+      setSaving(false);
+      toast({ title: 'Could not record call off', description: pointError.message, variant: 'destructive' });
+      return;
+    }
+    const { error } = await (supabase as any).from('shift_call_offs').insert({
+      schedule_id: callOffTarget.scheduleId,
+      employee_id: callOffTarget.employeeId,
+      call_off_date: today,
+      reason: callOffReason || null,
+      recorded_by: user?.id ?? null,
+      point_id: point?.id ?? null,
+    });
+    setSaving(false);
+    if (error) {
+      toast({ title: 'Could not record call off', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Call off recorded', description: `${POINTS.call_off} points assessed. Shift moved to open shifts.` });
+    setCallOffTarget(null);
+    setCallOffReason('');
+    load();
+  };
+
+  const undoCallOff = async (r: RosterEntry) => {
+    if (!r.calledOff) return;
+    const today = new Date().toISOString().split('T')[0];
+    const { error } = await (supabase as any).from('shift_call_offs').delete().eq('id', r.calledOff.id);
+    if (error) {
+      toast({ title: 'Could not undo', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await (supabase as any)
+      .from('attendance_points')
+      .delete()
+      .eq('schedule_id', r.scheduleId)
+      .eq('occurred_on', today)
+      .eq('point_type', 'call_off');
+    toast({ title: 'Call off removed' });
+    load();
+  };
+
   // group by hour bucket for the timeline label column
   let lastBucket = '';
 
@@ -243,6 +318,11 @@ const ShiftRoster = () => {
                             <Gift className="h-3 w-3 mr-1" /> Excused
                           </Badge>
                         )}
+                        {r.calledOff && (
+                          <Badge variant="destructive" className="ml-1">
+                            <UserX className="h-3 w-3 mr-1" /> Call off
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
                         {s.label} <span className="mx-1">/</span> {fmt(r.startTime)} - {fmt(r.endTime)}
@@ -250,20 +330,36 @@ const ShiftRoster = () => {
                       </div>
                     </div>
                     {canManage && !r.clockInAt && (
-                      r.excused ? (
-                        <Button size="sm" variant="ghost" onClick={() => revokeExcuse(r)}>
-                          Undo
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => { setExcuseTarget(r); setReason(''); }}
-                        >
-                          <Gift className="h-3.5 w-3.5 mr-1.5" />
-                          Excuse missed shift
-                        </Button>
-                      )
+                      <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
+                        {r.calledOff ? (
+                          <Button size="sm" variant="ghost" onClick={() => undoCallOff(r)}>
+                            Undo call off
+                          </Button>
+                        ) : r.excused ? (
+                          <Button size="sm" variant="ghost" onClick={() => revokeExcuse(r)}>
+                            Undo
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setExcuseTarget(r); setReason(''); }}
+                            >
+                              <Gift className="h-3.5 w-3.5 mr-1.5" />
+                              Excuse
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => { setCallOffTarget(r); setCallOffReason(''); }}
+                            >
+                              <UserX className="h-3.5 w-3.5 mr-1.5" />
+                              Call off
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -297,6 +393,35 @@ const ShiftRoster = () => {
             <Button variant="outline" onClick={() => setExcuseTarget(null)} disabled={saving}>Cancel</Button>
             <Button onClick={grantExcuse} disabled={saving}>
               {saving ? 'Saving…' : 'Excuse shift'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!callOffTarget} onOpenChange={(o) => !o && setCallOffTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Record call off</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              This records <strong>{callOffTarget?.firstName} {callOffTarget?.lastName}</strong> as a call off for today,
+              assesses <strong>{POINTS.call_off} attendance points</strong>, and moves today's shift to open shifts.
+              Their recurring schedule is unchanged for future weeks.
+            </p>
+            <div>
+              <Label>Reason (optional)</Label>
+              <Textarea
+                placeholder="e.g. Called out sick"
+                value={callOffReason}
+                onChange={(e) => setCallOffReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCallOffTarget(null)} disabled={saving}>Cancel</Button>
+            <Button variant="destructive" onClick={recordCallOff} disabled={saving}>
+              {saving ? 'Saving…' : 'Record call off'}
             </Button>
           </DialogFooter>
         </DialogContent>

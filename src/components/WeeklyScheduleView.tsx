@@ -15,8 +15,23 @@ import {
   Trash2,
   FileText,
   MapPin,
+  UserX,
+  Undo2,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { POINTS } from '@/lib/attendancePoints';
+
+interface CallOff {
+  id: string;
+  schedule_id: string;
+  call_off_date: string;
+  reason: string | null;
+}
 
 interface Employee {
   id: string;
@@ -60,12 +75,99 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
   // Week anchor = Monday of the currently viewed week
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeekMon(new Date()));
   const [rateByUserId, setRateByUserId] = useState<Record<string, number>>({});
+  const [callOffs, setCallOffs] = useState<CallOff[]>([]);
+  const [callOffTarget, setCallOffTarget] = useState<{ schedule: Schedule; date: string } | null>(null);
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+  const { isManager } = useAuth();
+  const canManage = isManager();
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   }, [weekStart]);
 
   const weekEnd = weekDays[6];
+
+  const loadCallOffs = async () => {
+    const { data } = await (supabase as any)
+      .from('shift_call_offs')
+      .select('id, schedule_id, call_off_date, reason')
+      .gte('call_off_date', toISODate(weekDays[0]))
+      .lte('call_off_date', toISODate(weekDays[6]));
+    setCallOffs((data as CallOff[]) || []);
+  };
+
+  useEffect(() => {
+    loadCallOffs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart]);
+
+  const callOffFor = (scheduleId: string, iso: string) =>
+    callOffs.find((c) => c.schedule_id === scheduleId && c.call_off_date === iso) || null;
+
+  const recordCallOff = async () => {
+    if (!callOffTarget) return;
+    setSaving(true);
+    const { schedule, date } = callOffTarget;
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: point, error: pointError } = await (supabase as any)
+      .from('attendance_points')
+      .insert({
+        employee_id: schedule.employee_id,
+        schedule_id: schedule.id,
+        occurred_on: date,
+        point_type: 'call_off',
+        points: POINTS.call_off,
+        notes: reason || null,
+        recorded_by: user?.id ?? null,
+      })
+      .select('id')
+      .single();
+
+    if (pointError) {
+      setSaving(false);
+      toast({ title: 'Could not record call off', description: pointError.message, variant: 'destructive' });
+      return;
+    }
+
+    const { error } = await (supabase as any).from('shift_call_offs').insert({
+      schedule_id: schedule.id,
+      employee_id: schedule.employee_id,
+      call_off_date: date,
+      reason: reason || null,
+      recorded_by: user?.id ?? null,
+      point_id: point?.id ?? null,
+    });
+    setSaving(false);
+    if (error) {
+      toast({ title: 'Could not record call off', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({
+      title: 'Call off recorded',
+      description: `${schedule.employees.first_name} ${schedule.employees.last_name} was assessed ${POINTS.call_off} points and this shift is now open.`,
+    });
+    setCallOffTarget(null);
+    setReason('');
+    loadCallOffs();
+  };
+
+  const undoCallOff = async (c: CallOff) => {
+    const { error } = await (supabase as any).from('shift_call_offs').delete().eq('id', c.id);
+    if (error) {
+      toast({ title: 'Could not undo', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await (supabase as any)
+      .from('attendance_points')
+      .delete()
+      .eq('schedule_id', c.schedule_id)
+      .eq('occurred_on', c.call_off_date)
+      .eq('point_type', 'call_off');
+    toast({ title: 'Call off removed' });
+    loadCallOffs();
+  };
 
   // Fetch hourly rates from profiles for wage totals
   useEffect(() => {
@@ -121,6 +223,7 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
     let hours = 0;
     weekDays.forEach((d) => {
       getShiftsFor(employeeId, d).forEach((s) => {
+        if (callOffFor(s.id, toISODate(d))) return;
         hours += shiftHours(s.start_time, s.end_time);
       });
     });
@@ -139,6 +242,7 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
       people += 1;
       const rate = (emp.user_id && rateByUserId[emp.user_id]) || 0;
       shifts.forEach((s) => {
+        if (callOffFor(s.id, toISODate(date))) return;
         const h = shiftHours(s.start_time, s.end_time);
         hours += h;
         wages += h * rate;
@@ -259,6 +363,7 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
                 {/* Day cells */}
                 {weekDays.map((d) => {
                   const shifts = getShiftsFor(emp.id, d);
+                  const iso = toISODate(d);
                   return (
                     <div
                       key={d.toISOString()}
@@ -270,6 +375,10 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
                           schedule={s}
                           onEdit={onEdit}
                           onDelete={onDelete}
+                          callOff={callOffFor(s.id, iso)}
+                          canManage={canManage}
+                          onCallOff={() => { setReason(''); setCallOffTarget({ schedule: s, date: iso }); }}
+                          onUndoCallOff={undoCallOff}
                         />
                       ))}
                     </div>
@@ -311,6 +420,35 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
           )}
         </div>
       </div>
+
+      <Dialog open={!!callOffTarget} onOpenChange={(o) => !o && setCallOffTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Record call off</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              This records <strong>{callOffTarget?.schedule.employees.first_name} {callOffTarget?.schedule.employees.last_name}</strong> as a
+              call off for {callOffTarget?.date}. It assesses <strong>{POINTS.call_off} attendance points</strong> and moves this
+              shift to open shifts for the day only — the recurring schedule stays intact for future weeks.
+            </p>
+            <div>
+              <Label>Reason (optional)</Label>
+              <Textarea
+                placeholder="e.g. Called out sick"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCallOffTarget(null)} disabled={saving}>Cancel</Button>
+            <Button variant="destructive" onClick={recordCallOff} disabled={saving}>
+              {saving ? 'Saving…' : 'Record call off'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
@@ -320,34 +458,70 @@ function ShiftBlock({
   schedule,
   onEdit,
   onDelete,
+  callOff,
+  canManage,
+  onCallOff,
+  onUndoCallOff,
 }: {
   schedule: Schedule;
   onEdit: (s: Schedule) => void;
   onDelete: (id: string) => void;
+  callOff: CallOff | null;
+  canManage: boolean;
+  onCallOff: () => void;
+  onUndoCallOff: (c: CallOff) => void;
 }) {
   const colors = jobColor(schedule.employees.job_title);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          className={`w-full text-left rounded-md px-2 py-1.5 text-white shadow-sm hover:brightness-110 transition ${colors}`}
-          title={schedule.notes || ''}
-        >
-          <div className="text-[11px] font-semibold leading-tight">
-            {shortTime(schedule.start_time)}–{shortTime(schedule.end_time)}
-          </div>
-          <div className="text-[10px] leading-tight opacity-90 flex items-center gap-1 truncate">
-            <MapPin className="h-2.5 w-2.5 shrink-0" />
-            <span className="truncate">{schedule.job_sites.name}</span>
-          </div>
-          {schedule.notes && (
-            <div className="text-[10px] leading-tight opacity-90 flex items-center gap-1">
-              <FileText className="h-2.5 w-2.5" /> Notes
+        {callOff ? (
+          <button
+            className="w-full text-left rounded-md px-2 py-1.5 border-2 border-dashed border-destructive bg-destructive/10 text-destructive hover:bg-destructive/15 transition"
+            title={callOff.reason || 'Called off'}
+          >
+            <div className="text-[11px] font-semibold leading-tight flex items-center gap-1">
+              <UserX className="h-2.5 w-2.5 shrink-0" /> OPEN SHIFT
             </div>
-          )}
-        </button>
+            <div className="text-[10px] leading-tight line-through opacity-80">
+              {shortTime(schedule.start_time)}–{shortTime(schedule.end_time)}
+            </div>
+            <div className="text-[10px] leading-tight opacity-90 truncate">
+              Call off • {schedule.job_sites.name}
+            </div>
+          </button>
+        ) : (
+          <button
+            className={`w-full text-left rounded-md px-2 py-1.5 text-white shadow-sm hover:brightness-110 transition ${colors}`}
+            title={schedule.notes || ''}
+          >
+            <div className="text-[11px] font-semibold leading-tight">
+              {shortTime(schedule.start_time)}–{shortTime(schedule.end_time)}
+            </div>
+            <div className="text-[10px] leading-tight opacity-90 flex items-center gap-1 truncate">
+              <MapPin className="h-2.5 w-2.5 shrink-0" />
+              <span className="truncate">{schedule.job_sites.name}</span>
+            </div>
+            {schedule.notes && (
+              <div className="text-[10px] leading-tight opacity-90 flex items-center gap-1">
+                <FileText className="h-2.5 w-2.5" /> Notes
+              </div>
+            )}
+          </button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
+        {canManage && (
+          callOff ? (
+            <DropdownMenuItem onClick={() => onUndoCallOff(callOff)}>
+              <Undo2 className="h-4 w-4 mr-2" /> Undo call off
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={onCallOff} className="text-destructive focus:text-destructive">
+              <UserX className="h-4 w-4 mr-2" /> Record call off ({POINTS.call_off} pts)
+            </DropdownMenuItem>
+          )
+        )}
         <DropdownMenuItem onClick={() => onEdit(schedule)}>
           <Edit2 className="h-4 w-4 mr-2" /> Edit shift
         </DropdownMenuItem>

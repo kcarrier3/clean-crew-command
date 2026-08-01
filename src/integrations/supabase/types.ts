@@ -148,14 +148,7 @@ export type Database = {
             foreignKeyName: "attendance_points_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "attendance_points_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_directory"
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
@@ -3800,14 +3793,7 @@ export type Database = {
             foreignKeyName: "shift_call_offs_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_call_offs_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_directory"
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
