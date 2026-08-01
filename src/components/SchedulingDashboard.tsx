@@ -378,6 +378,7 @@ const SchedulingDashboard = () => {
                   <Label htmlFor="startTime">Start Time</Label>
                   <Input
                     type="time"
+                    step="900"
                     value={formData.start_time}
                     onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
                     required
@@ -388,6 +389,7 @@ const SchedulingDashboard = () => {
                   <Label htmlFor="endTime">End Time</Label>
                   <Input
                     type="time"
+                    step="900"
                     value={formData.end_time}
                     onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
                     required
