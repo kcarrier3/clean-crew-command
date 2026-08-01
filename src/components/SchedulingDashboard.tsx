@@ -70,6 +70,7 @@ const SchedulingDashboard = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [sortBy, setSortBy] = useState<'alphabetical' | 'department'>('alphabetical');
+  const [dateLocked, setDateLocked] = useState(false);
   const isPhone = useIsMobile();
   const [formData, setFormData] = useState<ScheduleFormData>({
     employee_id: '',
@@ -209,6 +210,7 @@ const SchedulingDashboard = () => {
 
   const handleEdit = (schedule: Schedule) => {
     setEditingSchedule(schedule);
+    setDateLocked(false);
     setFormData({
       employee_id: schedule.employee_id,
       job_site_id: schedule.job_site_id,
@@ -251,14 +253,19 @@ const SchedulingDashboard = () => {
   const handleAddShift = (employeeId: string, isoDate: string) => {
     const d = new Date(`${isoDate}T00:00:00`);
     const dayNumber = ((d.getDay() + 6) % 7) + 1; // Mon=1..Sun=7
+    // Anchor to the Monday of the selected week so any selected weekday applies that same week
+    const weekStart = new Date(d);
+    weekStart.setDate(d.getDate() - (dayNumber - 1));
+    const weekStartIso = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
     setEditingSchedule(null);
+    setDateLocked(true);
     setFormData({
       employee_id: employeeId,
       job_site_id: '',
       start_time: '',
       end_time: '',
       days_of_week: [dayNumber],
-      start_date: isoDate,
+      start_date: weekStartIso,
       end_date: '',
       notes: '',
       week_interval: 1
@@ -267,6 +274,7 @@ const SchedulingDashboard = () => {
   };
 
   const resetForm = () => {
+    setDateLocked(false);
     setFormData({
       employee_id: '',
       job_site_id: '',
@@ -405,26 +413,42 @@ const SchedulingDashboard = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                    required
-                  />
+              {dateLocked ? (
+                <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Week of </span>
+                  <span className="font-medium">
+                    {formData.start_date
+                      ? new Date(`${formData.start_date}T00:00:00`).toLocaleDateString(undefined, {
+                          weekday: 'long', month: 'short', day: 'numeric', year: 'numeric',
+                        })
+                      : ''}
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Select additional days above to apply this shift to those days as well.
+                  </p>
                 </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="startDate">Start Date</Label>
+                    <Input
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <Label htmlFor="endDate">End Date (Optional)</Label>
-                  <Input
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
-                  />
+                  <div>
+                    <Label htmlFor="endDate">End Date (Optional)</Label>
+                    <Input
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <Label>Repeats</Label>
