@@ -17,6 +17,7 @@ import {
   MapPin,
   UserX,
   Undo2,
+  Plus,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -69,9 +70,10 @@ interface WeeklyScheduleViewProps {
   sortBy: 'alphabetical' | 'job_title';
   onEdit: (schedule: Schedule) => void;
   onDelete: (scheduleId: string) => void;
+  onAddShift?: (employeeId: string, isoDate: string) => void;
 }
 
-const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklyScheduleViewProps) => {
+const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete, onAddShift }: WeeklyScheduleViewProps) => {
   // Week anchor = Monday of the currently viewed week
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeekMon(new Date()));
   const [rateByUserId, setRateByUserId] = useState<Record<string, number>>({});
@@ -307,7 +309,7 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
             {weekDays.map((d) => (
               <div
                 key={d.toISOString()}
-                className="px-3 py-3 text-center border-l"
+                className={`px-3 py-3 text-center border-l ${isToday(d) ? 'bg-primary/5' : ''}`}
               >
                 <div
                   className={`inline-flex items-center justify-center px-3 py-0.5 rounded-full text-sm font-medium ${
@@ -340,10 +342,10 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
             return (
               <div
                 key={emp.id}
-                className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b hover:bg-muted/20 transition"
+                className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b transition"
               >
                 {/* Person column */}
-                <div className="px-3 py-2 flex items-center gap-2 border-r bg-background">
+                <div className="px-3 py-2 flex items-center gap-2 border-r bg-background sticky left-0 z-10">
                   <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold shrink-0">
                     {initials(emp.first_name, emp.last_name)}
                   </div>
@@ -367,7 +369,10 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
                   return (
                     <div
                       key={d.toISOString()}
-                      className="border-l p-1 min-h-[70px] space-y-1"
+                      className={`group/cell relative border-l p-1 min-h-[76px] space-y-1 transition-colors hover:bg-muted/40 ${
+                        isToday(d) ? 'bg-primary/[0.03]' : ''
+                      }`}
+                      onDoubleClick={() => canManage && onAddShift?.(emp.id, iso)}
                     >
                       {shifts.map((s) => (
                         <ShiftBlock
@@ -381,6 +386,27 @@ const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklySched
                           onUndoCallOff={undoCallOff}
                         />
                       ))}
+                      {canManage && onAddShift && (
+                        shifts.length === 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => onAddShift(emp.id, iso)}
+                            aria-label={`Add shift for ${emp.first_name} ${emp.last_name}`}
+                            className="absolute inset-1 flex items-center justify-center rounded-md border border-dashed border-transparent text-muted-foreground opacity-0 group-hover/cell:opacity-100 group-hover/cell:border-primary/40 group-hover/cell:text-primary focus:opacity-100 transition"
+                          >
+                            <Plus className="h-5 w-5" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => onAddShift(emp.id, iso)}
+                            aria-label={`Add another shift for ${emp.first_name} ${emp.last_name}`}
+                            className="w-full flex items-center justify-center gap-1 rounded-md border border-dashed border-primary/40 py-1 text-[11px] text-primary opacity-0 group-hover/cell:opacity-100 focus:opacity-100 transition"
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Add
+                          </button>
+                        )
+                      )}
                     </div>
                   );
                 })}
