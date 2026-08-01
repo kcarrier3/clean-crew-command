@@ -426,7 +426,10 @@ const Index = () => {
 
             {!isManager() && (
               <TabsContent value="timeoff" className="mt-6">
-                <TimeOffRequests isManager={false} currentEmployeeId={profile?.id} />
+                <div className="space-y-6">
+                  <PtoBalanceCard employeeId={profile?.id} />
+                  <TimeOffRequests isManager={false} currentEmployeeId={profile?.id} />
+                </div>
               </TabsContent>
             )}
 

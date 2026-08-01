@@ -21,6 +21,7 @@ import OfficeLocationCard from '@/components/OfficeLocationCard';
 import { RoleManagement } from '@/components/RoleManagement';
 import DepartmentManagement from '@/components/DepartmentManagement';
 import DirectoryAccessRules from '@/components/DirectoryAccessRules';
+import TimeOffPolicySettings from '@/components/TimeOffPolicySettings';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -80,6 +81,7 @@ export default function Settings() {
             <TabsTrigger value="account">Account</TabsTrigger>
             {isAdminLevel && <TabsTrigger value="company">Company</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="roles">Roles</TabsTrigger>}
+            {isAdminLevel && <TabsTrigger value="timeoff">Time off</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="directory">Directory</TabsTrigger>}
           </TabsList>
 
@@ -142,6 +144,12 @@ export default function Settings() {
           {isAdminLevel && (
             <TabsContent value="roles" className="mt-6">
               <RoleManagement />
+            </TabsContent>
+          )}
+
+          {isAdminLevel && (
+            <TabsContent value="timeoff" className="mt-6">
+              <TimeOffPolicySettings />
             </TabsContent>
           )}
 
