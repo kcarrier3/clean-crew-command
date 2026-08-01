@@ -240,6 +240,48 @@ const SchedulingDashboard = () => {
     }
   };
 
+  const handleAddShift = (employeeId: string, isoDate: string) => {
+    const d = new Date(`${isoDate}T00:00:00`);
+    const dayNumber = ((d.getDay() + 6) % 7) + 1; // Mon=1..Sun=7
+    setEditingSchedule(null);
+    setFormData({
+      employee_id: employeeId,
+      job_site_id: '',
+      start_time: '',
+      end_time: '',
+      days_of_week: [dayNumber],
+      start_date: isoDate,
+      end_date: '',
+      notes: ''
+    });
+    setIsDialogOpen(true);
+  };
+
+  const legacyHandleDelete = async (scheduleId: string) => {
+    try {
+      const { error } = await supabase
+        .from('employee_schedules')
+        .update({ active: false })
+        .eq('id', scheduleId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Schedule deleted successfully'
+      });
+      
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete schedule',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       employee_id: '',
