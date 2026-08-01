@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import TimeClock from './TimeClock';
 import TimeOffRequests from './TimeOffRequests';
+import PtoBalanceCard from './PtoBalanceCard';
 
 interface Employee {
   id: string;

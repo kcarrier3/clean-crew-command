@@ -31,6 +31,7 @@ import { OnboardingCenter } from '@/components/OnboardingCenter';
 import { OnboardingManager } from '@/components/OnboardingManager';
 import { DocumentsAdmin } from '@/components/documents/DocumentsAdmin';
 import TimeOffRequests from '@/components/TimeOffRequests';
+import PtoBalanceCard from '@/components/PtoBalanceCard';
 import CRMDashboard from '@/components/crm/CRMDashboard';
 import { useToast } from '@/hooks/use-toast';
 import { useIsNativeApp } from '@/hooks/useIsNativeApp';
