@@ -98,7 +98,7 @@ const SchedulingDashboard = () => {
         .from('employee_schedules')
         .select(`
           *,
-          employees:employee_id(id, employee_id, first_name, last_name, job_title, user_id),
+          employees:employee_id(id, employee_id, first_name, last_name, job_title),
           job_sites:job_site_id(id, name, address, client_name)
         `)
         .eq('active', true)
@@ -108,7 +108,7 @@ const SchedulingDashboard = () => {
 
       // Fetch employees
       const { data: employeesData, error: employeesError } = await supabase
-        .from('employees')
+        .from('profiles')
         .select('*')
         .eq('active', true)
         .order('first_name');

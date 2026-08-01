@@ -65,7 +65,7 @@ export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
 
   const fetchEmployees = async () => {
     const { data, error } = await supabase
-      .from('employees')
+      .from('profiles')
       .select('id, first_name, last_name, employee_id')
       .eq('active', true)
       .order('first_name');
