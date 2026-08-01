@@ -41,6 +41,7 @@ import { JOB_TITLES, getJobTitleColor, JOB_TITLE_PERMISSIONS, type JobTitle } fr
 const ALL_PERMISSIONS: { key: string; label: string; category: string }[] = [
   { key: 'view_schedules', label: 'View Schedules', category: 'Scheduling' },
   { key: 'edit_schedules', label: 'Edit Schedules', category: 'Scheduling' },
+  { key: 'publish_schedules', label: 'Publish Schedules', category: 'Scheduling' },
   { key: 'view_time_tracking', label: 'View Time Tracking', category: 'Time' },
   { key: 'edit_time_tracking', label: 'Edit Time Tracking', category: 'Time' },
   { key: 'view_work_orders', label: 'View Work Orders', category: 'Work Orders' },
