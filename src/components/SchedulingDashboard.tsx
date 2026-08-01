@@ -561,6 +561,7 @@ const SchedulingDashboard = () => {
             sortBy={sortBy}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onAddShift={handleAddShift}
           />
         )}
       </TabsContent>
