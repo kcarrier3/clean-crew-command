@@ -535,6 +535,11 @@ function ShiftBlock({
               <MapPin className="h-2.5 w-2.5 shrink-0" />
               <span className="truncate">{schedule.job_sites.name}</span>
             </div>
+            {Number(schedule.week_interval ?? 1) > 1 && (
+              <div className="text-[10px] leading-tight opacity-90">
+                Every {schedule.week_interval} wks
+              </div>
+            )}
             {schedule.notes && (
               <div className="text-[10px] leading-tight opacity-90 flex items-center gap-1">
                 <FileText className="h-2.5 w-2.5" /> Notes
@@ -591,14 +596,6 @@ function isDueThisWeek(
   const thisWeek = startOfWeekMon(date);
   const weeks = Math.round((thisWeek.getTime() - anchorWeek.getTime()) / (7 * 24 * 60 * 60 * 1000));
   return ((weeks % interval) + interval) % interval === 0;
-}
-function unusedStartOfWeekMon(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  const day = x.getDay(); // 0=Sun..6=Sat
-  const diff = (day + 6) % 7; // days since Monday
-  x.setDate(x.getDate() - diff);
-  return x;
 }
 function addDays(d: Date, n: number) {
   const x = new Date(d);
