@@ -393,17 +393,16 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     // Manager overrides bypass geofencing
     const isManagerOverride = forManager && isManager();
 
-    // Enforce early clock-in limit against today's scheduled start (skip for manager override).
-    if (!isManagerOverride && scheduledJobSite && scheduledJobSite.job_site_id === jobSiteId) {
-      const [h, m] = scheduledJobSite.start_time.split(':').map(Number);
-      const shiftStart = new Date();
-      shiftStart.setHours(h || 0, m || 0, 0, 0);
-      const earliestAllowed = new Date(shiftStart.getTime() - earlyClockinMinutes * 60 * 1000);
+    // Enforce early clock-in limit against the matched shift (skip for manager override).
+    if (!isManagerOverride && shiftMatch && shiftMatch.schedule.job_site_id === jobSiteId) {
+      const earliestAllowed = new Date(
+        shiftMatch.scheduledStart.getTime() - earlyClockinMinutes * 60 * 1000,
+      );
       if (new Date() < earliestAllowed) {
         const mins = Math.ceil((earliestAllowed.getTime() - Date.now()) / 60000);
         toast({
           title: 'Too Early to Clock In',
-          description: `Your shift starts at ${scheduledJobSite.start_time}. You can clock in up to ${earlyClockinMinutes} minutes early (in ${mins} min).`,
+          description: `Your shift starts at ${shiftMatch.scheduledStart.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. You can clock in up to ${earlyClockinMinutes} minutes early (in ${mins} min).`,
           variant: 'destructive',
         });
         return;
@@ -443,6 +442,11 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
         }
       }
 
+      // Attach the matched scheduled shift so an early/late punch still counts
+      // toward that shift instead of looking like a no-show.
+      const matchedForThisSite =
+        shiftMatch && shiftMatch.schedule.job_site_id === jobSiteId ? shiftMatch : null;
+
       const { data, error } = await supabase
         .from('time_entries')
         .insert({
@@ -453,6 +457,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           location_lng: location?.lng ?? null,
           manager_override: isManagerOverride,
           override_by: isManagerOverride ? profile?.id : null,
+          schedule_id: matchedForThisSite?.schedule.id ?? null,
+          scheduled_start: matchedForThisSite?.scheduledStart.toISOString() ?? null,
+          scheduled_end: matchedForThisSite?.scheduledEnd.toISOString() ?? null,
         })
         .select()
         .single();
