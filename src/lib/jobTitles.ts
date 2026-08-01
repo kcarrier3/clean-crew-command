@@ -37,9 +37,12 @@ export const ALL_PERMISSIONS = [
   'view_team_directory',
   'view_calendar',
   'use_messaging',
+  'publish_schedules',
 ] as const;
 
-const without = (...omit: string[]) => ALL_PERMISSIONS.filter(p => !omit.includes(p));
+// `publish_schedules` is opt-in only — it is never granted by the `without` helper.
+const without = (...omit: string[]) =>
+  ALL_PERMISSIONS.filter(p => p !== 'publish_schedules' && !omit.includes(p));
 
 // Permission mapping for each job title
 export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {

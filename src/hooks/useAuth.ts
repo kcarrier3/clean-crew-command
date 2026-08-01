@@ -28,7 +28,7 @@ export interface UserPermission {
               'view_work_orders' | 'create_work_orders' | 'edit_work_orders' | 'view_quality_control' |
               'edit_quality_control' | 'view_worker_status' | 'manage_employees' | 'view_notifications' |
               'admin_settings' | 'view_crm' | 'view_supplies' | 'use_estimating' |
-              'view_team_directory' | 'view_calendar' | 'use_messaging';
+              'view_team_directory' | 'view_calendar' | 'use_messaging' | 'publish_schedules';
 }
 
 export const useAuth = () => {
@@ -224,6 +224,7 @@ export const useAuth = () => {
 
   const canViewSchedules = () => hasPermission('view_schedules');
   const canEditSchedules = () => hasPermission('edit_schedules');
+  const canPublishSchedules = () => hasRole('admin') || hasPermission('publish_schedules');
   const canViewTimeTracking = () => hasPermission('view_time_tracking');
   const canEditTimeTracking = () => hasPermission('edit_time_tracking');
   const canViewWorkOrders = () => hasPermission('view_work_orders');
@@ -257,6 +258,7 @@ export const useAuth = () => {
     canApproveEstimate,
     canViewSchedules,
     canEditSchedules,
+    canPublishSchedules,
     canViewTimeTracking,
     canEditTimeTracking,
     canViewWorkOrders,
