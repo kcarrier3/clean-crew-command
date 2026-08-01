@@ -312,6 +312,32 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
                   
                   <div>
                     <Label htmlFor="reason">Reason (Optional)</Label>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border p-3">
+                    <div>
+                      <Label className="text-sm">Use paid vacation (PTO)</Label>
+                      <p className="text-xs text-muted-foreground">Deducts from the accrued PTO balance.</p>
+                    </div>
+                    <Switch
+                      checked={formData.use_pto}
+                      onCheckedChange={(v) => setFormData({ ...formData, use_pto: v })}
+                    />
+                  </div>
+                  {formData.use_pto && (
+                    <div>
+                      <Label htmlFor="pto_hours">PTO hours to use</Label>
+                      <Input
+                        id="pto_hours"
+                        type="number"
+                        min="0"
+                        step="0.25"
+                        value={formData.pto_hours}
+                        onChange={(e) => setFormData({ ...formData, pto_hours: e.target.value })}
+                        placeholder="e.g. 40"
+                      />
+                    </div>
+                  )}
+                  <div>
                     <Textarea
                       id="reason"
                       value={formData.reason}
