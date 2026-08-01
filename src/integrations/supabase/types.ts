@@ -4231,6 +4231,7 @@ export type Database = {
           clock_out: string | null
           created_at: string
           employee_id: string
+          exceeded_scheduled: boolean
           id: string
           job_site_id: string | null
           location_lat: number | null
@@ -4238,6 +4239,9 @@ export type Database = {
           manager_override: boolean
           notes: string | null
           override_by: string | null
+          schedule_id: string | null
+          scheduled_end: string | null
+          scheduled_start: string | null
           updated_at: string
         }
         Insert: {
@@ -4246,6 +4250,7 @@ export type Database = {
           clock_out?: string | null
           created_at?: string
           employee_id: string
+          exceeded_scheduled?: boolean
           id?: string
           job_site_id?: string | null
           location_lat?: number | null
@@ -4253,6 +4258,9 @@ export type Database = {
           manager_override?: boolean
           notes?: string | null
           override_by?: string | null
+          schedule_id?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           updated_at?: string
         }
         Update: {
@@ -4261,6 +4269,7 @@ export type Database = {
           clock_out?: string | null
           created_at?: string
           employee_id?: string
+          exceeded_scheduled?: boolean
           id?: string
           job_site_id?: string | null
           location_lat?: number | null
@@ -4268,6 +4277,9 @@ export type Database = {
           manager_override?: boolean
           notes?: string | null
           override_by?: string | null
+          schedule_id?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4297,6 +4309,13 @@ export type Database = {
             columns: ["override_by"]
             isOneToOne: false
             referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "employee_schedules"
             referencedColumns: ["id"]
           },
         ]
