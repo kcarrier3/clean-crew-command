@@ -513,6 +513,9 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
           clock_out: new Date().toISOString(),
           location_lat: location?.lat ?? null,
           location_lng: location?.lng ?? null,
+          ...(entry?.scheduled_end
+            ? { exceeded_scheduled: Date.now() > new Date(entry.scheduled_end).getTime() }
+            : {}),
           ...(isManagerOverride && !entry?.manager_override ? {
             manager_override: true,
             override_by: profile?.id
@@ -551,6 +554,46 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
     
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
+
+  /** Minutes remaining on the matched scheduled shift (negative = over). */
+  const minutesRemaining = (entry: TimeEntry): number | null => {
+    if (!entry.scheduled_end) return null;
+    return Math.round((new Date(entry.scheduled_end).getTime() - currentTime.getTime()) / 60000);
+  };
+
+  // Warn the worker as their scheduled end approaches, and flag going over.
+  const [notifiedEnding, setNotifiedEnding] = useState<Record<string, 'soon' | 'over'>>({});
+  useEffect(() => {
+    activeEntries.forEach((entry) => {
+      if (!profile || entry.employee_id !== profile.id) return;
+      const remaining = minutesRemaining(entry);
+      if (remaining === null) return;
+      const state = notifiedEnding[entry.id];
+
+      if (remaining < 0 && state !== 'over') {
+        setNotifiedEnding((prev) => ({ ...prev, [entry.id]: 'over' }));
+        toast({
+          title: 'Over Scheduled Hours',
+          description: `You are past your scheduled end time at ${entry.job_sites.name}. Please clock out or let your manager know.`,
+          variant: 'destructive',
+        });
+        if (!entry.exceeded_scheduled) {
+          supabase
+            .from('time_entries')
+            .update({ exceeded_scheduled: true })
+            .eq('id', entry.id)
+            .then(() => {});
+        }
+      } else if (remaining >= 0 && remaining <= END_OF_SHIFT_WARNING_MINUTES && !state) {
+        setNotifiedEnding((prev) => ({ ...prev, [entry.id]: 'soon' }));
+        toast({
+          title: 'Shift Ending Soon',
+          description: `Your scheduled shift ends in ${remaining} minute${remaining === 1 ? '' : 's'}.`,
+        });
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTime, activeEntries, profile?.id]);
 
   const currentEmployee = forManager && selectedEmployee 
     ? employees.find(emp => emp.id === selectedEmployee) 
