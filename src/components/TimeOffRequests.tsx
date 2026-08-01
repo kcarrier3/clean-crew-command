@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Calendar, Clock, Plus, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { timeOffCutoffFor, isPastTimeOffCutoff, formatCutoff } from '@/lib/schedulePolicy';
 
 interface Employee {
   id: string;
@@ -49,6 +50,13 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
     reason: ''
   });
   const { toast } = useToast();
+
+  const cutoffInfo = formData.start_date
+    ? {
+        cutoff: timeOffCutoffFor(formData.start_date),
+        late: isPastTimeOffCutoff(formData.start_date),
+      }
+    : null;
 
   useEffect(() => {
     fetchRequests();
@@ -111,6 +119,7 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
     e.preventDefault();
     
     try {
+      const late = formData.start_date ? isPastTimeOffCutoff(formData.start_date) : false;
       const { error } = await supabase
         .from('time_off_requests')
         .insert([formData]);
@@ -118,8 +127,11 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Time off request submitted successfully",
+        title: late ? 'Request auto-declined' : 'Success',
+        description: late
+          ? 'Submitted after the Wednesday 12:00 PM deadline for that work week, so it was automatically declined. Talk to your manager if you need an exception.'
+          : 'Time off request submitted successfully',
+        variant: late ? 'destructive' : undefined,
       });
 
       setIsDialogOpen(false);
@@ -255,6 +267,20 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
                       required
                     />
                   </div>
+
+                  {cutoffInfo && (
+                    <div
+                      className={`rounded-md border p-3 text-sm ${
+                        cutoffInfo.late
+                          ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                          : 'border-border bg-muted/40 text-muted-foreground'
+                      }`}
+                    >
+                      {cutoffInfo.late
+                        ? `The deadline for this work week was ${formatCutoff(cutoffInfo.cutoff)}. This request will be automatically declined.`
+                        : `Deadline for this work week: ${formatCutoff(cutoffInfo.cutoff)}.`}
+                    </div>
+                  )}
                   
                   <div>
                     <Label htmlFor="reason">Reason (Optional)</Label>

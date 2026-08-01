@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
+import { workWeekStart, schedulePostingDeadline, formatDeadline } from '@/lib/schedulePolicy';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -98,6 +99,17 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
   }, [weekStart]);
 
   const weekEnd = weekDays[6];
+
+  const workWeekSunday = useMemo(() => workWeekStart(weekDays[0]), [weekDays]);
+  const janitorialDeadline = useMemo(
+    () => schedulePostingDeadline(workWeekSunday, 'janitorial'),
+    [workWeekSunday],
+  );
+  const projectDeadline = useMemo(
+    () => schedulePostingDeadline(workWeekSunday, 'project'),
+    [workWeekSunday],
+  );
+  const postingOverdue = new Date() > janitorialDeadline;
 
   const loadCallOffs = async () => {
     const { data } = await (supabase as any)
@@ -370,6 +382,14 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
         </div>
 
         <div className="flex items-center gap-2">
+          <span className="hidden md:inline text-xs text-muted-foreground">
+            Post by {formatDeadline(janitorialDeadline)} (janitorial) · {formatDeadline(projectDeadline)} (project)
+          </span>
+          {!weekPublished && postingOverdue && (
+            <span className="inline-flex items-center rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">
+              Posting overdue
+            </span>
+          )}
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
               weekPublished
