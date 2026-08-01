@@ -310,9 +310,6 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
                     </div>
                   )}
                   
-                  <div>
-                    <Label htmlFor="reason">Reason (Optional)</Label>
-                  </div>
                   <div className="flex items-center justify-between rounded-md border p-3">
                     <div>
                       <Label className="text-sm">Use paid vacation (PTO)</Label>
@@ -338,6 +335,7 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
                     </div>
                   )}
                   <div>
+                    <Label htmlFor="reason">Reason (Optional)</Label>
                     <Textarea
                       id="reason"
                       value={formData.reason}
