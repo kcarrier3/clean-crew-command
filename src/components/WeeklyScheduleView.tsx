@@ -578,6 +578,28 @@ function startOfWeekMon(d: Date) {
   x.setDate(x.getDate() - diff);
   return x;
 }
+/** Every-other-week / every-3rd-week support */
+function isDueThisWeek(
+  s: { week_interval?: number | null; recurrence_anchor_date?: string | null; start_date: string },
+  date: Date,
+) {
+  const interval = Number(s.week_interval ?? 1);
+  if (!interval || interval <= 1) return true;
+  const anchorIso = s.recurrence_anchor_date || s.start_date;
+  if (!anchorIso) return true;
+  const anchorWeek = startOfWeekMon(new Date(`${anchorIso}T00:00:00`));
+  const thisWeek = startOfWeekMon(date);
+  const weeks = Math.round((thisWeek.getTime() - anchorWeek.getTime()) / (7 * 24 * 60 * 60 * 1000));
+  return ((weeks % interval) + interval) % interval === 0;
+}
+function unusedStartOfWeekMon(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  const day = x.getDay(); // 0=Sun..6=Sat
+  const diff = (day + 6) % 7; // days since Monday
+  x.setDate(x.getDate() - diff);
+  return x;
+}
 function addDays(d: Date, n: number) {
   const x = new Date(d);
   x.setDate(x.getDate() + n);
