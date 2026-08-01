@@ -48,6 +48,7 @@ const MySchedule = () => {
   const { toast } = useToast();
 
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [weekPublished, setWeekPublished] = useState(true);
   const [timeOffRequests, setTimeOffRequests] = useState<TimeOffRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -61,6 +62,7 @@ const MySchedule = () => {
   useEffect(() => {
     if (profile?.id) {
       fetchSchedules();
+      fetchWeekStatus();
       fetchTimeOffRequests();
 
       // Real-time subscription for time off request status updates

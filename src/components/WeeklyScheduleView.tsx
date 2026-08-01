@@ -368,6 +368,29 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
             Week
           </div>
         </div>
+
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+              weekPublished
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                : 'bg-amber-100 text-amber-800 border border-amber-200'
+            }`}
+          >
+            {weekPublished ? <CheckCircle2 className="h-3.5 w-3.5" /> : <PencilRuler className="h-3.5 w-3.5" />}
+            {weekPublished ? 'Published' : 'Draft'}
+          </span>
+          {canPublish && (
+            <Button
+              size="sm"
+              variant={weekPublished ? 'outline' : 'default'}
+              disabled={publishing}
+              onClick={togglePublish}
+            >
+              {publishing ? 'Saving…' : weekPublished ? 'Unpublish' : 'Publish week'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Grid */}
