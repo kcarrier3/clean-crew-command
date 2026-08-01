@@ -2,8 +2,14 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Palmtree } from 'lucide-react';
+import { Palmtree, CalendarDays } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  isPtoManagerTitle,
+  resolveHolidaysForYear,
+  type PaidHolidayRow,
+  type ResolvedHoliday,
+} from '@/lib/paidHolidays';
 
 export interface PtoSummary {
   employee_id: string;
@@ -35,6 +41,8 @@ const fmtDate = (iso?: string | null) =>
 const PtoBalanceCard = ({ employeeId }: { employeeId?: string }) => {
   const [summary, setSummary] = useState<PtoSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [holidays, setHolidays] = useState<ResolvedHoliday[]>([]);
+  const [isManager, setIsManager] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +57,23 @@ const PtoBalanceCard = ({ employeeId }: { employeeId?: string }) => {
         setLoading(false);
       }
     });
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!employeeId) return;
+    (async () => {
+      const [{ data: profile }, { data: rows }] = await Promise.all([
+        supabase.from('profiles').select('job_title').eq('id', employeeId).maybeSingle(),
+        supabase.from('paid_holidays').select('id, name, rule, active, paid_only_if_weekday'),
+      ]);
+      if (cancelled) return;
+      setIsManager(isPtoManagerTitle(profile?.job_title));
+      setHolidays(resolveHolidaysForYear((rows as PaidHolidayRow[]) || [], new Date().getFullYear()));
+    })();
     return () => {
       cancelled = true;
     };
@@ -118,6 +143,33 @@ const PtoBalanceCard = ({ employeeId }: { employeeId?: string }) => {
         <p className="text-xs text-muted-foreground">
           Based on an average of {summary.avg_weekly_hours.toFixed(1)} hours worked per week over the last 52 weeks.
         </p>
+
+        {isManager && holidays.length > 0 && (
+          <div className="rounded-lg border p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm font-medium">Paid holidays · {new Date().getFullYear()}</p>
+            </div>
+            <ul className="space-y-1.5">
+              {holidays.map((h) => (
+                <li key={h.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className={h.paid ? '' : 'text-muted-foreground line-through'}>{h.name}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-muted-foreground">
+                      {h.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </span>
+                    <Badge variant={h.paid ? 'default' : 'secondary'} className="text-xs">
+                      {h.paid ? 'Paid' : 'Not paid'}
+                    </Badge>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Holidays are paid only when they fall Monday through Friday.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
