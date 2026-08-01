@@ -2146,9 +2146,11 @@ export type Database = {
           id: string
           job_site_id: string
           notes: string | null
+          recurrence_anchor_date: string | null
           start_date: string
           start_time: string | null
           updated_at: string
+          week_interval: number
         }
         Insert: {
           active?: boolean
@@ -2160,9 +2162,11 @@ export type Database = {
           id?: string
           job_site_id: string
           notes?: string | null
+          recurrence_anchor_date?: string | null
           start_date: string
           start_time?: string | null
           updated_at?: string
+          week_interval?: number
         }
         Update: {
           active?: boolean
@@ -2174,9 +2178,11 @@ export type Database = {
           id?: string
           job_site_id?: string
           notes?: string | null
+          recurrence_anchor_date?: string | null
           start_date?: string
           start_time?: string | null
           updated_at?: string
+          week_interval?: number
         }
         Relationships: [
           {
