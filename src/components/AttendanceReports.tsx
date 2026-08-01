@@ -69,23 +69,19 @@ const AttendanceReports = () => {
     try {
       const { start, end } = getDateRange();
       
-      // Fetch employee records used by the schedule, plus tracking prefs from their profile
-      const { data: employeeRows, error: employeesError } = await supabase
-        .from('employees')
-        .select('id, first_name, last_name, user_id')
+      // Team roster lives in profiles — attendance must match the same people
+      const { data: profileRows, error: employeesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, attendance_tracking_type')
         .eq('active', true);
 
       if (employeesError) throw employeesError;
 
-      const { data: profileRows } = await supabase
-        .from('profiles')
-        .select('id, attendance_tracking_type');
-      const trackingByUser = new Map<string, string>(
-        (profileRows || []).map((p: any) => [p.id, p.attendance_tracking_type || 'attendance_only']),
-      );
-      const employees = (employeeRows || []).map((e: any) => ({
-        ...e,
-        attendance_tracking_type: (e.user_id && trackingByUser.get(e.user_id)) || 'attendance_only',
+      const employees = (profileRows || []).map((p: any) => ({
+        id: p.id,
+        first_name: p.first_name,
+        last_name: p.last_name,
+        attendance_tracking_type: p.attendance_tracking_type || 'attendance_only',
       }));
 
       // Fetch schedules for the period
