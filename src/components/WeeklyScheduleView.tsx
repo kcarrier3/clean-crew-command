@@ -17,6 +17,7 @@ import {
   MapPin,
   UserX,
   Undo2,
+  Plus,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -69,9 +70,10 @@ interface WeeklyScheduleViewProps {
   sortBy: 'alphabetical' | 'job_title';
   onEdit: (schedule: Schedule) => void;
   onDelete: (scheduleId: string) => void;
+  onAddShift?: (employeeId: string, isoDate: string) => void;
 }
 
-const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete }: WeeklyScheduleViewProps) => {
+const WeeklyScheduleView = ({ schedules, sortBy, onEdit, onDelete, onAddShift }: WeeklyScheduleViewProps) => {
   // Week anchor = Monday of the currently viewed week
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeekMon(new Date()));
   const [rateByUserId, setRateByUserId] = useState<Record<string, number>>({});
