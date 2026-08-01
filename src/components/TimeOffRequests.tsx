@@ -400,6 +400,16 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
                     <p className="text-sm text-muted-foreground">{request.reason}</p>
                   </div>
                 )}
+
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {request.use_pto && (
+                    <Badge variant="outline">PTO {Number(request.pto_hours || 0).toFixed(2)}h</Badge>
+                  )}
+                  {request.auto_approved && <Badge variant="outline">Auto-approved</Badge>}
+                  {request.status === 'pending' && (
+                    <Badge variant="outline">Needs manager override</Badge>
+                  )}
+                </div>
                 
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
                   <Clock className="h-3 w-3" />
