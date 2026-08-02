@@ -18,6 +18,7 @@ import QualityControlDashboard from './QualityControlDashboard';
 import JobBudgetingWidget from './JobBudgetingWidget';
 import { AccountDetail } from './AccountDetail';
 import OfficeLocationCard from './OfficeLocationCard';
+import { DAY_LABELS, monthlyHoursFromNightly, serviceDaysInMonth, describeFrequency } from '@/lib/serviceFrequency';
 
 interface JobSite {
   id: string;
