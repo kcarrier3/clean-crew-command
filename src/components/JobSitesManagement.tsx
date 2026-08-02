@@ -38,6 +38,8 @@ interface JobSite {
   remaining_hours: number | null;
   current_month_used_hours: number | null;
   current_month_year: string | null;
+  nightly_hours?: number | null;
+  service_days?: number[] | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -57,6 +59,8 @@ interface FormData {
   safety_requirements: string;
   is_recurring_monthly: boolean;
   budgeted_hours: string;
+  nightly_hours: string;
+  service_days: number[];
   active: boolean;
 }
 
@@ -87,6 +91,8 @@ export default function JobSitesManagement() {
     safety_requirements: '',
     is_recurring_monthly: false,
     budgeted_hours: '',
+    nightly_hours: '',
+    service_days: [],
     active: true
   });
 
