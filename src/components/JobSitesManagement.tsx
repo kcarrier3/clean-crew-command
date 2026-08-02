@@ -594,6 +594,15 @@ export default function JobSitesManagement() {
                     </div>
                   </div>
 
+                  {!isProjectForm && (
+                    <NightlyAllowanceFields
+                      idPrefix=""
+                      nightlyHours={formData.nightly_hours}
+                      serviceDays={formData.service_days}
+                      onChange={(patch) => setFormData({ ...formData, ...patch })}
+                    />
+                  )}
+
                   <p className="text-xs text-muted-foreground">
                     {isProjectForm
                       ? 'Project (one-time): billed once with a fixed hour budget that only changes with a change order.'
@@ -767,6 +776,15 @@ export default function JobSitesManagement() {
                       </p>
                     </div>
                   </div>
+
+                  {formData.is_recurring_monthly && (
+                    <NightlyAllowanceFields
+                      idPrefix="edit_"
+                      nightlyHours={formData.nightly_hours}
+                      serviceDays={formData.service_days}
+                      onChange={(patch) => setFormData({ ...formData, ...patch })}
+                    />
+                  )}
 
                   <div>
                     <div className="flex items-center space-x-2">
