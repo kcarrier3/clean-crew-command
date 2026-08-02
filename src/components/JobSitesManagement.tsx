@@ -65,8 +65,76 @@ interface FormData {
   active: boolean;
 }
 
+function NightlyAllowanceFields({
+  idPrefix,
+  nightlyHours,
+  serviceDays,
+  onChange,
+}: {
+  idPrefix: string;
+  nightlyHours: string;
+  serviceDays: number[];
+  onChange: (patch: { nightly_hours?: string; service_days?: number[] }) => void;
+}) {
+  const nightly = parseFloat(nightlyHours);
+  const nights = serviceDaysInMonth(serviceDays);
+  const monthly = monthlyHoursFromNightly(isNaN(nightly) ? null : nightly, serviceDays);
+
+  const toggleDay = (day: number) => {
+    onChange({
+      service_days: serviceDays.includes(day)
+        ? serviceDays.filter((d) => d !== day)
+        : [...serviceDays, day].sort((a, b) => a - b),
+    });
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border p-3">
+      <div>
+        <Label htmlFor={`${idPrefix}nightly_hours`}>Nightly Hour Allowance</Label>
+        <Input
+          id={`${idPrefix}nightly_hours`}
+          type="number"
+          min="0"
+          step="0.25"
+          value={nightlyHours}
+          onChange={(e) => onChange({ nightly_hours: e.target.value })}
+          placeholder="Hours allowed per night of service..."
+        />
+      </div>
+
+      <div>
+        <Label>Service Frequency</Label>
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {DAY_LABELS.map((label, day) => (
+            <Button
+              key={day}
+              type="button"
+              size="sm"
+              variant={serviceDays.includes(day) ? 'default' : 'outline'}
+              className="h-8 px-3"
+              onClick={() => toggleDay(day)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1.5">{describeFrequency(serviceDays)}</p>
+      </div>
+
+      {monthly !== null && (
+        <div className="rounded-md bg-muted p-2 text-sm">
+          <strong>{monthly} hrs</strong> allowed this month
+          <span className="text-muted-foreground">
+            {' '}({nightly} hrs × {nights} service days). Recalculates each month.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function JobSitesManagement() {
-  // (see NightlyAllowanceFields below the main component)
   const { toast } = useToast();
   const { isManager } = useAuth();
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
