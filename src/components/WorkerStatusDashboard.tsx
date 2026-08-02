@@ -90,7 +90,7 @@ const WorkerStatusDashboard = () => {
         .select(`
           *,
           job_sites:job_site_id(id, name, address, client_name),
-          employees:profiles!time_entries_employee_id_fkey(id, employee_id, first_name, last_name)
+          employees:profiles!employee_schedules_employee_id_fkey(id, employee_id, first_name, last_name)
         `)
         .eq('active', true)
         .contains('days_of_week', [adjustedDay])
