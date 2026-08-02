@@ -253,6 +253,8 @@ export default function JobSitesManagement() {
       safety_requirements: jobSite.safety_requirements || '',
       is_recurring_monthly: jobSite.is_recurring_monthly || false,
       budgeted_hours: jobSite.budgeted_hours ? jobSite.budgeted_hours.toString() : '',
+      nightly_hours: jobSite.nightly_hours ? jobSite.nightly_hours.toString() : '',
+      service_days: jobSite.service_days || [],
       active: jobSite.active
     });
     setIsEditDialogOpen(true);
@@ -273,6 +275,8 @@ export default function JobSitesManagement() {
       safety_requirements: '',
       is_recurring_monthly: false,
       budgeted_hours: '',
+      nightly_hours: '',
+      service_days: [],
       active: true 
     });
     setEditingJobSite(null);
