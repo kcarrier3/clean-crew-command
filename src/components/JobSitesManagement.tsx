@@ -66,6 +66,7 @@ interface FormData {
 }
 
 export default function JobSitesManagement() {
+  // (see NightlyAllowanceFields below the main component)
   const { toast } = useToast();
   const { isManager } = useAuth();
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
