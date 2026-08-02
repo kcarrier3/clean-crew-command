@@ -230,7 +230,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
       .from('time_entries')
       .select(`
         *,
-        employees:employee_id(id, employee_id, first_name, last_name, require_geofencing, geofence_lat, geofence_lng, geofence_radius_meters),
+        employees:profiles!time_entries_employee_id_fkey(id, employee_id, first_name, last_name, require_geofencing, geofence_lat, geofence_lng, geofence_radius_meters),
         job_sites:job_site_id(id, name, address, client_name)
       `)
       .is('clock_out', null)

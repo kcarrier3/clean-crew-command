@@ -66,7 +66,7 @@ const ManagerDashboard = () => {
         .from('time_entries')
         .select(`
           *,
-          employees:employee_id(first_name, last_name, employee_id),
+          employees:profiles!time_entries_employee_id_fkey(first_name, last_name, employee_id),
           job_sites:job_site_id(name)
         `)
         .gte('clock_in', start.toISOString())
@@ -86,7 +86,7 @@ const ManagerDashboard = () => {
         .from('time_entries')
         .select(`
           *,
-          employees:employee_id(first_name, last_name, employee_id),
+          employees:profiles!time_entries_employee_id_fkey(first_name, last_name, employee_id),
           job_sites:job_site_id(name)
         `)
         .is('clock_out', null)
