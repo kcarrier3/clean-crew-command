@@ -221,6 +221,8 @@ export default function JobSitesManagement() {
           safety_requirements: formData.safety_requirements.trim() || null,
           is_recurring_monthly: formData.is_recurring_monthly,
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
+          nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
+          service_days: formData.service_days,
           active: formData.active
         });
 
@@ -277,6 +279,8 @@ export default function JobSitesManagement() {
           safety_requirements: formData.safety_requirements.trim() || null,
           is_recurring_monthly: formData.is_recurring_monthly,
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
+          nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
+          service_days: formData.service_days,
           active: formData.active
         })
         .eq('id', editingJobSite.id);
