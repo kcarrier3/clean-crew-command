@@ -18,6 +18,7 @@ import QualityControlDashboard from './QualityControlDashboard';
 import JobBudgetingWidget from './JobBudgetingWidget';
 import { AccountDetail } from './AccountDetail';
 import OfficeLocationCard from './OfficeLocationCard';
+import { DAY_LABELS, monthlyHoursFromNightly, serviceDaysInMonth, describeFrequency } from '@/lib/serviceFrequency';
 
 interface JobSite {
   id: string;
@@ -38,6 +39,8 @@ interface JobSite {
   remaining_hours: number | null;
   current_month_used_hours: number | null;
   current_month_year: string | null;
+  nightly_hours?: number | null;
+  service_days?: number[] | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -57,7 +60,78 @@ interface FormData {
   safety_requirements: string;
   is_recurring_monthly: boolean;
   budgeted_hours: string;
+  nightly_hours: string;
+  service_days: number[];
   active: boolean;
+}
+
+function NightlyAllowanceFields({
+  idPrefix,
+  nightlyHours,
+  serviceDays,
+  onChange,
+}: {
+  idPrefix: string;
+  nightlyHours: string;
+  serviceDays: number[];
+  onChange: (patch: { nightly_hours?: string; service_days?: number[] }) => void;
+}) {
+  const nightly = parseFloat(nightlyHours);
+  const nights = serviceDaysInMonth(serviceDays);
+  const monthly = monthlyHoursFromNightly(isNaN(nightly) ? null : nightly, serviceDays);
+
+  const toggleDay = (day: number) => {
+    onChange({
+      service_days: serviceDays.includes(day)
+        ? serviceDays.filter((d) => d !== day)
+        : [...serviceDays, day].sort((a, b) => a - b),
+    });
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border p-3">
+      <div>
+        <Label htmlFor={`${idPrefix}nightly_hours`}>Nightly Hour Allowance</Label>
+        <Input
+          id={`${idPrefix}nightly_hours`}
+          type="number"
+          min="0"
+          step="0.25"
+          value={nightlyHours}
+          onChange={(e) => onChange({ nightly_hours: e.target.value })}
+          placeholder="Hours allowed per night of service..."
+        />
+      </div>
+
+      <div>
+        <Label>Service Frequency</Label>
+        <div className="flex flex-wrap gap-1.5 mt-1.5">
+          {DAY_LABELS.map((label, day) => (
+            <Button
+              key={day}
+              type="button"
+              size="sm"
+              variant={serviceDays.includes(day) ? 'default' : 'outline'}
+              className="h-8 px-3"
+              onClick={() => toggleDay(day)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1.5">{describeFrequency(serviceDays)}</p>
+      </div>
+
+      {monthly !== null && (
+        <div className="rounded-md bg-muted p-2 text-sm">
+          <strong>{monthly} hrs</strong> allowed this month
+          <span className="text-muted-foreground">
+            {' '}({nightly} hrs × {nights} service days). Recalculates each month.
+          </span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function JobSitesManagement() {
@@ -87,6 +161,8 @@ export default function JobSitesManagement() {
     safety_requirements: '',
     is_recurring_monthly: false,
     budgeted_hours: '',
+    nightly_hours: '',
+    service_days: [],
     active: true
   });
 
@@ -145,6 +221,8 @@ export default function JobSitesManagement() {
           safety_requirements: formData.safety_requirements.trim() || null,
           is_recurring_monthly: formData.is_recurring_monthly,
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
+          nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
+          service_days: formData.service_days,
           active: formData.active
         });
 
@@ -201,6 +279,8 @@ export default function JobSitesManagement() {
           safety_requirements: formData.safety_requirements.trim() || null,
           is_recurring_monthly: formData.is_recurring_monthly,
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
+          nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
+          service_days: formData.service_days,
           active: formData.active
         })
         .eq('id', editingJobSite.id);
@@ -247,6 +327,8 @@ export default function JobSitesManagement() {
       safety_requirements: jobSite.safety_requirements || '',
       is_recurring_monthly: jobSite.is_recurring_monthly || false,
       budgeted_hours: jobSite.budgeted_hours ? jobSite.budgeted_hours.toString() : '',
+      nightly_hours: jobSite.nightly_hours ? jobSite.nightly_hours.toString() : '',
+      service_days: jobSite.service_days || [],
       active: jobSite.active
     });
     setIsEditDialogOpen(true);
@@ -267,6 +349,8 @@ export default function JobSitesManagement() {
       safety_requirements: '',
       is_recurring_monthly: false,
       budgeted_hours: '',
+      nightly_hours: '',
+      service_days: [],
       active: true 
     });
     setEditingJobSite(null);
@@ -510,6 +594,15 @@ export default function JobSitesManagement() {
                     </div>
                   </div>
 
+                  {!isProjectForm && (
+                    <NightlyAllowanceFields
+                      idPrefix=""
+                      nightlyHours={formData.nightly_hours}
+                      serviceDays={formData.service_days}
+                      onChange={(patch) => setFormData({ ...formData, ...patch })}
+                    />
+                  )}
+
                   <p className="text-xs text-muted-foreground">
                     {isProjectForm
                       ? 'Project (one-time): billed once with a fixed hour budget that only changes with a change order.'
@@ -683,6 +776,15 @@ export default function JobSitesManagement() {
                       </p>
                     </div>
                   </div>
+
+                  {formData.is_recurring_monthly && (
+                    <NightlyAllowanceFields
+                      idPrefix="edit_"
+                      nightlyHours={formData.nightly_hours}
+                      serviceDays={formData.service_days}
+                      onChange={(patch) => setFormData({ ...formData, ...patch })}
+                    />
+                  )}
 
                   <div>
                     <div className="flex items-center space-x-2">

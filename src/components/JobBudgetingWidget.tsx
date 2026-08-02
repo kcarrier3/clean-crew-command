@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Clock, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react';
+import { describeFrequency, serviceDaysInMonth } from '@/lib/serviceFrequency';
 
 interface JobBudgetingWidgetProps {
   jobSite: {
@@ -13,6 +14,8 @@ interface JobBudgetingWidgetProps {
     remaining_hours: number | null;
     current_month_used_hours: number | null;
     current_month_year: string | null;
+    nightly_hours?: number | null;
+    service_days?: number[] | null;
   };
   className?: string;
 }
@@ -110,6 +113,13 @@ const JobBudgetingWidget = ({ jobSite, className }: JobBudgetingWidgetProps) => 
             </div>
           </div>
         </div>
+
+        {jobSite.nightly_hours && jobSite.service_days && jobSite.service_days.length > 0 && (
+          <p className="text-xs text-muted-foreground border-t pt-2">
+            {jobSite.nightly_hours}h/night · {describeFrequency(jobSite.service_days)} ·{' '}
+            {serviceDaysInMonth(jobSite.service_days)} service days this month
+          </p>
+        )}
       </CardContent>
     </Card>
   );

@@ -90,7 +90,7 @@ const WorkerStatusDashboard = () => {
         .select(`
           *,
           job_sites:job_site_id(id, name, address, client_name),
-          employees:employee_id(id, employee_id, first_name, last_name)
+          employees:profiles!employee_schedules_employee_id_fkey(id, employee_id, first_name, last_name)
         `)
         .eq('active', true)
         .contains('days_of_week', [adjustedDay])
@@ -104,7 +104,7 @@ const WorkerStatusDashboard = () => {
         .from('time_entries')
         .select(`
           *,
-          employees:employee_id(id, employee_id, first_name, last_name),
+          employees:profiles!time_entries_employee_id_fkey(id, employee_id, first_name, last_name),
           job_sites:job_site_id(id, name, address, client_name)
         `)
         .is('clock_out', null)

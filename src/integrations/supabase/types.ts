@@ -3069,10 +3069,12 @@ export type Database = {
           is_recurring_monthly: boolean | null
           last_reset_date: string | null
           name: string
+          nightly_hours: number | null
           project_manager: string | null
           qr_code_token: string
           remaining_hours: number | null
           safety_requirements: string | null
+          service_days: number[]
           special_instructions: string | null
           updated_at: string
           used_hours: number | null
@@ -3096,10 +3098,12 @@ export type Database = {
           is_recurring_monthly?: boolean | null
           last_reset_date?: string | null
           name: string
+          nightly_hours?: number | null
           project_manager?: string | null
           qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
+          service_days?: number[]
           special_instructions?: string | null
           updated_at?: string
           used_hours?: number | null
@@ -3123,10 +3127,12 @@ export type Database = {
           is_recurring_monthly?: boolean | null
           last_reset_date?: string | null
           name?: string
+          nightly_hours?: number | null
           project_manager?: string | null
           qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
+          service_days?: number[]
           special_instructions?: string | null
           updated_at?: string
           used_hours?: number | null
@@ -4964,6 +4970,10 @@ export type Database = {
       mark_conversation_read: {
         Args: { _conversation_id: string }
         Returns: undefined
+      }
+      monthly_hours_from_nightly: {
+        Args: { _month: string; _nightly: number; _service_days: number[] }
+        Returns: number
       }
       regenerate_job_site_qr_token: {
         Args: { _job_site_id: string }
