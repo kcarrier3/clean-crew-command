@@ -198,7 +198,21 @@ function DraftChip({
     >
       <div className="font-medium truncate">{isStart ? draft.title : `↳ ${draft.title}`}</div>
       {subtitle && isStart && <div className="truncate opacity-80">{subtitle}</div>}
-    </button>
+      {isMultiDay && (
+        <button
+          type="button"
+          aria-label="Remove this day"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemoveDay();
+          }}
+          className="absolute right-0.5 top-0.5 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-sm bg-background/80 text-foreground hover:bg-destructive hover:text-destructive-foreground"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </div>
   );
 }
 
