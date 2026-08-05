@@ -43,6 +43,17 @@ import {
   CalendarRange,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -123,7 +134,73 @@ const endOfDayFromInput = (value: string) => {
   return new Date(y, (m ?? 1) - 1, d ?? 1, 23, 59, 59, 999);
 };
 
+const dayKeyToDate = (key: string) => {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+};
+
+const addDaysISO = (iso: string, days: number) => {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+};
+
+function DayCell({ dayKey, children, className }: { dayKey: string; children: React.ReactNode; className?: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `day:${dayKey}` });
+  return (
+    <div ref={setNodeRef} className={cn(className, isOver && 'ring-2 ring-inset ring-primary/60 bg-primary/5')}>
+      {children}
+    </div>
+  );
+}
+
+function DraftChip({
+  draft,
+  dayKey,
+  isStart,
+  isEnd,
+  subtitle,
+  onOpen,
+}: {
+  draft: Draft;
+  dayKey: string;
+  isStart: boolean;
+  isEnd: boolean;
+  subtitle?: string;
+  onOpen: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `${draft.id}|${dayKey}`,
+    data: { draft, dayKey },
+  });
+  return (
+    <button
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      onClick={onOpen}
+      style={colorStyle(draft.color)}
+      className={cn(
+        'w-full text-left text-[11px] leading-tight border px-1.5 py-1 truncate cursor-grab active:cursor-grabbing touch-none',
+        isStart ? 'rounded-l' : 'rounded-l-none border-l-0',
+        isEnd ? 'rounded-r' : 'rounded-r-none border-r-0',
+        !draft.color && KIND_STYLE[draft.kind],
+        draft.promoted_schedule_id && 'opacity-60 line-through',
+        isDragging && 'opacity-30',
+      )}
+      title={draft.title}
+    >
+      <div className="font-medium truncate">{isStart ? draft.title : `↳ ${draft.title}`}</div>
+      {subtitle && isStart && <div className="truncate opacity-80">{subtitle}</div>}
+    </button>
+  );
+}
+
 const CalendarPlanner = () => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+  const [activeDrag, setActiveDrag] = useState<{ draft: Draft; dayKey: string } | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const [cursor, setCursor] = useState(new Date());
@@ -279,6 +356,44 @@ const CalendarPlanner = () => {
     return jobSites.find((x) => x.id === id)?.name ?? '';
   };
 
+  const handleDragStart = (e: DragStartEvent) => {
+    const data = e.active.data.current as { draft: Draft; dayKey: string } | undefined;
+    if (data) setActiveDrag(data);
+  };
+
+  const handleDragEnd = async (e: DragEndEvent) => {
+    const data = e.active.data.current as { draft: Draft; dayKey: string } | undefined;
+    setActiveDrag(null);
+    const overId = e.over?.id as string | undefined;
+    if (!data || !overId?.startsWith('day:')) return;
+    const targetKey = overId.slice(4);
+    if (targetKey === data.dayKey) return;
+    const deltaDays = Math.round(
+      (dayKeyToDate(targetKey).getTime() - dayKeyToDate(data.dayKey).getTime()) / 86400000,
+    );
+    if (!deltaDays) return;
+
+    const draft = data.draft;
+    const nextStart = addDaysISO(draft.start_at, deltaDays);
+    const nextEnd = draft.end_at ? addDaysISO(draft.end_at, deltaDays) : null;
+
+    const previous = drafts;
+    setDrafts((cur) =>
+      cur.map((d) => (d.id === draft.id ? { ...d, start_at: nextStart, end_at: nextEnd } : d)),
+    );
+
+    const { error } = await supabase
+      .from('calendar_drafts')
+      .update({ start_at: nextStart, end_at: nextEnd })
+      .eq('id', draft.id);
+    if (error) {
+      setDrafts(previous);
+      toast({ title: 'Could not move entry', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await loadDrafts();
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -319,6 +434,7 @@ const CalendarPlanner = () => {
           </div>
         </CardHeader>
         <CardContent>
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-7 gap-px bg-border rounded-md overflow-hidden text-sm">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
               <div key={d} className="bg-muted/60 px-2 py-1 text-xs font-semibold text-muted-foreground">
@@ -330,8 +446,9 @@ const CalendarPlanner = () => {
               const items = draftsByDay.get(key) ?? [];
               const muted = !isSameMonth(day, cursor);
               return (
-                <div
+                <DayCell
                   key={key}
+                  dayKey={key}
                   className={cn(
                     'min-h-[110px] bg-background p-1.5 align-top',
                     muted && 'bg-muted/30 text-muted-foreground',
@@ -354,33 +471,36 @@ const CalendarPlanner = () => {
                       const isEnd =
                         format(new Date(d.end_at ?? d.start_at), 'yyyy-MM-dd') === key;
                       return (
-                        <button
-                        key={d.id}
-                        onClick={() => setEditing(d)}
-                        style={colorStyle(d.color)}
-                        className={cn(
-                          'w-full text-left text-[11px] leading-tight border px-1.5 py-1 truncate',
-                          isStart ? 'rounded-l' : 'rounded-l-none border-l-0',
-                          isEnd ? 'rounded-r' : 'rounded-r-none border-r-0',
-                          !d.color && KIND_STYLE[d.kind],
-                          d.promoted_schedule_id && 'opacity-60 line-through',
-                        )}
-                        title={d.title}
-                      >
-                        <div className="font-medium truncate">
-                          {isStart ? d.title : `↳ ${d.title}`}
-                        </div>
-                        {d.job_site_id && isStart && (
-                          <div className="truncate opacity-80">{siteName(d.job_site_id)}</div>
-                        )}
-                        </button>
+                        <DraftChip
+                          key={d.id}
+                          draft={d}
+                          dayKey={key}
+                          isStart={isStart}
+                          isEnd={isEnd}
+                          subtitle={d.job_site_id ? siteName(d.job_site_id) : undefined}
+                          onOpen={() => setEditing(d)}
+                        />
                       );
                     })}
                   </div>
-                </div>
+                </DayCell>
               );
             })}
           </div>
+          <DragOverlay dropAnimation={null}>
+            {activeDrag && (
+              <div
+                style={colorStyle(activeDrag.draft.color)}
+                className={cn(
+                  'text-[11px] leading-tight border rounded px-1.5 py-1 shadow-lg bg-background',
+                  !activeDrag.draft.color && KIND_STYLE[activeDrag.draft.kind],
+                )}
+              >
+                {activeDrag.draft.title}
+              </div>
+            )}
+          </DragOverlay>
+          </DndContext>
           <div className="flex flex-wrap items-center gap-3 mt-4 text-xs text-muted-foreground">
             {(Object.keys(KIND_LABEL) as DraftKind[]).map((k) => (
               <span key={k} className="flex items-center gap-1.5">
