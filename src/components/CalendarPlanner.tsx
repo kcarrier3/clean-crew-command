@@ -135,6 +135,10 @@ const endOfDayFromInput = (value: string) => {
 };
 
 const CalendarPlanner = () => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+  const [activeDrag, setActiveDrag] = useState<{ draft: Draft; dayKey: string } | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const [cursor, setCursor] = useState(new Date());
