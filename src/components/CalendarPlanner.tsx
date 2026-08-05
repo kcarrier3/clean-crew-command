@@ -41,6 +41,7 @@ import {
   Plus,
   Trash2,
   CalendarRange,
+  X,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -376,6 +377,77 @@ const CalendarPlanner = () => {
     return jobSites.find((x) => x.id === id)?.name ?? '';
   };
 
+  // Remove a single day from a multi-day entry without deleting the whole series.
+  const removeDayFromDraft = async (draft: Draft, dayKey: string) => {
+    if (!user) return;
+    const start = new Date(draft.start_at);
+    const end = new Date(draft.end_at ?? draft.start_at);
+    const startKey = format(start, 'yyyy-MM-dd');
+    const endKey = format(end, 'yyyy-MM-dd');
+
+    if (startKey === endKey) {
+      const { error } = await supabase.from('calendar_drafts').delete().eq('id', draft.id);
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        return;
+      }
+      await loadDrafts();
+      return;
+    }
+
+    if (dayKey === startKey) {
+      const nextStart = startOfDayFromInput(format(addDays(start, 1), 'yyyy-MM-dd'));
+      const { error } = await supabase
+        .from('calendar_drafts')
+        .update({ start_at: nextStart.toISOString() })
+        .eq('id', draft.id);
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        return;
+      }
+    } else if (dayKey === endKey) {
+      const nextEnd = endOfDayFromInput(format(addDays(end, -1), 'yyyy-MM-dd'));
+      const { error } = await supabase
+        .from('calendar_drafts')
+        .update({ end_at: nextEnd.toISOString() })
+        .eq('id', draft.id);
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        return;
+      }
+    } else {
+      // Split into two entries around the removed day
+      const removed = dayKeyToDate(dayKey);
+      const firstEnd = endOfDayFromInput(format(addDays(removed, -1), 'yyyy-MM-dd'));
+      const secondStart = startOfDayFromInput(format(addDays(removed, 1), 'yyyy-MM-dd'));
+      const { error: upErr } = await supabase
+        .from('calendar_drafts')
+        .update({ end_at: firstEnd.toISOString() })
+        .eq('id', draft.id);
+      if (upErr) {
+        toast({ title: 'Error', description: upErr.message, variant: 'destructive' });
+        return;
+      }
+      const { error: insErr } = await supabase.from('calendar_drafts').insert({
+        title: draft.title,
+        kind: draft.kind,
+        notes: draft.notes ?? null,
+        start_at: secondStart.toISOString(),
+        end_at: end.toISOString(),
+        all_day: draft.all_day,
+        employee_id: draft.employee_id ?? null,
+        job_site_id: draft.job_site_id ?? null,
+        color: draft.color ?? null,
+        created_by: user.id,
+      });
+      if (insErr) {
+        toast({ title: 'Error', description: insErr.message, variant: 'destructive' });
+        return;
+      }
+    }
+    await loadDrafts();
+  };
+
   const handleDragStart = (e: DragStartEvent) => {
     const data = e.active.data.current as { draft: Draft; dayKey: string } | undefined;
     if (data) setActiveDrag(data);
@@ -499,6 +571,8 @@ const CalendarPlanner = () => {
                           isEnd={isEnd}
                           subtitle={d.job_site_id ? siteName(d.job_site_id) : undefined}
                           onOpen={() => setEditing(d)}
+                          isMultiDay={!(isStart && isEnd)}
+                          onRemoveDay={() => removeDayFromDraft(d, key)}
                         />
                       );
                     })}
