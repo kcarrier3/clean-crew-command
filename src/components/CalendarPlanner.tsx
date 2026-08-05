@@ -468,6 +468,34 @@ const CalendarPlanner = () => {
     if (!deltaDays) return;
 
     const draft = data.draft;
+    const startKey = format(new Date(draft.start_at), 'yyyy-MM-dd');
+    const endKey = format(new Date(draft.end_at ?? draft.start_at), 'yyyy-MM-dd');
+    const isMultiDay = startKey !== endKey;
+
+    // Multi-day entry: detach only the dragged day and move it independently.
+    if (isMultiDay && user) {
+      const newStart = startOfDayFromInput(targetKey);
+      const newEnd = endOfDayFromInput(targetKey);
+      const { error: insErr } = await supabase.from('calendar_drafts').insert({
+        title: draft.title,
+        kind: draft.kind,
+        notes: draft.notes ?? null,
+        start_at: newStart.toISOString(),
+        end_at: newEnd.toISOString(),
+        all_day: draft.all_day,
+        employee_id: draft.employee_id ?? null,
+        job_site_id: draft.job_site_id ?? null,
+        color: draft.color ?? null,
+        created_by: user.id,
+      });
+      if (insErr) {
+        toast({ title: 'Could not move entry', description: insErr.message, variant: 'destructive' });
+        return;
+      }
+      await removeDayFromDraft(draft, data.dayKey);
+      return;
+    }
+
     const nextStart = addDaysISO(draft.start_at, deltaDays);
     const nextEnd = draft.end_at ? addDaysISO(draft.end_at, deltaDays) : null;
 
