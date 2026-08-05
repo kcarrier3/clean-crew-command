@@ -230,6 +230,7 @@ const CalendarPlanner = () => {
   const [jobSites, setJobSites] = useState<JobSiteOpt[]>([]);
   const [filterKind, setFilterKind] = useState<DraftKind | 'all'>('all');
   const [editing, setEditing] = useState<Partial<Draft> | null>(null);
+  const [editingDayKey, setEditingDayKey] = useState<string | null>(null);
 
   const monthStart = startOfMonth(cursor);
   const monthEnd = endOfMonth(cursor);
