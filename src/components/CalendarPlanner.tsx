@@ -751,11 +751,26 @@ const CalendarPlanner = () => {
             </div>
           )}
           <DialogFooter className="flex justify-between sm:justify-between">
-            <div>
+            <div className="flex flex-wrap gap-2">
+              {editing?.id && editingDayKey &&
+                format(new Date(editing.start_at as string), 'yyyy-MM-dd') !==
+                  format(new Date((editing.end_at as string) ?? (editing.start_at as string)), 'yyyy-MM-dd') && (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await removeDayFromDraft(editing as Draft, editingDayKey);
+                    setEditing(null);
+                    setEditingDayKey(null);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete this day only
+                </Button>
+              )}
               {editing?.id && (
                 <Button variant="destructive" onClick={deleteDraft}>
                   <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
+                  Delete entire event
                 </Button>
               )}
             </div>
