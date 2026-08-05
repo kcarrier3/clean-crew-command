@@ -209,7 +209,7 @@ function DraftChip({
             e.stopPropagation();
             onRemoveDay();
           }}
-          className="absolute right-0.5 top-0.5 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-sm bg-background/80 text-foreground hover:bg-destructive hover:text-destructive-foreground"
+          className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-sm border bg-background/90 text-foreground opacity-70 hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground"
         >
           <X className="h-3 w-3" />
         </button>
