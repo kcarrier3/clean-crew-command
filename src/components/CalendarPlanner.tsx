@@ -572,7 +572,7 @@ const CalendarPlanner = () => {
                           isStart={isStart}
                           isEnd={isEnd}
                           subtitle={d.job_site_id ? siteName(d.job_site_id) : undefined}
-                          onOpen={() => setEditing(d)}
+                          onOpen={() => { setEditingDayKey(key); setEditing(d); }}
                           isMultiDay={!(isStart && isEnd)}
                           onRemoveDay={() => removeDayFromDraft(d, key)}
                         />
