@@ -134,6 +134,68 @@ const endOfDayFromInput = (value: string) => {
   return new Date(y, (m ?? 1) - 1, d ?? 1, 23, 59, 59, 999);
 };
 
+const dayKeyToDate = (key: string) => {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+};
+
+const addDaysISO = (iso: string, days: number) => {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+};
+
+function DayCell({ dayKey, children, className }: { dayKey: string; children: React.ReactNode; className?: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `day:${dayKey}` });
+  return (
+    <div ref={setNodeRef} className={cn(className, isOver && 'ring-2 ring-inset ring-primary/60 bg-primary/5')}>
+      {children}
+    </div>
+  );
+}
+
+function DraftChip({
+  draft,
+  dayKey,
+  isStart,
+  isEnd,
+  subtitle,
+  onOpen,
+}: {
+  draft: Draft;
+  dayKey: string;
+  isStart: boolean;
+  isEnd: boolean;
+  subtitle?: string;
+  onOpen: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `${draft.id}|${dayKey}`,
+    data: { draft, dayKey },
+  });
+  return (
+    <button
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      onClick={onOpen}
+      style={colorStyle(draft.color)}
+      className={cn(
+        'w-full text-left text-[11px] leading-tight border px-1.5 py-1 truncate cursor-grab active:cursor-grabbing touch-none',
+        isStart ? 'rounded-l' : 'rounded-l-none border-l-0',
+        isEnd ? 'rounded-r' : 'rounded-r-none border-r-0',
+        !draft.color && KIND_STYLE[draft.kind],
+        draft.promoted_schedule_id && 'opacity-60 line-through',
+        isDragging && 'opacity-30',
+      )}
+      title={draft.title}
+    >
+      <div className="font-medium truncate">{isStart ? draft.title : `↳ ${draft.title}`}</div>
+      {subtitle && isStart && <div className="truncate opacity-80">{subtitle}</div>}
+    </button>
+  );
+}
+
 const CalendarPlanner = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
