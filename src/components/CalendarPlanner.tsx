@@ -161,6 +161,8 @@ function DraftChip({
   isEnd,
   subtitle,
   onOpen,
+  onRemoveDay,
+  isMultiDay,
 }: {
   draft: Draft;
   dayKey: string;
@@ -168,20 +170,24 @@ function DraftChip({
   isEnd: boolean;
   subtitle?: string;
   onOpen: () => void;
+  onRemoveDay: () => void;
+  isMultiDay: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `${draft.id}|${dayKey}`,
     data: { draft, dayKey },
   });
   return (
-    <button
+    <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
       style={colorStyle(draft.color)}
       className={cn(
-        'w-full text-left text-[11px] leading-tight border px-1.5 py-1 truncate cursor-grab active:cursor-grabbing touch-none',
+        'group relative w-full text-left text-[11px] leading-tight border px-1.5 py-1 truncate cursor-grab active:cursor-grabbing touch-none',
         isStart ? 'rounded-l' : 'rounded-l-none border-l-0',
         isEnd ? 'rounded-r' : 'rounded-r-none border-r-0',
         !draft.color && KIND_STYLE[draft.kind],
