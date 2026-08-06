@@ -5,6 +5,7 @@ import {
   decodeCsvBytes, parseCsvText, getSafeContentType, sanitizeStorageFileName,
   sanitizeNoteHtml, htmlToPlainText,
 } from './sfUtils';
+import { uploadResumable, STANDARD_UPLOAD_BYTES } from './largeUpload';
 
 // ---------------------------------------------------------------- reporting -
 
@@ -901,15 +902,27 @@ async function importFiles(
         done++; continue;
       }
       const bytes = await entry.zipFile.async('uint8array');
-      if (bytes.byteLength > MAX_UPLOAD_BYTES) {
-        st.skipped.push({ sfId: job.sfId, label: fileName, reason: `${(bytes.byteLength / 1048576).toFixed(1)} MB exceeds the 50 MB browser upload limit` });
-        done++; continue;
-      }
       // Deterministic, Salesforce-ID based path → re-runs overwrite, never duplicate.
       const path = `salesforce/${job.sfId || docId || 'unknown'}/${sanitizeStorageFileName(fileName)}`;
-      const { error: upErr } = await supabase.storage.from('crm-files')
-        .upload(path, bytes, { contentType, upsert: true });
-      if (upErr) { st.failed.push({ sfId: job.sfId, label: fileName, reason: upErr.message }); done++; continue; }
+      const sizeMb = (bytes.byteLength / 1048576).toFixed(1);
+      if (bytes.byteLength > RESUMABLE_THRESHOLD_BYTES) {
+        try {
+          onProgress(80, `Uploading large file ${fileName} (${sizeMb} MB)…`);
+          await uploadResumable('crm-files', path, bytes, contentType, (sent, total) => {
+            onProgress(80, `Uploading ${fileName} — ${(sent / 1048576).toFixed(0)}/${(total / 1048576).toFixed(0)} MB`);
+          });
+        } catch (e: any) {
+          st.failed.push({
+            sfId: job.sfId, label: fileName,
+            reason: `Resumable upload failed for ${sizeMb} MB file: ${e?.message || String(e)}`,
+          });
+          done++; continue;
+        }
+      } else {
+        const { error: upErr } = await supabase.storage.from('crm-files')
+          .upload(path, bytes, { contentType, upsert: true });
+        if (upErr) { st.failed.push({ sfId: job.sfId, label: fileName, reason: `${sizeMb} MB upload failed: ${upErr.message}` }); done++; continue; }
+      }
 
       const payload: any = {
         ...job.parent,
