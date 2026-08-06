@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Calendar, DollarSign } from 'lucide-react';
@@ -68,7 +69,14 @@ function StageColumn({ stage, deals, onDealClick }: { stage: CrmStage; deals: Cr
 
 export function PipelineBoard({ stages, deals, onChanged, onDealClick, onNewDeal }: Props) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // A deal that mirrors an opportunity opens the full Opportunity record page;
+  // standalone deals keep using the deal dialog.
+  const openDeal = (deal: CrmDeal) => {
+    if (deal.lead_id) navigate(`/crm/opportunities/${deal.lead_id}`);
+    else onDealClick(deal);
+  };
 
   const byStage = useMemo(() => {
     const map = new Map<string, CrmDeal[]>();
@@ -110,7 +118,7 @@ export function PipelineBoard({ stages, deals, onChanged, onDealClick, onNewDeal
               key={stage.id}
               stage={stage}
               deals={byStage.get(stage.id) || []}
-              onDealClick={onDealClick}
+              onDealClick={openDeal}
             />
           ))}
         </div>
