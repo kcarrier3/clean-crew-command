@@ -371,9 +371,9 @@ export function calculateSpecialty(service: ServiceType, inputs: SpecialtyInputs
 
 /** Merges stored JSONB back over the service defaults so new fields appear. */
 export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): SpecialtyInputs {
-  const defaults = DEFAULT_SPECIALTY_INPUTS(service) as Record<string, unknown>;
+  const defaults = DEFAULT_SPECIALTY_INPUTS(service) as unknown as Record<string, unknown>;
   const raw = (stored && typeof stored === 'object' ? stored : {}) as Record<string, unknown>;
-  const merged = { ...defaults, ...raw } as SpecialtyInputs;
+  const merged = { ...defaults, ...raw } as unknown as SpecialtyInputs;
   if (service === 'construction_cleaning') {
     const c = merged as ConstructionInputs;
     if (!Array.isArray(c.phases) || c.phases.length === 0) c.phases = DEFAULT_CONSTRUCTION_PHASES();
