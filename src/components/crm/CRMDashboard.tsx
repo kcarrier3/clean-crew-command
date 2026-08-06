@@ -148,6 +148,7 @@ export default function CRMDashboard() {
     setResetting(false);
     setResetOpen(false);
     setResetConfirm('');
+    loadRecent();
     if (errors.length) {
       toast({ title: 'Reset finished with errors', description: errors.join(' | '), variant: 'destructive' });
     } else {
