@@ -759,7 +759,9 @@ async function fetchExistingNoteKeys(): Promise<Map<string, string>> {
 
 // -------------------------------------------------------------- files step --
 
-const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+// Files above this size use the resumable (TUS) endpoint instead of a single
+// request, so large Salesforce binaries are preserved rather than skipped.
+const RESUMABLE_THRESHOLD_BYTES = STANDARD_UPLOAD_BYTES;
 
 async function importFiles(
   csvs: Record<string, Row[]>, binaries: BinaryIndex, resolver: SfResolver,
