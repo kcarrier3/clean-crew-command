@@ -223,6 +223,7 @@ export default function CRMDashboard() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="recent">Recent</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
           <TabsTrigger value="leads">Opportunities</TabsTrigger>
           <TabsTrigger value="companies">Accounts</TabsTrigger>
@@ -231,6 +232,61 @@ export default function CRMDashboard() {
           <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="activities">Follow-ups</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="recent" className="mt-4">
+          {recentLoading ? (
+            <p className="text-muted-foreground text-sm">Loading recent opportunities…</p>
+          ) : recent.length === 0 ? (
+            <Card><CardContent className="py-10 text-center text-muted-foreground">
+              No recent opportunities. Open or create an opportunity to see it here.
+            </CardContent></Card>
+          ) : (
+            <div className="space-y-2">
+              {recent.map(({ lead, lastAt }) => (
+                <Card
+                  key={lead.id}
+                  className="hover:shadow-md hover:border-primary/40 transition cursor-pointer"
+                  onClick={() => navigate(`/crm/opportunities/${lead.id}`)}
+                >
+                  <CardContent className="p-4 flex flex-wrap items-center gap-3 justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium">{lead.company_name}</p>
+                        <Badge className={STATUS_COLORS[lead.status] + ' text-xs'}>{LEAD_STATUS_LABELS[lead.status]}</Badge>
+                        {lead.source && <Badge variant="outline" className="text-xs">{lead.source}</Badge>}
+                      </div>
+                      {lead.contact_name && <p className="text-sm text-muted-foreground">{lead.contact_name}</p>}
+                      <div className="flex gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
+                        {lead.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{lead.email}</span>}
+                        {lead.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{lead.phone}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right min-w-[120px]">
+                      <p className="text-sm font-medium">${(Number(lead.amount) || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+                        <Clock className="h-3 w-3" />
+                        {(() => {
+                          const diff = Date.now() - lastAt;
+                          const mins = Math.floor(diff / 60000);
+                          const hours = Math.floor(diff / 3600000);
+                          const days = Math.floor(diff / 86400000);
+                          if (mins < 1) return 'just now';
+                          if (mins < 60) return `${mins}m ago`;
+                          if (hours < 24) return `${hours}h ago`;
+                          if (days < 30) return `${days}d ago`;
+                          return new Date(lastAt).toLocaleDateString();
+                        })()}
+                      </p>
+                      {lead.stage_id && (
+                        <p className="text-xs text-muted-foreground">{stages.find(s => s.id === lead.stage_id)?.name}</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
         <TabsContent value="pipeline" className="mt-4">
           <PipelineBoard
