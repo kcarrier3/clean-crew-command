@@ -2395,9 +2395,14 @@ export type Database = {
           price_per_visit: number
           pricing_mode: string
           production_rate_sqft_hour: number
+          project_direct_cost: number | null
+          project_labor_hours: number | null
+          project_price: number | null
           restroom_count: number
           revision_number: number
+          service_type: string
           service_window: string
+          specialty_inputs: Json
           square_feet: number
           status: string
           supply_preset: string
@@ -2439,9 +2444,14 @@ export type Database = {
           price_per_visit?: number
           pricing_mode?: string
           production_rate_sqft_hour?: number
+          project_direct_cost?: number | null
+          project_labor_hours?: number | null
+          project_price?: number | null
           restroom_count?: number
           revision_number?: number
+          service_type?: string
           service_window?: string
+          specialty_inputs?: Json
           square_feet?: number
           status?: string
           supply_preset?: string
@@ -2483,9 +2493,14 @@ export type Database = {
           price_per_visit?: number
           pricing_mode?: string
           production_rate_sqft_hour?: number
+          project_direct_cost?: number | null
+          project_labor_hours?: number | null
+          project_price?: number | null
           restroom_count?: number
           revision_number?: number
+          service_type?: string
           service_window?: string
+          specialty_inputs?: Json
           square_feet?: number
           status?: string
           supply_preset?: string
@@ -2569,6 +2584,7 @@ export type Database = {
           lead_id: string
           name: string
           owner_id: string | null
+          service_type: string
           status: string
           updated_at: string
         }
@@ -2585,6 +2601,7 @@ export type Database = {
           lead_id: string
           name: string
           owner_id?: string | null
+          service_type?: string
           status?: string
           updated_at?: string
         }
@@ -2601,6 +2618,7 @@ export type Database = {
           lead_id?: string
           name?: string
           owner_id?: string | null
+          service_type?: string
           status?: string
           updated_at?: string
         }
