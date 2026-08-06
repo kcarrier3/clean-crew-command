@@ -197,6 +197,21 @@ async function fetchExistingSfIds(table: string): Promise<Map<string, string>> {
   return map;
 }
 
+/** Existing accounts with their exact names, so opportunity display names are right. */
+async function fetchExistingAccounts(): Promise<Map<string, { id: string; name: string }>> {
+  const map = new Map<string, { id: string; name: string }>();
+  let from = 0;
+  for (;;) {
+    const { data, error } = await (supabase as any)
+      .from('crm_companies').select('id, name, salesforce_id').not('salesforce_id', 'is', null).range(from, from + 999);
+    if (error || !data?.length) break;
+    data.forEach((r: any) => map.set(k15(r.salesforce_id), { id: r.id, name: r.name }));
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  return map;
+}
+
 // ------------------------------------------------------------- the resolver -
 
 type ParentKind = 'account' | 'contact' | 'opportunity' | 'task';
