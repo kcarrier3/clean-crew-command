@@ -166,7 +166,7 @@ const Index = () => {
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
-        ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
+        ...(isCrmUser() ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
@@ -178,7 +178,7 @@ const Index = () => {
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'supplies',   label: 'Supplies',        icon: Package },
-        ...(isCrmUser() ? [{ v: 'crm', label: 'CRM', icon: Briefcase }] : []),
+        ...(isCrmUser() ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ];
@@ -215,7 +215,7 @@ const Index = () => {
     <div className="min-h-screen overflow-x-hidden">
       <SEO
         title="Crew Compass — Janitorial Team & Operations Management"
-        description="Crew Compass helps janitorial and facilities teams run scheduling, time clock with geofencing, quality control, supply management, and CRM in one app."
+        description="Crew Compass helps janitorial and facilities teams run scheduling, time clock with geofencing, quality control, supply management, and Waypoint CRM in one app."
         path="/"
       />
       {showDesktopSidebar && (

@@ -83,7 +83,7 @@ export default function CRMDashboard() {
     if (errors.length) {
       toast({ title: 'Reset finished with errors', description: errors.join(' | '), variant: 'destructive' });
     } else {
-      toast({ title: 'CRM reset', description: 'All CRM records were removed.' });
+      toast({ title: 'Waypoint reset', description: 'All Waypoint records were removed.' });
     }
     loadAll();
   };
@@ -127,7 +127,7 @@ export default function CRMDashboard() {
           className="mr-2 text-destructive hover:text-destructive"
           onClick={() => setResetOpen(true)}
         >
-          <Trash2 className="h-4 w-4 mr-2" /> Reset CRM
+          <Trash2 className="h-4 w-4 mr-2" /> Reset Waypoint
         </Button>
         <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
           <FileArchive className="h-4 w-4 mr-2" /> Import from Salesforce
@@ -221,7 +221,7 @@ export default function CRMDashboard() {
       <AlertDialog open={resetOpen} onOpenChange={(o) => { if (!resetting) { setResetOpen(o); if (!o) setResetConfirm(''); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive">Reset CRM data?</AlertDialogTitle>
+            <AlertDialogTitle className="text-destructive">Reset Waypoint data?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>
