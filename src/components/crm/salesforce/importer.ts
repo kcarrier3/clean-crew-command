@@ -340,7 +340,7 @@ export async function runSalesforceImport(
       name, salesforce_id: sfId, owner_id: uid, created_by: uid,
     }));
     const ids = await upsertChunked('crm_companies', payload, 'salesforce_id', st, new Set(), (r) => r.name);
-    ids.forEach((id, sf) => resolver.set(sf, 'account', id));
+    ids.forEach((id, sf) => resolver.set(sf, 'account', id, wanted.get(sf)?.name));
     return ids.size;
   }
 
@@ -378,9 +378,11 @@ export async function runSalesforceImport(
       });
     }
     const ids = await upsertChunked('crm_companies', payload, 'salesforce_id', st, existing, (r) => r.name);
-    ids.forEach((id, sf) => resolver.set(sf, 'account', id));
-    // Records that already existed but were not in this export still need resolving.
-    (await fetchExistingSfIds('crm_companies')).forEach((id, sf) => { if (!ids.has(sf)) resolver.set(sf, 'account', id); });
+    const nameBySf = new Map(payload.map((p: any) => [k15(p.salesforce_id), p.name as string]));
+    ids.forEach((id, sf) => resolver.set(sf, 'account', id, nameBySf.get(sf)));
+    // Records that already existed but were not in this export still need resolving —
+    // their exact name is carried too, so Opportunity display names stay correct.
+    (await fetchExistingAccounts()).forEach((row, sf) => { if (!ids.has(sf)) resolver.set(sf, 'account', row.id, row.name); });
   }
 
   // ------------------------------------------------------------ 3. Contacts --
