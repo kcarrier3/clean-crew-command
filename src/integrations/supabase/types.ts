@@ -693,6 +693,7 @@ export type Database = {
           owner_id: string | null
           primary_contact_id: string | null
           probability: number | null
+          sf_account_id: string | null
           stage_id: string
           updated_at: string
           value: number | null
@@ -713,6 +714,7 @@ export type Database = {
           owner_id?: string | null
           primary_contact_id?: string | null
           probability?: number | null
+          sf_account_id?: string | null
           stage_id: string
           updated_at?: string
           value?: number | null
@@ -733,6 +735,7 @@ export type Database = {
           owner_id?: string | null
           primary_contact_id?: string | null
           probability?: number | null
+          sf_account_id?: string | null
           stage_id?: string
           updated_at?: string
           value?: number | null
@@ -1272,6 +1275,8 @@ export type Database = {
           probability: number | null
           salesforce_id: string | null
           service_line: string | null
+          sf_account_id: string | null
+          sf_account_name: string | null
           sf_created_date: string | null
           sf_last_modified_date: string | null
           sf_owner_id: string | null
@@ -1305,6 +1310,8 @@ export type Database = {
           probability?: number | null
           salesforce_id?: string | null
           service_line?: string | null
+          sf_account_id?: string | null
+          sf_account_name?: string | null
           sf_created_date?: string | null
           sf_last_modified_date?: string | null
           sf_owner_id?: string | null
@@ -1338,6 +1345,8 @@ export type Database = {
           probability?: number | null
           salesforce_id?: string | null
           service_line?: string | null
+          sf_account_id?: string | null
+          sf_account_name?: string | null
           sf_created_date?: string | null
           sf_last_modified_date?: string | null
           sf_owner_id?: string | null
