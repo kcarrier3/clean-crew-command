@@ -686,7 +686,7 @@ async function importNotes(
   st.sourceRows = rows.length;
   if (!rows.length) return;
 
-  const existing = await fetchExistingSfIds('crm_lead_notes');
+  const existing = await fetchExistingNoteKeys();
   for (const r of rows) {
     const sfId = pick(r, 'Id', 'Note ID', '18 Digit ID');
     const title = pick(r, 'Title', 'Name');
@@ -711,13 +711,20 @@ async function importNotes(
       sf_last_modified_date: parseTimestamp(pick(r, 'LastModifiedDate', 'Last Modified Date')),
       created_by: uid,
     };
-    await writeNote(payload, sfId, existing, st);
+    await writeNote(payload, sfId, parent, existing, st);
   }
 }
 
-/** Insert or update one note, keyed by its Salesforce Id (idempotent re-runs). */
-async function writeNote(payload: any, sfId: string, existing: Map<string, string>, st: ObjectStat) {
-  const known = sfId ? existing.get(k15(sfId)) : undefined;
+/**
+ * Insert or update one note, keyed by Salesforce Id **plus its parent** so a
+ * single Enhanced Note linked to several records keeps every relationship.
+ */
+async function writeNote(
+  payload: any, sfId: string, parent: Record<string, string | null>,
+  existing: Map<string, string>, st: ObjectStat,
+) {
+  const key = noteParentKey(sfId, parent);
+  const known = sfId ? existing.get(key) : undefined;
   if (known) {
     const { error } = await (supabase as any).from('crm_lead_notes').update(payload).eq('id', known);
     if (error) st.failed.push({ sfId, label: payload.title || sfId, reason: error.message });
@@ -726,8 +733,28 @@ async function writeNote(payload: any, sfId: string, existing: Map<string, strin
   }
   const { data, error } = await (supabase as any).from('crm_lead_notes').insert(payload).select('id').single();
   if (error) { st.failed.push({ sfId, label: payload.title || sfId, reason: error.message }); return; }
-  if (sfId && data?.id) existing.set(k15(sfId), data.id);
+  if (sfId && data?.id) existing.set(key, data.id);
   st.inserted++;
+}
+
+const noteParentKey = (sfId: string, parent: Record<string, string | null>) =>
+  [k15(sfId), parent.lead_id, parent.company_id, parent.contact_id, parent.task_id].join('|');
+
+async function fetchExistingNoteKeys(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  let from = 0;
+  for (;;) {
+    const { data, error } = await (supabase as any)
+      .from('crm_lead_notes')
+      .select('id, salesforce_id, lead_id, company_id, contact_id, task_id')
+      .not('salesforce_id', 'is', null)
+      .range(from, from + 999);
+    if (error || !data?.length) break;
+    data.forEach((r: any) => map.set(noteParentKey(r.salesforce_id, r), r.id));
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  return map;
 }
 
 // -------------------------------------------------------------- files step --
