@@ -331,12 +331,12 @@ export default function EstimatingDetail() {
     <>
       <SEO
         title={`${name || 'Estimate'} — Estimating`}
-        description="Janitorial estimate pricing worksheet with labor, supply, overhead and margin detail."
+        description="Estimate pricing worksheet with labor, materials, overhead and margin detail."
         path={`/estimating/${id ?? ''}`}
       />
       <EstimatorShell
         title={name || 'Estimate'}
-        subtitle={lead?.company_name}
+        subtitle={[SERVICE_LABELS[serviceType], lead?.company_name].filter(Boolean).join(' · ')}
         backTo="/estimating"
         actions={
           readOnly ? (
@@ -364,19 +364,35 @@ export default function EstimatingDetail() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Badge>Completed</Badge>
+              <Badge variant="secondary">{SERVICE_LABELS[serviceType]}</Badge>
               <span className="text-xs text-muted-foreground">Read-only. Duplicate as a draft to revise.</span>
             </div>
-            <PricingSummary
-              inputs={inputs}
-              outputs={outputs}
-              meta={{
-                estimateName: name,
-                opportunityName: lead?.company_name || 'Opportunity',
-                ownerName,
-                completedAt: estimate?.completed_at,
-                notes,
-              }}
-            />
+            {isJanitorial ? (
+              <PricingSummary
+                inputs={inputs}
+                outputs={outputs}
+                meta={{
+                  estimateName: name,
+                  opportunityName: lead?.company_name || 'Opportunity',
+                  ownerName,
+                  completedAt: estimate?.completed_at,
+                  notes,
+                }}
+              />
+            ) : (
+              <div className="space-y-3">
+                <SpecialtySummaryPanel outputs={specialtyOutputs} />
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Record</CardTitle></CardHeader>
+                  <CardContent className="pt-0 space-y-1 text-sm">
+                    <Line label="Opportunity" value={lead?.company_name || 'Opportunity'} />
+                    <Line label="Owner" value={ownerName} />
+                    <Line label="Completed" value={estimate?.completed_at ? new Date(estimate.completed_at).toLocaleString() : '—'} />
+                    {notes && <p className="text-xs text-muted-foreground whitespace-pre-wrap pt-2">{notes}</p>}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
             <Button variant="outline" className="w-full" onClick={copySummary}>
               <Copy className="h-4 w-4 mr-2" /> Copy Pricing Summary
             </Button>
@@ -400,10 +416,21 @@ export default function EstimatingDetail() {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Building2 className="h-4 w-4" />
                     <span className="truncate">{lead?.company_name || 'Opportunity'}</span>
+                    <Badge variant="secondary" className="ml-auto shrink-0">{SERVICE_LABELS[serviceType]}</Badge>
                   </div>
                 </CardContent>
               </Card>
 
+              {!isJanitorial && (
+                <SpecialtyForm
+                  service={serviceType}
+                  inputs={specialty}
+                  patch={setSpecialtyInput}
+                />
+              )}
+
+              {isJanitorial && (
+              <>
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Production</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-2 gap-3">
@@ -475,6 +502,8 @@ export default function EstimatingDetail() {
                   </p>
                 </CardContent>
               </Card>
+              </>
+              )}
 
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Internal notes &amp; assumptions</CardTitle></CardHeader>
@@ -490,6 +519,8 @@ export default function EstimatingDetail() {
             </div>
 
             <div className="space-y-3 md:sticky md:top-20">
+              {isJanitorial ? (
+              <>
               <Card className="border-brand-orange/40">
                 <CardContent className="pt-6 text-center">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Monthly price</p>
@@ -517,6 +548,10 @@ export default function EstimatingDetail() {
                   <Line label="Price / sq ft / mo" value={`$${outputs.price_per_sqft.toFixed(4)}`} />
                 </CardContent>
               </Card>
+              </>
+              ) : (
+                <SpecialtySummaryPanel outputs={specialtyOutputs} />
+              )}
               <Button variant="outline" className="w-full" onClick={copySummary}>
                 <Copy className="h-4 w-4 mr-2" /> Copy Pricing Summary
               </Button>
