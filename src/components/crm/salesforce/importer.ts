@@ -89,6 +89,10 @@ const CSV_MATCHERS: Array<{ object: string; test: RegExp }> = [
   // broad /opportunit/ matcher or history snapshots become "Untitled Opportunity".
   { object: '__ignore__', test: /opportunity(history|fieldhistory|lineitem|share|teammember|competitor|partner|stage|split|tag|feed)/i },
   { object: '__ignore__', test: /(accounthistory|contacthistory|leadhistory|casehistory|_history)\b/i },
+  // Junction / sharing / feed objects around Account & Contact must never be
+  // mistaken for the real Account or Contact export.
+  { object: '__ignore__', test: /account(share|teammember|contactrole|contactrelation|partner|feed|tag|brand|cleaninfo)/i },
+  { object: '__ignore__', test: /contact(share|feed|tag|cleaninfo|pointofcontact|requestcapture)/i },
   { object: 'ContentDocumentLink', test: /contentdocumentlink/i },
   { object: 'ContentDocument', test: /contentdocument(?!link)/i },
   { object: 'ContentVersion', test: /contentversion/i },
@@ -97,6 +101,10 @@ const CSV_MATCHERS: Array<{ object: string; test: RegExp }> = [
   { object: 'Attachment', test: /attachment/i },
   { object: 'Note', test: /(^|[\\/_-])notes?\b|notes?\.csv$/i },
   { object: 'Task', test: /(^|[\\/_-])tasks?\b|tasks?\.csv$/i },
+  // Real Account exports first: "Account.csv", "Accounts.csv", "001_Account.csv",
+  // "WE_Account_1.csv" … Checked before the generic /contact/ matcher so an
+  // "Account" file is never swallowed by a contact-ish token in its path.
+  { object: 'Account', test: /(^|[\\/_\- ])accounts?([\\/_\- .]|$)/i },
   { object: 'Contact', test: /contact/i },
   { object: 'Account', test: /account/i },
 ];
@@ -105,6 +113,31 @@ function classifyCsv(name: string): string | null {
   const base = name.split(/[\\/]/).pop() || name;
   const object = CSV_MATCHERS.find((m) => m.test.test(base))?.object ?? null;
   return object === '__ignore__' ? null : object;
+}
+
+/** True when the file name matched an explicitly ignored child/history object. */
+function isIgnoredCsv(name: string): boolean {
+  const base = name.split(/[\\/]/).pop() || name;
+  return CSV_MATCHERS.find((m) => m.test.test(base))?.object === '__ignore__';
+}
+
+/**
+ * A CSV whose file name did not classify can still be identified from its
+ * headers + the key prefix of its Id column. This is what keeps the import
+ * working for renamed / non-standard export layouts.
+ */
+function classifyByContent(rows: Row[]): string | null {
+  const first = rows[0];
+  if (!first) return null;
+  const headers = Object.keys(first).map((h) => h.trim().toLowerCase());
+  const has = (h: string) => headers.includes(h);
+  const id = pick(first, 'Id', '18 Digit ID', 'Record ID');
+  const prefix = sfPrefix(id).toUpperCase();
+  if (prefix === '001' && has('name')) return 'Account';
+  if (prefix === '003') return 'Contact';
+  if (prefix === '006' && (has('stagename') || has('closedate'))) return 'Opportunity';
+  if (prefix === '00T') return 'Task';
+  return null;
 }
 
 // ------------------------------------------------------------ upsert plumbing
@@ -236,9 +269,12 @@ export async function runSalesforceImport(
         const entry = zip.files[name];
         if (entry.dir) continue;
         if (/\.csv$/i.test(name)) {
-          const object = classifyCsv(name);
-          if (!object) continue;
+          if (isIgnoredCsv(name)) continue;
+          let object = classifyCsv(name);
           const rows = parseCsvText(decodeCsvBytes(await entry.async('uint8array')));
+          // Unrecognised file name → identify the object from its own headers.
+          object ??= classifyByContent(rows);
+          if (!object) continue;
           (csvs[object] ??= []).push(...rows);          // merge across every part
           part.objects[object] = (part.objects[object] || 0) + rows.length;
         } else {
@@ -247,17 +283,43 @@ export async function runSalesforceImport(
         }
       }
     } else {
-      const object = classifyCsv(file.name);
-      if (object) {
+      if (!isIgnoredCsv(file.name)) {
         const rows = parseCsvText(decodeCsvBytes(new Uint8Array(await file.arrayBuffer())));
+        const object = classifyCsv(file.name) ?? classifyByContent(rows);
+        if (object) {
         (csvs[object] ??= []).push(...rows);
         part.objects[object] = rows.length;
+        }
       }
     }
     report.preflight.push(part);
   }
 
   const resolver = new SfResolver();
+
+  /**
+   * Guarantees an Account row exists for a Salesforce AccountId, even when the
+   * Account CSV is missing/misnamed or the row simply wasn't in this export.
+   * Keyed on salesforce_id, so re-imports never create duplicates.
+   */
+  async function ensureAccounts(pairs: Array<{ sfId: string; name: string }>): Promise<number> {
+    const wanted = new Map<string, { sfId: string; name: string }>();
+    for (const { sfId, name } of pairs) {
+      if (!sfId || !/^001/i.test(sfId)) continue;
+      if (resolver.get(sfId)) continue;
+      const clean = (name || '').trim();
+      if (!clean) continue;                         // never invent a name
+      if (!wanted.has(k15(sfId))) wanted.set(k15(sfId), { sfId, name: clean });
+    }
+    if (!wanted.size) return 0;
+    const st = stat('Account');
+    const payload = Array.from(wanted.values()).map(({ sfId, name }) => ({
+      name, salesforce_id: sfId, owner_id: uid, created_by: uid,
+    }));
+    const ids = await upsertChunked('crm_companies', payload, 'salesforce_id', st, new Set(), (r) => r.name);
+    ids.forEach((id, sf) => resolver.set(sf, 'account', id));
+    return ids.size;
+  }
 
   // ------------------------------------------------------------ 2. Accounts --
   onProgress(10, 'Importing Accounts…');
@@ -306,6 +368,11 @@ export async function runSalesforceImport(
     st.sourceRows = rows.length;
     const existing = new Set((await fetchExistingSfIds('crm_contacts')).keys());
     const payload: any[] = [];
+    // Create any Account referenced by a Contact but absent from the export.
+    await ensureAccounts(rows.map((r) => ({
+      sfId: pick(r, 'AccountId', 'Account ID', 'Account Id'),
+      name: pick(r, 'Account Name', 'AccountName', 'Account'),
+    })));
     for (const r of rows) {
       const sfId = pick(r, 'Id', 'Contact ID', 'Contact Id', '18 Digit ID');
       const fullName = pick(r, 'Name');
@@ -400,6 +467,15 @@ export async function runSalesforceImport(
 
     const payload: any[] = [];
     const dealSeed: Array<{ sfId: string; row: Row }> = [];
+    // Accounts referenced by an Opportunity but missing from crm_companies are
+    // created first (minimal row, exact Salesforce name) so every Opportunity
+    // can be linked. Never creates a row from an Opportunity name.
+    const accountNameOf = (r: Row) =>
+      pick(r, 'Account Name', 'AccountName', 'Account.Name', 'Account');
+    await ensureAccounts(rows.map((r) => ({
+      sfId: pick(r, 'AccountId', 'Account ID', 'Account Id'),
+      name: accountNameOf(r),
+    })));
     for (const r of rows) {
       const sfId = pick(r, 'Id', 'Opportunity ID', 'Opportunity Id', '18 Digit ID');
       const oppName = pick(r, 'Name', 'Opportunity Name');
@@ -411,21 +487,26 @@ export async function runSalesforceImport(
         continue;
       }
       const sfStage = pick(r, 'StageName', 'Stage');
-      const sfAcct = pick(r, 'AccountId', 'Account ID');
+      const sfAcct = pick(r, 'AccountId', 'Account ID', 'Account Id');
       const account = sfAcct ? resolver.get(sfAcct) : null;
       if (sfAcct && !account) {
         report.relationshipExceptions.push({ sfId, label: oppName || sfId, reason: `Opportunity AccountId ${sfAcct} not found in this import` });
       }
+      const resolvedCompanyId = account?.kind === 'account' ? account.id : null;
+      const sfAcctName = accountNameOf(r);
       payload.push({
         // Account Name is preserved exactly; opportunity name lives in contact_name,
         // which is what the Opportunity UI already labels "Opportunity Name".
-        company_name: pick(r, 'Account Name', 'AccountName') || oppName || 'Untitled Opportunity',
+        company_name: sfAcctName || oppName || 'Untitled Opportunity',
         contact_name: oppName || null,
         source: pick(r, 'LeadSource', 'Lead Source', 'Type') || null,
         lead_source: pick(r, 'LeadSource', 'Lead Source') || null,
         service_line: pick(r, 'Service_Line__c', 'Service Line') || null,
         status: statusFor(sfStage),
-        company_id: account?.kind === 'account' ? account.id : null,
+        company_id: resolvedCompanyId,
+        // Always retained so account relationships can be reconciled later.
+        sf_account_id: sfAcct || null,
+        sf_account_name: sfAcctName || null,
         primary_contact_id: primaryContactBySfOpp.get(k15(sfId)) ?? null,
         amount: parseNum(pick(r, 'Amount', 'Opportunity Amount')),
         close_date: parseDate(pick(r, 'CloseDate', 'Close Date')),
@@ -462,13 +543,14 @@ export async function runSalesforceImport(
       // Use the Salesforce CloseDate / LastModifiedDate — never the import date.
       const closedAt = parseTimestamp(pick(r, 'CloseDate', 'Close Date'))
         || parseTimestamp(pick(r, 'LastModifiedDate', 'Last Modified Date'));
-      const sfAcct = pick(r, 'AccountId', 'Account ID');
+      const sfAcct = pick(r, 'AccountId', 'Account ID', 'Account Id');
       const account = sfAcct ? resolver.get(sfAcct) : null;
       dealRows.push({
         name: pick(r, 'Name', 'Opportunity Name') || 'Untitled Opportunity',
         lead_id: leadId,
         stage_id: stageFor(sfStage)?.id || firstStage?.id || null,
         company_id: account?.kind === 'account' ? account.id : null,
+        sf_account_id: sfAcct || null,
         value: parseNum(pick(r, 'Amount', 'Opportunity Amount')) ?? 0,
         probability: parseInteger(pick(r, 'Probability', 'Probability (%)')),
         expected_close_date: parseDate(pick(r, 'CloseDate', 'Close Date')),

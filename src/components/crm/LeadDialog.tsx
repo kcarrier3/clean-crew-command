@@ -699,6 +699,11 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       { label: 'Created', value: lead?.created_at ? new Date(lead.created_at).toLocaleString() : '—' },
       { label: 'Last Modified', value: lead?.updated_at ? new Date(lead.updated_at).toLocaleString() : '—' },
     ];
+    const sf = lead as any;
+    if (sf?.service_line) rows.splice(12, 0, { label: 'Service Line', value: sf.service_line });
+    if (sf?.salesforce_id) rows.push({ label: 'Salesforce Opportunity ID', value: sf.salesforce_id });
+    if (sf?.sf_account_id) rows.push({ label: 'Salesforce Account ID', value: sf.sf_account_id });
+    if (sf?.sf_account_name) rows.push({ label: 'Salesforce Account Name', value: sf.sf_account_name });
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-2">
