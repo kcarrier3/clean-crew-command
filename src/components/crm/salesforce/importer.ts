@@ -89,6 +89,10 @@ const CSV_MATCHERS: Array<{ object: string; test: RegExp }> = [
   // broad /opportunit/ matcher or history snapshots become "Untitled Opportunity".
   { object: '__ignore__', test: /opportunity(history|fieldhistory|lineitem|share|teammember|competitor|partner|stage|split|tag|feed)/i },
   { object: '__ignore__', test: /(accounthistory|contacthistory|leadhistory|casehistory|_history)\b/i },
+  // Junction / sharing / feed objects around Account & Contact must never be
+  // mistaken for the real Account or Contact export.
+  { object: '__ignore__', test: /account(share|teammember|contactrole|contactrelation|partner|feed|tag|brand|cleaninfo)/i },
+  { object: '__ignore__', test: /contact(share|feed|tag|cleaninfo|pointofcontact|requestcapture)/i },
   { object: 'ContentDocumentLink', test: /contentdocumentlink/i },
   { object: 'ContentDocument', test: /contentdocument(?!link)/i },
   { object: 'ContentVersion', test: /contentversion/i },
@@ -97,6 +101,10 @@ const CSV_MATCHERS: Array<{ object: string; test: RegExp }> = [
   { object: 'Attachment', test: /attachment/i },
   { object: 'Note', test: /(^|[\\/_-])notes?\b|notes?\.csv$/i },
   { object: 'Task', test: /(^|[\\/_-])tasks?\b|tasks?\.csv$/i },
+  // Real Account exports first: "Account.csv", "Accounts.csv", "001_Account.csv",
+  // "WE_Account_1.csv" … Checked before the generic /contact/ matcher so an
+  // "Account" file is never swallowed by a contact-ish token in its path.
+  { object: 'Account', test: /(^|[\\/_\- ])accounts?([\\/_\- .]|$)/i },
   { object: 'Contact', test: /contact/i },
   { object: 'Account', test: /account/i },
 ];
@@ -105,6 +113,25 @@ function classifyCsv(name: string): string | null {
   const base = name.split(/[\\/]/).pop() || name;
   const object = CSV_MATCHERS.find((m) => m.test.test(base))?.object ?? null;
   return object === '__ignore__' ? null : object;
+}
+
+/**
+ * A CSV whose file name did not classify can still be identified from its
+ * headers + the key prefix of its Id column. This is what keeps the import
+ * working for renamed / non-standard export layouts.
+ */
+function classifyByContent(rows: Row[]): string | null {
+  const first = rows[0];
+  if (!first) return null;
+  const headers = Object.keys(first).map((h) => h.trim().toLowerCase());
+  const has = (h: string) => headers.includes(h);
+  const id = pick(first, 'Id', '18 Digit ID', 'Record ID');
+  const prefix = sfPrefix(id).toUpperCase();
+  if (prefix === '001' && has('name')) return 'Account';
+  if (prefix === '003') return 'Contact';
+  if (prefix === '006' && (has('stagename') || has('closedate'))) return 'Opportunity';
+  if (prefix === '00T') return 'Task';
+  return null;
 }
 
 // ------------------------------------------------------------ upsert plumbing
