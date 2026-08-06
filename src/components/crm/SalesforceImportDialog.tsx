@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { runSalesforceImport, type ImportReport } from './salesforce/importer';
 import { reconcileStorage, type ReconcileReport } from './salesforce/reconcile';
+import { backfillOpportunityAccounts, type BackfillReport } from './salesforce/backfillAccounts';
 import { toCsv } from './salesforce/sfUtils';
 
 interface Props {
@@ -29,9 +30,11 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
   const [report, setReport] = useState<ImportReport | null>(null);
   const [recon, setRecon] = useState<ReconcileReport | null>(null);
   const [reconRunning, setReconRunning] = useState(false);
+  const [backfill, setBackfill] = useState<BackfillReport | null>(null);
+  const [backfillRunning, setBackfillRunning] = useState(false);
 
   const reset = () => {
-    setFiles([]); setProgress(0); setStatus(''); setReport(null); setRecon(null); setConfirmed(false);
+    setFiles([]); setProgress(0); setStatus(''); setReport(null); setRecon(null); setBackfill(null); setConfirmed(false);
   };
 
   const handleImport = async () => {
@@ -42,6 +45,8 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
       const uid = userData?.user?.id;
       if (!uid) throw new Error('You must be signed in.');
       const result = await runSalesforceImport(files, uid, (pct, s) => { setProgress(pct); setStatus(s); });
+      setStatus('Reconciling account relationships…');
+      setBackfill(await backfillOpportunityAccounts(uid));
       setReport(result);
       onImported();
       const totals = Object.values(result.stats).reduce(
@@ -53,6 +58,26 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
       toast({ title: 'Import failed', description: err?.message, variant: 'destructive' });
     } finally {
       setRunning(false);
+    }
+  };
+
+  const handleBackfill = async () => {
+    setBackfillRunning(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) throw new Error('You must be signed in.');
+      const r = await backfillOpportunityAccounts(uid);
+      setBackfill(r);
+      onImported();
+      toast({
+        title: 'Account reconciliation complete',
+        description: `${r.linkedBySalesforceId + r.linkedByName} opportunities linked · ${r.accountsCreated} accounts created`,
+      });
+    } catch (e: any) {
+      toast({ title: 'Reconciliation failed', description: e?.message, variant: 'destructive' });
+    } finally {
+      setBackfillRunning(false);
     }
   };
 
