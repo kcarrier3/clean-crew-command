@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Briefcase, DollarSign, Bell, Users, FileArchive, Trash2 } from 'lucide-react';
+import { Briefcase, DollarSign, Bell, Users, FileArchive, Trash2, Clock, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -10,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { PipelineBoard } from './PipelineBoard';
 import { LeadsList } from './LeadsList';
 import { DealDialog } from './DealDialog';
@@ -19,7 +22,7 @@ import { ContactsList } from './ContactsList';
 import { TasksList } from './TasksList';
 import { CRMReports } from './CRMReports';
 import { SalesforceImportDialog } from './SalesforceImportDialog';
-import type { CrmDeal, CrmLead, CrmStage } from './types';
+import { LEAD_STATUS_LABELS, type CrmDeal, type CrmLead, type CrmStage } from './types';
 
 export default function CRMDashboard() {
   const { toast } = useToast();
