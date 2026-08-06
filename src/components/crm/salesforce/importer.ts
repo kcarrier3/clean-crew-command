@@ -771,7 +771,7 @@ async function importFiles(
   const stNote = report.stats['Note'] ??= newStat('Note');
 
   const existingFiles = await fetchExistingFileKeys();
-  const existingNotes = await fetchExistingSfIds('crm_lead_notes');
+  const existingNotes = await fetchExistingNoteKeys();
 
   interface Job {
     sfId: string; row: Row; kind: 'attachment' | 'file';
@@ -882,7 +882,7 @@ async function importFiles(
           sf_created_date: parseTimestamp(pick(job.row, 'CreatedDate')),
           sf_last_modified_date: parseTimestamp(pick(job.row, 'LastModifiedDate')),
           created_by: uid,
-        }, job.sfId, existingNotes, stNote);
+        }, job.sfId, job.parent, existingNotes, stNote);
       } catch (e: any) {
         stNote.failed.push({ sfId: job.sfId, label: fileName, reason: e?.message || String(e) });
       }
