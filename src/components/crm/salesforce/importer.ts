@@ -5,6 +5,7 @@ import {
   decodeCsvBytes, parseCsvText, getSafeContentType, sanitizeStorageFileName,
   sanitizeNoteHtml, htmlToPlainText,
 } from './sfUtils';
+import { uploadResumable, STANDARD_UPLOAD_BYTES } from './largeUpload';
 
 // ---------------------------------------------------------------- reporting -
 
@@ -197,19 +198,42 @@ async function fetchExistingSfIds(table: string): Promise<Map<string, string>> {
   return map;
 }
 
+/** Existing accounts with their exact names, so opportunity display names are right. */
+async function fetchExistingAccounts(): Promise<Map<string, { id: string; name: string }>> {
+  const map = new Map<string, { id: string; name: string }>();
+  let from = 0;
+  for (;;) {
+    const { data, error } = await (supabase as any)
+      .from('crm_companies').select('id, name, salesforce_id').not('salesforce_id', 'is', null).range(from, from + 999);
+    if (error || !data?.length) break;
+    data.forEach((r: any) => map.set(k15(r.salesforce_id), { id: r.id, name: r.name }));
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  return map;
+}
+
 // ------------------------------------------------------------- the resolver -
 
 type ParentKind = 'account' | 'contact' | 'opportunity' | 'task';
-interface Resolved { kind: ParentKind; id: string; }
+interface Resolved { kind: ParentKind; id: string; name?: string }
 
 class SfResolver {
   private map = new Map<string, Resolved>();
-  set(sfId: string, kind: ParentKind, id: string) {
-    if (sfId) this.map.set(k15(sfId), { kind, id });
+  set(sfId: string, kind: ParentKind, id: string, name?: string) {
+    if (!sfId) return;
+    const key = k15(sfId);
+    const prev = this.map.get(key);
+    this.map.set(key, { kind, id, name: name ?? prev?.name });
   }
   get(sfId: string): Resolved | null {
     if (!sfId) return null;
     return this.map.get(k15(sfId)) ?? null;
+  }
+  /** Exact Salesforce Account name for a 001 id, when it is known. */
+  accountName(sfId: string): string | null {
+    const r = this.get(sfId);
+    return r?.kind === 'account' ? (r.name || null) : null;
   }
   /** Parent columns for crm_lead_notes / crm_lead_files. */
   columns(sfId: string): Record<string, string | null> | null {
@@ -317,7 +341,7 @@ export async function runSalesforceImport(
       name, salesforce_id: sfId, owner_id: uid, created_by: uid,
     }));
     const ids = await upsertChunked('crm_companies', payload, 'salesforce_id', st, new Set(), (r) => r.name);
-    ids.forEach((id, sf) => resolver.set(sf, 'account', id));
+    ids.forEach((id, sf) => resolver.set(sf, 'account', id, wanted.get(sf)?.name));
     return ids.size;
   }
 
@@ -355,9 +379,11 @@ export async function runSalesforceImport(
       });
     }
     const ids = await upsertChunked('crm_companies', payload, 'salesforce_id', st, existing, (r) => r.name);
-    ids.forEach((id, sf) => resolver.set(sf, 'account', id));
-    // Records that already existed but were not in this export still need resolving.
-    (await fetchExistingSfIds('crm_companies')).forEach((id, sf) => { if (!ids.has(sf)) resolver.set(sf, 'account', id); });
+    const nameBySf = new Map(payload.map((p: any) => [k15(p.salesforce_id), p.name as string]));
+    ids.forEach((id, sf) => resolver.set(sf, 'account', id, nameBySf.get(sf)));
+    // Records that already existed but were not in this export still need resolving —
+    // their exact name is carried too, so Opportunity display names stay correct.
+    (await fetchExistingAccounts()).forEach((row, sf) => { if (!ids.has(sf)) resolver.set(sf, 'account', row.id, row.name); });
   }
 
   // ------------------------------------------------------------ 3. Contacts --
@@ -493,11 +519,19 @@ export async function runSalesforceImport(
         report.relationshipExceptions.push({ sfId, label: oppName || sfId, reason: `Opportunity AccountId ${sfAcct} not found in this import` });
       }
       const resolvedCompanyId = account?.kind === 'account' ? account.id : null;
-      const sfAcctName = accountNameOf(r);
+      // Salesforce's Opportunity.csv carries AccountId but NOT the Account Name.
+      // Always prefer the exact name of the linked Account record; only fall back
+      // to a name column on the row itself when the id does not resolve.
+      const linkedAccountName = sfAcct ? resolver.accountName(sfAcct) : null;
+      const sfAcctName = linkedAccountName || accountNameOf(r);
+      if (resolvedCompanyId && !linkedAccountName && !accountNameOf(r)) {
+        report.relationshipExceptions.push({ sfId, label: oppName || sfId, reason: `Linked account ${sfAcct} has no name available` });
+      }
       payload.push({
         // Account Name is preserved exactly; opportunity name lives in contact_name,
         // which is what the Opportunity UI already labels "Opportunity Name".
-        company_name: sfAcctName || oppName || 'Untitled Opportunity',
+        // Never use the Opportunity name as an Account name when the account resolved.
+        company_name: sfAcctName || (resolvedCompanyId ? '(unnamed account)' : (oppName || 'Untitled Opportunity')),
         contact_name: oppName || null,
         source: pick(r, 'LeadSource', 'Lead Source', 'Type') || null,
         lead_source: pick(r, 'LeadSource', 'Lead Source') || null,
@@ -653,7 +687,7 @@ async function importNotes(
   st.sourceRows = rows.length;
   if (!rows.length) return;
 
-  const existing = await fetchExistingSfIds('crm_lead_notes');
+  const existing = await fetchExistingNoteKeys();
   for (const r of rows) {
     const sfId = pick(r, 'Id', 'Note ID', '18 Digit ID');
     const title = pick(r, 'Title', 'Name');
@@ -678,13 +712,20 @@ async function importNotes(
       sf_last_modified_date: parseTimestamp(pick(r, 'LastModifiedDate', 'Last Modified Date')),
       created_by: uid,
     };
-    await writeNote(payload, sfId, existing, st);
+    await writeNote(payload, sfId, parent, existing, st);
   }
 }
 
-/** Insert or update one note, keyed by its Salesforce Id (idempotent re-runs). */
-async function writeNote(payload: any, sfId: string, existing: Map<string, string>, st: ObjectStat) {
-  const known = sfId ? existing.get(k15(sfId)) : undefined;
+/**
+ * Insert or update one note, keyed by Salesforce Id **plus its parent** so a
+ * single Enhanced Note linked to several records keeps every relationship.
+ */
+async function writeNote(
+  payload: any, sfId: string, parent: Record<string, string | null>,
+  existing: Map<string, string>, st: ObjectStat,
+) {
+  const key = noteParentKey(sfId, parent);
+  const known = sfId ? existing.get(key) : undefined;
   if (known) {
     const { error } = await (supabase as any).from('crm_lead_notes').update(payload).eq('id', known);
     if (error) st.failed.push({ sfId, label: payload.title || sfId, reason: error.message });
@@ -693,13 +734,35 @@ async function writeNote(payload: any, sfId: string, existing: Map<string, strin
   }
   const { data, error } = await (supabase as any).from('crm_lead_notes').insert(payload).select('id').single();
   if (error) { st.failed.push({ sfId, label: payload.title || sfId, reason: error.message }); return; }
-  if (sfId && data?.id) existing.set(k15(sfId), data.id);
+  if (sfId && data?.id) existing.set(key, data.id);
   st.inserted++;
+}
+
+const noteParentKey = (sfId: string, parent: Record<string, string | null>) =>
+  [k15(sfId), parent.lead_id, parent.company_id, parent.contact_id, parent.task_id].join('|');
+
+async function fetchExistingNoteKeys(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  let from = 0;
+  for (;;) {
+    const { data, error } = await (supabase as any)
+      .from('crm_lead_notes')
+      .select('id, salesforce_id, lead_id, company_id, contact_id, task_id')
+      .not('salesforce_id', 'is', null)
+      .range(from, from + 999);
+    if (error || !data?.length) break;
+    data.forEach((r: any) => map.set(noteParentKey(r.salesforce_id, r), r.id));
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  return map;
 }
 
 // -------------------------------------------------------------- files step --
 
-const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+// Files above this size use the resumable (TUS) endpoint instead of a single
+// request, so large Salesforce binaries are preserved rather than skipped.
+const RESUMABLE_THRESHOLD_BYTES = STANDARD_UPLOAD_BYTES;
 
 async function importFiles(
   csvs: Record<string, Row[]>, binaries: BinaryIndex, resolver: SfResolver,
@@ -711,7 +774,7 @@ async function importFiles(
   const stNote = report.stats['Note'] ??= newStat('Note');
 
   const existingFiles = await fetchExistingFileKeys();
-  const existingNotes = await fetchExistingSfIds('crm_lead_notes');
+  const existingNotes = await fetchExistingNoteKeys();
 
   interface Job {
     sfId: string; row: Row; kind: 'attachment' | 'file';
@@ -822,7 +885,7 @@ async function importFiles(
           sf_created_date: parseTimestamp(pick(job.row, 'CreatedDate')),
           sf_last_modified_date: parseTimestamp(pick(job.row, 'LastModifiedDate')),
           created_by: uid,
-        }, job.sfId, existingNotes, stNote);
+        }, job.sfId, job.parent, existingNotes, stNote);
       } catch (e: any) {
         stNote.failed.push({ sfId: job.sfId, label: fileName, reason: e?.message || String(e) });
       }
@@ -839,15 +902,27 @@ async function importFiles(
         done++; continue;
       }
       const bytes = await entry.zipFile.async('uint8array');
-      if (bytes.byteLength > MAX_UPLOAD_BYTES) {
-        st.skipped.push({ sfId: job.sfId, label: fileName, reason: `${(bytes.byteLength / 1048576).toFixed(1)} MB exceeds the 50 MB browser upload limit` });
-        done++; continue;
-      }
       // Deterministic, Salesforce-ID based path → re-runs overwrite, never duplicate.
       const path = `salesforce/${job.sfId || docId || 'unknown'}/${sanitizeStorageFileName(fileName)}`;
-      const { error: upErr } = await supabase.storage.from('crm-files')
-        .upload(path, bytes, { contentType, upsert: true });
-      if (upErr) { st.failed.push({ sfId: job.sfId, label: fileName, reason: upErr.message }); done++; continue; }
+      const sizeMb = (bytes.byteLength / 1048576).toFixed(1);
+      if (bytes.byteLength > RESUMABLE_THRESHOLD_BYTES) {
+        try {
+          onProgress(80, `Uploading large file ${fileName} (${sizeMb} MB)…`);
+          await uploadResumable('crm-files', path, bytes, contentType, (sent, total) => {
+            onProgress(80, `Uploading ${fileName} — ${(sent / 1048576).toFixed(0)}/${(total / 1048576).toFixed(0)} MB`);
+          });
+        } catch (e: any) {
+          st.failed.push({
+            sfId: job.sfId, label: fileName,
+            reason: `Resumable upload failed for ${sizeMb} MB file: ${e?.message || String(e)}`,
+          });
+          done++; continue;
+        }
+      } else {
+        const { error: upErr } = await supabase.storage.from('crm-files')
+          .upload(path, bytes, { contentType, upsert: true });
+        if (upErr) { st.failed.push({ sfId: job.sfId, label: fileName, reason: `${sizeMb} MB upload failed: ${upErr.message}` }); done++; continue; }
+      }
 
       const payload: any = {
         ...job.parent,
