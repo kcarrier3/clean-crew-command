@@ -467,6 +467,15 @@ export async function runSalesforceImport(
 
     const payload: any[] = [];
     const dealSeed: Array<{ sfId: string; row: Row }> = [];
+    // Accounts referenced by an Opportunity but missing from crm_companies are
+    // created first (minimal row, exact Salesforce name) so every Opportunity
+    // can be linked. Never creates a row from an Opportunity name.
+    const accountNameOf = (r: Row) =>
+      pick(r, 'Account Name', 'AccountName', 'Account.Name', 'Account');
+    await ensureAccounts(rows.map((r) => ({
+      sfId: pick(r, 'AccountId', 'Account ID', 'Account Id'),
+      name: accountNameOf(r),
+    })));
     for (const r of rows) {
       const sfId = pick(r, 'Id', 'Opportunity ID', 'Opportunity Id', '18 Digit ID');
       const oppName = pick(r, 'Name', 'Opportunity Name');
@@ -478,21 +487,26 @@ export async function runSalesforceImport(
         continue;
       }
       const sfStage = pick(r, 'StageName', 'Stage');
-      const sfAcct = pick(r, 'AccountId', 'Account ID');
+      const sfAcct = pick(r, 'AccountId', 'Account ID', 'Account Id');
       const account = sfAcct ? resolver.get(sfAcct) : null;
       if (sfAcct && !account) {
         report.relationshipExceptions.push({ sfId, label: oppName || sfId, reason: `Opportunity AccountId ${sfAcct} not found in this import` });
       }
+      const resolvedCompanyId = account?.kind === 'account' ? account.id : null;
+      const sfAcctName = accountNameOf(r);
       payload.push({
         // Account Name is preserved exactly; opportunity name lives in contact_name,
         // which is what the Opportunity UI already labels "Opportunity Name".
-        company_name: pick(r, 'Account Name', 'AccountName') || oppName || 'Untitled Opportunity',
+        company_name: sfAcctName || oppName || 'Untitled Opportunity',
         contact_name: oppName || null,
         source: pick(r, 'LeadSource', 'Lead Source', 'Type') || null,
         lead_source: pick(r, 'LeadSource', 'Lead Source') || null,
         service_line: pick(r, 'Service_Line__c', 'Service Line') || null,
         status: statusFor(sfStage),
-        company_id: account?.kind === 'account' ? account.id : null,
+        company_id: resolvedCompanyId,
+        // Always retained so account relationships can be reconciled later.
+        sf_account_id: sfAcct || null,
+        sf_account_name: sfAcctName || null,
         primary_contact_id: primaryContactBySfOpp.get(k15(sfId)) ?? null,
         amount: parseNum(pick(r, 'Amount', 'Opportunity Amount')),
         close_date: parseDate(pick(r, 'CloseDate', 'Close Date')),
@@ -529,13 +543,14 @@ export async function runSalesforceImport(
       // Use the Salesforce CloseDate / LastModifiedDate — never the import date.
       const closedAt = parseTimestamp(pick(r, 'CloseDate', 'Close Date'))
         || parseTimestamp(pick(r, 'LastModifiedDate', 'Last Modified Date'));
-      const sfAcct = pick(r, 'AccountId', 'Account ID');
+      const sfAcct = pick(r, 'AccountId', 'Account ID', 'Account Id');
       const account = sfAcct ? resolver.get(sfAcct) : null;
       dealRows.push({
         name: pick(r, 'Name', 'Opportunity Name') || 'Untitled Opportunity',
         lead_id: leadId,
         stage_id: stageFor(sfStage)?.id || firstStage?.id || null,
         company_id: account?.kind === 'account' ? account.id : null,
+        sf_account_id: sfAcct || null,
         value: parseNum(pick(r, 'Amount', 'Opportunity Amount')) ?? 0,
         probability: parseInteger(pick(r, 'Probability', 'Probability (%)')),
         expected_close_date: parseDate(pick(r, 'CloseDate', 'Close Date')),
