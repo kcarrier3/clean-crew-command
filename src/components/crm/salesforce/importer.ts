@@ -368,6 +368,11 @@ export async function runSalesforceImport(
     st.sourceRows = rows.length;
     const existing = new Set((await fetchExistingSfIds('crm_contacts')).keys());
     const payload: any[] = [];
+    // Create any Account referenced by a Contact but absent from the export.
+    await ensureAccounts(rows.map((r) => ({
+      sfId: pick(r, 'AccountId', 'Account ID', 'Account Id'),
+      name: pick(r, 'Account Name', 'AccountName', 'Account'),
+    })));
     for (const r of rows) {
       const sfId = pick(r, 'Id', 'Contact ID', 'Contact Id', '18 Digit ID');
       const fullName = pick(r, 'Name');
