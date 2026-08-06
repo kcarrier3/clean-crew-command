@@ -24,19 +24,31 @@ import { CRMReports } from './CRMReports';
 import { SalesforceImportDialog } from './SalesforceImportDialog';
 import { LEAD_STATUS_LABELS, type CrmDeal, type CrmLead, type CrmStage } from './types';
 
+const STATUS_COLORS: Record<CrmLead['status'], string> = {
+  new: 'bg-blue-100 text-blue-800',
+  contacted: 'bg-yellow-100 text-yellow-800',
+  qualified: 'bg-green-100 text-green-800',
+  unqualified: 'bg-gray-200 text-gray-700',
+  converted: 'bg-purple-100 text-purple-800',
+};
+
 export default function CRMDashboard() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [stages, setStages] = useState<CrmStage[]>([]);
   const [deals, setDeals] = useState<CrmDeal[]>([]);
   const [leads, setLeads] = useState<CrmLead[]>([]);
   const [openActsCount, setOpenActsCount] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<CrmDeal | null>(null);
-  const [tab, setTab] = useState('pipeline');
+  const [tab, setTab] = useState('recent');
   const [importOpen, setImportOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetConfirm, setResetConfirm] = useState('');
   const [resetting, setResetting] = useState(false);
+  const [recent, setRecent] = useState<Array<{ lead: CrmLead; lastAt: number }>>([]);
+  const [recentLoading, setRecentLoading] = useState(true);
 
   const loadAll = async () => {
     const [{ data: s }, { data: d }, { data: l }, { count }] = await Promise.all([
@@ -51,7 +63,60 @@ export default function CRMDashboard() {
     setOpenActsCount(count || 0);
   };
 
-  useEffect(() => { loadAll(); }, []);
+  const loadRecent = async () => {
+    if (!user) {
+      setRecentLoading(false);
+      return;
+    }
+    setRecentLoading(true);
+    const userId = user.id;
+
+    const [{ data: owned }, { data: acts }, { data: tasks }, { data: dealRows }] = await Promise.all([
+      (supabase as any).from('crm_leads').select('*').or(`assigned_to.eq.${userId},created_by.eq.${userId}`),
+      (supabase as any).from('crm_activities')
+        .select('lead_id, created_at, completed_at, updated_at')
+        .or(`owner_id.eq.${userId},created_by.eq.${userId}`)
+        .not('lead_id', 'is', null),
+      (supabase as any).from('crm_tasks')
+        .select('lead_id, created_at, completed_at, updated_at')
+        .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
+        .not('lead_id', 'is', null),
+      (supabase as any).from('crm_deals')
+        .select('lead_id, created_at, updated_at, won_at')
+        .or(`owner_id.eq.${userId},created_by.eq.${userId}`)
+        .not('lead_id', 'is', null),
+    ]);
+
+    const lastInteraction = new Map<string, number>();
+    const track = (leadId: string | null, ts: string | null) => {
+      if (!leadId || !ts) return;
+      const t = new Date(ts).getTime();
+      const current = lastInteraction.get(leadId);
+      if (!current || t > current) lastInteraction.set(leadId, t);
+    };
+
+    owned?.forEach((l: CrmLead) => track(l.id, l.updated_at || l.created_at));
+    acts?.forEach((a: any) => track(a.lead_id, a.completed_at || a.updated_at || a.created_at));
+    tasks?.forEach((t: any) => track(t.lead_id, t.completed_at || t.updated_at || t.created_at));
+    dealRows?.forEach((d: any) => track(d.lead_id, d.won_at || d.updated_at || d.created_at));
+
+    const ids = Array.from(lastInteraction.keys());
+    if (ids.length === 0) {
+      setRecent([]);
+      setRecentLoading(false);
+      return;
+    }
+
+    const { data: leadRows } = await (supabase as any).from('crm_leads').select('*').in('id', ids);
+    const merged = (leadRows || [])
+      .map((l: CrmLead) => ({ lead: l, lastAt: lastInteraction.get(l.id) || new Date(l.updated_at || l.created_at).getTime() }))
+      .sort((a: any, b: any) => b.lastAt - a.lastAt)
+      .slice(0, 15);
+    setRecent(merged);
+    setRecentLoading(false);
+  };
+
+  useEffect(() => { loadAll(); loadRecent(); }, [user]);
 
   const resetCrm = async () => {
     setResetting(true);
