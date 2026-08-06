@@ -200,16 +200,24 @@ async function fetchExistingSfIds(table: string): Promise<Map<string, string>> {
 // ------------------------------------------------------------- the resolver -
 
 type ParentKind = 'account' | 'contact' | 'opportunity' | 'task';
-interface Resolved { kind: ParentKind; id: string; }
+interface Resolved { kind: ParentKind; id: string; name?: string }
 
 class SfResolver {
   private map = new Map<string, Resolved>();
-  set(sfId: string, kind: ParentKind, id: string) {
-    if (sfId) this.map.set(k15(sfId), { kind, id });
+  set(sfId: string, kind: ParentKind, id: string, name?: string) {
+    if (!sfId) return;
+    const key = k15(sfId);
+    const prev = this.map.get(key);
+    this.map.set(key, { kind, id, name: name ?? prev?.name });
   }
   get(sfId: string): Resolved | null {
     if (!sfId) return null;
     return this.map.get(k15(sfId)) ?? null;
+  }
+  /** Exact Salesforce Account name for a 001 id, when it is known. */
+  accountName(sfId: string): string | null {
+    const r = this.get(sfId);
+    return r?.kind === 'account' ? (r.name || null) : null;
   }
   /** Parent columns for crm_lead_notes / crm_lead_files. */
   columns(sfId: string): Record<string, string | null> | null {
