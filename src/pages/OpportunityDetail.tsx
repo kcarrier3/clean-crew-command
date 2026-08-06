@@ -23,6 +23,12 @@ export default function OpportunityDetail() {
 
   useEffect(() => { load(); }, [id]);
 
+  // Browser back stays natural; a deep-linked/refreshed page falls back to the CRM.
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <SEO
@@ -31,7 +37,7 @@ export default function OpportunityDetail() {
         path={`/crm/opportunities/${id ?? ''}`}
       />
       <div className="max-w-7xl mx-auto p-4 space-y-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="sm" onClick={goBack}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Opportunities
         </Button>
         {loading ? (
