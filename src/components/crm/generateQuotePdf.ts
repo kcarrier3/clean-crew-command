@@ -21,7 +21,7 @@ export function generateQuotePdf({ quote, items, deal, clientName, clientEmail, 
   doc.text('Summit Facilities Group', 14, 20);
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text('Crew Compass CRM', 14, 26);
+  doc.text('Crew Compass Waypoint', 14, 26);
 
   // Quote title
   doc.setFontSize(16);

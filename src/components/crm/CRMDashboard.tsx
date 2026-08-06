@@ -83,7 +83,7 @@ export default function CRMDashboard() {
     if (errors.length) {
       toast({ title: 'Reset finished with errors', description: errors.join(' | '), variant: 'destructive' });
     } else {
-      toast({ title: 'CRM reset', description: 'All CRM records were removed.' });
+      toast({ title: 'Waypoint reset', description: 'All Waypoint records were removed.' });
     }
     loadAll();
   };
@@ -221,7 +221,7 @@ export default function CRMDashboard() {
       <AlertDialog open={resetOpen} onOpenChange={(o) => { if (!resetting) { setResetOpen(o); if (!o) setResetConfirm(''); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive">Reset CRM data?</AlertDialogTitle>
+            <AlertDialogTitle className="text-destructive">Reset Waypoint data?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>

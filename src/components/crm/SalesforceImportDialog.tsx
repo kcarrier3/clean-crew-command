@@ -133,7 +133,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
                 <ShieldCheck className="h-4 w-4" />
                 <AlertTitle>This is a repair / upsert — nothing is deleted</AlertTitle>
                 <AlertDescription className="text-sm">
-                  Existing CRM records are matched by their Salesforce ID and updated in place. No accounts, contacts,
+                  Existing Waypoint records are matched by their Salesforce ID and updated in place. No accounts, contacts,
                   opportunities, notes, files or stored documents are cleared, and running this twice will not create
                   duplicates.
                 </AlertDescription>
@@ -160,7 +160,7 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
                   disabled={running}
                   onChange={(e) => setConfirmed(e.target.checked)}
                 />
-                <span>I understand this updates and adds records and will not clear existing CRM data.</span>
+                <span>I understand this updates and adds records and will not clear existing Waypoint data.</span>
               </label>
 
               {running && (
