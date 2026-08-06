@@ -115,6 +115,12 @@ function classifyCsv(name: string): string | null {
   return object === '__ignore__' ? null : object;
 }
 
+/** True when the file name matched an explicitly ignored child/history object. */
+function isIgnoredCsv(name: string): boolean {
+  const base = name.split(/[\\/]/).pop() || name;
+  return CSV_MATCHERS.find((m) => m.test.test(base))?.object === '__ignore__';
+}
+
 /**
  * A CSV whose file name did not classify can still be identified from its
  * headers + the key prefix of its Id column. This is what keeps the import
