@@ -172,6 +172,36 @@ export function SalesforceImportDialog({ open, onOpenChange, onImported }: Props
 
               <div className="border-t pt-4 space-y-2">
                 <p className="text-sm font-medium">Storage recovery scan</p>
+              </div>
+
+              <div className="border-t pt-4 space-y-2">
+                <p className="text-sm font-medium">Account relationship repair</p>
+                <p className="text-xs text-muted-foreground">
+                  Links existing opportunities to their Salesforce account without re-importing. Matches on the stored
+                  Salesforce Account ID first, then on an exact, unambiguous account name. Nothing is deleted and an
+                  account is only created when a real Salesforce Account ID and name are present.
+                </p>
+                <Button variant="outline" size="sm" disabled={backfillRunning || running} onClick={handleBackfill}>
+                  <RefreshCw className="h-4 w-4 mr-2" />{backfillRunning ? 'Reconciling…' : 'Reconcile accounts now'}
+                </Button>
+                {backfill && (
+                  <div className="text-sm space-y-1 pt-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">{backfill.leadsScanned} unlinked opportunities</Badge>
+                      <Badge variant="outline">{backfill.linkedBySalesforceId} linked by Salesforce ID</Badge>
+                      <Badge variant="outline">{backfill.linkedByName} linked by name</Badge>
+                      <Badge variant="outline">{backfill.accountsCreated} accounts created</Badge>
+                    </div>
+                    {backfill.unresolved.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {backfill.unresolved.length} could not be resolved safely — e.g. “{backfill.unresolved[0].reason}”.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
                   Read-only comparison of stored documents against file records. Nothing is deleted; an object is only
                   re-linked when its Salesforce identity and parent are unambiguous.
