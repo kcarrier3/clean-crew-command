@@ -31,6 +31,8 @@ export interface CrmLead {
   description?: string | null;
   next_step?: string | null;
   stage_id?: string | null;
+  sf_created_date?: string | null;
+  sf_last_modified_date?: string | null;
 }
 
 export interface CrmDeal {
