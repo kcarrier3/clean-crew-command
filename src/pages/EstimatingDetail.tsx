@@ -19,6 +19,14 @@ import { useToast } from '@/hooks/use-toast';
 import { SEO } from '@/components/SEO';
 import { EstimatorShell } from '@/components/estimator/EstimatorShell';
 import { PricingSummary, buildSummaryText } from '@/components/estimator/PricingSummary';
+import { SERVICE_LABELS, normalizeServiceType, type ServiceType } from '@/components/estimator/serviceTypes';
+import {
+  SpecialtyForm, SpecialtySummaryPanel, buildSpecialtySummaryText,
+} from '@/components/estimator/SpecialtyEditor';
+import {
+  calculateSpecialty, hydrateSpecialtyInputs, validateSpecialty,
+  type SpecialtyInputs, type SpecialtyOutputs,
+} from '@/components/estimator/specialtyCalc';
 import {
   DEFAULT_INPUTS, SUPPLY_PRESETS, calculateEstimate, isPricingSolvable,
   supplyRateForPreset, money, hoursFmt, pct,
@@ -36,6 +44,23 @@ const OUTPUT_COLUMNS = (o: ReturnType<typeof calculateEstimate>) => ({
   price_per_visit: o.price_per_visit,
   monthly_price: o.monthly_price,
   annual_price: o.annual_price,
+  price_per_sqft: o.price_per_sqft,
+  gross_margin_percent: o.gross_margin_percent,
+  markup_percent: o.markup_on_direct_percent,
+});
+
+const SPECIALTY_COLUMNS = (i: SpecialtyInputs, o: SpecialtyOutputs) => ({
+  specialty_inputs: i,
+  base_wage: (i as any).base_wage,
+  labor_burden_percent: (i as any).labor_burden_percent,
+  overhead_percent: (i as any).overhead_percent,
+  target_margin_percent: (i as any).target_margin_percent,
+  loaded_labor_rate: o.loaded_labor_rate,
+  project_labor_hours: o.labor_hours,
+  project_direct_cost: o.total_direct_cost,
+  project_price: o.project_price,
+  total_direct_cost: o.total_direct_cost,
+  overhead_amount: o.overhead_amount,
   price_per_sqft: o.price_per_sqft,
   gross_margin_percent: o.gross_margin_percent,
   markup_percent: o.markup_on_direct_percent,
@@ -84,6 +109,8 @@ export default function EstimatingDetail() {
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [inputs, setInputs] = useState<EstimateInputs>(DEFAULT_INPUTS);
+  const [serviceType, setServiceType] = useState<ServiceType>('janitorial');
+  const [specialty, setSpecialty] = useState<SpecialtyInputs>(() => hydrateSpecialtyInputs('carpet_cleaning', {}));
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
@@ -91,7 +118,12 @@ export default function EstimatingDetail() {
   const dirtyRef = useRef(false);
 
   const readOnly = estimate?.status === 'completed';
+  const isJanitorial = serviceType === 'janitorial';
   const outputs = useMemo(() => calculateEstimate(inputs), [inputs]);
+  const specialtyOutputs = useMemo(
+    () => calculateSpecialty(serviceType, specialty),
+    [serviceType, specialty]
+  );
   const solvable = isPricingSolvable(inputs.overhead_percent, inputs.target_margin_percent);
 
   useEffect(() => { if (!loading && !user) navigate('/auth'); }, [loading, user, navigate]);
@@ -102,12 +134,15 @@ export default function EstimatingDetail() {
     if (!est) { setEstimate(null); return; }
     setEstimate(est);
     setName(est.name || '');
+    const svc = normalizeServiceType(est.service_type);
+    setServiceType(svc);
 
     const { data: rev } = await (supabase as any)
       .from('estimate_revisions').select('*').eq('id', est.current_revision_id).maybeSingle();
     if (rev) {
       setRevision(rev);
       setNotes(rev.notes || '');
+      setSpecialty(hydrateSpecialtyInputs(svc, rev.specialty_inputs));
       setInputs({
         square_feet: Number(rev.square_feet) || 0,
         cleanings_per_week: Number(rev.cleanings_per_week) || 0,
@@ -144,14 +179,22 @@ export default function EstimatingDetail() {
     dirtyRef.current = true;
   };
 
+  const setSpecialtyInput = (patch: Record<string, unknown>) => {
+    setSpecialty(prev => ({ ...(prev as any), ...patch }) as SpecialtyInputs);
+    setDirty(true);
+    dirtyRef.current = true;
+  };
+
   const saveDraft = useCallback(async (silent = false) => {
     if (!estimate || !revision || estimate.status === 'completed') return;
     setSaving(true);
-    const o = calculateEstimate(inputs);
+    const revPayload = isJanitorial
+      ? { ...inputs, ...OUTPUT_COLUMNS(calculateEstimate(inputs)) }
+      : SPECIALTY_COLUMNS(specialty, calculateSpecialty(serviceType, specialty));
     const [{ error: e1 }, { error: e2 }] = await Promise.all([
       (supabase as any).from('estimates').update({ name: name || 'Untitled estimate', updated_at: new Date().toISOString() }).eq('id', estimate.id),
       (supabase as any).from('estimate_revisions').update({
-        ...inputs, notes, updated_at: new Date().toISOString(), ...OUTPUT_COLUMNS(o),
+        ...revPayload, service_type: serviceType, notes, updated_at: new Date().toISOString(),
       }).eq('id', revision.id),
     ]);
     setSaving(false);
@@ -162,22 +205,24 @@ export default function EstimatingDetail() {
     setDirty(false);
     dirtyRef.current = false;
     if (!silent) toast({ title: 'Draft saved' });
-  }, [estimate, revision, inputs, notes, name, toast]);
+  }, [estimate, revision, inputs, specialty, serviceType, isJanitorial, notes, name, toast]);
 
   // Autosave drafts a couple of seconds after the last edit.
   useEffect(() => {
     if (!dirty || readOnly) return;
     const t = setTimeout(() => { saveDraft(true); }, 1500);
     return () => clearTimeout(t);
-  }, [dirty, inputs, notes, name, readOnly, saveDraft]);
+  }, [dirty, inputs, specialty, notes, name, readOnly, saveDraft]);
 
   const markComplete = async () => {
     if (!estimate || !revision || !user) return;
     setBusy(true);
-    const o = calculateEstimate(inputs);
+    const revPayload = isJanitorial
+      ? { ...inputs, ...OUTPUT_COLUMNS(calculateEstimate(inputs)) }
+      : SPECIALTY_COLUMNS(specialty, calculateSpecialty(serviceType, specialty));
     const now = new Date().toISOString();
     const { error: revErr } = await (supabase as any).from('estimate_revisions').update({
-      ...inputs, notes, status: 'completed', updated_at: now, ...OUTPUT_COLUMNS(o),
+      ...revPayload, service_type: serviceType, notes, status: 'completed', updated_at: now,
     }).eq('id', revision.id);
     if (revErr) {
       setBusy(false);
@@ -206,6 +251,7 @@ export default function EstimatingDetail() {
       company_id: estimate.company_id,
       contact_id: estimate.contact_id,
       status: 'draft',
+      service_type: serviceType,
       created_by: user.id,
       owner_id: user.id,
     }).select().single();
@@ -214,15 +260,17 @@ export default function EstimatingDetail() {
       toast({ title: 'Could not duplicate', description: error?.message, variant: 'destructive' });
       return;
     }
-    const o = calculateEstimate(inputs);
+    const revPayload = isJanitorial
+      ? { ...inputs, ...OUTPUT_COLUMNS(calculateEstimate(inputs)) }
+      : SPECIALTY_COLUMNS(specialty, calculateSpecialty(serviceType, specialty));
     const { data: rev, error: revErr } = await (supabase as any).from('estimate_revisions').insert({
       estimate_id: est.id,
       revision_number: (revision.revision_number || 1) + 1,
       status: 'draft',
+      service_type: serviceType,
       created_by: user.id,
-      ...inputs,
+      ...revPayload,
       notes,
-      ...OUTPUT_COLUMNS(o),
     }).select().single();
     if (revErr) {
       setBusy(false);
@@ -235,13 +283,16 @@ export default function EstimatingDetail() {
   };
 
   const copySummary = async () => {
-    const text = buildSummaryText(inputs, outputs, {
+    const meta = {
       estimateName: name || 'Untitled estimate',
       opportunityName: lead?.company_name || 'Opportunity',
       ownerName,
       completedAt: estimate?.completed_at,
       notes,
-    });
+    };
+    const text = isJanitorial
+      ? buildSummaryText(inputs, outputs, meta)
+      : buildSpecialtySummaryText(serviceType, specialty, specialtyOutputs, meta);
     try {
       await navigator.clipboard.writeText(text);
       toast({ title: 'Pricing summary copied' });
@@ -252,6 +303,7 @@ export default function EstimatingDetail() {
 
   const validationError = (() => {
     if (!name.trim()) return 'Add an estimate name.';
+    if (!isJanitorial) return validateSpecialty(serviceType, specialty);
     if (!(inputs.square_feet > 0)) return 'Building square feet must be greater than zero.';
     if (!(inputs.cleanings_per_week > 0)) return 'Cleanings per week must be greater than zero.';
     if (!(inputs.production_rate_sqft_hour > 0)) return 'Production rate must be greater than zero.';
@@ -279,12 +331,12 @@ export default function EstimatingDetail() {
     <>
       <SEO
         title={`${name || 'Estimate'} — Estimating`}
-        description="Janitorial estimate pricing worksheet with labor, supply, overhead and margin detail."
+        description="Estimate pricing worksheet with labor, materials, overhead and margin detail."
         path={`/estimating/${id ?? ''}`}
       />
       <EstimatorShell
         title={name || 'Estimate'}
-        subtitle={lead?.company_name}
+        subtitle={[SERVICE_LABELS[serviceType], lead?.company_name].filter(Boolean).join(' · ')}
         backTo="/estimating"
         actions={
           readOnly ? (
@@ -312,19 +364,35 @@ export default function EstimatingDetail() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Badge>Completed</Badge>
+              <Badge variant="secondary">{SERVICE_LABELS[serviceType]}</Badge>
               <span className="text-xs text-muted-foreground">Read-only. Duplicate as a draft to revise.</span>
             </div>
-            <PricingSummary
-              inputs={inputs}
-              outputs={outputs}
-              meta={{
-                estimateName: name,
-                opportunityName: lead?.company_name || 'Opportunity',
-                ownerName,
-                completedAt: estimate?.completed_at,
-                notes,
-              }}
-            />
+            {isJanitorial ? (
+              <PricingSummary
+                inputs={inputs}
+                outputs={outputs}
+                meta={{
+                  estimateName: name,
+                  opportunityName: lead?.company_name || 'Opportunity',
+                  ownerName,
+                  completedAt: estimate?.completed_at,
+                  notes,
+                }}
+              />
+            ) : (
+              <div className="space-y-3">
+                <SpecialtySummaryPanel outputs={specialtyOutputs} />
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Record</CardTitle></CardHeader>
+                  <CardContent className="pt-0 space-y-1 text-sm">
+                    <Line label="Opportunity" value={lead?.company_name || 'Opportunity'} />
+                    <Line label="Owner" value={ownerName} />
+                    <Line label="Completed" value={estimate?.completed_at ? new Date(estimate.completed_at).toLocaleString() : '—'} />
+                    {notes && <p className="text-xs text-muted-foreground whitespace-pre-wrap pt-2">{notes}</p>}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
             <Button variant="outline" className="w-full" onClick={copySummary}>
               <Copy className="h-4 w-4 mr-2" /> Copy Pricing Summary
             </Button>
@@ -348,10 +416,21 @@ export default function EstimatingDetail() {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Building2 className="h-4 w-4" />
                     <span className="truncate">{lead?.company_name || 'Opportunity'}</span>
+                    <Badge variant="secondary" className="ml-auto shrink-0">{SERVICE_LABELS[serviceType]}</Badge>
                   </div>
                 </CardContent>
               </Card>
 
+              {!isJanitorial && (
+                <SpecialtyForm
+                  service={serviceType}
+                  inputs={specialty}
+                  patch={setSpecialtyInput}
+                />
+              )}
+
+              {isJanitorial && (
+              <>
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Production</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-2 gap-3">
@@ -423,6 +502,8 @@ export default function EstimatingDetail() {
                   </p>
                 </CardContent>
               </Card>
+              </>
+              )}
 
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Internal notes &amp; assumptions</CardTitle></CardHeader>
@@ -438,6 +519,8 @@ export default function EstimatingDetail() {
             </div>
 
             <div className="space-y-3 md:sticky md:top-20">
+              {isJanitorial ? (
+              <>
               <Card className="border-brand-orange/40">
                 <CardContent className="pt-6 text-center">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Monthly price</p>
@@ -465,6 +548,10 @@ export default function EstimatingDetail() {
                   <Line label="Price / sq ft / mo" value={`$${outputs.price_per_sqft.toFixed(4)}`} />
                 </CardContent>
               </Card>
+              </>
+              ) : (
+                <SpecialtySummaryPanel outputs={specialtyOutputs} />
+              )}
               <Button variant="outline" className="w-full" onClick={copySummary}>
                 <Copy className="h-4 w-4 mr-2" /> Copy Pricing Summary
               </Button>

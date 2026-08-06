@@ -12,6 +12,9 @@ import { useToast } from '@/hooks/use-toast';
 import { SEO } from '@/components/SEO';
 import { EstimatorShell } from '@/components/estimator/EstimatorShell';
 import { OpportunityPicker } from '@/components/estimator/OpportunityPicker';
+import { ServiceTypePicker } from '@/components/estimator/ServiceTypePicker';
+import { SERVICE_LABELS, normalizeServiceType, isRecurringService, type ServiceType } from '@/components/estimator/serviceTypes';
+import { DEFAULT_SPECIALTY_INPUTS, calculateSpecialty } from '@/components/estimator/specialtyCalc';
 import { DEFAULT_INPUTS, calculateEstimate, money } from '@/components/estimator/calc';
 import type { CrmLead } from '@/components/crm/types';
 
@@ -23,6 +26,7 @@ interface EstimateRow {
   updated_at: string;
   completed_at: string | null;
   current_revision_id: string | null;
+  service_type?: string | null;
 }
 
 export default function Estimating() {
@@ -35,6 +39,8 @@ export default function Estimating() {
   const [tab, setTab] = useState<'draft' | 'completed'>('draft');
   const [search, setSearch] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [servicePickerOpen, setServicePickerOpen] = useState(false);
+  const [pendingLead, setPendingLead] = useState<CrmLead | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -44,7 +50,7 @@ export default function Estimating() {
   const load = useCallback(async () => {
     const { data, error } = await (supabase as any)
       .from('estimates')
-      .select('id,name,status,lead_id,updated_at,completed_at,current_revision_id')
+      .select('id,name,status,lead_id,updated_at,completed_at,current_revision_id,service_type')
       .order('updated_at', { ascending: false });
     if (error) {
       toast({ title: 'Failed to load estimates', description: error.message, variant: 'destructive' });
@@ -56,9 +62,13 @@ export default function Estimating() {
     const revIds = list.map(r => r.current_revision_id).filter(Boolean) as string[];
     if (revIds.length) {
       const { data: revs } = await (supabase as any)
-        .from('estimate_revisions').select('id,monthly_price').in('id', revIds);
+        .from('estimate_revisions').select('id,monthly_price,project_price,service_type').in('id', revIds);
       const map: Record<string, number> = {};
-      (revs || []).forEach((r: any) => { map[r.id] = Number(r.monthly_price) || 0; });
+      (revs || []).forEach((r: any) => {
+        map[r.id] = isRecurringService(r.service_type)
+          ? Number(r.monthly_price) || 0
+          : Number(r.project_price) || 0;
+      });
       setPrices(map);
     }
 
@@ -74,17 +84,25 @@ export default function Estimating() {
 
   useEffect(() => { if (user) load(); }, [user, load]);
 
-  const createForLead = async (lead: CrmLead) => {
-    if (!user) return;
+  const pickLead = (lead: CrmLead) => {
+    setPendingLead(lead);
+    setPickerOpen(false);
+    setServicePickerOpen(true);
+  };
+
+  const createForLead = async (service: ServiceType) => {
+    const lead = pendingLead;
+    if (!user || !lead) return;
     setBusy(true);
     const { data: est, error } = await (supabase as any)
       .from('estimates')
       .insert({
-        name: `${lead.company_name} estimate`,
+        name: `${lead.company_name} — ${SERVICE_LABELS[service]}`,
         lead_id: lead.id,
         company_id: lead.company_id ?? null,
         contact_id: lead.primary_contact_id ?? null,
         status: 'draft',
+        service_type: service,
         created_by: user.id,
         owner_id: user.id,
       })
@@ -95,14 +113,10 @@ export default function Estimating() {
       toast({ title: 'Could not create estimate', description: error?.message, variant: 'destructive' });
       return;
     }
-    const outputs = calculateEstimate(DEFAULT_INPUTS);
-    const { data: rev, error: revErr } = await (supabase as any)
-      .from('estimate_revisions')
-      .insert({
-        estimate_id: est.id,
-        revision_number: 1,
-        status: 'draft',
-        created_by: user.id,
+    let payload: Record<string, any>;
+    if (service === 'janitorial') {
+      const outputs = calculateEstimate(DEFAULT_INPUTS);
+      payload = {
         ...DEFAULT_INPUTS,
         labor_hours_per_visit: outputs.labor_hours_per_visit,
         monthly_labor_hours: outputs.monthly_labor_hours,
@@ -117,6 +131,36 @@ export default function Estimating() {
         price_per_sqft: outputs.price_per_sqft,
         gross_margin_percent: outputs.gross_margin_percent,
         markup_percent: outputs.markup_on_direct_percent,
+      };
+    } else {
+      const specialty = DEFAULT_SPECIALTY_INPUTS(service);
+      const o = calculateSpecialty(service, specialty);
+      payload = {
+        specialty_inputs: specialty,
+        base_wage: (specialty as any).base_wage,
+        labor_burden_percent: (specialty as any).labor_burden_percent,
+        overhead_percent: (specialty as any).overhead_percent,
+        target_margin_percent: (specialty as any).target_margin_percent,
+        loaded_labor_rate: o.loaded_labor_rate,
+        project_labor_hours: o.labor_hours,
+        project_direct_cost: o.total_direct_cost,
+        project_price: o.project_price,
+        total_direct_cost: o.total_direct_cost,
+        overhead_amount: o.overhead_amount,
+        price_per_sqft: o.price_per_sqft,
+        gross_margin_percent: o.gross_margin_percent,
+        markup_percent: o.markup_on_direct_percent,
+      };
+    }
+    const { data: rev, error: revErr } = await (supabase as any)
+      .from('estimate_revisions')
+      .insert({
+        estimate_id: est.id,
+        revision_number: 1,
+        status: 'draft',
+        service_type: service,
+        created_by: user.id,
+        ...payload,
       })
       .select()
       .single();
@@ -127,6 +171,8 @@ export default function Estimating() {
     }
     await (supabase as any).from('estimates').update({ current_revision_id: rev.id }).eq('id', est.id);
     setBusy(false);
+    setServicePickerOpen(false);
+    setPendingLead(null);
     navigate(`/estimating/${est.id}`);
   };
 
@@ -199,7 +245,10 @@ export default function Estimating() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {visible.map(r => (
+              {visible.map(r => {
+                const service = normalizeServiceType(r.service_type);
+                const recurring = isRecurringService(service);
+                return (
                 <Card
                   key={r.id}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -212,24 +261,36 @@ export default function Estimating() {
                         <Building2 className="h-3 w-3 shrink-0" />
                         {leadNames[r.lead_id] || 'Opportunity'}
                       </div>
+                      <Badge variant="secondary" className="mt-1 text-[10px]">{SERVICE_LABELS[service]}</Badge>
                     </div>
                     <div className="text-right shrink-0">
                       <div className="text-sm font-semibold tabular-nums">
-                        {r.current_revision_id ? `${money(prices[r.current_revision_id] || 0)}/mo` : '—'}
+                        {r.current_revision_id
+                          ? `${money(prices[r.current_revision_id] || 0)}${recurring ? '/mo' : ''}`
+                          : '—'}
                       </div>
+                      {!recurring && <div className="text-[10px] text-muted-foreground">project total</div>}
                       <Badge variant={r.status === 'completed' ? 'default' : 'outline'} className="mt-1 text-[10px]">
                         {r.status === 'completed' ? 'Completed' : 'Draft'}
                       </Badge>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </EstimatorShell>
 
-      <OpportunityPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={createForLead} />
+      <OpportunityPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={pickLead} />
+      <ServiceTypePicker
+        open={servicePickerOpen}
+        onOpenChange={o => { setServicePickerOpen(o); if (!o) setPendingLead(null); }}
+        onSelect={createForLead}
+        subtitle={pendingLead ? `New estimate for ${pendingLead.company_name}` : undefined}
+        disabled={busy}
+      />
     </>
   );
 }
