@@ -340,7 +340,7 @@ export default function CRMDashboard() {
       <SalesforceImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
-        onImported={loadAll}
+        onImported={() => { loadAll(); loadRecent(); }}
       />
 
       <AlertDialog open={resetOpen} onOpenChange={(o) => { if (!resetting) { setResetOpen(o); if (!o) setResetConfirm(''); } }}>
