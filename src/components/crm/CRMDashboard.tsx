@@ -127,7 +127,7 @@ export default function CRMDashboard() {
           className="mr-2 text-destructive hover:text-destructive"
           onClick={() => setResetOpen(true)}
         >
-          <Trash2 className="h-4 w-4 mr-2" /> Reset CRM
+          <Trash2 className="h-4 w-4 mr-2" /> Reset Waypoint
         </Button>
         <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
           <FileArchive className="h-4 w-4 mr-2" /> Import from Salesforce
