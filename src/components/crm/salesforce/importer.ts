@@ -269,9 +269,12 @@ export async function runSalesforceImport(
         const entry = zip.files[name];
         if (entry.dir) continue;
         if (/\.csv$/i.test(name)) {
-          const object = classifyCsv(name);
-          if (!object) continue;
+          if (isIgnoredCsv(name)) continue;
+          let object = classifyCsv(name);
           const rows = parseCsvText(decodeCsvBytes(await entry.async('uint8array')));
+          // Unrecognised file name → identify the object from its own headers.
+          object ??= classifyByContent(rows);
+          if (!object) continue;
           (csvs[object] ??= []).push(...rows);          // merge across every part
           part.objects[object] = (part.objects[object] || 0) + rows.length;
         } else {
@@ -280,17 +283,46 @@ export async function runSalesforceImport(
         }
       }
     } else {
-      const object = classifyCsv(file.name);
-      if (object) {
+      if (!isIgnoredCsv(file.name)) {
         const rows = parseCsvText(decodeCsvBytes(new Uint8Array(await file.arrayBuffer())));
+        const object = classifyCsv(file.name) ?? classifyByContent(rows);
+        if (object) {
         (csvs[object] ??= []).push(...rows);
         part.objects[object] = rows.length;
+        }
       }
     }
     report.preflight.push(part);
   }
 
   const resolver = new SfResolver();
+
+  /**
+   * Guarantees an Account row exists for a Salesforce AccountId, even when the
+   * Account CSV is missing/misnamed or the row simply wasn't in this export.
+   * Keyed on salesforce_id, so re-imports never create duplicates.
+   */
+  async function ensureAccounts(pairs: Array<{ sfId: string; name: string }>): Promise<number> {
+    const wanted = new Map<string, string>();
+    for (const { sfId, name } of pairs) {
+      if (!sfId || !/^001/i.test(sfId)) continue;
+      if (resolver.get(sfId)) continue;
+      const clean = (name || '').trim();
+      if (!clean) continue;                         // never invent a name
+      if (!wanted.has(k15(sfId))) wanted.set(k15(sfId), clean);
+    }
+    if (!wanted.size) return 0;
+    const st = stat('Account');
+    const payload = Array.from(wanted.entries()).map(([, name], i) => ({
+      name,
+      salesforce_id: pairs.find((p) => k15(p.sfId) === Array.from(wanted.keys())[i])?.sfId || '',
+      owner_id: uid,
+      created_by: uid,
+    })).filter((r) => r.salesforce_id);
+    const ids = await upsertChunked('crm_companies', payload, 'salesforce_id', st, new Set(), (r) => r.name);
+    ids.forEach((id, sf) => resolver.set(sf, 'account', id));
+    return ids.size;
+  }
 
   // ------------------------------------------------------------ 2. Accounts --
   onProgress(10, 'Importing Accounts…');
