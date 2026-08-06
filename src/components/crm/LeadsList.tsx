@@ -84,7 +84,10 @@ export function LeadsList({ stages, onChanged }: Props) {
 
   const daysSince = (iso: string) =>
     Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  const lastActivity = (l: CrmLead) => l.updated_at || l.created_at;
+  // Imported records all share the import timestamp, so prefer the original
+  // Salesforce activity dates when they exist.
+  const lastActivity = (l: CrmLead) =>
+    l.sf_last_modified_date || l.sf_created_date || l.updated_at || l.created_at;
   const isAged = (l: CrmLead) => !isLost(l) && daysSince(lastActivity(l)) >= Number(ageDays);
 
   const lostCount = leads.filter(isLost).length;
