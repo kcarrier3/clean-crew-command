@@ -518,11 +518,19 @@ export async function runSalesforceImport(
         report.relationshipExceptions.push({ sfId, label: oppName || sfId, reason: `Opportunity AccountId ${sfAcct} not found in this import` });
       }
       const resolvedCompanyId = account?.kind === 'account' ? account.id : null;
-      const sfAcctName = accountNameOf(r);
+      // Salesforce's Opportunity.csv carries AccountId but NOT the Account Name.
+      // Always prefer the exact name of the linked Account record; only fall back
+      // to a name column on the row itself when the id does not resolve.
+      const linkedAccountName = sfAcct ? resolver.accountName(sfAcct) : null;
+      const sfAcctName = linkedAccountName || accountNameOf(r);
+      if (resolvedCompanyId && !linkedAccountName && !accountNameOf(r)) {
+        report.relationshipExceptions.push({ sfId, label: oppName || sfId, reason: `Linked account ${sfAcct} has no name available` });
+      }
       payload.push({
         // Account Name is preserved exactly; opportunity name lives in contact_name,
         // which is what the Opportunity UI already labels "Opportunity Name".
-        company_name: sfAcctName || oppName || 'Untitled Opportunity',
+        // Never use the Opportunity name as an Account name when the account resolved.
+        company_name: sfAcctName || (resolvedCompanyId ? '(unnamed account)' : (oppName || 'Untitled Opportunity')),
         contact_name: oppName || null,
         source: pick(r, 'LeadSource', 'Lead Source', 'Type') || null,
         lead_source: pick(r, 'LeadSource', 'Lead Source') || null,
