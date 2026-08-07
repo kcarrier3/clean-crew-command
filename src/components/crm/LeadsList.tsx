@@ -218,7 +218,7 @@ export function LeadsList({ stages, onChanged }: Props) {
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium">{lead.company_name}</p>
+                    <p className="font-medium">{lead.name || `${lead.company_name} opportunity`}</p>
                     <Badge className={STATUS_COLORS[lead.status] + ' text-xs'}>{LEAD_STATUS_LABELS[lead.status]}</Badge>
                     {lead.source && <Badge variant="outline" className="text-xs">{lead.source}</Badge>}
                     {view === 'aged' && (
