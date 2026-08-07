@@ -404,6 +404,13 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
           )}
         </TabsContent>
 
+        {/* T&M Tab */}
+        {isProject && (
+          <TabsContent value="tm" className="mt-4">
+            <TMTickets jobSiteId={jobSite.id} onHoursChange={fetchTmHours} />
+          </TabsContent>
+        )}
+
         {/* QA History Tab */}
         <TabsContent value="inspections" className="mt-4 space-y-3">
           {inspections.length === 0 ? (
