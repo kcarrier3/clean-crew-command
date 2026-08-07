@@ -262,12 +262,27 @@ const localDateKey = (iso: string) => {
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
+ * Sunday-start workweek key (`yyyy-mm-dd` of that Sunday) for an ISO date key.
+ * Crew Compass pay periods run Sunday through Saturday, so the 40-hour
+ * regular/overtime threshold resets on each Sunday.
+ */
+export function workweekKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const dt = new Date(y, (m || 1) - 1, d || 1);
+  dt.setDate(dt.getDate() - dt.getDay()); // back up to Sunday
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+/**
  * Build export rows.
  *
- * Overtime: hours beyond 40 in the pay period are attributed to the latest
- * punches (chronological order), which keeps daily job/municipality detail
- * intact while matching the weekly OT rule used by the standard payroll report.
- * A day/job that spans the threshold produces two rows (REG + OT).
+ * Overtime: the 40-hour threshold is applied per Sunday–Saturday workweek and
+ * resets at the start of every week, so a custom range spanning multiple weeks
+ * never carries overtime across a week boundary. Within a week, hours beyond 40
+ * are attributed to the latest punches (chronological order), which keeps daily
+ * job/municipality detail intact and matches the weekly OT rule used by the
+ * standard payroll report. A day/job that spans the threshold produces two rows
+ * (REG + OT).
  */
 export function buildAdpRows(
   entries: RawEntry[],
@@ -277,7 +292,7 @@ export function buildAdpRows(
 ): AdpExportRow[] {
   const profileById = new Map(profiles.map((p) => [p.id, p]));
   const siteById = new Map(jobSites.map((s) => [s.id, s]));
-  interface Bucket { date: string; jobId: string | null; hours: number }
+  interface Bucket { date: string; week: string; jobId: string | null; hours: number }
   const byEmployee = new Map<string, Bucket[]>();
 
   for (const e of entries) {
@@ -290,7 +305,7 @@ export function buildAdpRows(
     const list = byEmployee.get(e.employee_id) || [];
     const existing = list.find((b) => b.date === date && b.jobId === (e.job_site_id ?? null));
     if (existing) existing.hours += hours;
-    else list.push({ date, jobId: e.job_site_id ?? null, hours });
+    else list.push({ date, week: workweekKey(date), jobId: e.job_site_id ?? null, hours });
     byEmployee.set(e.employee_id, list);
   }
 
@@ -299,8 +314,14 @@ export function buildAdpRows(
   for (const [employeeId, buckets] of byEmployee) {
     const profile = profileById.get(employeeId);
     buckets.sort((a, b) => (a.date === b.date ? 0 : a.date < b.date ? -1 : 1));
+    // Cumulative hours within the current Sunday–Saturday workweek.
     let cumulative = 0;
+    let currentWeek: string | null = null;
     for (const bucket of buckets) {
+      if (bucket.week !== currentWeek) {
+        currentWeek = bucket.week;
+        cumulative = 0; // new workweek -> reset the 40-hour threshold
+      }
       const site = bucket.jobId ? siteById.get(bucket.jobId) : undefined;
       const before = cumulative;
       cumulative += bucket.hours;
