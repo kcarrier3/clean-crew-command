@@ -21,7 +21,6 @@ import { CompaniesList } from './CompaniesList';
 import { ContactsList } from './ContactsList';
 import { TasksList } from './TasksList';
 import { CRMReports } from './CRMReports';
-import { SalesforceImportDialog } from './SalesforceImportDialog';
 import { LEAD_STATUS_LABELS, type CrmDeal, type CrmLead, type CrmStage } from './types';
 
 const STATUS_COLORS: Record<CrmLead['status'], string> = {
@@ -213,19 +212,6 @@ export default function CRMDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          className="mr-2 text-destructive hover:text-destructive"
-          onClick={() => setResetOpen(true)}
-        >
-          <Trash2 className="h-4 w-4 mr-2" /> Reset Waypoint
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-          <FileArchive className="h-4 w-4 mr-2" /> Import from Salesforce
-        </Button>
-      </div>
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-4">
@@ -405,45 +391,6 @@ export default function CRMDashboard() {
         leads={leads}
         onChanged={loadAll}
       />
-
-      <SalesforceImportDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        onImported={() => { loadAll(); loadRecent(); }}
-      />
-
-      <AlertDialog open={resetOpen} onOpenChange={(o) => { if (!resetting) { setResetOpen(o); if (!o) setResetConfirm(''); } }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive">Reset Waypoint data?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>
-                  This permanently deletes <strong>all</strong> companies, contacts, leads, deals, quotes, invoices,
-                  meetings, tasks, activities, and email logs. Pipeline stages and services are kept.
-                </p>
-                <p>This cannot be undone. Type <strong>RESET</strong> below to confirm.</p>
-                <Input
-                  value={resetConfirm}
-                  onChange={(e) => setResetConfirm(e.target.value)}
-                  placeholder="Type RESET"
-                  autoFocus
-                />
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={resetting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={resetConfirm !== 'RESET' || resetting}
-              onClick={(e) => { e.preventDefault(); resetCrm(); }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {resetting ? 'Resetting…' : 'Reset everything'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <p className="text-sm text-center mt-8">
         Won the deal? Head to the <strong>Accounts</strong> tab to create the Job Site.
