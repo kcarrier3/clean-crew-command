@@ -22,6 +22,7 @@ import { RoleManagement } from '@/components/RoleManagement';
 import DepartmentManagement from '@/components/DepartmentManagement';
 import DirectoryAccessRules from '@/components/DirectoryAccessRules';
 import TimeOffPolicySettings from '@/components/TimeOffPolicySettings';
+import WaypointDataSettings from '@/components/crm/WaypointDataSettings';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -83,6 +84,7 @@ export default function Settings() {
             {isAdminLevel && <TabsTrigger value="roles">Roles</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="timeoff">Time off</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="directory">Directory</TabsTrigger>}
+            {isAdminLevel && <TabsTrigger value="waypoint">Waypoint</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="account" className="mt-6 space-y-6">
@@ -164,6 +166,12 @@ export default function Settings() {
                   <DirectoryAccessRules />
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {isAdminLevel && (
+            <TabsContent value="waypoint" className="mt-6 space-y-6">
+              <WaypointDataSettings />
             </TabsContent>
           )}
         </Tabs>

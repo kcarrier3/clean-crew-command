@@ -2,14 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Briefcase, DollarSign, Bell, Users, FileArchive, Trash2, Clock, Mail, Phone, AlertTriangle } from 'lucide-react';
+import { Briefcase, DollarSign, Bell, Users, Clock, Mail, Phone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,7 +16,6 @@ import { CompaniesList } from './CompaniesList';
 import { ContactsList } from './ContactsList';
 import { TasksList } from './TasksList';
 import { CRMReports } from './CRMReports';
-import { SalesforceImportDialog } from './SalesforceImportDialog';
 import { LEAD_STATUS_LABELS, type CrmDeal, type CrmLead, type CrmStage } from './types';
 
 const STATUS_COLORS: Record<CrmLead['status'], string> = {
@@ -43,10 +37,6 @@ export default function CRMDashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<CrmDeal | null>(null);
   const [tab, setTab] = useState('recent');
-  const [importOpen, setImportOpen] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
-  const [resetConfirm, setResetConfirm] = useState('');
-  const [resetting, setResetting] = useState(false);
   const [recent, setRecent] = useState<Array<{ lead: CrmLead; lastAt: number }>>([]);
   const [recentLoading, setRecentLoading] = useState(true);
 
@@ -118,45 +108,6 @@ export default function CRMDashboard() {
 
   useEffect(() => { loadAll(); loadRecent(); }, [user]);
 
-  const resetCrm = async () => {
-    setResetting(true);
-    // Order matters: delete children before parents.
-    const tables = [
-      'crm_quote_signatures',
-      'crm_quote_items',
-      'crm_quotes',
-      'crm_invoice_items',
-      'crm_invoices',
-      'crm_meetings',
-      'crm_tasks',
-      'crm_activities',
-      'crm_email_logs',
-      'crm_lead_submission_log',
-      'crm_deals',
-      'crm_leads',
-      'crm_contacts',
-      'crm_companies',
-    ];
-    const errors: string[] = [];
-    for (const t of tables) {
-      const { error } = await (supabase as any)
-        .from(t)
-        .delete()
-        .not('id', 'is', null);
-      if (error) errors.push(`${t}: ${error.message}`);
-    }
-    setResetting(false);
-    setResetOpen(false);
-    setResetConfirm('');
-    loadRecent();
-    if (errors.length) {
-      toast({ title: 'Reset finished with errors', description: errors.join(' | '), variant: 'destructive' });
-    } else {
-      toast({ title: 'Waypoint reset', description: 'All Waypoint records were removed.' });
-    }
-    loadAll();
-  };
-
   // Pipeline value = open opportunities' amounts + open deals not tied to an opportunity
   const isOpenStage = (stageId?: string | null) => {
     const st = stages.find(s => s.id === stageId);
@@ -213,19 +164,6 @@ export default function CRMDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          className="mr-2 text-destructive hover:text-destructive"
-          onClick={() => setResetOpen(true)}
-        >
-          <Trash2 className="h-4 w-4 mr-2" /> Reset Waypoint
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-          <FileArchive className="h-4 w-4 mr-2" /> Import from Salesforce
-        </Button>
-      </div>
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-4">
@@ -405,45 +343,6 @@ export default function CRMDashboard() {
         leads={leads}
         onChanged={loadAll}
       />
-
-      <SalesforceImportDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        onImported={() => { loadAll(); loadRecent(); }}
-      />
-
-      <AlertDialog open={resetOpen} onOpenChange={(o) => { if (!resetting) { setResetOpen(o); if (!o) setResetConfirm(''); } }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive">Reset Waypoint data?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>
-                  This permanently deletes <strong>all</strong> companies, contacts, leads, deals, quotes, invoices,
-                  meetings, tasks, activities, and email logs. Pipeline stages and services are kept.
-                </p>
-                <p>This cannot be undone. Type <strong>RESET</strong> below to confirm.</p>
-                <Input
-                  value={resetConfirm}
-                  onChange={(e) => setResetConfirm(e.target.value)}
-                  placeholder="Type RESET"
-                  autoFocus
-                />
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={resetting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={resetConfirm !== 'RESET' || resetting}
-              onClick={(e) => { e.preventDefault(); resetCrm(); }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {resetting ? 'Resetting…' : 'Reset everything'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <p className="text-sm text-center mt-8">
         Won the deal? Head to the <strong>Accounts</strong> tab to create the Job Site.
