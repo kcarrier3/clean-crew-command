@@ -152,6 +152,7 @@ export default function EstimatingDetail() {
         weeks_per_month: Number(rev.weeks_per_month) || 4.33,
         production_rate_sqft_hour: Number(rev.production_rate_sqft_hour) || 3500,
         minimum_visit_minutes: Number(rev.minimum_visit_minutes) || 0,
+        labor_hours_per_visit_override: Number(rev.labor_hours_per_visit_override) || 0,
         base_wage: Number(rev.base_wage) || 0,
         labor_burden_percent: Number(rev.labor_burden_percent) || 0,
         supervision_percent: Number(rev.supervision_percent) || 0,
@@ -445,9 +446,15 @@ export default function EstimatingDetail() {
                   <NumField id="wpm" label="Weeks per month" value={inputs.weeks_per_month} onChange={v => setInput({ weeks_per_month: v })} />
                   <NumField id="rate" label="Production rate" value={inputs.production_rate_sqft_hour} suffix="/hr" onChange={v => setInput({ production_rate_sqft_hour: v })} />
                   <NumField id="minvisit" label="Minimum visit time" value={inputs.minimum_visit_minutes} suffix="min" onChange={v => setInput({ minimum_visit_minutes: v })} />
+                  <NumField id="hoursoverride" label="Labor hours per visit override" value={inputs.labor_hours_per_visit_override} suffix="hr" onChange={v => setInput({ labor_hours_per_visit_override: v })} />
                   <div className="col-span-2 text-[11px] text-muted-foreground">
                     Hours/visit = max(sq ft ÷ production rate, minimum visit ÷ 60).
                     {outputs.minimum_visit_applied && ' Minimum visit time is driving this estimate.'}
+                    {outputs.hours_override_applied && (
+                      <span className="text-foreground font-medium">
+                        {' '}Override active: {inputs.labor_hours_per_visit_override} hr/visit is driving this estimate (production rate and minimum visit are ignored). Set to 0 to disable.
+                      </span>
+                    )}
                   </div>
                 </CardContent>
               </Card>
