@@ -188,8 +188,6 @@ export default function Estimating() {
     navigate(`/estimating/${est.id}`);
   };
 
-  const visible = useMemo(() => {
-
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -205,6 +203,7 @@ export default function Estimating() {
     toast({ title: 'Estimate deleted' });
   };
 
+  const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter(r => {
       if (r.status !== tab) return false;
