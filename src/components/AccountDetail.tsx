@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AccountContacts } from './AccountContacts';
 import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 import { WorkOrderDetail } from './WorkOrderDetail';
+import { TMTickets } from './TMTickets';
 import { format } from 'date-fns';
 
 interface JobSite {
@@ -32,6 +33,7 @@ interface JobSite {
   budgeted_hours: number | null;
   used_hours: number | null;
   remaining_hours: number | null;
+  tm_hours?: number | null;
   active: boolean;
 }
 
@@ -95,6 +97,7 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [createWOOpen, setCreateWOOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tmHours, setTmHours] = useState<number>(Number(jobSite.tm_hours || 0));
   const { toast } = useToast();
   const { isManager } = useAuth();
 
@@ -104,8 +107,13 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
 
   const fetchAll = async () => {
     setLoading(true);
-    await Promise.all([fetchWorkOrders(), fetchInspections(), fetchScheduledEmployees()]);
+    await Promise.all([fetchWorkOrders(), fetchInspections(), fetchScheduledEmployees(), fetchTmHours()]);
     setLoading(false);
+  };
+
+  const fetchTmHours = async () => {
+    const { data } = await supabase.from('job_sites').select('tm_hours').eq('id', jobSite.id).maybeSingle();
+    setTmHours(Number((data as any)?.tm_hours || 0));
   };
 
   const fetchWorkOrders = async () => {
