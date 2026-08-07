@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -428,7 +429,12 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
 
         {/* Highlights strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-4 bg-background border-b">
-          <HighlightField label="Account Name" value={accountDisplay} link />
+          <HighlightField
+            label="Account Name"
+            value={accountDisplay}
+            link
+            onClick={form.company_id ? () => navigate(`/crm/accounts/${form.company_id}`) : undefined}
+          />
           <HighlightField label="Close Date" value={closeDateDisplay} />
           <HighlightField label="Amount" value={amountDisplay} strong />
           <HighlightField label="Opportunity Owner" value={ownerName} link />
@@ -983,13 +989,23 @@ function FileTile({ file, onOpen, onDelete, nameFor }: { file: any; onOpen: () =
   );
 }
 
-function HighlightField({ label, value, link, strong }: { label: string; value: string; link?: boolean; strong?: boolean }) {
+function HighlightField({ label, value, link, strong, onClick }: { label: string; value: string; link?: boolean; strong?: boolean; onClick?: () => void }) {
   return (
     <div className="min-w-0">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={cn('truncate', strong ? 'text-base font-semibold' : 'text-sm', link && 'text-primary')}>
-        {value}
-      </div>
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          className={cn('truncate block max-w-full text-left hover:underline', strong ? 'text-base font-semibold' : 'text-sm', link && 'text-primary')}
+        >
+          {value}
+        </button>
+      ) : (
+        <div className={cn('truncate', strong ? 'text-base font-semibold' : 'text-sm', link && 'text-primary')}>
+          {value}
+        </div>
+      )}
     </div>
   );
 }
