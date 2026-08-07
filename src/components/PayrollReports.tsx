@@ -30,6 +30,7 @@ interface PayrollEntry {
   attendance_bonus_eligible: boolean;
   time_bonus_eligible: boolean;
   total_with_bonus: number;
+  cities_worked: string;
 }
 
 const PayrollReports = () => {
@@ -104,6 +105,12 @@ const PayrollReports = () => {
         .not('clock_out', 'is', null);
 
       if (timeEntriesError) throw timeEntriesError;
+
+      // Job site payroll locations so each employee's worked cities show on the report
+      const { data: jobSitesData } = await supabase
+        .from('job_sites')
+        .select('id, name, city, state, tax_jurisdiction');
+      const siteById = new Map((jobSitesData || []).map((s: any) => [s.id, s]));
 
       // Determine if this is the first full pay period of a new month
       // Pay week is Sun-Sat. First full paycheck of a new month = first pay period
@@ -182,6 +189,15 @@ const PayrollReports = () => {
         const totalHours = totalMinutes / 60;
         const regularHours = Math.min(totalHours, 40);
         const overtimeHours = Math.max(totalHours - 40, 0);
+
+        // Distinct payroll cities from the job sites this employee punched into
+        const citySet = new Set<string>();
+        employeeTimeEntries.forEach((entry: any) => {
+          const site: any = entry.job_site_id ? siteById.get(entry.job_site_id) : null;
+          const city = site?.tax_jurisdiction || site?.city;
+          if (city) citySet.add(site.state ? `${city}, ${site.state}` : city);
+        });
+        const citiesWorked = Array.from(citySet).sort().join('; ');
 
         let totalPay = 0;
         
@@ -307,6 +323,7 @@ const PayrollReports = () => {
           attendance_bonus_eligible: attendanceBonusEligible,
           time_bonus_eligible: timeBonusEligible,
           total_with_bonus: Number((totalPay + attendanceBonus + timeBonus).toFixed(2)),
+          cities_worked: citiesWorked,
         });
       }
 
@@ -367,6 +384,7 @@ const PayrollReports = () => {
       'Total Hours',
       'Regular Hours',
       'Overtime Hours',
+      'Cities Worked',
       'Total Pay',
       'Attendance Bonus',
       'Time Bonus',
@@ -386,6 +404,7 @@ const PayrollReports = () => {
         entry.total_hours,
         entry.regular_hours,
         entry.overtime_hours,
+        `"${entry.cities_worked}"`,
         entry.total_pay,
         entry.attendance_bonus,
         entry.time_bonus,
@@ -575,6 +594,7 @@ const PayrollReports = () => {
                   <TableHead>Regular Hrs</TableHead>
                   <TableHead>OT Hrs</TableHead>
                   <TableHead>Total Hrs</TableHead>
+                  <TableHead>City (payroll)</TableHead>
                   <TableHead className="text-right">Base Pay</TableHead>
                   <TableHead className="text-right">Attend. Bonus</TableHead>
                   <TableHead className="text-right">Time Bonus</TableHead>
@@ -600,6 +620,9 @@ const PayrollReports = () => {
                     <TableCell>{entry.regular_hours.toFixed(1)}</TableCell>
                     <TableCell>{entry.overtime_hours.toFixed(1)}</TableCell>
                     <TableCell>{entry.total_hours.toFixed(1)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">
+                      {entry.cities_worked || <span className="text-muted-foreground">—</span>}
+                    </TableCell>
                     <TableCell className="text-right">${entry.total_pay.toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                       {entry.attendance_bonus > 0 ? (
