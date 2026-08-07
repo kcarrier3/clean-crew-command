@@ -531,6 +531,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
               size="sm"
               onClick={() => {
                 setForm({
+                  name: lead.name || '',
                   company_id: lead.company_id || '',
                   company_name: lead.company_name || '',
                   primary_contact_id: lead.primary_contact_id || '',
