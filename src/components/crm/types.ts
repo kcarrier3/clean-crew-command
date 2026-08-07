@@ -10,6 +10,7 @@ export interface CrmStage {
 
 export interface CrmLead {
   id: string;
+  name: string | null;
   company_name: string;
   contact_name: string | null;
   email: string | null;
