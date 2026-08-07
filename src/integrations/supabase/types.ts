@@ -1267,6 +1267,7 @@ export type Database = {
           follow_up: boolean
           id: string
           lead_source: string | null
+          name: string | null
           next_step: string | null
           notes: string | null
           owner_id: string | null
@@ -1302,6 +1303,7 @@ export type Database = {
           follow_up?: boolean
           id?: string
           lead_source?: string | null
+          name?: string | null
           next_step?: string | null
           notes?: string | null
           owner_id?: string | null
@@ -1337,6 +1339,7 @@ export type Database = {
           follow_up?: boolean
           id?: string
           lead_source?: string | null
+          name?: string | null
           next_step?: string | null
           notes?: string | null
           owner_id?: string | null
