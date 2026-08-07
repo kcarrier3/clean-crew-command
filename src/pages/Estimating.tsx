@@ -301,6 +301,15 @@ export default function Estimating() {
                         {r.status === 'completed' ? 'Completed' : 'Draft'}
                       </Badge>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      aria-label={`Delete ${r.name}`}
+                      onClick={e => { e.stopPropagation(); setDeleteTarget(r); }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </CardContent>
                 </Card>
                 );
@@ -318,6 +327,27 @@ export default function Estimating() {
         subtitle={pendingLead ? `New estimate for ${pendingLead.company_name}` : undefined}
         disabled={busy}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={o => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this estimate?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.name} and all of its revisions will be permanently removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={e => { e.preventDefault(); confirmDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
