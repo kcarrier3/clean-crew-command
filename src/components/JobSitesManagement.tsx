@@ -221,6 +221,16 @@ export default function JobSitesManagement() {
       return;
     }
 
+    // Projects need a work city/state so punches report to the right municipality on payroll
+    if (!formData.is_recurring_monthly && (!formData.city.trim() || !formData.state.trim())) {
+      toast({
+        title: "Work location required",
+        description: "Enter the project's city and state so payroll can report the correct municipality.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase
