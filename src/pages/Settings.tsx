@@ -23,6 +23,7 @@ import DepartmentManagement from '@/components/DepartmentManagement';
 import DirectoryAccessRules from '@/components/DirectoryAccessRules';
 import TimeOffPolicySettings from '@/components/TimeOffPolicySettings';
 import WaypointDataSettings from '@/components/crm/WaypointDataSettings';
+import AdpSettings from '@/components/AdpSettings';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -85,6 +86,7 @@ export default function Settings() {
             {isAdminLevel && <TabsTrigger value="timeoff">Time off</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="directory">Directory</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="waypoint">Waypoint</TabsTrigger>}
+            {isAdminLevel && <TabsTrigger value="adp">ADP Payroll</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="account" className="mt-6 space-y-6">
@@ -172,6 +174,12 @@ export default function Settings() {
           {isAdminLevel && (
             <TabsContent value="waypoint" className="mt-6 space-y-6">
               <WaypointDataSettings />
+            </TabsContent>
+          )}
+
+          {isAdminLevel && (
+            <TabsContent value="adp" className="mt-6 space-y-6">
+              <AdpSettings />
             </TabsContent>
           )}
         </Tabs>
