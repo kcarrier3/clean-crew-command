@@ -914,15 +914,17 @@ export default function JobSitesManagement() {
                   <div className="space-y-4">
                     <Label className="font-semibold">Payroll &amp; Tax Location</Label>
                     <p className="text-xs text-muted-foreground">
-                      Used on the ADP payroll export so hours worked here report to the right municipality and job cost code.
+                      {isProjectForm
+                        ? 'Required for projects: every punch at this site is stamped with this city/state so payroll auto-populates the work municipality.'
+                        : 'Used on the ADP payroll export so hours worked here report to the right municipality and job cost code.'}
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6">
                       <div>
-                        <Label htmlFor="edit_city">City</Label>
+                        <Label htmlFor="edit_city">City {isProjectForm && <span className="text-destructive">*</span>}</Label>
                         <Input id="edit_city" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
                       </div>
                       <div>
-                        <Label htmlFor="edit_state">State</Label>
+                        <Label htmlFor="edit_state">State {isProjectForm && <span className="text-destructive">*</span>}</Label>
                         <Input id="edit_state" value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
                       </div>
                       <div>
