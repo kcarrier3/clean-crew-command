@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { CrmCompany } from './types';
-import { CompanyDetailDialog } from './CompanyDetailDialog';
 
 interface Props { onChanged?: () => void; }
 
@@ -19,14 +19,13 @@ const blank = { name: '', industry: '', website: '', phone: '', address: '', cit
 export function CompaniesList({ onChanged }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [items, setItems] = useState<CrmCompany[]>([]);
   const [filter, setFilter] = useState('');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CrmCompany | null>(null);
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailCompany, setDetailCompany] = useState<CrmCompany | null>(null);
 
   const load = async () => {
     const { data, error } = await (supabase as any).from('crm_companies').select('*').order('name');
@@ -86,7 +85,7 @@ export function CompaniesList({ onChanged }: Props) {
             <Card
               key={c.id}
               className="cursor-pointer hover:shadow-md transition"
-              onClick={() => { setDetailCompany(c); setDetailOpen(true); }}
+              onClick={() => navigate(`/crm/accounts/${c.id}`)}
             >
               <CardContent className="p-4 flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -132,13 +131,6 @@ export function CompaniesList({ onChanged }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <CompanyDetailDialog
-        company={detailCompany}
-        open={detailOpen}
-        onOpenChange={(o) => { setDetailOpen(o); if (!o) setDetailCompany(null); }}
-        onChanged={() => { load(); onChanged?.(); }}
-      />
     </div>
   );
 }
