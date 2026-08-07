@@ -295,6 +295,15 @@ export default function JobSitesManagement() {
       return;
     }
 
+    if (!formData.is_recurring_monthly && (!formData.city.trim() || !formData.state.trim())) {
+      toast({
+        title: "Work location required",
+        description: "Enter the project's city and state so payroll can report the correct municipality.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase
@@ -676,15 +685,17 @@ export default function JobSitesManagement() {
                   <div className="space-y-4">
                     <Label className="font-semibold">Payroll &amp; Tax Location</Label>
                     <p className="text-xs text-muted-foreground">
-                      Used on the ADP payroll export so hours worked here report to the right municipality and job cost code.
+                      {isProjectForm
+                        ? 'Required for projects: every punch at this site is stamped with this city/state so payroll auto-populates the work municipality.'
+                        : 'Used on the ADP payroll export so hours worked here report to the right municipality and job cost code.'}
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6">
                       <div>
-                        <Label htmlFor="city">City</Label>
+                        <Label htmlFor="city">City {isProjectForm && <span className="text-destructive">*</span>}</Label>
                         <Input id="city" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
                       </div>
                       <div>
-                        <Label htmlFor="state">State</Label>
+                        <Label htmlFor="state">State {isProjectForm && <span className="text-destructive">*</span>}</Label>
                         <Input id="state" value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
                       </div>
                       <div>
