@@ -16,6 +16,7 @@ import CompleteProfile from './pages/CompleteProfile';
 import ReportIssue from './pages/ReportIssue';
 import PunchClock from './pages/PunchClock';
 import OpportunityDetail from './pages/OpportunityDetail';
+import AccountDetailPage from './pages/AccountDetailPage';
 import Estimating from './pages/Estimating';
 import EstimatingDetail from './pages/EstimatingDetail';
 import Settings from './pages/Settings';
@@ -46,6 +47,7 @@ const AppContent = () => {
       <Route path="/report/:jobSiteId" element={<ReportIssue />} />
       <Route path="/punch/:token" element={<PunchClock />} />
       <Route path="/crm/opportunities/:id" element={<OpportunityDetail />} />
+      <Route path="/crm/accounts/:id" element={<AccountDetailPage />} />
       <Route path="/estimating" element={<Estimating />} />
       <Route path="/estimating/:id" element={<EstimatingDetail />} />
       <Route path="/settings" element={<Settings />} />
