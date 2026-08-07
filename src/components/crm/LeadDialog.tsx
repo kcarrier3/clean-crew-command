@@ -688,7 +688,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     const rows: { label: string; value: string }[] = [
       { label: 'Opportunity Owner', value: ownerName },
       { label: 'Close Date', value: closeDateDisplay },
-      { label: 'Opportunity Name', value: form.contact_name || '—' },
+      { label: 'Opportunity Name', value: form.name || '—' },
       { label: 'Stage', value: stageName },
       { label: 'Account Name', value: accountDisplay },
       { label: 'Primary Contact', value: contactDisplay },
