@@ -566,7 +566,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
             <Input type="date" value={form.close_date} onChange={e => setForm({ ...form, close_date: e.target.value })} />
           </FieldRow>
           <FieldRow label="Opportunity Name">
-            <Input value={form.contact_name} onChange={e => setForm({ ...form, contact_name: e.target.value })} placeholder="Opportunity name" />
+            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Opportunity name" />
           </FieldRow>
           <FieldRow label="Stage">
             <Select value={form.stage_id || undefined} onValueChange={v => setForm({ ...form, stage_id: v })}>
