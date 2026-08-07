@@ -3103,6 +3103,7 @@ export type Database = {
           safety_requirements: string | null
           service_days: number[]
           special_instructions: string | null
+          tm_hours: number
           updated_at: string
           used_hours: number | null
         }
@@ -3132,6 +3133,7 @@ export type Database = {
           safety_requirements?: string | null
           service_days?: number[]
           special_instructions?: string | null
+          tm_hours?: number
           updated_at?: string
           used_hours?: number | null
         }
@@ -3161,6 +3163,7 @@ export type Database = {
           safety_requirements?: string | null
           service_days?: number[]
           special_instructions?: string | null
+          tm_hours?: number
           updated_at?: string
           used_hours?: number | null
         }
@@ -4612,6 +4615,167 @@ export type Database = {
           },
         ]
       }
+      tm_ticket_hours: {
+        Row: {
+          created_at: string
+          employee_id: string | null
+          hours: number
+          id: string
+          notes: string | null
+          ticket_id: string
+          time_entry_id: string | null
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id?: string | null
+          hours?: number
+          id?: string
+          notes?: string | null
+          ticket_id: string
+          time_entry_id?: string | null
+          updated_at?: string
+          work_date?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string | null
+          hours?: number
+          id?: string
+          notes?: string | null
+          ticket_id?: string
+          time_entry_id?: string | null
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tm_ticket_hours_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_ticket_hours_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_ticket_hours_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tm_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_ticket_hours_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tm_tickets: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          customer_name: string | null
+          customer_signature_data: string | null
+          customer_signed_at: string | null
+          description: string | null
+          id: string
+          job_site_id: string
+          rejection_reason: string | null
+          status: string
+          ticket_number: string | null
+          title: string
+          total_hours: number
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          customer_name?: string | null
+          customer_signature_data?: string | null
+          customer_signed_at?: string | null
+          description?: string | null
+          id?: string
+          job_site_id: string
+          rejection_reason?: string | null
+          status?: string
+          ticket_number?: string | null
+          title: string
+          total_hours?: number
+          updated_at?: string
+          work_date?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          customer_name?: string | null
+          customer_signature_data?: string | null
+          customer_signed_at?: string | null
+          description?: string | null
+          id?: string
+          job_site_id?: string
+          rejection_reason?: string | null
+          status?: string
+          ticket_number?: string | null
+          title?: string
+          total_hours?: number
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tm_tickets_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_tickets_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_tickets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_tickets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_tickets_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_custom_roles: {
         Row: {
           granted_at: string
@@ -4858,7 +5022,9 @@ export type Database = {
         Returns: boolean
       }
       can_approve_estimate: { Args: { _user_id: string }; Returns: boolean }
+      can_approve_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_estimate: { Args: { _user_id: string }; Returns: boolean }
+      can_manage_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_message_user: {
         Args: { _recipient_id: string; _sender_id: string }
         Returns: boolean
