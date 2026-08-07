@@ -13,12 +13,25 @@ export default function OpportunityDetail() {
   const navigate = useNavigate();
   const [lead, setLead] = useState<CrmLead | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accountId, setAccountId] = useState<string | null>(null);
 
   const load = async () => {
     if (!id) return;
     const { data } = await (supabase as any).from('crm_leads').select('*').eq('id', id).maybeSingle();
     setLead(data || null);
     setLoading(false);
+    if (data?.company_id) {
+      setAccountId(data.company_id);
+    } else if (data?.company_name) {
+      const { data: co } = await (supabase as any)
+        .from('crm_companies')
+        .select('id')
+        .ilike('name', data.company_name)
+        .maybeSingle();
+      setAccountId(co?.id || null);
+    } else {
+      setAccountId(null);
+    }
   };
 
   useEffect(() => { load(); }, [id]);
@@ -40,6 +53,22 @@ export default function OpportunityDetail() {
         <Button variant="ghost" size="sm" onClick={goBack}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Opportunities
         </Button>
+        {lead?.company_name && (
+          <div className="text-sm text-muted-foreground">
+            Account:{' '}
+            {accountId ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/crm/accounts/${accountId}`)}
+                className="font-medium text-primary hover:underline"
+              >
+                {lead.company_name}
+              </button>
+            ) : (
+              <span className="font-medium text-foreground">{lead.company_name}</span>
+            )}
+          </div>
+        )}
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : !lead ? (
