@@ -337,7 +337,7 @@ export default function CRMDashboard() {
                       onClick={() => navigate(`/crm/opportunities/${lead.id}`)}
                     >
                       <CardContent className="p-3">
-                        <p className="font-medium text-sm truncate">{lead.company_name}</p>
+                        <p className="font-medium text-sm truncate">{lead.name || `${lead.company_name} opportunity`}</p>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <Badge variant="secondary" className="text-xs">
                             {(lead.stage_id && stageById.get(lead.stage_id)?.name) || LEAD_STATUS_LABELS[lead.status]}
