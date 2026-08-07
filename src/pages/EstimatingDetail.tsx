@@ -41,6 +41,9 @@ const OUTPUT_COLUMNS = (o: ReturnType<typeof calculateEstimate>) => ({
   monthly_supply_cost: o.monthly_supply_cost,
   total_direct_cost: o.total_direct_cost,
   overhead_amount: o.overhead_amount,
+  supervision_amount: o.monthly_supervision_cost,
+  base_monthly_price: o.base_monthly_price,
+  periodic_floor_care_amount: o.periodic_floor_care_amount,
   price_per_visit: o.price_per_visit,
   monthly_price: o.monthly_price,
   annual_price: o.annual_price,
@@ -148,12 +151,15 @@ export default function EstimatingDetail() {
         cleanings_per_week: Number(rev.cleanings_per_week) || 0,
         weeks_per_month: Number(rev.weeks_per_month) || 4.33,
         production_rate_sqft_hour: Number(rev.production_rate_sqft_hour) || 3500,
+        minimum_visit_minutes: Number(rev.minimum_visit_minutes) || 0,
         base_wage: Number(rev.base_wage) || 0,
         labor_burden_percent: Number(rev.labor_burden_percent) || 0,
+        supervision_percent: Number(rev.supervision_percent) || 0,
         supply_preset: (rev.supply_preset as SupplyPreset) || 'standard',
         supply_rate_per_hour: Number(rev.supply_rate_per_hour) || 0,
         overhead_percent: Number(rev.overhead_percent) || 0,
         target_margin_percent: Number(rev.target_margin_percent) || 0,
+        periodic_floor_care_percent: Number(rev.periodic_floor_care_percent) || 0,
       });
     }
 
@@ -438,6 +444,11 @@ export default function EstimatingDetail() {
                   <NumField id="cpw" label="Cleanings per week" value={inputs.cleanings_per_week} onChange={v => setInput({ cleanings_per_week: v })} />
                   <NumField id="wpm" label="Weeks per month" value={inputs.weeks_per_month} onChange={v => setInput({ weeks_per_month: v })} />
                   <NumField id="rate" label="Production rate" value={inputs.production_rate_sqft_hour} suffix="/hr" onChange={v => setInput({ production_rate_sqft_hour: v })} />
+                  <NumField id="minvisit" label="Minimum visit time" value={inputs.minimum_visit_minutes} suffix="min" onChange={v => setInput({ minimum_visit_minutes: v })} />
+                  <div className="col-span-2 text-[11px] text-muted-foreground">
+                    Hours/visit = max(sq ft ÷ production rate, minimum visit ÷ 60).
+                    {outputs.minimum_visit_applied && ' Minimum visit time is driving this estimate.'}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -448,6 +459,10 @@ export default function EstimatingDetail() {
                     <NumField id="wage" label="Base wage" value={inputs.base_wage} suffix="$/hr" onChange={v => setInput({ base_wage: v })} />
                     <NumField id="burden" label="Labor burden" value={inputs.labor_burden_percent} suffix="%" onChange={v => setInput({ labor_burden_percent: v })} />
                   </div>
+                  <NumField id="sup" label="Supervision allowance (% of base wage labor)" value={inputs.supervision_percent} suffix="%" onChange={v => setInput({ supervision_percent: v })} />
+                  <p className="text-xs text-muted-foreground">
+                    Supervision cost: <span className="font-medium text-foreground">{money(outputs.monthly_supervision_cost)}/mo</span> — a direct cost added before profit pricing, not a selling-price margin.
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     Loaded labor rate: <span className="font-medium text-foreground">{money(outputs.loaded_labor_rate)}/hr</span>
                   </p>
@@ -502,6 +517,17 @@ export default function EstimatingDetail() {
                   </p>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader className="pb-3"><CardTitle className="text-sm">Periodic floor care</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <NumField id="floorcare" label="Periodic floor-care allowance" value={inputs.periodic_floor_care_percent} suffix="%" onChange={v => setInput({ periodic_floor_care_percent: v })} />
+                  <p className="text-[11px] text-muted-foreground">
+                    Percentage of the base janitorial selling price, broken out separately and included in the monthly and annual totals.
+                    Currently {money(outputs.periodic_floor_care_amount)}/mo.
+                  </p>
+                </CardContent>
+              </Card>
               </>
               )}
 
@@ -537,10 +563,13 @@ export default function EstimatingDetail() {
                   <Line label="Visits / month" value={outputs.visits_per_month.toFixed(2)} />
                   <Separator className="my-2" />
                   <Line label="Loaded labor / visit" value={money(outputs.loaded_labor_cost_per_visit)} />
+                  <Line label="Supervision / mo" value={money(outputs.monthly_supervision_cost)} />
                   <Line label="Supply / visit" value={money(outputs.supply_cost_per_visit)} />
                   <Line label="Direct cost / visit" value={money(outputs.direct_cost_per_visit)} />
                   <Line label="Monthly direct cost" value={money(outputs.total_direct_cost)} />
                   <Separator className="my-2" />
+                  <Line label="Base janitorial price" value={money(outputs.base_monthly_price)} />
+                  <Line label={`Periodic floor care (${pct(inputs.periodic_floor_care_percent)})`} value={money(outputs.periodic_floor_care_amount)} />
                   <Line label="Overhead $" value={money(outputs.overhead_amount)} />
                   <Line label="Profit $" value={money(outputs.profit_amount)} />
                   <Line label="Gross margin" value={pct(outputs.gross_margin_percent)} />
