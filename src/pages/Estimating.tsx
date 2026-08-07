@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Calculator, Building2 } from 'lucide-react';
+import { Plus, Calculator, Building2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -42,6 +52,8 @@ export default function Estimating() {
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
   const [pendingLead, setPendingLead] = useState<CrmLead | null>(null);
   const [busy, setBusy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<EstimateRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate('/auth');
@@ -177,6 +189,22 @@ export default function Estimating() {
   };
 
   const visible = useMemo(() => {
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    // Revisions and line adders are removed automatically via ON DELETE CASCADE.
+    const { error } = await (supabase as any).from('estimates').delete().eq('id', deleteTarget.id);
+    setDeleting(false);
+    if (error) {
+      toast({ title: 'Could not delete estimate', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setRows(prev => prev.filter(r => r.id !== deleteTarget.id));
+    setDeleteTarget(null);
+    toast({ title: 'Estimate deleted' });
+  };
+
     const q = search.trim().toLowerCase();
     return rows.filter(r => {
       if (r.status !== tab) return false;
