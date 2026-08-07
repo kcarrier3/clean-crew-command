@@ -528,9 +528,9 @@ export async function runSalesforceImport(
         report.relationshipExceptions.push({ sfId, label: oppName || sfId, reason: `Linked account ${sfAcct} has no name available` });
       }
       payload.push({
-        // Account Name is preserved exactly; opportunity name lives in contact_name,
-        // which is what the Opportunity UI already labels "Opportunity Name".
+        // Account Name is preserved exactly; opportunity name lives in `name`.
         // Never use the Opportunity name as an Account name when the account resolved.
+        name: oppName || null,
         company_name: sfAcctName || (resolvedCompanyId ? '(unnamed account)' : (oppName || 'Untitled Opportunity')),
         contact_name: oppName || null,
         source: pick(r, 'LeadSource', 'Lead Source', 'Type') || null,
