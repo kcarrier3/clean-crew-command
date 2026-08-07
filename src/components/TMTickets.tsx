@@ -65,7 +65,7 @@ export const TMTickets = ({ jobSiteId, onHoursChange }: TMTicketsProps) => {
   const [newLine, setNewLine] = useState({ employee_id: '', work_date: format(new Date(), 'yyyy-MM-dd'), hours: '', notes: '' });
   const [customerName, setCustomerName] = useState('');
 
-  const canApprove = isManager() || ['Owner', 'Operations Manager', 'Office Manager'].includes(profile?.job_title || '');
+  const canApprove = isManager() || ['Owner', 'Operations Manager', 'Office Manager', 'Project Crew Lead', 'Night Manager', 'Janitorial Manager'].includes(profile?.job_title || '');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -161,14 +161,18 @@ export const TMTickets = ({ jobSiteId, onHoursChange }: TMTicketsProps) => {
 
   const saveSignature = async (data: string) => {
     if (!active) return;
+    const autoApprove = canApprove && active.status !== 'approved';
     const { error } = await supabase.from('tm_tickets').update({
       customer_name: customerName || null,
       customer_signature_data: data,
       customer_signed_at: new Date().toISOString(),
-      status: active.status === 'draft' || active.status === 'rejected' ? 'pending_approval' : active.status,
+      status: autoApprove
+        ? 'approved'
+        : (active.status === 'draft' || active.status === 'rejected' ? 'pending_approval' : active.status),
+      ...(autoApprove ? { approved_by: user?.id, approved_at: new Date().toISOString() } : {}),
     }).eq('id', active.id);
     if (error) { toast({ title: 'Could not save signature', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: 'Signature captured', description: 'Ticket sent for manager approval.' });
+    toast({ title: 'Signature captured', description: autoApprove ? 'Ticket approved — hours added to the project budget.' : 'Ticket sent for manager approval.' });
     refreshActive(active.id);
   };
 
