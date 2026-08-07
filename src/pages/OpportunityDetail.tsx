@@ -54,7 +54,7 @@ export default function OpportunityDetail() {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title={lead ? `${lead.company_name} | Opportunity` : 'Opportunity'}
+        title={lead ? `${lead.name || 'Opportunity'} | Opportunity` : 'Opportunity'}
         description="View and manage opportunity details, notes, files, and activity."
         path={`/crm/opportunities/${id ?? ''}`}
       />

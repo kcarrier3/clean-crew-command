@@ -65,6 +65,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const [addlOpen, setAddlOpen] = useState(true);
   const [sysOpen, setSysOpen] = useState(true);
   const [form, setForm] = useState({
+    name: '',
     company_id: '',
     company_name: '',
     primary_contact_id: '',
@@ -86,6 +87,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   useEffect(() => {
     if (lead) {
       setForm({
+        name: lead.name || '',
         company_id: lead.company_id || '',
         company_name: lead.company_name || '',
         primary_contact_id: lead.primary_contact_id || '',
@@ -106,7 +108,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       setEditMode(false);
     } else {
       setForm({
-        company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new',
+        name: '', company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new',
         close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '',
       });
       setEditMode(true);
@@ -299,8 +301,10 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     }
     const linkedCompany = companies.find(c => c.id === form.company_id);
     setSaving(true);
+    const opportunityName = form.name?.trim() || `${(linkedCompany?.name || form.company_name || 'Opportunity').trim()} opportunity`;
     const payload: any = {
       ...form,
+      name: opportunityName,
       company_id: form.company_id,
       company_name: (linkedCompany?.name || form.company_name || '').trim(),
       primary_contact_id: form.primary_contact_id || null,
@@ -403,7 +407,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     ? `${selectedContact.first_name} ${selectedContact.last_name || ''}`.trim()
     : '—';
   const ownerName = owner?.full_name || (lead ? 'Unassigned' : 'You');
-  const title = accountDisplay !== '—' ? accountDisplay : (lead ? 'Opportunity' : 'New Opportunity');
+  const title = form.name?.trim() || (lead ? 'Opportunity' : 'New Opportunity');
 
   const body = (
       <>
@@ -529,6 +533,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
               size="sm"
               onClick={() => {
                 setForm({
+                  name: lead.name || '',
                   company_id: lead.company_id || '',
                   company_name: lead.company_name || '',
                   primary_contact_id: lead.primary_contact_id || '',
@@ -561,7 +566,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
             <Input type="date" value={form.close_date} onChange={e => setForm({ ...form, close_date: e.target.value })} />
           </FieldRow>
           <FieldRow label="Opportunity Name">
-            <Input value={form.contact_name} onChange={e => setForm({ ...form, contact_name: e.target.value })} placeholder="Opportunity name" />
+            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Opportunity name" />
           </FieldRow>
           <FieldRow label="Stage">
             <Select value={form.stage_id || undefined} onValueChange={v => setForm({ ...form, stage_id: v })}>
@@ -683,7 +688,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     const rows: { label: string; value: string }[] = [
       { label: 'Opportunity Owner', value: ownerName },
       { label: 'Close Date', value: closeDateDisplay },
-      { label: 'Opportunity Name', value: form.contact_name || '—' },
+      { label: 'Opportunity Name', value: form.name || '—' },
       { label: 'Stage', value: stageName },
       { label: 'Account Name', value: accountDisplay },
       { label: 'Primary Contact', value: contactDisplay },
