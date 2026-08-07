@@ -301,8 +301,10 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     }
     const linkedCompany = companies.find(c => c.id === form.company_id);
     setSaving(true);
+    const opportunityName = form.name?.trim() || `${(linkedCompany?.name || form.company_name || 'Opportunity').trim()} opportunity`;
     const payload: any = {
       ...form,
+      name: opportunityName,
       company_id: form.company_id,
       company_name: (linkedCompany?.name || form.company_name || '').trim(),
       primary_contact_id: form.primary_contact_id || null,
