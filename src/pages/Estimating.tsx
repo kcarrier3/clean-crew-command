@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Calculator, Building2 } from 'lucide-react';
+import { Plus, Calculator, Building2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -42,6 +52,8 @@ export default function Estimating() {
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
   const [pendingLead, setPendingLead] = useState<CrmLead | null>(null);
   const [busy, setBusy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<EstimateRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate('/auth');
@@ -176,6 +188,21 @@ export default function Estimating() {
     navigate(`/estimating/${est.id}`);
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    // Revisions and line adders are removed automatically via ON DELETE CASCADE.
+    const { error } = await (supabase as any).from('estimates').delete().eq('id', deleteTarget.id);
+    setDeleting(false);
+    if (error) {
+      toast({ title: 'Could not delete estimate', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setRows(prev => prev.filter(r => r.id !== deleteTarget.id));
+    setDeleteTarget(null);
+    toast({ title: 'Estimate deleted' });
+  };
+
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter(r => {
@@ -274,6 +301,15 @@ export default function Estimating() {
                         {r.status === 'completed' ? 'Completed' : 'Draft'}
                       </Badge>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      aria-label={`Delete ${r.name}`}
+                      onClick={e => { e.stopPropagation(); setDeleteTarget(r); }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </CardContent>
                 </Card>
                 );
@@ -291,6 +327,27 @@ export default function Estimating() {
         subtitle={pendingLead ? `New estimate for ${pendingLead.company_name}` : undefined}
         disabled={busy}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={o => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this estimate?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.name} and all of its revisions will be permanently removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={e => { e.preventDefault(); confirmDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
