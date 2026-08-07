@@ -2,14 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Briefcase, DollarSign, Bell, Users, FileArchive, Trash2, Clock, Mail, Phone, AlertTriangle } from 'lucide-react';
+import { Briefcase, DollarSign, Bell, Users, Clock, Mail, Phone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,10 +37,6 @@ export default function CRMDashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<CrmDeal | null>(null);
   const [tab, setTab] = useState('recent');
-  const [importOpen, setImportOpen] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
-  const [resetConfirm, setResetConfirm] = useState('');
-  const [resetting, setResetting] = useState(false);
   const [recent, setRecent] = useState<Array<{ lead: CrmLead; lastAt: number }>>([]);
   const [recentLoading, setRecentLoading] = useState(true);
 
@@ -116,45 +107,6 @@ export default function CRMDashboard() {
   };
 
   useEffect(() => { loadAll(); loadRecent(); }, [user]);
-
-  const resetCrm = async () => {
-    setResetting(true);
-    // Order matters: delete children before parents.
-    const tables = [
-      'crm_quote_signatures',
-      'crm_quote_items',
-      'crm_quotes',
-      'crm_invoice_items',
-      'crm_invoices',
-      'crm_meetings',
-      'crm_tasks',
-      'crm_activities',
-      'crm_email_logs',
-      'crm_lead_submission_log',
-      'crm_deals',
-      'crm_leads',
-      'crm_contacts',
-      'crm_companies',
-    ];
-    const errors: string[] = [];
-    for (const t of tables) {
-      const { error } = await (supabase as any)
-        .from(t)
-        .delete()
-        .not('id', 'is', null);
-      if (error) errors.push(`${t}: ${error.message}`);
-    }
-    setResetting(false);
-    setResetOpen(false);
-    setResetConfirm('');
-    loadRecent();
-    if (errors.length) {
-      toast({ title: 'Reset finished with errors', description: errors.join(' | '), variant: 'destructive' });
-    } else {
-      toast({ title: 'Waypoint reset', description: 'All Waypoint records were removed.' });
-    }
-    loadAll();
-  };
 
   // Pipeline value = open opportunities' amounts + open deals not tied to an opportunity
   const isOpenStage = (stageId?: string | null) => {
