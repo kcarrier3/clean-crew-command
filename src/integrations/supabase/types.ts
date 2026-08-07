@@ -2421,6 +2421,7 @@ export type Database = {
       estimate_revisions: {
         Row: {
           annual_price: number
+          base_monthly_price: number
           base_wage: number
           building_type: string | null
           cleanings_per_week: number
@@ -2436,6 +2437,7 @@ export type Database = {
           labor_hours_per_visit: number
           loaded_labor_rate: number
           markup_percent: number
+          minimum_visit_minutes: number
           monthly_labor_cost: number
           monthly_labor_hours: number
           monthly_price: number
@@ -2445,6 +2447,8 @@ export type Database = {
           overhead_amount: number
           overhead_percent: number
           periodic_floor_care: Json
+          periodic_floor_care_amount: number
+          periodic_floor_care_percent: number
           price_per_sqft: number
           price_per_visit: number
           pricing_mode: string
@@ -2459,6 +2463,8 @@ export type Database = {
           specialty_inputs: Json
           square_feet: number
           status: string
+          supervision_amount: number
+          supervision_percent: number
           supply_preset: string
           supply_rate_per_hour: number
           target_margin_percent: number
@@ -2470,6 +2476,7 @@ export type Database = {
         }
         Insert: {
           annual_price?: number
+          base_monthly_price?: number
           base_wage?: number
           building_type?: string | null
           cleanings_per_week?: number
@@ -2485,6 +2492,7 @@ export type Database = {
           labor_hours_per_visit?: number
           loaded_labor_rate?: number
           markup_percent?: number
+          minimum_visit_minutes?: number
           monthly_labor_cost?: number
           monthly_labor_hours?: number
           monthly_price?: number
@@ -2494,6 +2502,8 @@ export type Database = {
           overhead_amount?: number
           overhead_percent?: number
           periodic_floor_care?: Json
+          periodic_floor_care_amount?: number
+          periodic_floor_care_percent?: number
           price_per_sqft?: number
           price_per_visit?: number
           pricing_mode?: string
@@ -2508,6 +2518,8 @@ export type Database = {
           specialty_inputs?: Json
           square_feet?: number
           status?: string
+          supervision_amount?: number
+          supervision_percent?: number
           supply_preset?: string
           supply_rate_per_hour?: number
           target_margin_percent?: number
@@ -2519,6 +2531,7 @@ export type Database = {
         }
         Update: {
           annual_price?: number
+          base_monthly_price?: number
           base_wage?: number
           building_type?: string | null
           cleanings_per_week?: number
@@ -2534,6 +2547,7 @@ export type Database = {
           labor_hours_per_visit?: number
           loaded_labor_rate?: number
           markup_percent?: number
+          minimum_visit_minutes?: number
           monthly_labor_cost?: number
           monthly_labor_hours?: number
           monthly_price?: number
@@ -2543,6 +2557,8 @@ export type Database = {
           overhead_amount?: number
           overhead_percent?: number
           periodic_floor_care?: Json
+          periodic_floor_care_amount?: number
+          periodic_floor_care_percent?: number
           price_per_sqft?: number
           price_per_visit?: number
           pricing_mode?: string
@@ -2557,6 +2573,8 @@ export type Database = {
           specialty_inputs?: Json
           square_feet?: number
           status?: string
+          supervision_amount?: number
+          supervision_percent?: number
           supply_preset?: string
           supply_rate_per_hour?: number
           target_margin_percent?: number
