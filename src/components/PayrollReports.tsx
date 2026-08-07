@@ -30,6 +30,7 @@ interface PayrollEntry {
   attendance_bonus_eligible: boolean;
   time_bonus_eligible: boolean;
   total_with_bonus: number;
+  cities_worked: string;
 }
 
 const PayrollReports = () => {
@@ -104,6 +105,12 @@ const PayrollReports = () => {
         .not('clock_out', 'is', null);
 
       if (timeEntriesError) throw timeEntriesError;
+
+      // Job site payroll locations so each employee's worked cities show on the report
+      const { data: jobSitesData } = await supabase
+        .from('job_sites')
+        .select('id, name, city, state, tax_jurisdiction');
+      const siteById = new Map((jobSitesData || []).map((s: any) => [s.id, s]));
 
       // Determine if this is the first full pay period of a new month
       // Pay week is Sun-Sat. First full paycheck of a new month = first pay period
