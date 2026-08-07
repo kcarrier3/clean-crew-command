@@ -14,6 +14,7 @@ export default function OpportunityDetail() {
   const [lead, setLead] = useState<CrmLead | null>(null);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [accountName, setAccountName] = useState<string | null>(null);
 
   const load = async () => {
     if (!id) return;
@@ -22,15 +23,23 @@ export default function OpportunityDetail() {
     setLoading(false);
     if (data?.company_id) {
       setAccountId(data.company_id);
+      const { data: co } = await (supabase as any)
+        .from('crm_companies')
+        .select('name')
+        .eq('id', data.company_id)
+        .maybeSingle();
+      setAccountName(co?.name || data.company_name || null);
     } else if (data?.company_name) {
       const { data: co } = await (supabase as any)
         .from('crm_companies')
-        .select('id')
+        .select('id, name')
         .ilike('name', data.company_name)
         .maybeSingle();
       setAccountId(co?.id || null);
+      setAccountName(co?.name || data.company_name);
     } else {
       setAccountId(null);
+      setAccountName(null);
     }
   };
 
@@ -53,7 +62,7 @@ export default function OpportunityDetail() {
         <Button variant="ghost" size="sm" onClick={goBack}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Opportunities
         </Button>
-        {lead?.company_name && (
+        {accountName && (
           <div className="text-sm text-muted-foreground">
             Account:{' '}
             {accountId ? (
@@ -62,10 +71,10 @@ export default function OpportunityDetail() {
                 onClick={() => navigate(`/crm/accounts/${accountId}`)}
                 className="font-medium text-primary hover:underline"
               >
-                {lead.company_name}
+                {accountName}
               </button>
             ) : (
-              <span className="font-medium text-foreground">{lead.company_name}</span>
+              <span className="font-medium text-foreground">{accountName}</span>
             )}
           </div>
         )}
@@ -77,7 +86,7 @@ export default function OpportunityDetail() {
           <>
             <LinkedEstimates
                 leadId={lead.id}
-                companyName={lead.company_name}
+                companyName={accountName || lead.company_name}
                 companyId={lead.company_id}
                 contactId={lead.primary_contact_id}
             />
