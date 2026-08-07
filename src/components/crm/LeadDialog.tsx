@@ -49,6 +49,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const open = asPage ? true : !!openProp;
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(!lead?.id);
   const [tab, setTab] = useState('details');
