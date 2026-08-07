@@ -163,7 +163,7 @@ export function CompanyDetailDialog({ company, open, onOpenChange, onChanged }: 
                       <CardContent className="p-3 flex flex-wrap items-center gap-3 justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium text-sm">{lead.company_name}</p>
+                            <p className="font-medium text-sm">{lead.name || `${lead.company_name} opportunity`}</p>
                             <Badge className={STATUS_COLORS[lead.status] + ' text-xs'}>{LEAD_STATUS_LABELS[lead.status]}</Badge>
                             {lead.source && <Badge variant="outline" className="text-xs">{lead.source}</Badge>}
                           </div>

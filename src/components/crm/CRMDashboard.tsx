@@ -278,11 +278,11 @@ export default function CRMDashboard() {
                   <CardContent className="p-4 flex flex-wrap items-center gap-3 justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium">{lead.company_name}</p>
+                        <p className="font-medium">{lead.name || `${lead.company_name} opportunity`}</p>
                         <Badge className={STATUS_COLORS[lead.status] + ' text-xs'}>{LEAD_STATUS_LABELS[lead.status]}</Badge>
                         {lead.source && <Badge variant="outline" className="text-xs">{lead.source}</Badge>}
                       </div>
-                      {lead.contact_name && <p className="text-sm text-muted-foreground">{lead.contact_name}</p>}
+                      {lead.company_name && <p className="text-sm text-muted-foreground">{lead.company_name}</p>}
                       <div className="flex gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
                         {lead.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{lead.email}</span>}
                         {lead.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{lead.phone}</span>}
@@ -337,7 +337,7 @@ export default function CRMDashboard() {
                       onClick={() => navigate(`/crm/opportunities/${lead.id}`)}
                     >
                       <CardContent className="p-3">
-                        <p className="font-medium text-sm truncate">{lead.company_name}</p>
+                        <p className="font-medium text-sm truncate">{lead.name || `${lead.company_name} opportunity`}</p>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <Badge variant="secondary" className="text-xs">
                             {(lead.stage_id && stageById.get(lead.stage_id)?.name) || LEAD_STATUS_LABELS[lead.status]}
