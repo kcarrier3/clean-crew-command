@@ -405,7 +405,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     ? `${selectedContact.first_name} ${selectedContact.last_name || ''}`.trim()
     : '—';
   const ownerName = owner?.full_name || (lead ? 'Unassigned' : 'You');
-  const title = accountDisplay !== '—' ? accountDisplay : (lead ? 'Opportunity' : 'New Opportunity');
+  const title = form.name?.trim() || (lead ? 'Opportunity' : 'New Opportunity');
 
   const body = (
       <>
