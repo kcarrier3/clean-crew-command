@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Briefcase, DollarSign, Bell, Users, FileArchive, Trash2, Clock, Mail, Phone } from 'lucide-react';
+import { Briefcase, DollarSign, Bell, Users, FileArchive, Trash2, Clock, Mail, Phone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -187,6 +187,30 @@ export default function CRMDashboard() {
 
   const newLeads = leads.filter(l => l.status === 'new').length;
 
+  // "Needs attention": won/post-award opportunities that haven't moved in 30+ days
+  const stageById = new Map(stages.map(s => [s.id, s]));
+  const lastTouched = (l: CrmLead) => {
+    const candidates = [l.updated_at, l.sf_last_modified_date, l.created_at]
+      .filter(Boolean)
+      .map(d => new Date(d as string).getTime())
+      .filter(t => !Number.isNaN(t));
+    return candidates.length ? Math.max(...candidates) : 0;
+  };
+  const THIRTY_DAYS = 30 * 86400000;
+  const needsAttention = leads
+    .filter(l => {
+      const st = l.stage_id ? stageById.get(l.stage_id) : undefined;
+      if (st?.is_lost) return false;
+      const isWonOrPostAward =
+        l.status === 'converted' || (!!st && !st.is_lost && st.sort_order >= 40 && !st.is_won);
+      if (!isWonOrPostAward) return false;
+      return Date.now() - lastTouched(l) > THIRTY_DAYS;
+    })
+    .map(l => ({ lead: l, lastAt: lastTouched(l) }))
+    .sort((a, b) => a.lastAt - b.lastAt);
+
+  const daysAgo = (ts: number) => Math.floor((Date.now() - ts) / 86400000);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
@@ -235,6 +259,8 @@ export default function CRMDashboard() {
         </TabsList>
 
         <TabsContent value="recent" className="mt-4">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-2">
           {recentLoading ? (
             <p className="text-muted-foreground text-sm">Loading recent opportunities…</p>
           ) : recent.length === 0 ? (
@@ -287,6 +313,49 @@ export default function CRMDashboard() {
               ))}
             </div>
           )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <h3 className="font-semibold text-sm">Needs Attention</h3>
+                <Badge variant="outline" className="text-xs">{needsAttention.length}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Won opportunities with no stage change in 30+ days.
+              </p>
+              {needsAttention.length === 0 ? (
+                <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">
+                  Nothing stalled. Nice work.
+                </CardContent></Card>
+              ) : (
+                <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
+                  {needsAttention.map(({ lead, lastAt }) => (
+                    <Card
+                      key={lead.id}
+                      className="border-amber-300/70 hover:shadow-md transition cursor-pointer"
+                      onClick={() => navigate(`/crm/opportunities/${lead.id}`)}
+                    >
+                      <CardContent className="p-3">
+                        <p className="font-medium text-sm truncate">{lead.company_name}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <Badge variant="secondary" className="text-xs">
+                            {(lead.stage_id && stageById.get(lead.stage_id)?.name) || LEAD_STATUS_LABELS[lead.status]}
+                          </Badge>
+                          <span className="text-xs text-amber-700">{daysAgo(lastAt)}d without update</span>
+                        </div>
+                        {Number(lead.amount) > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            ${(Number(lead.amount) || 0).toLocaleString()}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="pipeline" className="mt-4">
