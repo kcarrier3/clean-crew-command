@@ -28,6 +28,8 @@ interface Employee {
   email: string | null;
   employee_id: string | null;
   job_title: string | null;
+  adp_file_number: string | null;
+  adp_department_code: string | null;
   hourly_rate: number | null;
   hire_date: string | null;
   phone: string | null;
@@ -957,6 +959,23 @@ const TeamManagement = () => {
                           onBlur={(e) => updateEmployeeProfile({ employee_id: e.target.value })}
                         />
                       </div>
+                      <div>
+                        <Label htmlFor="adp_file_number">ADP File Number</Label>
+                        <Input
+                          id="adp_file_number"
+                          placeholder="Used to match this employee in ADP"
+                          defaultValue={selectedEmployee.adp_file_number || ''}
+                          onBlur={(e) => updateEmployeeProfile({ adp_file_number: e.target.value || null })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="adp_department_code">ADP Department / Cost Center</Label>
+                        <Input
+                          id="adp_department_code"
+                          defaultValue={selectedEmployee.adp_department_code || ''}
+                          onBlur={(e) => updateEmployeeProfile({ adp_department_code: e.target.value || null })}
+                        />
+                      </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-4">
@@ -967,6 +986,14 @@ const TeamManagement = () => {
                       <div>
                         <Label className="text-sm font-medium">Employee ID</Label>
                         <p className="text-sm">{selectedEmployee.employee_id || 'Not set'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">ADP File Number</Label>
+                        <p className="text-sm">{selectedEmployee.adp_file_number || 'Not set'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">ADP Department</Label>
+                        <p className="text-sm">{selectedEmployee.adp_department_code || 'Not set'}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium">Email</Label>
