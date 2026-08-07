@@ -19,6 +19,7 @@ export const DEFAULT_INPUTS: EstimateInputs = {
   weeks_per_month: 4.33,
   production_rate_sqft_hour: 3500,
   minimum_visit_minutes: 0,
+  labor_hours_per_visit_override: 0,
   base_wage: 15,
   labor_burden_percent: 20,
   supervision_percent: 0,
@@ -36,6 +37,8 @@ export interface EstimateInputs {
   production_rate_sqft_hour: number;
   /** Minimum billable time on site per visit. Hours/visit never drops below this. */
   minimum_visit_minutes: number;
+  /** Explicit hours/visit. When > 0 this overrides the production/minimum calculation. */
+  labor_hours_per_visit_override: number;
   base_wage: number;
   labor_burden_percent: number;
   /** Supervision allowance as a % of BASE direct wage labor (a cost, not a price margin). */
@@ -53,6 +56,8 @@ export interface EstimateOutputs {
   labor_hours_per_visit: number;
   /** True when the minimum visit time drove hours/visit instead of the production rate. */
   minimum_visit_applied: boolean;
+  /** True when an explicit hours/visit override drove the estimate. */
+  hours_override_applied: boolean;
   monthly_labor_hours: number;
   loaded_labor_rate: number;
   loaded_labor_cost_per_visit: number;
@@ -114,7 +119,10 @@ export function calculateEstimate(i: EstimateInputs): EstimateOutputs {
   // Production
   const producedHoursPerVisit = rate > 0 ? sqft / rate : 0;
   const minHoursPerVisit = Math.max(0, n(i.minimum_visit_minutes)) / 60;
-  const laborHoursPerVisit = Math.max(producedHoursPerVisit, minHoursPerVisit);
+  const overrideHours = Math.max(0, n(i.labor_hours_per_visit_override));
+  const overrideApplied = overrideHours > 0;
+  // An explicit override wins over both the production rate and the minimum visit time.
+  const laborHoursPerVisit = overrideApplied ? overrideHours : Math.max(producedHoursPerVisit, minHoursPerVisit);
   const monthlyLaborHours = laborHoursPerVisit * visitsPerMonth;
 
   // Labor
@@ -158,7 +166,8 @@ export function calculateEstimate(i: EstimateInputs): EstimateOutputs {
   return {
     visits_per_month: safe(visitsPerMonth),
     labor_hours_per_visit: safe(laborHoursPerVisit),
-    minimum_visit_applied: minHoursPerVisit > producedHoursPerVisit,
+    minimum_visit_applied: !overrideApplied && minHoursPerVisit > producedHoursPerVisit,
+    hours_override_applied: overrideApplied,
     monthly_labor_hours: safe(monthlyLaborHours),
     loaded_labor_rate: safe(loadedLaborRate),
     loaded_labor_cost_per_visit: safe(loadedLaborCostPerVisit),

@@ -36,6 +36,7 @@ export function buildSummaryText(i: EstimateInputs, o: EstimateOutputs, m: Summa
     `Frequency: ${num(i.cleanings_per_week, 2)}x/week (${num(i.weeks_per_month, 2)} weeks/month = ${num(o.visits_per_month, 2)} visits/month)`,
     `Production rate: ${num(i.production_rate_sqft_hour, 0)} sq ft/hour`,
     i.minimum_visit_minutes > 0 ? `Minimum visit time: ${num(i.minimum_visit_minutes, 0)} minutes${o.minimum_visit_applied ? ' (applied)' : ''}` : null,
+    o.hours_override_applied ? `Labor hours per visit override: ${num(i.labor_hours_per_visit_override)} hr (applied — overrides production rate and minimum visit time)` : null,
     `Hours per visit: ${num(o.labor_hours_per_visit)}`,
     `Monthly hours: ${num(o.monthly_labor_hours)}`,
     ``,
@@ -91,6 +92,9 @@ export function PricingSummary({ inputs, outputs, meta }: { inputs: EstimateInpu
           <Row label="Production rate" value={`${num(inputs.production_rate_sqft_hour, 0)} sq ft/hr`} />
           {inputs.minimum_visit_minutes > 0 && (
             <Row label="Minimum visit time" value={`${num(inputs.minimum_visit_minutes, 0)} min${outputs.minimum_visit_applied ? ' (applied)' : ''}`} />
+          )}
+          {outputs.hours_override_applied && (
+            <Row label="Hours/visit override (applied)" value={hoursFmt(inputs.labor_hours_per_visit_override)} strong />
           )}
           <Row label="Hours per visit" value={hoursFmt(outputs.labor_hours_per_visit)} />
           <Row label="Monthly hours" value={hoursFmt(outputs.monthly_labor_hours)} />

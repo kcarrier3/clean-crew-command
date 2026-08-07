@@ -2435,6 +2435,7 @@ export type Database = {
           id: string
           labor_burden_percent: number
           labor_hours_per_visit: number
+          labor_hours_per_visit_override: number
           loaded_labor_rate: number
           markup_percent: number
           minimum_visit_minutes: number
@@ -2490,6 +2491,7 @@ export type Database = {
           id?: string
           labor_burden_percent?: number
           labor_hours_per_visit?: number
+          labor_hours_per_visit_override?: number
           loaded_labor_rate?: number
           markup_percent?: number
           minimum_visit_minutes?: number
@@ -2545,6 +2547,7 @@ export type Database = {
           id?: string
           labor_burden_percent?: number
           labor_hours_per_visit?: number
+          labor_hours_per_visit_override?: number
           loaded_labor_rate?: number
           markup_percent?: number
           minimum_visit_minutes?: number

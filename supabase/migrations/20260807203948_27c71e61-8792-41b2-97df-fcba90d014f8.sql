@@ -1,0 +1,1 @@
+ALTER TABLE public.estimate_revisions ADD COLUMN IF NOT EXISTS labor_hours_per_visit_override numeric NOT NULL DEFAULT 0;
