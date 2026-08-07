@@ -41,6 +41,12 @@ interface JobSite {
   current_month_year: string | null;
   nightly_hours?: number | null;
   service_days?: number[] | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  tax_jurisdiction?: string | null;
+  job_cost_code?: string | null;
+  location_code?: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -49,6 +55,12 @@ interface JobSite {
 interface FormData {
   name: string;
   address: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  tax_jurisdiction: string;
+  job_cost_code: string;
+  location_code: string;
   client_name: string;
   contact_person: string;
   contact_phone: string;
@@ -150,6 +162,12 @@ export default function JobSitesManagement() {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     address: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    tax_jurisdiction: '',
+    job_cost_code: '',
+    location_code: '',
     client_name: '',
     contact_person: '',
     contact_phone: '',
