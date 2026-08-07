@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Calendar, DollarSign, Clock, Download, FileText, Calculator } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import AdpExportDialog from '@/components/AdpExportDialog';
 
 interface PayrollEntry {
   employee_id: string;
@@ -32,11 +34,21 @@ interface PayrollEntry {
 
 const PayrollReports = () => {
   const { toast } = useToast();
+  const { canRunPayroll } = useAuth();
+  const [adpOpen, setAdpOpen] = useState(false);
   const [payrollData, setPayrollData] = useState<PayrollEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPayPeriod, setSelectedPayPeriod] = useState<string>('');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
+
+  const activeRange = (() => {
+    if (selectedPayPeriod) {
+      const [s, e] = selectedPayPeriod.split('_');
+      return { start: s, end: e };
+    }
+    return { start: customStartDate, end: customEndDate };
+  })();
 
   // Calculate pay period options (last 8 weeks)
   const getPayPeriods = () => {
@@ -472,7 +484,19 @@ const PayrollReports = () => {
                 Export CSV
               </Button>
             )}
+            {canRunPayroll() && (
+              <Button variant="secondary" onClick={() => setAdpOpen(true)}>
+                <FileText className="h-4 w-4 mr-2" />
+                Export for ADP
+              </Button>
+            )}
           </div>
+          {canRunPayroll() && (
+            <p className="text-sm text-muted-foreground">
+              The ADP export produces one row per employee, day and job so multiple municipalities stay separate.
+              Column headers can be matched to your ADP Workforce Now template under Settings → ADP Payroll.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -603,6 +627,13 @@ const PayrollReports = () => {
           </CardContent>
         </Card>
       )}
+
+      <AdpExportDialog
+        open={adpOpen}
+        onOpenChange={setAdpOpen}
+        defaultStartDate={activeRange.start}
+        defaultEndDate={activeRange.end}
+      />
     </div>
   );
 };
