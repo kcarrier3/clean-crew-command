@@ -458,7 +458,7 @@ export async function runSalesforceImport(
       const compact = n.replace(/\s+/g, '');
       if (!n) return firstStage || null;
       if (n.includes('lost')) return lostStage || stageByName('Lost') || firstStage || null;
-      if (n.includes('closed won') || n === 'won') return wonStage || stageByName('Closed') || firstStage || null;
+      if (n.includes('closed won') || n === 'won') return wonStage || stageByName('Paid') || stageByName('Closed') || firstStage || null;
       const exact = stageByName(sfStage);
       if (exact) return exact;
       if (compact.includes('prequal')) return stageByName('Pre-Qualification') || firstStage || null;
