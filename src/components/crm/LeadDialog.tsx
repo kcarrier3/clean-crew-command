@@ -65,6 +65,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const [addlOpen, setAddlOpen] = useState(true);
   const [sysOpen, setSysOpen] = useState(true);
   const [form, setForm] = useState({
+    name: '',
     company_id: '',
     company_name: '',
     primary_contact_id: '',
