@@ -218,6 +218,12 @@ export const useAuth = () => {
 
   const canApproveEstimate = () => hasRole('admin') || profile?.job_title === 'Owner';
 
+  // Payroll / ADP export access — mirrors public.can_run_payroll()
+  const PAYROLL_JOB_TITLES = ['Owner', 'Office Manager', 'Operations Manager'];
+  const canRunPayroll = () =>
+    hasRole('admin') ||
+    (!!profile?.job_title && PAYROLL_JOB_TITLES.includes(profile.job_title));
+
   const hasPermission = (permission: UserPermission['permission']) => {
     return permissions.some(p => p.permission === permission);
   };
@@ -256,6 +262,7 @@ export const useAuth = () => {
     isCrmUser,
     canEstimate,
     canApproveEstimate,
+    canRunPayroll,
     canViewSchedules,
     canEditSchedules,
     canPublishSchedules,
