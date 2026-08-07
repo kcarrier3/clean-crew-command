@@ -170,9 +170,11 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
     }
   };
 
-  const hoursPercent = jobSite.budgeted_hours && jobSite.used_hours
-    ? Math.min(100, Math.round((jobSite.used_hours / jobSite.budgeted_hours) * 100))
+  const totalBudgetHours = (jobSite.budgeted_hours || 0) + tmHours;
+  const hoursPercent = totalBudgetHours && jobSite.used_hours
+    ? Math.min(100, Math.round((jobSite.used_hours / totalBudgetHours) * 100))
     : 0;
+  const isProject = !jobSite.is_recurring_monthly;
 
   const openWorkOrders = workOrders.filter(wo => wo.status === 'open' || wo.status === 'in_progress');
   const avgScore = inspections.length > 0
