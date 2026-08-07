@@ -42,16 +42,27 @@ export function CompanyDetailDialog({ company, open, onOpenChange, onChanged }: 
   const load = async () => {
     if (!company) return;
     setLoading(true);
-    const [{ data: cs }, { data: ls }, { data: st }] = await Promise.all([
+    const [{ data: cs }, { data: byId }, { data: byName }, { data: st }] = await Promise.all([
       (supabase as any).from('crm_contacts').select('*').eq('company_id', company.id).order('is_primary', { ascending: false }).order('last_name'),
       (supabase as any).from('crm_leads')
         .select('*')
-        .or(`company_id.eq.${company.id},company_name.ilike.${company.name.replace(/[%_]/g, '')}`)
+        .eq('company_id', company.id)
+        .order('created_at', { ascending: false }),
+      (supabase as any).from('crm_leads')
+        .select('*')
+        .is('company_id', null)
+        .ilike('company_name', company.name.replace(/[%_]/g, ''))
         .order('created_at', { ascending: false }),
       (supabase as any).from('crm_pipeline_stages').select('*').eq('active', true).order('sort_order'),
     ]);
     setContacts(cs || []);
-    setLeads(ls || []);
+    const seen = new Set<string>();
+    const merged = [...(byId || []), ...(byName || [])].filter((l: any) => {
+      if (seen.has(l.id)) return false;
+      seen.add(l.id);
+      return true;
+    });
+    setLeads(merged);
     setStages(st || []);
     setLoading(false);
   };
