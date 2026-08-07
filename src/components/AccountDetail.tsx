@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AccountContacts } from './AccountContacts';
 import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 import { WorkOrderDetail } from './WorkOrderDetail';
+import { TMTickets } from './TMTickets';
 import { format } from 'date-fns';
 
 interface JobSite {
@@ -32,6 +33,7 @@ interface JobSite {
   budgeted_hours: number | null;
   used_hours: number | null;
   remaining_hours: number | null;
+  tm_hours?: number | null;
   active: boolean;
 }
 
@@ -95,6 +97,7 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [createWOOpen, setCreateWOOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tmHours, setTmHours] = useState<number>(Number(jobSite.tm_hours || 0));
   const { toast } = useToast();
   const { isManager } = useAuth();
 
@@ -104,8 +107,13 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
 
   const fetchAll = async () => {
     setLoading(true);
-    await Promise.all([fetchWorkOrders(), fetchInspections(), fetchScheduledEmployees()]);
+    await Promise.all([fetchWorkOrders(), fetchInspections(), fetchScheduledEmployees(), fetchTmHours()]);
     setLoading(false);
+  };
+
+  const fetchTmHours = async () => {
+    const { data } = await supabase.from('job_sites').select('tm_hours').eq('id', jobSite.id).maybeSingle();
+    setTmHours(Number((data as any)?.tm_hours || 0));
   };
 
   const fetchWorkOrders = async () => {
@@ -162,9 +170,11 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
     }
   };
 
-  const hoursPercent = jobSite.budgeted_hours && jobSite.used_hours
-    ? Math.min(100, Math.round((jobSite.used_hours / jobSite.budgeted_hours) * 100))
+  const totalBudgetHours = (jobSite.budgeted_hours || 0) + tmHours;
+  const hoursPercent = totalBudgetHours && jobSite.used_hours
+    ? Math.min(100, Math.round((jobSite.used_hours / totalBudgetHours) * 100))
     : 0;
+  const isProject = !jobSite.is_recurring_monthly;
 
   const openWorkOrders = workOrders.filter(wo => wo.status === 'open' || wo.status === 'in_progress');
   const avgScore = inspections.length > 0
@@ -247,7 +257,7 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
 
       {/* Main Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="grid grid-cols-4 w-full max-w-lg h-auto">
+        <TabsList className={`grid ${isProject ? 'grid-cols-5 max-w-xl' : 'grid-cols-4 max-w-lg'} w-full h-auto`}>
           <TabsTrigger value="overview" className="text-xs md:text-sm px-1 py-1.5">Overview</TabsTrigger>
           <TabsTrigger value="workorders" className="text-xs md:text-sm px-1 py-1.5">
             <span className="truncate">Work Orders</span>
@@ -257,6 +267,9 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
               </Badge>
             )}
           </TabsTrigger>
+          {isProject && (
+            <TabsTrigger value="tm" className="text-xs md:text-sm px-1 py-1.5">T&amp;M</TabsTrigger>
+          )}
           <TabsTrigger value="inspections" className="text-xs md:text-sm px-1 py-1.5">QA History</TabsTrigger>
           <TabsTrigger value="team" className="text-xs md:text-sm px-1 py-1.5">Team</TabsTrigger>
         </TabsList>
@@ -271,7 +284,7 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
           </Card>
 
           {/* Budget */}
-          {jobSite.budgeted_hours && (
+          {!!jobSite.budgeted_hours && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -282,12 +295,25 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
               <CardContent className="p-4 pt-0">
                 <div className="flex justify-between text-sm mb-2">
                   <span>Used: {jobSite.used_hours || 0} hrs</span>
-                  <span>Budget: {jobSite.budgeted_hours} hrs</span>
+                  <span>Total budget: {Math.round(totalBudgetHours * 100) / 100} hrs</span>
                 </div>
                 <Progress value={hoursPercent} className={`h-2 ${hoursPercent > 90 ? 'bg-red-100' : ''}`} />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {jobSite.remaining_hours ?? (jobSite.budgeted_hours - (jobSite.used_hours || 0))} hrs remaining
-                </p>
+                <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Contract</p>
+                    <p className="text-sm font-semibold">{jobSite.budgeted_hours} hrs</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Approved T&amp;M</p>
+                    <p className="text-sm font-semibold">{Math.round(tmHours * 100) / 100} hrs</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Remaining</p>
+                    <p className="text-sm font-semibold">
+                      {Math.round((totalBudgetHours - (jobSite.used_hours || 0)) * 100) / 100} hrs
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -377,6 +403,13 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
             ))
           )}
         </TabsContent>
+
+        {/* T&M Tab */}
+        {isProject && (
+          <TabsContent value="tm" className="mt-4">
+            <TMTickets jobSiteId={jobSite.id} onHoursChange={fetchTmHours} />
+          </TabsContent>
+        )}
 
         {/* QA History Tab */}
         <TabsContent value="inspections" className="mt-4 space-y-3">
