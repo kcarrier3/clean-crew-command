@@ -64,6 +64,57 @@ export type Database = {
           },
         ]
       }
+      adp_export_settings: {
+        Row: {
+          columns: Json
+          created_at: string
+          date_format: string
+          id: string
+          overtime_code: string
+          regular_code: string
+          singleton: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          columns?: Json
+          created_at?: string
+          date_format?: string
+          id?: string
+          overtime_code?: string
+          regular_code?: string
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          columns?: Json
+          created_at?: string
+          date_format?: string
+          id?: string
+          overtime_code?: string
+          regular_code?: string
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adp_export_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "adp_export_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           description: string | null
@@ -3086,6 +3137,7 @@ export type Database = {
           address: string | null
           budget_info: string | null
           budgeted_hours: number | null
+          city: string | null
           client_name: string | null
           contact_email: string | null
           contact_person: string | null
@@ -3097,15 +3149,20 @@ export type Database = {
           id: string
           is_office: boolean
           is_recurring_monthly: boolean | null
+          job_cost_code: string | null
           last_reset_date: string | null
+          location_code: string | null
           name: string
           nightly_hours: number | null
+          postal_code: string | null
           project_manager: string | null
           qr_code_token: string
           remaining_hours: number | null
           safety_requirements: string | null
           service_days: number[]
           special_instructions: string | null
+          state: string | null
+          tax_jurisdiction: string | null
           tm_hours: number
           updated_at: string
           used_hours: number | null
@@ -3116,6 +3173,7 @@ export type Database = {
           address?: string | null
           budget_info?: string | null
           budgeted_hours?: number | null
+          city?: string | null
           client_name?: string | null
           contact_email?: string | null
           contact_person?: string | null
@@ -3127,15 +3185,20 @@ export type Database = {
           id?: string
           is_office?: boolean
           is_recurring_monthly?: boolean | null
+          job_cost_code?: string | null
           last_reset_date?: string | null
+          location_code?: string | null
           name: string
           nightly_hours?: number | null
+          postal_code?: string | null
           project_manager?: string | null
           qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
           service_days?: number[]
           special_instructions?: string | null
+          state?: string | null
+          tax_jurisdiction?: string | null
           tm_hours?: number
           updated_at?: string
           used_hours?: number | null
@@ -3146,6 +3209,7 @@ export type Database = {
           address?: string | null
           budget_info?: string | null
           budgeted_hours?: number | null
+          city?: string | null
           client_name?: string | null
           contact_email?: string | null
           contact_person?: string | null
@@ -3157,15 +3221,20 @@ export type Database = {
           id?: string
           is_office?: boolean
           is_recurring_monthly?: boolean | null
+          job_cost_code?: string | null
           last_reset_date?: string | null
+          location_code?: string | null
           name?: string
           nightly_hours?: number | null
+          postal_code?: string | null
           project_manager?: string | null
           qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
           service_days?: number[]
           special_instructions?: string | null
+          state?: string | null
+          tax_jurisdiction?: string | null
           tm_hours?: number
           updated_at?: string
           used_hours?: number | null
@@ -3558,6 +3627,161 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll_export_batches: {
+        Row: {
+          created_at: string
+          exported_at: string
+          exported_by: string | null
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          row_count: number
+          total_hours: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          exported_at?: string
+          exported_by?: string | null
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          row_count?: number
+          total_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          exported_at?: string
+          exported_by?: string | null
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          row_count?: number
+          total_hours?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_export_batches_exported_by_fkey"
+            columns: ["exported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_export_batches_exported_by_fkey"
+            columns: ["exported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_export_rows: {
+        Row: {
+          adp_file_number: string | null
+          batch_id: string
+          city: string | null
+          created_at: string
+          crew_compass_employee_code: string | null
+          department_code: string | null
+          earnings_code: string
+          employee_id: string | null
+          employee_name: string
+          hourly_rate: number | null
+          id: string
+          job_cost_code: string | null
+          job_name: string | null
+          job_site_id: string | null
+          location_code: string | null
+          overtime_hours: number
+          regular_hours: number
+          state: string | null
+          tax_jurisdiction: string | null
+          total_hours: number
+          work_date: string
+        }
+        Insert: {
+          adp_file_number?: string | null
+          batch_id: string
+          city?: string | null
+          created_at?: string
+          crew_compass_employee_code?: string | null
+          department_code?: string | null
+          earnings_code?: string
+          employee_id?: string | null
+          employee_name: string
+          hourly_rate?: number | null
+          id?: string
+          job_cost_code?: string | null
+          job_name?: string | null
+          job_site_id?: string | null
+          location_code?: string | null
+          overtime_hours?: number
+          regular_hours?: number
+          state?: string | null
+          tax_jurisdiction?: string | null
+          total_hours?: number
+          work_date: string
+        }
+        Update: {
+          adp_file_number?: string | null
+          batch_id?: string
+          city?: string | null
+          created_at?: string
+          crew_compass_employee_code?: string | null
+          department_code?: string | null
+          earnings_code?: string
+          employee_id?: string | null
+          employee_name?: string
+          hourly_rate?: number | null
+          id?: string
+          job_cost_code?: string | null
+          job_name?: string | null
+          job_site_id?: string | null
+          location_code?: string | null
+          overtime_hours?: number
+          regular_hours?: number
+          state?: string | null
+          tax_jurisdiction?: string | null
+          total_hours?: number
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_export_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_export_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_export_rows_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_export_rows_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_export_rows_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           category: string
@@ -3687,6 +3911,8 @@ export type Database = {
           active: boolean
           address_line1: string | null
           address_line2: string | null
+          adp_department_code: string | null
+          adp_file_number: string | null
           attendance_bonus_amount: number | null
           attendance_incentive_enrolled: boolean
           attendance_tracking_type: string | null
@@ -3721,6 +3947,8 @@ export type Database = {
           active?: boolean
           address_line1?: string | null
           address_line2?: string | null
+          adp_department_code?: string | null
+          adp_file_number?: string | null
           attendance_bonus_amount?: number | null
           attendance_incentive_enrolled?: boolean
           attendance_tracking_type?: string | null
@@ -3755,6 +3983,8 @@ export type Database = {
           active?: boolean
           address_line1?: string | null
           address_line2?: string | null
+          adp_department_code?: string | null
+          adp_file_number?: string | null
           attendance_bonus_amount?: number | null
           attendance_incentive_enrolled?: boolean
           attendance_tracking_type?: string | null
@@ -5033,6 +5263,7 @@ export type Database = {
         Returns: boolean
       }
       can_publish_schedules: { Args: { _user_id: string }; Returns: boolean }
+      can_run_payroll: { Args: { _user_id: string }; Returns: boolean }
       compute_inspection_score: {
         Args: { p_inspection_id: string }
         Returns: undefined
