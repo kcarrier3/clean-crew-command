@@ -662,6 +662,40 @@ export default function JobSitesManagement() {
                     />
                   </div>
 
+                  {/* Payroll & tax location — used by the ADP payroll export */}
+                  <div className="space-y-4">
+                    <Label className="font-semibold">Payroll &amp; Tax Location</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Used on the ADP payroll export so hours worked here report to the right municipality and job cost code.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6">
+                      <div>
+                        <Label htmlFor="city">City</Label>
+                        <Input id="city" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="state">State</Label>
+                        <Input id="state" value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="postal_code">ZIP</Label>
+                        <Input id="postal_code" value={formData.postal_code} onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="tax_jurisdiction">Tax jurisdiction</Label>
+                        <Input id="tax_jurisdiction" placeholder="Defaults to city" value={formData.tax_jurisdiction} onChange={(e) => setFormData({ ...formData, tax_jurisdiction: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="job_cost_code">Job cost code</Label>
+                        <Input id="job_cost_code" value={formData.job_cost_code} onChange={(e) => setFormData({ ...formData, job_cost_code: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="location_code">Location code</Label>
+                        <Input id="location_code" value={formData.location_code} onChange={(e) => setFormData({ ...formData, location_code: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Contact Information Section */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
@@ -853,6 +887,40 @@ export default function JobSitesManagement() {
                       placeholder={isProjectForm ? 'Enter site address...' : 'Enter account address...'}
                       className="min-h-[80px]"
                     />
+                  </div>
+
+                  {/* Payroll & tax location — used by the ADP payroll export */}
+                  <div className="space-y-4">
+                    <Label className="font-semibold">Payroll &amp; Tax Location</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Used on the ADP payroll export so hours worked here report to the right municipality and job cost code.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6">
+                      <div>
+                        <Label htmlFor="edit_city">City</Label>
+                        <Input id="edit_city" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_state">State</Label>
+                        <Input id="edit_state" value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_postal_code">ZIP</Label>
+                        <Input id="edit_postal_code" value={formData.postal_code} onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_tax_jurisdiction">Tax jurisdiction</Label>
+                        <Input id="edit_tax_jurisdiction" placeholder="Defaults to city" value={formData.tax_jurisdiction} onChange={(e) => setFormData({ ...formData, tax_jurisdiction: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_job_cost_code">Job cost code</Label>
+                        <Input id="edit_job_cost_code" value={formData.job_cost_code} onChange={(e) => setFormData({ ...formData, job_cost_code: e.target.value })} />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_location_code">Location code</Label>
+                        <Input id="edit_location_code" value={formData.location_code} onChange={(e) => setFormData({ ...formData, location_code: e.target.value })} />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Contact Information Section */}
