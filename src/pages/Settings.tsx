@@ -168,6 +168,12 @@ export default function Settings() {
               </Card>
             </TabsContent>
           )}
+
+          {isAdminLevel && (
+            <TabsContent value="waypoint" className="mt-6 space-y-6">
+              <WaypointDataSettings />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 
