@@ -187,6 +187,8 @@ export default function EstimatingDetail() {
     }
     setDirty(false);
     dirtyRef.current = false;
+    // Keep the in-memory snapshot in sync so drift detection reflects the save.
+    setRevision((prev: any) => (prev ? { ...prev, ...revPayload, notes } : prev));
     if (!silent) toast({ title: 'Draft saved' });
   }, [estimate, revision, inputs, specialty, serviceType, isJanitorial, notes, name, toast]);
 
