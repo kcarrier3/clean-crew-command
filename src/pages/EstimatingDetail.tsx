@@ -113,6 +113,13 @@ export default function EstimatingDetail() {
   );
   const solvable = isPricingSolvable(inputs.overhead_percent, inputs.target_margin_percent);
 
+  // Snapshot drift: the saved monthly_price vs what the current calculator produces
+  // from the same saved inputs. Only meaningful before the user starts editing.
+  const drift = useMemo(
+    () => (isJanitorial && revision && !dirty ? monthlyPriceDrift(revision, outputs.monthly_price) : null),
+    [isJanitorial, revision, dirty, outputs.monthly_price]
+  );
+
   useEffect(() => { if (!loading && !user) navigate('/auth'); }, [loading, user, navigate]);
 
   const load = useCallback(async () => {
@@ -336,6 +343,26 @@ export default function EstimatingDetail() {
           )
         }
       >
+        {drift?.drifted && (
+          <div className="mb-3 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+            <div className="space-y-1">
+              <p className="font-medium">Saved snapshot and current calculator disagree</p>
+              <p className="text-muted-foreground">
+                Saved monthly price {money(drift.stored)} · recalculated {money(drift.computed)}{' '}
+                (difference {money(drift.computed - drift.stored)}).
+                {readOnly
+                  ? ' This estimate is completed and read-only — duplicate it as a draft to resave with current figures.'
+                  : ' Press Save to sync the stored snapshot with these figures. Inputs are unchanged.'}
+              </p>
+              {!readOnly && (
+                <Button size="sm" variant="outline" onClick={() => saveDraft()} disabled={saving}>
+                  <Save className="h-4 w-4 mr-1" /> {saving ? 'Saving…' : 'Resave snapshot'}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         {readOnly ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
