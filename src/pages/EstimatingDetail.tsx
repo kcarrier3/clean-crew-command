@@ -180,7 +180,7 @@ export default function EstimatingDetail() {
     if (!estimate || !revision || estimate.status === 'completed') return;
     setSaving(true);
     const revPayload = isJanitorial
-      ? { ...inputs, ...OUTPUT_COLUMNS(calculateEstimate(inputs)) }
+      ? janitorialRevisionPayload(inputs)
       : SPECIALTY_COLUMNS(specialty, calculateSpecialty(serviceType, specialty));
     const [{ error: e1 }, { error: e2 }] = await Promise.all([
       (supabase as any).from('estimates').update({ name: name || 'Untitled estimate', updated_at: new Date().toISOString() }).eq('id', estimate.id),
@@ -209,7 +209,7 @@ export default function EstimatingDetail() {
     if (!estimate || !revision || !user) return;
     setBusy(true);
     const revPayload = isJanitorial
-      ? { ...inputs, ...OUTPUT_COLUMNS(calculateEstimate(inputs)) }
+      ? janitorialRevisionPayload(inputs)
       : SPECIALTY_COLUMNS(specialty, calculateSpecialty(serviceType, specialty));
     const now = new Date().toISOString();
     const { error: revErr } = await (supabase as any).from('estimate_revisions').update({
@@ -252,7 +252,7 @@ export default function EstimatingDetail() {
       return;
     }
     const revPayload = isJanitorial
-      ? { ...inputs, ...OUTPUT_COLUMNS(calculateEstimate(inputs)) }
+      ? janitorialRevisionPayload(inputs)
       : SPECIALTY_COLUMNS(specialty, calculateSpecialty(serviceType, specialty));
     const { data: rev, error: revErr } = await (supabase as any).from('estimate_revisions').insert({
       estimate_id: est.id,
