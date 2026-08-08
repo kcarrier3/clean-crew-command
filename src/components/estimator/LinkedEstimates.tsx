@@ -7,7 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { DEFAULT_INPUTS, calculateEstimate, money } from './calc';
+import { DEFAULT_INPUTS, money } from './calc';
+import {
+  REVISION_LIST_COLUMNS, hydrateJanitorialInputs, janitorialRevisionPayload, revisionDisplayPrice,
+} from './janitorial';
 import { ServiceTypePicker } from './ServiceTypePicker';
 import { SERVICE_LABELS, isRecurringService, normalizeServiceType, type ServiceType } from './serviceTypes';
 import { DEFAULT_SPECIALTY_INPUTS, calculateSpecialty } from './specialtyCalc';
@@ -43,13 +46,9 @@ export function LinkedEstimates({ leadId, companyName, companyId, contactId }: P
     const revIds = list.map((r: any) => r.current_revision_id).filter(Boolean);
     if (revIds.length) {
       const { data: revs } = await (supabase as any)
-        .from('estimate_revisions').select('id,monthly_price,project_price,service_type').in('id', revIds);
+        .from('estimate_revisions').select(REVISION_LIST_COLUMNS).in('id', revIds);
       const map: Record<string, number> = {};
-      (revs || []).forEach((r: any) => {
-        map[r.id] = isRecurringService(r.service_type)
-          ? Number(r.monthly_price) || 0
-          : Number(r.project_price) || 0;
-      });
+      (revs || []).forEach((r: any) => { map[r.id] = revisionDisplayPrice(r); });
       setPrices(map);
     }
   }, [leadId]);
@@ -76,23 +75,7 @@ export function LinkedEstimates({ leadId, companyName, companyId, contactId }: P
     }
     let payload: Record<string, any>;
     if (service === 'janitorial') {
-      const o = calculateEstimate(DEFAULT_INPUTS);
-      payload = {
-        ...DEFAULT_INPUTS,
-        labor_hours_per_visit: o.labor_hours_per_visit,
-        monthly_labor_hours: o.monthly_labor_hours,
-        loaded_labor_rate: o.loaded_labor_rate,
-        monthly_labor_cost: o.monthly_labor_cost,
-        monthly_supply_cost: o.monthly_supply_cost,
-        total_direct_cost: o.total_direct_cost,
-        overhead_amount: o.overhead_amount,
-        price_per_visit: o.price_per_visit,
-        monthly_price: o.monthly_price,
-        annual_price: o.annual_price,
-        price_per_sqft: o.price_per_sqft,
-        gross_margin_percent: o.gross_margin_percent,
-        markup_percent: o.markup_on_direct_percent,
-      };
+      payload = janitorialRevisionPayload(hydrateJanitorialInputs(DEFAULT_INPUTS));
     } else {
       const si = DEFAULT_SPECIALTY_INPUTS(service);
       const o = calculateSpecialty(service, si);
