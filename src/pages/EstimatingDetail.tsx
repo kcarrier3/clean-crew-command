@@ -32,25 +32,9 @@ import {
   supplyRateForPreset, money, hoursFmt, pct,
   type EstimateInputs, type SupplyPreset,
 } from '@/components/estimator/calc';
-
-const OUTPUT_COLUMNS = (o: ReturnType<typeof calculateEstimate>) => ({
-  labor_hours_per_visit: o.labor_hours_per_visit,
-  monthly_labor_hours: o.monthly_labor_hours,
-  loaded_labor_rate: o.loaded_labor_rate,
-  monthly_labor_cost: o.monthly_labor_cost,
-  monthly_supply_cost: o.monthly_supply_cost,
-  total_direct_cost: o.total_direct_cost,
-  overhead_amount: o.overhead_amount,
-  supervision_amount: o.monthly_supervision_cost,
-  base_monthly_price: o.base_monthly_price,
-  periodic_floor_care_amount: o.periodic_floor_care_amount,
-  price_per_visit: o.price_per_visit,
-  monthly_price: o.monthly_price,
-  annual_price: o.annual_price,
-  price_per_sqft: o.price_per_sqft,
-  gross_margin_percent: o.gross_margin_percent,
-  markup_percent: o.markup_on_direct_percent,
-});
+import {
+  hydrateJanitorialInputs, janitorialRevisionPayload, monthlyPriceDrift,
+} from '@/components/estimator/janitorial';
 
 const SPECIALTY_COLUMNS = (i: SpecialtyInputs, o: SpecialtyOutputs) => ({
   specialty_inputs: i,
