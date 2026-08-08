@@ -8,21 +8,21 @@ import {
 // Saved inputs for the MetroHealth W. 150th ASC draft (override active).
 const W150 = {
   service_type: 'janitorial',
-  square_feet: 6000,
+  square_feet: 3492,
   cleanings_per_week: 5,
   weeks_per_month: 4.33,
   production_rate_sqft_hour: 3500,
-  minimum_visit_minutes: 0,
+  minimum_visit_minutes: 45,
   labor_hours_per_visit_override: 3,
-  base_wage: 15,
+  base_wage: 14.5,
   labor_burden_percent: 20,
-  supervision_percent: 5,
+  supervision_percent: 10,
   supply_preset: 'custom',
   supply_rate_per_hour: 0,
-  overhead_percent: 15,
-  target_margin_percent: 20,
+  overhead_percent: 0,
+  target_margin_percent: 25,
   periodic_floor_care_percent: 13,
-  monthly_price: 0,
+  monthly_price: 1844.6233,
 };
 
 describe('normalizeSupply', () => {
@@ -59,14 +59,17 @@ describe('hydration + calculation', () => {
   it('uses production/minimum when no override is set', () => {
     const o = calculateEstimate(hydrateJanitorialInputs({ ...W150, labor_hours_per_visit_override: 0 }));
     expect(o.hours_override_applied).toBe(false);
-    expect(o.labor_hours_per_visit).toBeCloseTo(6000 / 3500, 10);
+    expect(o.labor_hours_per_visit).toBeCloseTo(3492 / 3500 > 45 / 60 ? 3492 / 3500 : 45 / 60, 10);
   });
 
   it('produces the same monthly price on the list and detail helper paths', () => {
     const detail = calculateEstimate(hydrateJanitorialInputs(W150)).monthly_price;
     const list = revisionDisplayPrice(W150);
     expect(list).toBeCloseTo(detail, 10);
-    expect(list).toBeGreaterThan(0);
+    // W. 150th ASC: 3.00 hr/visit override -> 64.95 monthly hours -> $1,844.62/mo.
+    expect(calculateEstimate(hydrateJanitorialInputs(W150)).monthly_labor_hours).toBeCloseTo(64.95, 6);
+    expect(list).toBeCloseTo(1844.6233, 3);
+    expect(list).toBeCloseTo(Number(W150.monthly_price), 3);
   });
 
   it('uses stored project_price for non-recurring services', () => {
