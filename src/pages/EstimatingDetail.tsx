@@ -130,22 +130,7 @@ export default function EstimatingDetail() {
       setRevision(rev);
       setNotes(rev.notes || '');
       setSpecialty(hydrateSpecialtyInputs(svc, rev.specialty_inputs));
-      setInputs({
-        square_feet: Number(rev.square_feet) || 0,
-        cleanings_per_week: Number(rev.cleanings_per_week) || 0,
-        weeks_per_month: Number(rev.weeks_per_month) || 4.33,
-        production_rate_sqft_hour: Number(rev.production_rate_sqft_hour) || 3500,
-        minimum_visit_minutes: Number(rev.minimum_visit_minutes) || 0,
-        labor_hours_per_visit_override: Number(rev.labor_hours_per_visit_override) || 0,
-        base_wage: Number(rev.base_wage) || 0,
-        labor_burden_percent: Number(rev.labor_burden_percent) || 0,
-        supervision_percent: Number(rev.supervision_percent) || 0,
-        supply_preset: (rev.supply_preset as SupplyPreset) || 'standard',
-        supply_rate_per_hour: Number(rev.supply_rate_per_hour) || 0,
-        overhead_percent: Number(rev.overhead_percent) || 0,
-        target_margin_percent: Number(rev.target_margin_percent) || 0,
-        periodic_floor_care_percent: Number(rev.periodic_floor_care_percent) || 0,
-      });
+      setInputs(hydrateJanitorialInputs(rev));
     }
 
     if (est.lead_id) {
