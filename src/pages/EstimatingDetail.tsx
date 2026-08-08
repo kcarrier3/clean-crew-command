@@ -32,25 +32,9 @@ import {
   supplyRateForPreset, money, hoursFmt, pct,
   type EstimateInputs, type SupplyPreset,
 } from '@/components/estimator/calc';
-
-const OUTPUT_COLUMNS = (o: ReturnType<typeof calculateEstimate>) => ({
-  labor_hours_per_visit: o.labor_hours_per_visit,
-  monthly_labor_hours: o.monthly_labor_hours,
-  loaded_labor_rate: o.loaded_labor_rate,
-  monthly_labor_cost: o.monthly_labor_cost,
-  monthly_supply_cost: o.monthly_supply_cost,
-  total_direct_cost: o.total_direct_cost,
-  overhead_amount: o.overhead_amount,
-  supervision_amount: o.monthly_supervision_cost,
-  base_monthly_price: o.base_monthly_price,
-  periodic_floor_care_amount: o.periodic_floor_care_amount,
-  price_per_visit: o.price_per_visit,
-  monthly_price: o.monthly_price,
-  annual_price: o.annual_price,
-  price_per_sqft: o.price_per_sqft,
-  gross_margin_percent: o.gross_margin_percent,
-  markup_percent: o.markup_on_direct_percent,
-});
+import {
+  hydrateJanitorialInputs, janitorialRevisionPayload, monthlyPriceDrift,
+} from '@/components/estimator/janitorial';
 
 const SPECIALTY_COLUMNS = (i: SpecialtyInputs, o: SpecialtyOutputs) => ({
   specialty_inputs: i,
@@ -129,6 +113,13 @@ export default function EstimatingDetail() {
   );
   const solvable = isPricingSolvable(inputs.overhead_percent, inputs.target_margin_percent);
 
+  // Snapshot drift: the saved monthly_price vs what the current calculator produces
+  // from the same saved inputs. Only meaningful before the user starts editing.
+  const drift = useMemo(
+    () => (isJanitorial && revision && !dirty ? monthlyPriceDrift(revision, outputs.monthly_price) : null),
+    [isJanitorial, revision, dirty, outputs.monthly_price]
+  );
+
   useEffect(() => { if (!loading && !user) navigate('/auth'); }, [loading, user, navigate]);
 
   const load = useCallback(async () => {
@@ -146,22 +137,7 @@ export default function EstimatingDetail() {
       setRevision(rev);
       setNotes(rev.notes || '');
       setSpecialty(hydrateSpecialtyInputs(svc, rev.specialty_inputs));
-      setInputs({
-        square_feet: Number(rev.square_feet) || 0,
-        cleanings_per_week: Number(rev.cleanings_per_week) || 0,
-        weeks_per_month: Number(rev.weeks_per_month) || 4.33,
-        production_rate_sqft_hour: Number(rev.production_rate_sqft_hour) || 3500,
-        minimum_visit_minutes: Number(rev.minimum_visit_minutes) || 0,
-        labor_hours_per_visit_override: Number(rev.labor_hours_per_visit_override) || 0,
-        base_wage: Number(rev.base_wage) || 0,
-        labor_burden_percent: Number(rev.labor_burden_percent) || 0,
-        supervision_percent: Number(rev.supervision_percent) || 0,
-        supply_preset: (rev.supply_preset as SupplyPreset) || 'standard',
-        supply_rate_per_hour: Number(rev.supply_rate_per_hour) || 0,
-        overhead_percent: Number(rev.overhead_percent) || 0,
-        target_margin_percent: Number(rev.target_margin_percent) || 0,
-        periodic_floor_care_percent: Number(rev.periodic_floor_care_percent) || 0,
-      });
+      setInputs(hydrateJanitorialInputs(rev));
     }
 
     if (est.lead_id) {
@@ -196,7 +172,7 @@ export default function EstimatingDetail() {
     if (!estimate || !revision || estimate.status === 'completed') return;
     setSaving(true);
     const revPayload = isJanitorial
-      ? { ...inputs, ...OUTPUT_COLUMNS(calculateEstimate(inputs)) }
+      ? janitorialRevisionPayload(inputs)
       : SPECIALTY_COLUMNS(specialty, calculateSpecialty(serviceType, specialty));
     const [{ error: e1 }, { error: e2 }] = await Promise.all([
       (supabase as any).from('estimates').update({ name: name || 'Untitled estimate', updated_at: new Date().toISOString() }).eq('id', estimate.id),
@@ -211,6 +187,8 @@ export default function EstimatingDetail() {
     }
     setDirty(false);
     dirtyRef.current = false;
+    // Keep the in-memory snapshot in sync so drift detection reflects the save.
+    setRevision((prev: any) => (prev ? { ...prev, ...revPayload, notes } : prev));
     if (!silent) toast({ title: 'Draft saved' });
   }, [estimate, revision, inputs, specialty, serviceType, isJanitorial, notes, name, toast]);
 
@@ -225,7 +203,7 @@ export default function EstimatingDetail() {
     if (!estimate || !revision || !user) return;
     setBusy(true);
     const revPayload = isJanitorial
-      ? { ...inputs, ...OUTPUT_COLUMNS(calculateEstimate(inputs)) }
+      ? janitorialRevisionPayload(inputs)
       : SPECIALTY_COLUMNS(specialty, calculateSpecialty(serviceType, specialty));
     const now = new Date().toISOString();
     const { error: revErr } = await (supabase as any).from('estimate_revisions').update({
@@ -268,7 +246,7 @@ export default function EstimatingDetail() {
       return;
     }
     const revPayload = isJanitorial
-      ? { ...inputs, ...OUTPUT_COLUMNS(calculateEstimate(inputs)) }
+      ? janitorialRevisionPayload(inputs)
       : SPECIALTY_COLUMNS(specialty, calculateSpecialty(serviceType, specialty));
     const { data: rev, error: revErr } = await (supabase as any).from('estimate_revisions').insert({
       estimate_id: est.id,
@@ -367,6 +345,26 @@ export default function EstimatingDetail() {
           )
         }
       >
+        {drift?.drifted && (
+          <div className="mb-3 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+            <div className="space-y-1">
+              <p className="font-medium">Saved snapshot and current calculator disagree</p>
+              <p className="text-muted-foreground">
+                Saved monthly price {money(drift.stored)} · recalculated {money(drift.computed)}{' '}
+                (difference {money(drift.computed - drift.stored)}).
+                {readOnly
+                  ? ' This estimate is completed and read-only — duplicate it as a draft to resave with current figures.'
+                  : ' Press Save to sync the stored snapshot with these figures. Inputs are unchanged.'}
+              </p>
+              {!readOnly && (
+                <Button size="sm" variant="outline" onClick={() => saveDraft()} disabled={saving}>
+                  <Save className="h-4 w-4 mr-1" /> {saving ? 'Saving…' : 'Resave snapshot'}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         {readOnly ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
