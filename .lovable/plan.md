@@ -1,71 +1,53 @@
-## Diagnostic audit — Salesforce migration (read-only, nothing changed)
+# Estimating math audit — W. 150th ASC and the MetroHealth set
 
-### What actually exists today
+## Bottom line
 
-There is **no Salesforce API integration at all**. The entire migration is one client-side file:
-`src/components/crm/SalesforceImportDialog.tsx` (680 lines), launched from `src/components/crm/CRMDashboard.tsx` ("Import from Salesforce"). It parses a **Setup → Data Export ZIP** (JSZip + PapaParse) in the browser and writes through the normal `supabase` anon client. No edge function is involved (`supabase/functions/` has only `admin-reset-password`, `check-late-workers`, `invite-employee`, `send-push-notification`, `submit-lead`, `submit-porter-report`).
+The stored data is not wrong. I recalculated all 11 MetroHealth current revisions from their saved input fields using the exact formula in `calculateEstimate`, and every one matches its stored `monthly_price` to four decimals — including W. 150th ASC ($1,844.6233/mo, direct cost $1,224.3075, base price $1,632.41, floor care $212.2133).
 
-Current row counts: `crm_companies` 1052, `crm_contacts` 320, `crm_leads` 396, `crm_deals` 396, `crm_lead_notes` 863, `crm_lead_files` 414, `crm_tasks` **0**, `storage.objects` in `crm-files` **828**.
+So there is no data mismatch. The difference you see on the detail page comes from how the two screens produce their number, not from the numbers themselves.
 
----
+## The two screens use different sources
 
-### Answers to your ten questions
+| Screen | Source of the price |
+|---|---|
+| Estimating list (`src/pages/Estimating.tsx`) and opportunity-linked list (`LinkedEstimates.tsx`) | reads the stored snapshot column `estimate_revisions.monthly_price` |
+| Estimate detail (`src/pages/EstimatingDetail.tsx`) | ignores every stored output column and recomputes live with `calculateEstimate(inputs)` from the hydrated input fields |
 
-1. **Objects read** (ZIP CSV filename regexes, lines 224–230): `Account`, `Contact`, `Opportunity`, `Note`, `Attachment`, `ContentVersion`, `ContentDocumentLink`. **Not read: `Task`, `Event`, `ContentDocument`, `Lead`, `OpportunityContactRole`, `User`.** No SOQL/REST/Bulk API is used, so questions about queryMore and OAuth scopes are moot today — fidelity is bounded by what the Data Export ZIP contains.
-2. **Both note systems partially supported.** Classic `Note.csv` → `crm_lead_notes` (lines 463–481). Enhanced Notes arrive as `ContentVersion` rows with `FileType=SNOTE`; those are detected (line 520) and HTML-stripped into `crm_lead_notes`. Classic `Attachment` and modern Files both map to `crm_lead_files`.
-3. **Pagination:** N/A (file-based), but ZIP-native truncation risk is real — Salesforce Data Export splits into multiple ZIPs (`WE_00D…_1.ZIP`, `_2.ZIP`), and the loop at line 219 keeps only the **first** ZIP's copy of each CSV (`accounts = accounts ?? …`) and only the **last** `sourceZip` for file bytes. **Confirmed defect: multi-part exports silently lose records and file bytes.**
-4. **Mappings** (confirmed): Account→`crm_companies` (Name, Industry, Website, Phone, Billing*, Description→notes, AnnualRevenue, NumberOfEmployees, Id→`salesforce_id`). Contact→`crm_contacts` (First/Last/Email/Phone/Title/Description, AccountId→`company_id`). Opportunity→`crm_leads` + mirrored `crm_deals` (Amount, Probability, CloseDate, StageName→`stage_id`, Type, NextStep, Description). **Defects:** `owner_id`/`created_by` are hardcoded to the importing user (`uid`) on every object — Salesforce `OwnerId` is discarded; Salesforce `CreatedDate`/`LastModifiedDate` are discarded everywhere (rows get `now()`); `won_at`/`lost_at` are set to `new Date()` instead of `CloseDate`; `crm_leads.contact_name` is stuffed with the **opportunity name** (line 385) and `company_name` falls back to the opportunity name; `crm_leads.notes` is overwritten with the literal string `Stage: <x>` (line 398), destroying any real note text on that column.
-5. **Files:** there is **no VersionData download** — bytes come from the ZIP via `findZipEntryById()` (lines 174–186), which scans for the Salesforce Id as a path segment. Uploads go to `crm-files` at `crm-leads/<lead_id>/<uuid>-<name>`, then a row is inserted into `crm_lead_files`. **Confirmed defect:** if the id isn't found in the ZIP path the file is silently skipped with no error and no counter (lines 513–514) — this is the single most likely cause of "files not importing," and it is invisible in the summary. Salesforce Data Export actually names file folders by `ContentDocumentId`/`ParentId` in some layouts, not by the `ContentVersion.Id` that line 512 uses.
-6. **Enhanced Notes are lossy by design:** the `.snote` HTML is regex-stripped to plain text (lines 526–539), so bullets, links, tables and formatting are destroyed. Only ~7 HTML entities are decoded; anything else survives as literal `&…;`. Titles equal to "Untitled Note" are nulled.
-7. **Polymorphic resolution is the biggest fidelity gap.** `Note.ParentId`, `Attachment.ParentId` and `ContentDocumentLink.LinkedEntityId` are resolved **only** against `sfIdToLeadId` (opportunities). Any note/file whose parent is an **Account or Contact** is dropped with `continue` and never reported (lines 468, 500, 506). Salesforce orgs keep the majority of notes and files on Accounts — this alone explains large missing volumes. Schema reinforces it: `crm_lead_notes` and `crm_lead_files` have **only** `lead_id`; there is no company/contact/task parent column. `Task.WhoId`/`WhatId` are never read because Tasks are never imported (`crm_tasks` = 0 rows).
-8. **Idempotency is asymmetric.** Accounts/Contacts/Opportunities upsert on `salesforce_id`; deals upsert on `lead_id`. **Notes and files use plain `.insert()` and have no `salesforce_id` column at all** — every re-run duplicates them. Evidence: 828 storage objects vs 414 `crm_lead_files` rows (~2× — orphaned bytes from a prior run wiped by "Reset CRM", which deletes DB rows but never storage objects). Error handling `break`s out of the whole entity loop on the first chunk error, abandoning remaining chunks; skipped rows produce no counts, so the summary can report success while thousands of records were dropped. No reconciliation against source row counts.
-9. **RLS/storage are not the blocker.** `crm_lead_notes`, `crm_lead_files`, `crm_tasks` all have `FOR ALL … is_crm_user(auth.uid())`, and `crm-files` has matching insert/select/update/delete policies gated on `is_crm_user`. Real risks here are the browser-side 50 MB cap (line 558) and doing thousands of sequential uploads on an anon-key session in a tab that can be closed mid-run.
-10. **OAuth/permissions:** none required today. If we move to API-based sync we'd need a Connected App with `api` + `refresh_token offline_access`, and the importing user needs "View All Data" plus read on Notes/Attachments/ContentDocument to see other owners' private notes and files.
+They only agree when the browser runs the same calculator version that wrote the snapshot. A client on an older bundle recomputes with the older formula while the list still shows the newer stored number.
 
----
+## Most likely cause for W. 150th ASC specifically
 
-### Confirmed defects (ranked)
+W. 150th ASC is the only estimate in the set driven by `labor_hours_per_visit_override` (3.00 hr). That field was added recently. A cached client bundle that predates it drops the override and falls back to `max(3492 / 3500, 45/60)` = 0.998 hr/visit, recomputing to roughly $461/mo while the list still reads $1,844.62 from the snapshot. That matches the symptom shape exactly.
 
-1. Notes/files attached to **Accounts, Contacts, or Tasks are silently discarded** — schema only supports `lead_id`.
-2. **Silent skips everywhere** (`continue` with no counter) — the summary overstates success.
-3. **No idempotency for notes/files** → duplicates on re-run; Reset CRM orphans storage objects.
-4. ZIP entry lookup keyed on the wrong Salesforce Id in common export layouts → files "not importing."
-5. Enhanced Note rich text destroyed; entity decoding incomplete.
-6. **Tasks not imported at all.**
-7. Salesforce `OwnerId`, `CreatedDate`, `LastModifiedDate`, `CreatedById` discarded on every object.
-8. Multi-part Data Export ZIPs partially ignored.
-9. `crm_leads.contact_name` / `.notes` polluted with wrong values.
-10. First chunk error aborts the remaining chunks of that entity.
+Confirming step: hard-refresh the detail page and read the "Hours / visit" line in the right panel. 3.00 hr means the client is current; ~1.00 hr means it is stale and this is the cause.
 
-### Likely risks (unconfirmed)
+## Real code-level defects found regardless
 
-- Browser memory/time limits on multi-GB exports; tab-close mid-import leaves half-migrated state.
-- `is_crm_user` denies the importer if the signed-in user lacks admin/manager → all-or-nothing failure.
-- 50 MB files skipped (the bucket may allow more server-side).
+1. **Snapshot columns are written incompletely on create.** `Estimating.tsx:130-146` and `LinkedEstimates.tsx:79-95` write the output list but omit `supervision_amount`, `base_monthly_price` and `periodic_floor_care_amount`, which the detail page's `OUTPUT_COLUMNS` does write. New estimates carry zero/stale values in those three columns until the first autosave.
+2. **Asymmetric hydration defaults** (`EstimatingDetail.tsx:149-164`): `supply_preset` falls back to `'standard'` while `supply_rate_per_hour` falls back to `0`. A revision with a null preset renders with "Standard $0.55" visually selected while the math uses $0.00/hr. All 11 MetroHealth rows store `supply_preset = 'custom'` with rate 0, so they are unaffected today, but any row created outside the UI can land in this state — and the first edit autosaves the inconsistent pair.
+3. **No drift detection.** Because the list trusts the snapshot and the detail trusts the formula, a formula change silently desynchronizes every previously saved estimate with no warning anywhere.
 
----
+## Formula in use (`src/components/estimator/calc.ts`)
 
-### Recommended correction plan (not implemented)
+```text
+visits        = cleanings_per_week * weeks_per_month
+hours/visit   = override > 0 ? override
+                             : max(square_feet / production_rate, minimum_visit_minutes / 60)
+monthly hours = hours/visit * visits
+loaded rate   = base_wage * (1 + labor_burden_percent/100)
+direct cost   = monthly hours * loaded rate
+              + monthly hours * base_wage * supervision_percent/100
+              + monthly hours * supply_rate_per_hour
+base price    = direct cost / (1 - overhead_percent/100 - target_margin_percent/100)
+floor care    = base price * periodic_floor_care_percent/100
+monthly price = base price + floor care
+```
 
-**Phase 1 — schema for true parity**
-- Add polymorphic parents + external ids to notes/files: `salesforce_id` (unique), `parent_type` (`account|contact|opportunity|task`), `company_id`, `contact_id`, `task_id`, plus `sf_owner_id`, `sf_created_date`, `sf_created_by_name`, and `content_html` for rich Enhanced Notes.
-- Add `salesforce_id` + `who_id`/`what_id` resolution columns to `crm_tasks`.
-- Backfill-safe: existing `lead_id` rows keep working.
+## Recommended fix (not applied — audit only)
 
-**Phase 2 — importer rewrite in `SalesforceImportDialog.tsx`**
-- Accept **multiple ZIP parts**; concatenate CSVs across parts, index every ZIP entry once into a `Map` keyed by *all* id-like path segments (15- and 18-char) so lookups can't miss.
-- Build one global `sfId → {type, uuid}` resolver covering accounts, contacts, opportunities, tasks; route `ParentId`/`LinkedEntityId`/`WhoId`/`WhatId` through it.
-- Import `Task.csv` → `crm_tasks` with subject, status, priority, `ActivityDate`, and resolved who/what links.
-- Preserve Enhanced Note HTML (sanitized allowlist) into `content_html`, keep the stripped text in `content`.
-- Upsert notes/files on `salesforce_id`; deduplicate storage paths deterministically (`crm/<sf_id>/<name>`) with `upsert: true`.
-- Per-row outcome ledger: `imported / updated / skipped(reason) / failed(reason)`; never `break` a whole entity on one chunk error.
+1. Make the list page use the same source of truth as the detail page: select the full input set for each current revision and render `calculateEstimate(inputs).monthly_price`, falling back to the stored value only for specialty/project estimates. The two screens then cannot disagree.
+2. Extract one shared `hydrateJanitorialInputs(rev)` helper used by both hydration and the create paths, with consistent defaults — derive `supply_preset` from the stored rate so the pair can never disagree.
+3. Route all revision inserts through the same `OUTPUT_COLUMNS` writer so snapshots are always complete.
+4. Optional: on the detail page, flag when the recomputed price differs from the stored snapshot by more than a cent, so future formula changes surface instead of hiding.
 
-**Phase 3 — validation procedure (proves parity)**
-1. Pre-import: record source row counts per CSV and per parent type (`Note` by ParentId prefix `001`/`003`/`006`, same for `Attachment` and `ContentDocumentLink`).
-2. Post-import: run reconciliation SQL comparing `count(distinct salesforce_id)` per table against those source counts; expect exact equality, with an explicit reason list for every non-match.
-3. Relationship check: zero notes/files with `parent_type` set but all parent FKs null; zero opportunities with an `AccountId` in source but null `company_id`.
-4. File integrity: for a random 25-file sample, compare `crm_lead_files.file_size` to the ZIP entry's uncompressed size and confirm the storage object downloads.
-5. Storage hygiene: report `storage.objects` in `crm-files` with no matching DB row (today: ~414 orphans) and offer a one-time cleanup.
-6. Re-run the same import twice; all counts must be identical (idempotency proof).
-
-Say the word and I'll implement Phase 1–3 in that order.
+No files were changed for this audit.
