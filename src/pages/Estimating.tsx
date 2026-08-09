@@ -27,7 +27,7 @@ import { SERVICE_LABELS, normalizeServiceType, isRecurringService, type ServiceT
 import { DEFAULT_SPECIALTY_INPUTS, calculateSpecialty } from '@/components/estimator/specialtyCalc';
 import { DEFAULT_INPUTS, money } from '@/components/estimator/calc';
 import {
-  REVISION_LIST_COLUMNS, hydrateJanitorialInputs, janitorialRevisionPayload, revisionDisplayPrice,
+  REVISION_LIST_COLUMNS, hydrateJanitorialInputs, janitorialRevisionPayload, revisionDisplayPrice, revisionHourlyRate,
 } from '@/components/estimator/janitorial';
 import type { CrmLead } from '@/components/crm/types';
 
@@ -48,6 +48,7 @@ export default function Estimating() {
   const { user, loading, canEstimate } = useAuth();
   const [rows, setRows] = useState<EstimateRow[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [rates, setRates] = useState<Record<string, number | null>>({});
   const [leadNames, setLeadNames] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<'draft' | 'completed'>('draft');
   const [search, setSearch] = useState('');
@@ -81,6 +82,9 @@ export default function Estimating() {
       const map: Record<string, number> = {};
       (revs || []).forEach((r: any) => { map[r.id] = revisionDisplayPrice(r); });
       setPrices(map);
+      const rateMap: Record<string, number | null> = {};
+      (revs || []).forEach((r: any) => { rateMap[r.id] = revisionHourlyRate(r); });
+      setRates(rateMap);
     }
 
     const leadIds = Array.from(new Set(list.map(r => r.lead_id).filter(Boolean)));
@@ -279,6 +283,11 @@ export default function Estimating() {
                           ? `${money(prices[r.current_revision_id] || 0)}${recurring ? '/mo' : ''}`
                           : '—'}
                       </div>
+                      {r.current_revision_id && recurring && (
+                        <div className="text-[10px] text-muted-foreground tabular-nums">
+                          {hourlyRateFmt(rates[r.current_revision_id])}
+                        </div>
+                      )}
                       {!recurring && <div className="text-[10px] text-muted-foreground">project total</div>}
                       <Badge variant={r.status === 'completed' ? 'default' : 'outline'} className="mt-1 text-[10px]">
                         {r.status === 'completed' ? 'Completed' : 'Draft'}
