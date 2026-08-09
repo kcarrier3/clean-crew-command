@@ -209,6 +209,10 @@ export const money = (v: number, digits = 2) =>
 
 export const hoursFmt = (v: number) => `${(Number.isFinite(v) ? v : 0).toFixed(2)} hr`;
 
+/** Billable hourly rate display, e.g. "$42.75/hr". Em dash when not computable. */
+export const hourlyRateFmt = (v: number | null | undefined) =>
+  v == null || !Number.isFinite(v) ? '—' : `${money(v)}/hr`;
+
 export const pct = (v: number) => `${(Number.isFinite(v) ? v : 0).toFixed(1)}%`;
 
 export const ESTIMATE_STATUS_LABELS: Record<string, string> = {
