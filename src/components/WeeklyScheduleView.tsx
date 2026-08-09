@@ -209,7 +209,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
     }
     toast({
       title: 'Call off recorded',
-      description: `${schedule.employees.first_name} ${schedule.employees.last_name} was assessed ${POINTS.call_off} points and this shift is now open.`,
+      description: `${schedule.employees?.first_name ?? 'Employee'} ${schedule.employees?.last_name ?? ''} was assessed ${POINTS.call_off} points and this shift is now open.`,
     });
     setCallOffTarget(null);
     setReason('');
@@ -256,7 +256,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
     const userIds = Array.from(
       new Set(
         schedules
-          .map((s) => s.employees.user_id)
+          .map((s) => s.employees?.user_id)
           .filter((v): v is string => !!v),
       ),
     );
@@ -279,7 +279,9 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
     const list = Array.from(
       new Map([
         ...allEmployees.map((e) => [e.id, e] as [string, Employee]),
-        ...schedules.map((s) => [s.employee_id, s.employees] as [string, Employee]),
+        ...schedules
+          .filter((s) => !!s.employee_id && !!s.employees)
+          .map((s) => [s.employee_id as string, s.employees as Employee] as [string, Employee]),
       ]).values(),
     );
     return list.sort((a, b) => {
@@ -309,13 +311,27 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
 
   const getOpenShiftsForDay = (date: Date) => {
     const iso = toISODate(date);
-    return callOffs
+    const fromCallOffs = callOffs
       .filter((c) => c.call_off_date === iso)
       .map((c) => {
         const schedule = schedules.find((s) => s.id === c.schedule_id);
-        return schedule ? { schedule, callOff: c } : null;
+        return schedule ? { schedule, callOff: c as CallOff | null } : null;
       })
-      .filter((x): x is { schedule: Schedule; callOff: CallOff } => !!x);
+      .filter((x): x is { schedule: Schedule; callOff: CallOff | null } => !!x);
+
+    const dayNum = ((date.getDay() + 6) % 7) + 1;
+    const unassigned = schedules
+      .filter((s) => {
+        if (s.employee_id) return false;
+        if (!s.days_of_week.includes(dayNum)) return false;
+        if (s.start_date && s.start_date > iso) return false;
+        if (s.end_date && s.end_date < iso) return false;
+        if (!isDueThisWeek(s, date)) return false;
+        return true;
+      })
+      .map((s) => ({ schedule: s, callOff: null as CallOff | null }));
+
+    return [...unassigned, ...fromCallOffs];
   };
 
   const employeeStats = (employeeId: string) => {
