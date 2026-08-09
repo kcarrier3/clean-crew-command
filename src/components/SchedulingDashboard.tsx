@@ -13,7 +13,7 @@ import { Calendar, Clock, Users, MapPin, Plus, ArrowUpDown, CalendarDays } from 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import WeeklyScheduleView from './WeeklyScheduleView';
+import WeeklyScheduleView, { OPEN_SHIFT_ID } from './WeeklyScheduleView';
 import ManagerTimeOffReview from './ManagerTimeOffReview';
 import PayrollReports from './PayrollReports';
 import AttendanceReports from './AttendanceReports';
@@ -36,7 +36,7 @@ interface JobSite {
 
 interface Schedule {
   id: string;
-  employee_id: string;
+  employee_id: string | null;
   job_site_id: string;
   start_time: string;
   end_time: string;
@@ -47,7 +47,7 @@ interface Schedule {
   active: boolean;
   week_interval?: number | null;
   recurrence_anchor_date?: string | null;
-  employees: Employee;
+  employees: Employee | null;
   job_sites: JobSite;
 }
 
@@ -147,7 +147,7 @@ const SchedulingDashboard = () => {
         const { error } = await supabase
           .from('employee_schedules')
           .update({
-            employee_id: formData.employee_id,
+            employee_id: formData.employee_id === OPEN_SHIFT_ID ? null : formData.employee_id,
             job_site_id: formData.job_site_id,
             start_time: formData.start_time,
             end_time: formData.end_time,
@@ -172,7 +172,7 @@ const SchedulingDashboard = () => {
         const { error } = await supabase
           .from('employee_schedules')
           .insert({
-            employee_id: formData.employee_id,
+            employee_id: formData.employee_id === OPEN_SHIFT_ID ? null : formData.employee_id,
             job_site_id: formData.job_site_id,
             start_time: formData.start_time,
             end_time: formData.end_time,
@@ -212,7 +212,7 @@ const SchedulingDashboard = () => {
     setEditingSchedule(schedule);
     setDateLocked(false);
     setFormData({
-      employee_id: schedule.employee_id,
+      employee_id: schedule.employee_id ?? OPEN_SHIFT_ID,
       job_site_id: schedule.job_site_id,
       start_time: schedule.start_time,
       end_time: schedule.end_time,
@@ -343,6 +343,7 @@ const SchedulingDashboard = () => {
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value={OPEN_SHIFT_ID}>Open shift (unassigned)</SelectItem>
                       {employees.map((employee) => (
                         <SelectItem key={employee.id} value={employee.id}>
                           {employee.first_name} {employee.last_name} ({employee.employee_id})
@@ -538,7 +539,7 @@ const SchedulingDashboard = () => {
               <div className="flex items-center gap-3">
                 <Users className="h-8 w-8 text-green-500" />
                 <div>
-                  <p className="text-2xl font-bold">{new Set(schedules.map(s => s.employee_id)).size}</p>
+                  <p className="text-2xl font-bold">{new Set(schedules.filter(s => s.employee_id).map(s => s.employee_id)).size}</p>
                   <p className="text-sm text-muted-foreground">Scheduled Employees</p>
                 </div>
               </div>
