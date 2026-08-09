@@ -607,6 +607,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                           canManage={canManage}
                           onCallOff={() => { setReason(''); setCallOffTarget({ schedule: s, date: iso }); }}
                           onUndoCallOff={undoCallOff}
+                          colorClass={deptColor(deptName)}
                         />
                       ))}
                       {canManage && onAddShift && (
@@ -712,6 +713,7 @@ function ShiftBlock({
   canManage,
   onCallOff,
   onUndoCallOff,
+  colorClass,
 }: {
   schedule: Schedule;
   onEdit: (s: Schedule) => void;
