@@ -77,6 +77,11 @@ export interface EstimateOutputs {
   price_per_visit: number;
   annual_price: number;
   price_per_sqft: number;
+  /**
+   * Effective billable hourly rate implied by the final customer price:
+   * monthly price / monthly labor hours. Null when hours are zero/missing.
+   */
+  hourly_rate: number | null;
   overhead_amount: number;
   profit_amount: number;
   /** Target profit as a true margin of the selling price. */
@@ -184,6 +189,9 @@ export function calculateEstimate(i: EstimateInputs): EstimateOutputs {
     price_per_visit: safe(visitsPerMonth > 0 ? monthlyPrice / visitsPerMonth : 0),
     annual_price: safe(monthlyPrice * 12),
     price_per_sqft: safe(sqft > 0 ? monthlyPrice / sqft : 0),
+    hourly_rate: monthlyLaborHours > 0 && Number.isFinite(monthlyLaborHours)
+      ? safe(monthlyPrice / monthlyLaborHours)
+      : null,
     overhead_amount: safe(overheadAmount),
     profit_amount: safe(profitAmount),
     profit_margin_percent: safe(profitPct),
