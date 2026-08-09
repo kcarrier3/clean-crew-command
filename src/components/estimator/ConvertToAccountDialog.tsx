@@ -120,7 +120,7 @@ export function ConvertToAccountDialog({
     onOpenChange(false);
     onConverted?.(site.id);
     toast({ title: 'Account created', description: `${site.name} is now in Account Management.` });
-    navigate(`/accounts/${site.id}`);
+    navigate('/?tab=jobsites');
   };
 
   return (
