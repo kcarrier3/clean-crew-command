@@ -101,6 +101,7 @@ export default function EstimatingDetail() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
+  const [confirmReopen, setConfirmReopen] = useState(false);
   const [busy, setBusy] = useState(false);
   const dirtyRef = useRef(false);
 
@@ -224,6 +225,25 @@ export default function EstimatingDetail() {
       return;
     }
     toast({ title: 'Estimate completed', description: 'It is now read-only.' });
+    load();
+  };
+
+  // Reopen a completed estimate so revisions can be made in place.
+  const reopenForEdits = async () => {
+    if (!estimate || !revision) return;
+    setBusy(true);
+    const now = new Date().toISOString();
+    const { error: revErr } = await (supabase as any)
+      .from('estimate_revisions').update({ status: 'draft', updated_at: now }).eq('id', revision.id);
+    const { error } = revErr ? { error: revErr } : await (supabase as any)
+      .from('estimates').update({ status: 'draft', updated_at: now }).eq('id', estimate.id);
+    setBusy(false);
+    setConfirmReopen(false);
+    if (error) {
+      toast({ title: 'Could not reopen', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Estimate reopened', description: 'Make your changes, then mark it complete again.' });
     load();
   };
 
