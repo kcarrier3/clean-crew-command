@@ -745,7 +745,7 @@ function ShiftBlock({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        {canManage && (
+        {canManage && !unassigned && (
           callOff ? (
             <DropdownMenuItem onClick={() => onUndoCallOff(callOff)}>
               <Undo2 className="h-4 w-4 mr-2" /> Undo call off
