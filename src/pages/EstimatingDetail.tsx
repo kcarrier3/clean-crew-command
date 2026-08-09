@@ -35,6 +35,7 @@ import {
 import {
   hydrateJanitorialInputs, janitorialRevisionPayload, monthlyPriceDrift,
 } from '@/components/estimator/janitorial';
+import { ConvertToAccountDialog } from '@/components/estimator/ConvertToAccountDialog';
 
 const SPECIALTY_COLUMNS = (i: SpecialtyInputs, o: SpecialtyOutputs) => ({
   specialty_inputs: i,
@@ -87,7 +88,7 @@ export default function EstimatingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading, canEstimate } = useAuth();
+  const { user, loading, canEstimate, isManager } = useAuth();
 
   const [estimate, setEstimate] = useState<any>(null);
   const [revision, setRevision] = useState<any>(null);
@@ -102,6 +103,7 @@ export default function EstimatingDetail() {
   const [dirty, setDirty] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
   const [confirmReopen, setConfirmReopen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const dirtyRef = useRef(false);
 
@@ -352,6 +354,14 @@ export default function EstimatingDetail() {
               <Button size="sm" variant="outline" onClick={() => setConfirmReopen(true)} disabled={busy}>
                 <Pencil className="h-4 w-4 mr-1" /> Edit estimate
               </Button>
+              {isManager() && !estimate?.converted_job_site_id && (
+                <Button size="sm" variant="outline" onClick={() => setConvertOpen(true)} disabled={busy}>
+                  <Building2 className="h-4 w-4 mr-1" /> Convert to account
+                </Button>
+              )}
+              {estimate?.converted_job_site_id && (
+                <Badge variant="secondary" className="self-center">Converted to account</Badge>
+              )}
               <Button size="sm" onClick={duplicateAsDraft} disabled={busy}>
                 <Files className="h-4 w-4 mr-1" /> Duplicate
               </Button>
@@ -656,6 +666,21 @@ export default function EstimatingDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {estimate && (
+        <ConvertToAccountDialog
+          open={convertOpen}
+          onOpenChange={setConvertOpen}
+          estimateId={estimate.id}
+          estimateName={name || estimate.name}
+          serviceType={serviceType}
+          clientName={lead?.company_name || null}
+          hoursPerVisit={outputs.labor_hours_per_visit}
+          cleaningsPerWeek={inputs.cleanings_per_week}
+          projectHours={specialtyOutputs.labor_hours}
+          onConverted={() => load()}
+        />
+      )}
     </>
   );
 }

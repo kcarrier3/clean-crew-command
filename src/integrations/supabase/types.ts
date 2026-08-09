@@ -2651,6 +2651,8 @@ export type Database = {
           completed_at: string | null
           completed_by: string | null
           contact_id: string | null
+          converted_at: string | null
+          converted_job_site_id: string | null
           created_at: string
           created_by: string | null
           current_revision_id: string | null
@@ -2668,6 +2670,8 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           contact_id?: string | null
+          converted_at?: string | null
+          converted_job_site_id?: string | null
           created_at?: string
           created_by?: string | null
           current_revision_id?: string | null
@@ -2685,6 +2689,8 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           contact_id?: string | null
+          converted_at?: string | null
+          converted_job_site_id?: string | null
           created_at?: string
           created_by?: string | null
           current_revision_id?: string | null
@@ -2710,6 +2716,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_converted_job_site_id_fkey"
+            columns: ["converted_job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
             referencedColumns: ["id"]
           },
           {
