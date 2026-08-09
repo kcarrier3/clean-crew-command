@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { money, hoursFmt, pct, type EstimateInputs, type EstimateOutputs } from './calc';
+import { money, hoursFmt, hourlyRateFmt, pct, type EstimateInputs, type EstimateOutputs } from './calc';
 
 export interface SummaryMeta {
   estimateName: string;
@@ -39,6 +39,7 @@ export function buildSummaryText(i: EstimateInputs, o: EstimateOutputs, m: Summa
     o.hours_override_applied ? `Labor hours per visit override: ${num(i.labor_hours_per_visit_override)} hr (applied — overrides production rate and minimum visit time)` : null,
     `Hours per visit: ${num(o.labor_hours_per_visit)}`,
     `Monthly hours: ${num(o.monthly_labor_hours)}`,
+    `Hourly rate (billable): ${hourlyRateFmt(o.hourly_rate)}`,
     ``,
     `COST`,
     `Base wage: ${money(i.base_wage)}/hr`,
@@ -79,6 +80,7 @@ export function PricingSummary({ inputs, outputs, meta }: { inputs: EstimateInpu
           <p className="text-xs text-muted-foreground mt-1">
             {money(outputs.price_per_visit)}/visit · {money(outputs.annual_price, 0)}/year · ${num(outputs.price_per_sqft, 4)}/sq ft per month
           </p>
+          <p className="text-xs text-muted-foreground mt-1">Hourly rate {hourlyRateFmt(outputs.hourly_rate)}</p>
         </CardContent>
       </Card>
 
@@ -98,6 +100,7 @@ export function PricingSummary({ inputs, outputs, meta }: { inputs: EstimateInpu
           )}
           <Row label="Hours per visit" value={hoursFmt(outputs.labor_hours_per_visit)} />
           <Row label="Monthly hours" value={hoursFmt(outputs.monthly_labor_hours)} />
+          <Row label="Hourly rate" value={hourlyRateFmt(outputs.hourly_rate)} strong />
         </CardContent>
       </Card>
 
