@@ -65,7 +65,30 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
     navigate('/auth');
   };
 
-  if (isNative) return <>{children}</>;
+  const logo = (
+    <button
+      onClick={() => navigate('/')}
+      className="inline-flex items-center"
+      aria-label="Crew Compass home"
+    >
+      <img
+        src="/crew-compass-logo-notag.png?v=4"
+        alt="Crew Compass"
+        width="512"
+        height="256"
+        className="h-12 md:h-14 w-auto"
+      />
+    </button>
+  );
+
+  if (isNative) {
+    return (
+      <div className="min-h-screen">
+        <div className="px-3 pt-3">{logo}</div>
+        {children}
+      </div>
+    );
+  }
 
   const displayName = profile ? `${profile.first_name} ${profile.last_name}` : (user?.email ?? '');
 
@@ -84,6 +107,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
         onDeleteAccount={() => navigate('/settings')}
       />
       <div className={`transition-[padding] duration-200 ${collapsed ? 'md:pl-[64px]' : 'md:pl-56'}`}>
+        <div className="px-4 md:px-6 pt-4">{logo}</div>
         {children}
       </div>
     </div>
