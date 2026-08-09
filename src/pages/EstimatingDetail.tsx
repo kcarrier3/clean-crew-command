@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Copy, Save, CheckCircle2, Files, AlertTriangle, Building2 } from 'lucide-react';
+import { Copy, Save, CheckCircle2, Files, AlertTriangle, Building2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -626,7 +626,7 @@ export default function EstimatingDetail() {
             <AlertDialogDescription>
               {validationError
                 ? validationError
-                : 'Completed estimates are read-only. To change anything later you will duplicate it as a new draft.'}
+                : 'Completed estimates become read-only. You can reopen it later with “Edit estimate” if the customer wants revisions.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -637,6 +637,22 @@ export default function EstimatingDetail() {
             >
               Mark Complete
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmReopen} onOpenChange={setConfirmReopen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reopen this estimate for edits?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It moves back to draft so you can make revisions. Mark it complete again when you're done.
+              If you'd rather keep the completed version intact, use Duplicate instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={reopenForEdits} disabled={busy}>Reopen for edits</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
