@@ -305,6 +305,17 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
     });
   };
 
+  const getOpenShiftsForDay = (date: Date) => {
+    const iso = toISODate(date);
+    return callOffs
+      .filter((c) => c.call_off_date === iso)
+      .map((c) => {
+        const schedule = schedules.find((s) => s.id === c.schedule_id);
+        return schedule ? { schedule, callOff: c } : null;
+      })
+      .filter((x): x is { schedule: Schedule; callOff: CallOff } => !!x);
+  };
+
   const employeeStats = (employeeId: string) => {
     let hours = 0;
     weekDays.forEach((d) => {
