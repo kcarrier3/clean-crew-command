@@ -847,6 +847,29 @@ function shortTime(t: string) {
 function initials(f: string, l: string) {
   return `${(f || '').charAt(0)}${(l || '').charAt(0)}`.toUpperCase();
 }
+const DEPT_PALETTE = [
+  'bg-sky-600',
+  'bg-emerald-600',
+  'bg-violet-600',
+  'bg-orange-500',
+  'bg-rose-600',
+  'bg-teal-600',
+  'bg-indigo-600',
+  'bg-amber-500',
+  'bg-fuchsia-600',
+  'bg-lime-600',
+  'bg-cyan-600',
+  'bg-pink-600',
+];
+
+/** Stable color per department name */
+function deptColor(name?: string | null) {
+  if (!name || name === 'Unassigned') return 'bg-slate-600';
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return DEPT_PALETTE[h % DEPT_PALETTE.length];
+}
+
 function jobColor(title: string) {
   const map: Record<string, string> = {
     Owner: 'bg-violet-600',
