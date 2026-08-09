@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_INPUTS, money, hourlyRateFmt } from './calc';
 import {
-  REVISION_LIST_COLUMNS, hydrateJanitorialInputs, janitorialRevisionPayload, revisionDisplayPrice,
+  REVISION_LIST_COLUMNS, hydrateJanitorialInputs, janitorialRevisionPayload, revisionDisplayPrice, revisionHourlyRate,
 } from './janitorial';
 import { ServiceTypePicker } from './ServiceTypePicker';
 import { SERVICE_LABELS, isRecurringService, normalizeServiceType, type ServiceType } from './serviceTypes';
