@@ -697,7 +697,7 @@ function ShiftBlock({
               {shortTime(schedule.start_time)}–{shortTime(schedule.end_time)}
             </div>
             <div className="text-[10px] leading-tight opacity-90 truncate">
-              Call off • {schedule.job_sites.name}
+              Open • {schedule.job_sites.name}
             </div>
           </button>
         ) : (
