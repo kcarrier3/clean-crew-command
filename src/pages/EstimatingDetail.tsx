@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Copy, Save, CheckCircle2, Files, AlertTriangle, Building2 } from 'lucide-react';
+import { Copy, Save, CheckCircle2, Files, AlertTriangle, Building2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -101,6 +101,7 @@ export default function EstimatingDetail() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
+  const [confirmReopen, setConfirmReopen] = useState(false);
   const [busy, setBusy] = useState(false);
   const dirtyRef = useRef(false);
 
@@ -227,6 +228,25 @@ export default function EstimatingDetail() {
     load();
   };
 
+  // Reopen a completed estimate so revisions can be made in place.
+  const reopenForEdits = async () => {
+    if (!estimate || !revision) return;
+    setBusy(true);
+    const now = new Date().toISOString();
+    const { error: revErr } = await (supabase as any)
+      .from('estimate_revisions').update({ status: 'draft', updated_at: now }).eq('id', revision.id);
+    const { error } = revErr ? { error: revErr } : await (supabase as any)
+      .from('estimates').update({ status: 'draft', updated_at: now }).eq('id', estimate.id);
+    setBusy(false);
+    setConfirmReopen(false);
+    if (error) {
+      toast({ title: 'Could not reopen', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Estimate reopened', description: 'Make your changes, then mark it complete again.' });
+    load();
+  };
+
   const duplicateAsDraft = async () => {
     if (!estimate || !revision || !user) return;
     setBusy(true);
@@ -329,6 +349,9 @@ export default function EstimatingDetail() {
               <Button size="sm" variant="outline" onClick={copySummary}>
                 <Copy className="h-4 w-4 mr-1" /> Copy
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setConfirmReopen(true)} disabled={busy}>
+                <Pencil className="h-4 w-4 mr-1" /> Edit estimate
+              </Button>
               <Button size="sm" onClick={duplicateAsDraft} disabled={busy}>
                 <Files className="h-4 w-4 mr-1" /> Duplicate
               </Button>
@@ -354,7 +377,7 @@ export default function EstimatingDetail() {
                 Saved monthly price {money(drift.stored)} · recalculated {money(drift.computed)}{' '}
                 (difference {money(drift.computed - drift.stored)}).
                 {readOnly
-                  ? ' This estimate is completed and read-only — duplicate it as a draft to resave with current figures.'
+                  ? ' This estimate is completed and read-only — choose Edit estimate to reopen it and resave with current figures.'
                   : ' Press Save to sync the stored snapshot with these figures. Inputs are unchanged.'}
               </p>
               {!readOnly && (
@@ -370,7 +393,7 @@ export default function EstimatingDetail() {
             <div className="flex items-center gap-2">
               <Badge>Completed</Badge>
               <Badge variant="secondary">{SERVICE_LABELS[serviceType]}</Badge>
-              <span className="text-xs text-muted-foreground">Read-only. Duplicate as a draft to revise.</span>
+              <span className="text-xs text-muted-foreground">Read-only. Choose “Edit estimate” to reopen and revise it.</span>
             </div>
             {isJanitorial ? (
               <PricingSummary
@@ -603,7 +626,7 @@ export default function EstimatingDetail() {
             <AlertDialogDescription>
               {validationError
                 ? validationError
-                : 'Completed estimates are read-only. To change anything later you will duplicate it as a new draft.'}
+                : 'Completed estimates become read-only. You can reopen it later with “Edit estimate” if the customer wants revisions.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -614,6 +637,22 @@ export default function EstimatingDetail() {
             >
               Mark Complete
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmReopen} onOpenChange={setConfirmReopen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reopen this estimate for edits?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It moves back to draft so you can make revisions. Mark it complete again when you're done.
+              If you'd rather keep the completed version intact, use Duplicate instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={reopenForEdits} disabled={busy}>Reopen for edits</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
