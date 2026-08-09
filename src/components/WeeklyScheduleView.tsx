@@ -55,7 +55,7 @@ interface JobSite {
 
 interface Schedule {
   id: string;
-  employee_id: string;
+  employee_id: string | null;
   job_site_id: string;
   start_time: string;
   end_time: string;
@@ -66,7 +66,7 @@ interface Schedule {
   active: boolean;
   week_interval?: number | null;
   recurrence_anchor_date?: string | null;
-  employees: Employee;
+  employees: Employee | null;
   job_sites: JobSite;
 }
 
@@ -78,6 +78,8 @@ interface WeeklyScheduleViewProps {
   onDelete: (scheduleId: string) => void;
   onAddShift?: (employeeId: string, isoDate: string) => void;
 }
+
+export const OPEN_SHIFT_ID = '__open__';
 
 const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDelete, onAddShift }: WeeklyScheduleViewProps) => {
   // Week anchor = Monday of the currently viewed week
@@ -207,7 +209,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
     }
     toast({
       title: 'Call off recorded',
-      description: `${schedule.employees.first_name} ${schedule.employees.last_name} was assessed ${POINTS.call_off} points and this shift is now open.`,
+      description: `${schedule.employees?.first_name ?? 'Employee'} ${schedule.employees?.last_name ?? ''} was assessed ${POINTS.call_off} points and this shift is now open.`,
     });
     setCallOffTarget(null);
     setReason('');
@@ -254,7 +256,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
     const userIds = Array.from(
       new Set(
         schedules
-          .map((s) => s.employees.user_id)
+          .map((s) => s.employees?.user_id)
           .filter((v): v is string => !!v),
       ),
     );
@@ -277,7 +279,9 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
     const list = Array.from(
       new Map([
         ...allEmployees.map((e) => [e.id, e] as [string, Employee]),
-        ...schedules.map((s) => [s.employee_id, s.employees] as [string, Employee]),
+        ...schedules
+          .filter((s) => !!s.employee_id && !!s.employees)
+          .map((s) => [s.employee_id as string, s.employees as Employee] as [string, Employee]),
       ]).values(),
     );
     return list.sort((a, b) => {
@@ -307,13 +311,27 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
 
   const getOpenShiftsForDay = (date: Date) => {
     const iso = toISODate(date);
-    return callOffs
+    const fromCallOffs = callOffs
       .filter((c) => c.call_off_date === iso)
       .map((c) => {
         const schedule = schedules.find((s) => s.id === c.schedule_id);
-        return schedule ? { schedule, callOff: c } : null;
+        return schedule ? { schedule, callOff: c as CallOff | null } : null;
       })
-      .filter((x): x is { schedule: Schedule; callOff: CallOff } => !!x);
+      .filter((x): x is { schedule: Schedule; callOff: CallOff | null } => !!x);
+
+    const dayNum = ((date.getDay() + 6) % 7) + 1;
+    const unassigned = schedules
+      .filter((s) => {
+        if (s.employee_id) return false;
+        if (!s.days_of_week.includes(dayNum)) return false;
+        if (s.start_date && s.start_date > iso) return false;
+        if (s.end_date && s.end_date < iso) return false;
+        if (!isDueThisWeek(s, date)) return false;
+        return true;
+      })
+      .map((s) => ({ schedule: s, callOff: null as CallOff | null }));
+
+    return [...unassigned, ...fromCallOffs];
   };
 
   const employeeStats = (employeeId: string) => {
@@ -453,7 +471,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
 
           {/* Open shifts row */}
           <div className="px-4 py-2 text-xs font-semibold text-muted-foreground border-b bg-background">
-            Open shifts ({callOffs.length})
+            Open shifts ({weekDays.reduce((n, d) => n + getOpenShiftsForDay(d).length, 0)})
           </div>
 
           <div className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b bg-amber-50/30 dark:bg-amber-950/10">
@@ -466,7 +484,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                   Open shifts
                 </div>
                 <div className="text-[11px] text-muted-foreground leading-tight">
-                  {callOffs.length} open
+                  Unassigned / needs coverage
                 </div>
               </div>
             </div>
@@ -480,10 +498,11 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                   className={`group/cell relative border-l p-1 min-h-[76px] space-y-1 transition-colors hover:bg-muted/40 ${
                     isToday(d) ? 'bg-primary/[0.03]' : ''
                   }`}
+                  onDoubleClick={() => canManage && onAddShift?.(OPEN_SHIFT_ID, iso)}
                 >
                   {openShifts.map(({ schedule, callOff }) => (
                     <ShiftBlock
-                      key={schedule.id}
+                      key={`${schedule.id}-${callOff ? 'co' : 'un'}`}
                       schedule={schedule}
                       onEdit={onEdit}
                       onDelete={onDelete}
@@ -493,6 +512,27 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                       onUndoCallOff={undoCallOff}
                     />
                   ))}
+                  {canManage && onAddShift && (
+                    openShifts.length === 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => onAddShift(OPEN_SHIFT_ID, iso)}
+                        aria-label={`Add open shift on ${iso}`}
+                        className="absolute inset-1 flex items-center justify-center rounded-md border border-dashed border-transparent text-muted-foreground opacity-0 group-hover/cell:opacity-100 group-hover/cell:border-primary/40 group-hover/cell:text-primary focus:opacity-100 transition"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onAddShift(OPEN_SHIFT_ID, iso)}
+                        aria-label={`Add another open shift on ${iso}`}
+                        className="w-full flex items-center justify-center gap-1 rounded-md border border-dashed border-primary/40 py-1 text-[11px] text-primary opacity-0 group-hover/cell:opacity-100 focus:opacity-100 transition"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add
+                      </button>
+                    )
+                  )}
                 </div>
               );
             })}
@@ -681,19 +721,20 @@ function ShiftBlock({
   onCallOff: () => void;
   onUndoCallOff: (c: CallOff) => void;
 }) {
-  const colors = jobColor(schedule.employees.job_title);
+  const colors = jobColor(schedule.employees?.job_title ?? '');
+  const unassigned = !schedule.employee_id;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        {callOff ? (
+        {callOff || unassigned ? (
           <button
             className="w-full text-left rounded-md px-2 py-1.5 border-2 border-dashed border-destructive bg-destructive/10 text-destructive hover:bg-destructive/15 transition"
-            title={callOff.reason || 'Called off'}
+            title={callOff?.reason || (unassigned ? 'Unassigned open shift' : 'Called off')}
           >
             <div className="text-[11px] font-semibold leading-tight flex items-center gap-1">
               <UserX className="h-2.5 w-2.5 shrink-0" /> OPEN SHIFT
             </div>
-            <div className="text-[10px] leading-tight line-through opacity-80">
+            <div className={`text-[10px] leading-tight opacity-80 ${callOff ? 'line-through' : ''}`}>
               {shortTime(schedule.start_time)}–{shortTime(schedule.end_time)}
             </div>
             <div className="text-[10px] leading-tight opacity-90 truncate">
@@ -726,7 +767,7 @@ function ShiftBlock({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        {canManage && (
+        {canManage && !unassigned && (
           callOff ? (
             <DropdownMenuItem onClick={() => onUndoCallOff(callOff)}>
               <Undo2 className="h-4 w-4 mr-2" /> Undo call off
