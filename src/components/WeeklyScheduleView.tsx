@@ -720,8 +720,9 @@ function ShiftBlock({
   canManage: boolean;
   onCallOff: () => void;
   onUndoCallOff: (c: CallOff) => void;
+  colorClass?: string;
 }) {
-  const colors = jobColor(schedule.employees?.job_title ?? '');
+  const colors = colorClass || jobColor(schedule.employees?.job_title ?? '');
   const unassigned = !schedule.employee_id;
   return (
     <DropdownMenu>
