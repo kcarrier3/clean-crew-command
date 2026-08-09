@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact, Calculator, Settings as SettingsIcon } from 'lucide-react';
@@ -45,6 +45,7 @@ import { SEO } from '@/components/SEO';
 
 const Index = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { user, loading, profile, isManager, canManageEmployees, isCrmUser, canEstimate, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
   const isNativeShell = useIsNativeApp();
@@ -77,6 +78,17 @@ const Index = () => {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Allow other routed pages to deep-link back into a tab via "/?tab=..."
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+      const next = new URLSearchParams(searchParams);
+      next.delete('tab');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Require new hires to complete their profile before using the app
   useEffect(() => {
