@@ -29,7 +29,7 @@ import {
 } from '@/components/estimator/specialtyCalc';
 import {
   DEFAULT_INPUTS, SUPPLY_PRESETS, calculateEstimate, isPricingSolvable,
-  supplyRateForPreset, money, hoursFmt, pct,
+  supplyRateForPreset, money, hoursFmt, hourlyRateFmt, pct,
   type EstimateInputs, type SupplyPreset,
 } from '@/components/estimator/calc';
 import {
@@ -559,12 +559,14 @@ export default function EstimatingDetail() {
                   <p className="text-xs text-muted-foreground mt-1">
                     {money(outputs.price_per_visit)}/visit · {money(outputs.annual_price, 0)}/yr
                   </p>
+                  <p className="text-xs text-muted-foreground mt-1">Hourly rate {hourlyRateFmt(outputs.hourly_rate)}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-4 space-y-1 text-sm">
                   <Line label="Hours / visit" value={hoursFmt(outputs.labor_hours_per_visit)} />
                   <Line label="Monthly hours" value={hoursFmt(outputs.monthly_labor_hours)} />
+                  <Line label="Hourly rate" value={hourlyRateFmt(outputs.hourly_rate)} />
                   <Line label="Visits / month" value={outputs.visits_per_month.toFixed(2)} />
                   <Separator className="my-2" />
                   <Line label="Loaded labor / visit" value={money(outputs.loaded_labor_cost_per_visit)} />
