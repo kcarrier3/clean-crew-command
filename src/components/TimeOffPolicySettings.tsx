@@ -186,8 +186,10 @@ const TimeOffPolicySettings = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Paid holidays</CardTitle>
-          <CardDescription>Paid only when the holiday falls Monday through Friday.</CardDescription>
+          <CardTitle className="text-lg">Paid holidays (managers only)</CardTitle>
+          <CardDescription>
+            Holiday pay applies to management job titles only, and only when the holiday falls Monday through Friday.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {holidays.map((h) => (
