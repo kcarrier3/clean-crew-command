@@ -471,7 +471,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
 
           {/* Open shifts row */}
           <div className="px-4 py-2 text-xs font-semibold text-muted-foreground border-b bg-background">
-            Open shifts ({callOffs.length})
+            Open shifts ({weekDays.reduce((n, d) => n + getOpenShiftsForDay(d).length, 0)})
           </div>
 
           <div className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b bg-amber-50/30 dark:bg-amber-950/10">
@@ -484,7 +484,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                   Open shifts
                 </div>
                 <div className="text-[11px] text-muted-foreground leading-tight">
-                  {callOffs.length} open
+                  Unassigned / needs coverage
                 </div>
               </div>
             </div>
@@ -498,10 +498,11 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                   className={`group/cell relative border-l p-1 min-h-[76px] space-y-1 transition-colors hover:bg-muted/40 ${
                     isToday(d) ? 'bg-primary/[0.03]' : ''
                   }`}
+                  onDoubleClick={() => canManage && onAddShift?.(OPEN_SHIFT_ID, iso)}
                 >
                   {openShifts.map(({ schedule, callOff }) => (
                     <ShiftBlock
-                      key={schedule.id}
+                      key={`${schedule.id}-${callOff ? 'co' : 'un'}`}
                       schedule={schedule}
                       onEdit={onEdit}
                       onDelete={onDelete}
@@ -511,6 +512,27 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                       onUndoCallOff={undoCallOff}
                     />
                   ))}
+                  {canManage && onAddShift && (
+                    openShifts.length === 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => onAddShift(OPEN_SHIFT_ID, iso)}
+                        aria-label={`Add open shift on ${iso}`}
+                        className="absolute inset-1 flex items-center justify-center rounded-md border border-dashed border-transparent text-muted-foreground opacity-0 group-hover/cell:opacity-100 group-hover/cell:border-primary/40 group-hover/cell:text-primary focus:opacity-100 transition"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onAddShift(OPEN_SHIFT_ID, iso)}
+                        aria-label={`Add another open shift on ${iso}`}
+                        className="w-full flex items-center justify-center gap-1 rounded-md border border-dashed border-primary/40 py-1 text-[11px] text-primary opacity-0 group-hover/cell:opacity-100 focus:opacity-100 transition"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add
+                      </button>
+                    )
+                  )}
                 </div>
               );
             })}
