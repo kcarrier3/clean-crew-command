@@ -445,6 +445,19 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
       {/* Grid */}
       <div className="overflow-x-auto">
         <div className="min-w-[1100px]">
+          {/* Department color legend */}
+          {Object.keys(deptByEmployee).length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 px-4 py-2 border-b bg-background text-[11px] text-muted-foreground">
+              {Array.from(new Set(employees.map((e) => deptByEmployee[e.id] || 'Unassigned')))
+                .sort()
+                .map((d) => (
+                  <span key={d} className="inline-flex items-center gap-1.5">
+                    <span className={`h-2.5 w-2.5 rounded-sm ${deptColor(d)}`} />
+                    {d}
+                  </span>
+                ))}
+            </div>
+          )}
           {/* Header row */}
           <div className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b bg-muted/30">
             <div className="px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground">
