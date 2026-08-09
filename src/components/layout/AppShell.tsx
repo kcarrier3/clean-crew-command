@@ -76,7 +76,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
         alt="Crew Compass"
         width="512"
         height="256"
-        className="h-12 md:h-14 w-auto"
+        className="h-28 md:h-32 w-auto"
       />
     </button>
   );
