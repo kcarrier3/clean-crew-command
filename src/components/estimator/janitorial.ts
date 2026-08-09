@@ -125,3 +125,14 @@ export function monthlyPriceDrift(rev: Record<string, any> | null | undefined, c
   const diff = computed - stored;
   return { stored, computed, diff, drifted: Math.abs(diff) > 0.01 };
 }
+
+/**
+ * Effective billable hourly rate for a revision row — recurring monthly price
+ * divided by monthly labor hours. Null for non-recurring/project estimates and
+ * whenever labor hours are zero or missing.
+ */
+export function revisionHourlyRate(rev: Record<string, any> | null | undefined): number | null {
+  if (!rev) return null;
+  if (!isRecurringService(normalizeServiceType(rev.service_type))) return null;
+  return calculateEstimate(hydrateJanitorialInputs(rev)).hourly_rate;
+}

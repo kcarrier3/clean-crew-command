@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { DEFAULT_INPUTS, money } from './calc';
+import { DEFAULT_INPUTS, money, hourlyRateFmt } from './calc';
 import {
-  REVISION_LIST_COLUMNS, hydrateJanitorialInputs, janitorialRevisionPayload, revisionDisplayPrice,
+  REVISION_LIST_COLUMNS, hydrateJanitorialInputs, janitorialRevisionPayload, revisionDisplayPrice, revisionHourlyRate,
 } from './janitorial';
 import { ServiceTypePicker } from './ServiceTypePicker';
 import { SERVICE_LABELS, isRecurringService, normalizeServiceType, type ServiceType } from './serviceTypes';
@@ -32,6 +32,7 @@ export function LinkedEstimates({ leadId, companyName, companyId, contactId }: P
   const { toast } = useToast();
   const [rows, setRows] = useState<any[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [rates, setRates] = useState<Record<string, number | null>>({});
   const [busy, setBusy] = useState(false);
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
 
@@ -50,6 +51,9 @@ export function LinkedEstimates({ leadId, companyName, companyId, contactId }: P
       const map: Record<string, number> = {};
       (revs || []).forEach((r: any) => { map[r.id] = revisionDisplayPrice(r); });
       setPrices(map);
+      const rateMap: Record<string, number | null> = {};
+      (revs || []).forEach((r: any) => { rateMap[r.id] = revisionHourlyRate(r); });
+      setRates(rateMap);
     }
   }, [leadId]);
 
@@ -157,10 +161,17 @@ export function LinkedEstimates({ leadId, companyName, companyId, contactId }: P
           >
             <span className="flex-1 truncate text-sm">{r.name}</span>
             <Badge variant="secondary" className="text-[10px]">{SERVICE_LABELS[service]}</Badge>
-            <span className="text-sm font-medium tabular-nums">
-              {r.current_revision_id
-                ? `${money(prices[r.current_revision_id] || 0)}${isRecurringService(service) ? '/mo' : ''}`
-                : '—'}
+            <span className="text-right">
+              <span className="block text-sm font-medium tabular-nums">
+                {r.current_revision_id
+                  ? `${money(prices[r.current_revision_id] || 0)}${isRecurringService(service) ? '/mo' : ''}`
+                  : '—'}
+              </span>
+              {r.current_revision_id && isRecurringService(service) && (
+                <span className="block text-[10px] text-muted-foreground tabular-nums">
+                  {hourlyRateFmt(rates[r.current_revision_id])}
+                </span>
+              )}
             </span>
             <Badge variant={r.status === 'completed' ? 'default' : 'outline'} className="text-[10px]">
               {r.status === 'completed' ? 'Completed' : 'Draft'}
