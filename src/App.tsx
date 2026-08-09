@@ -20,6 +20,7 @@ import AccountDetailPage from './pages/AccountDetailPage';
 import Estimating from './pages/Estimating';
 import EstimatingDetail from './pages/EstimatingDetail';
 import Settings from './pages/Settings';
+import AppShell from './components/layout/AppShell';
 
 const queryClient = new QueryClient();
 
@@ -46,11 +47,11 @@ const AppContent = () => {
       <Route path="/get-a-quote" element={<LeadCapture />} />
       <Route path="/report/:jobSiteId" element={<ReportIssue />} />
       <Route path="/punch/:token" element={<PunchClock />} />
-      <Route path="/crm/opportunities/:id" element={<OpportunityDetail />} />
-      <Route path="/crm/accounts/:id" element={<AccountDetailPage />} />
-      <Route path="/estimating" element={<Estimating />} />
-      <Route path="/estimating/:id" element={<EstimatingDetail />} />
-      <Route path="/settings" element={<Settings />} />
+      <Route path="/crm/opportunities/:id" element={<AppShell><OpportunityDetail /></AppShell>} />
+      <Route path="/crm/accounts/:id" element={<AppShell><AccountDetailPage /></AppShell>} />
+      <Route path="/estimating" element={<AppShell><Estimating /></AppShell>} />
+      <Route path="/estimating/:id" element={<AppShell><EstimatingDetail /></AppShell>} />
+      <Route path="/settings" element={<AppShell><Settings /></AppShell>} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
