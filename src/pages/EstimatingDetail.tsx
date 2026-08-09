@@ -666,6 +666,21 @@ export default function EstimatingDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {estimate && (
+        <ConvertToAccountDialog
+          open={convertOpen}
+          onOpenChange={setConvertOpen}
+          estimateId={estimate.id}
+          estimateName={name || estimate.name}
+          serviceType={serviceType}
+          clientName={lead?.company_name || null}
+          hoursPerVisit={outputs.labor_hours_per_visit}
+          cleaningsPerWeek={inputs.cleanings_per_week}
+          projectHours={specialtyOutputs.labor_hours}
+          onConverted={() => load()}
+        />
+      )}
     </>
   );
 }
