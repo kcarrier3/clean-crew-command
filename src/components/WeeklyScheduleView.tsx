@@ -699,19 +699,20 @@ function ShiftBlock({
   onCallOff: () => void;
   onUndoCallOff: (c: CallOff) => void;
 }) {
-  const colors = jobColor(schedule.employees.job_title);
+  const colors = jobColor(schedule.employees?.job_title ?? '');
+  const unassigned = !schedule.employee_id;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        {callOff ? (
+        {callOff || unassigned ? (
           <button
             className="w-full text-left rounded-md px-2 py-1.5 border-2 border-dashed border-destructive bg-destructive/10 text-destructive hover:bg-destructive/15 transition"
-            title={callOff.reason || 'Called off'}
+            title={callOff?.reason || (unassigned ? 'Unassigned open shift' : 'Called off')}
           >
             <div className="text-[11px] font-semibold leading-tight flex items-center gap-1">
               <UserX className="h-2.5 w-2.5 shrink-0" /> OPEN SHIFT
             </div>
-            <div className="text-[10px] leading-tight line-through opacity-80">
+            <div className={`text-[10px] leading-tight opacity-80 ${callOff ? 'line-through' : ''}`}>
               {shortTime(schedule.start_time)}–{shortTime(schedule.end_time)}
             </div>
             <div className="text-[10px] leading-tight opacity-90 truncate">
