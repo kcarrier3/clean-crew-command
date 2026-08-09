@@ -25,7 +25,7 @@ import { OpportunityPicker } from '@/components/estimator/OpportunityPicker';
 import { ServiceTypePicker } from '@/components/estimator/ServiceTypePicker';
 import { SERVICE_LABELS, normalizeServiceType, isRecurringService, type ServiceType } from '@/components/estimator/serviceTypes';
 import { DEFAULT_SPECIALTY_INPUTS, calculateSpecialty } from '@/components/estimator/specialtyCalc';
-import { DEFAULT_INPUTS, money } from '@/components/estimator/calc';
+import { DEFAULT_INPUTS, money, hourlyRateFmt } from '@/components/estimator/calc';
 import {
   REVISION_LIST_COLUMNS, hydrateJanitorialInputs, janitorialRevisionPayload, revisionDisplayPrice, revisionHourlyRate,
 } from '@/components/estimator/janitorial';
