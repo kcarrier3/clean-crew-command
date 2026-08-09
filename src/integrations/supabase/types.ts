@@ -2210,7 +2210,7 @@ export type Database = {
           active: boolean
           created_at: string
           days_of_week: number[]
-          employee_id: string
+          employee_id: string | null
           end_date: string | null
           end_time: string | null
           id: string
@@ -2226,7 +2226,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           days_of_week?: number[]
-          employee_id: string
+          employee_id?: string | null
           end_date?: string | null
           end_time?: string | null
           id?: string
@@ -2242,7 +2242,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           days_of_week?: number[]
-          employee_id?: string
+          employee_id?: string | null
           end_date?: string | null
           end_time?: string | null
           id?: string
