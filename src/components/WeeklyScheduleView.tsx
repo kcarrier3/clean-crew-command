@@ -451,6 +451,53 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
             ))}
           </div>
 
+          {/* Open shifts row */}
+          <div className="px-4 py-2 text-xs font-semibold text-muted-foreground border-b bg-background">
+            Open shifts ({callOffs.length})
+          </div>
+
+          <div className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b bg-amber-50/30 dark:bg-amber-950/10">
+            <div className="px-3 py-2 flex items-center gap-2 border-r bg-background sticky left-0 z-10">
+              <div className="h-9 w-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-semibold shrink-0">
+                <UserX className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium leading-tight truncate">
+                  Open shifts
+                </div>
+                <div className="text-[11px] text-muted-foreground leading-tight">
+                  {callOffs.length} open
+                </div>
+              </div>
+            </div>
+
+            {weekDays.map((d) => {
+              const iso = toISODate(d);
+              const openShifts = getOpenShiftsForDay(d);
+              return (
+                <div
+                  key={d.toISOString()}
+                  className={`group/cell relative border-l p-1 min-h-[76px] space-y-1 transition-colors hover:bg-muted/40 ${
+                    isToday(d) ? 'bg-primary/[0.03]' : ''
+                  }`}
+                >
+                  {openShifts.map(({ schedule, callOff }) => (
+                    <ShiftBlock
+                      key={schedule.id}
+                      schedule={schedule}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      callOff={callOff}
+                      canManage={canManage}
+                      onCallOff={() => { setReason(''); setCallOffTarget({ schedule, date: iso }); }}
+                      onUndoCallOff={undoCallOff}
+                    />
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+
           {/* Section label */}
           <div className="px-4 py-2 text-xs font-semibold text-muted-foreground border-b bg-background">
             Team members ({employees.length})
