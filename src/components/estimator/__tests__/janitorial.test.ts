@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateEstimate, DEFAULT_INPUTS } from '../calc';
 import {
   hydrateJanitorialInputs, janitorialOutputColumns, janitorialRevisionPayload,
-  normalizeSupply, revisionDisplayPrice,
+  normalizeSupply, revisionDisplayPrice, revisionHourlyRate,
 } from '../janitorial';
 
 // Saved inputs for the MetroHealth W. 150th ASC draft (override active).
@@ -78,6 +78,18 @@ describe('hydration + calculation', () => {
 });
 
 describe('serialization', () => {
+  it('derives the billable hourly rate from price / monthly hours', () => {
+    const o = calculateEstimate(hydrateJanitorialInputs(W150));
+    expect(o.hourly_rate!).toBeCloseTo(o.monthly_price / o.monthly_labor_hours, 10);
+    expect(revisionHourlyRate(W150)!).toBeCloseTo(o.hourly_rate!, 10);
+    expect(o.hourly_rate!).toBeCloseTo(1844.6233 / 64.95, 3);
+  });
+
+  it('returns null hourly rate with no hours and for project services', () => {
+    expect(calculateEstimate(hydrateJanitorialInputs({ ...W150, labor_hours_per_visit_override: 0, square_feet: 0, minimum_visit_minutes: 0 })).hourly_rate).toBeNull();
+    expect(revisionHourlyRate({ service_type: 'carpet_cleaning', project_price: 100 })).toBeNull();
+  });
+
   it('persists every snapshot column', () => {
     const payload = janitorialRevisionPayload(hydrateJanitorialInputs(W150));
     for (const key of Object.keys(janitorialOutputColumns(calculateEstimate(hydrateJanitorialInputs(W150))))) {
