@@ -55,7 +55,7 @@ interface JobSite {
 
 interface Schedule {
   id: string;
-  employee_id: string;
+  employee_id: string | null;
   job_site_id: string;
   start_time: string;
   end_time: string;
@@ -66,7 +66,7 @@ interface Schedule {
   active: boolean;
   week_interval?: number | null;
   recurrence_anchor_date?: string | null;
-  employees: Employee;
+  employees: Employee | null;
   job_sites: JobSite;
 }
 
@@ -78,6 +78,8 @@ interface WeeklyScheduleViewProps {
   onDelete: (scheduleId: string) => void;
   onAddShift?: (employeeId: string, isoDate: string) => void;
 }
+
+export const OPEN_SHIFT_ID = '__open__';
 
 const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDelete, onAddShift }: WeeklyScheduleViewProps) => {
   // Week anchor = Monday of the currently viewed week
