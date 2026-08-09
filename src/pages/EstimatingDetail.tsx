@@ -349,6 +349,9 @@ export default function EstimatingDetail() {
               <Button size="sm" variant="outline" onClick={copySummary}>
                 <Copy className="h-4 w-4 mr-1" /> Copy
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setConfirmReopen(true)} disabled={busy}>
+                <Pencil className="h-4 w-4 mr-1" /> Edit estimate
+              </Button>
               <Button size="sm" onClick={duplicateAsDraft} disabled={busy}>
                 <Files className="h-4 w-4 mr-1" /> Duplicate
               </Button>
@@ -374,7 +377,7 @@ export default function EstimatingDetail() {
                 Saved monthly price {money(drift.stored)} · recalculated {money(drift.computed)}{' '}
                 (difference {money(drift.computed - drift.stored)}).
                 {readOnly
-                  ? ' This estimate is completed and read-only — duplicate it as a draft to resave with current figures.'
+                  ? ' This estimate is completed and read-only — choose Edit estimate to reopen it and resave with current figures.'
                   : ' Press Save to sync the stored snapshot with these figures. Inputs are unchanged.'}
               </p>
               {!readOnly && (
@@ -390,7 +393,7 @@ export default function EstimatingDetail() {
             <div className="flex items-center gap-2">
               <Badge>Completed</Badge>
               <Badge variant="secondary">{SERVICE_LABELS[serviceType]}</Badge>
-              <span className="text-xs text-muted-foreground">Read-only. Duplicate as a draft to revise.</span>
+              <span className="text-xs text-muted-foreground">Read-only. Choose “Edit estimate” to reopen and revise it.</span>
             </div>
             {isJanitorial ? (
               <PricingSummary
