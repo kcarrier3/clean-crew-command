@@ -35,6 +35,7 @@ import {
 import {
   hydrateJanitorialInputs, janitorialRevisionPayload, monthlyPriceDrift,
 } from '@/components/estimator/janitorial';
+import { ConvertToAccountDialog } from '@/components/estimator/ConvertToAccountDialog';
 
 const SPECIALTY_COLUMNS = (i: SpecialtyInputs, o: SpecialtyOutputs) => ({
   specialty_inputs: i,
@@ -102,6 +103,7 @@ export default function EstimatingDetail() {
   const [dirty, setDirty] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
   const [confirmReopen, setConfirmReopen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const dirtyRef = useRef(false);
 
