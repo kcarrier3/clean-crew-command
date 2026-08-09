@@ -166,7 +166,7 @@ const PtoBalanceCard = ({ employeeId }: { employeeId?: string }) => {
               ))}
             </ul>
             <p className="mt-2 text-xs text-muted-foreground">
-              Holidays are paid only when they fall Monday through Friday.
+              Paid holidays are a management benefit, and only paid when they fall Monday through Friday.
             </p>
           </div>
         )}
