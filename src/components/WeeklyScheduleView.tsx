@@ -445,6 +445,19 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
       {/* Grid */}
       <div className="overflow-x-auto">
         <div className="min-w-[1100px]">
+          {/* Department color legend */}
+          {Object.keys(deptByEmployee).length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 px-4 py-2 border-b bg-background text-[11px] text-muted-foreground">
+              {Array.from(new Set(employees.map((e) => deptByEmployee[e.id] || 'Unassigned')))
+                .sort()
+                .map((d) => (
+                  <span key={d} className="inline-flex items-center gap-1.5">
+                    <span className={`h-2.5 w-2.5 rounded-sm ${deptColor(d)}`} />
+                    {d}
+                  </span>
+                ))}
+            </div>
+          )}
           {/* Header row */}
           <div className="grid grid-cols-[240px_repeat(7,minmax(0,1fr))] border-b bg-muted/30">
             <div className="px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground">
@@ -607,6 +620,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                           canManage={canManage}
                           onCallOff={() => { setReason(''); setCallOffTarget({ schedule: s, date: iso }); }}
                           onUndoCallOff={undoCallOff}
+                          colorClass={deptColor(deptName)}
                         />
                       ))}
                       {canManage && onAddShift && (
@@ -712,6 +726,7 @@ function ShiftBlock({
   canManage,
   onCallOff,
   onUndoCallOff,
+  colorClass,
 }: {
   schedule: Schedule;
   onEdit: (s: Schedule) => void;
@@ -720,8 +735,9 @@ function ShiftBlock({
   canManage: boolean;
   onCallOff: () => void;
   onUndoCallOff: (c: CallOff) => void;
+  colorClass?: string;
 }) {
-  const colors = jobColor(schedule.employees?.job_title ?? '');
+  const colors = colorClass || jobColor(schedule.employees?.job_title ?? '');
   const unassigned = !schedule.employee_id;
   return (
     <DropdownMenu>
@@ -847,6 +863,29 @@ function shortTime(t: string) {
 function initials(f: string, l: string) {
   return `${(f || '').charAt(0)}${(l || '').charAt(0)}`.toUpperCase();
 }
+const DEPT_PALETTE = [
+  'bg-sky-600',
+  'bg-emerald-600',
+  'bg-violet-600',
+  'bg-orange-500',
+  'bg-rose-600',
+  'bg-teal-600',
+  'bg-indigo-600',
+  'bg-amber-500',
+  'bg-fuchsia-600',
+  'bg-lime-600',
+  'bg-cyan-600',
+  'bg-pink-600',
+];
+
+/** Stable color per department name */
+function deptColor(name?: string | null) {
+  if (!name || name === 'Unassigned') return 'bg-slate-600';
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return DEPT_PALETTE[h % DEPT_PALETTE.length];
+}
+
 function jobColor(title: string) {
   const map: Record<string, string> = {
     Owner: 'bg-violet-600',
