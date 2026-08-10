@@ -6,9 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Pencil, Globe, Phone, MapPin, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Pencil, Globe, Phone, MapPin, Trash2, Merge } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from './fetchAllRows';
+import { MergeDialog } from './MergeDialog';
+import { mergeAccounts } from './mergeUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { CrmCompany } from './types';
@@ -27,6 +30,8 @@ export function CompaniesList({ onChanged }: Props) {
   const [editing, setEditing] = useState<CrmCompany | null>(null);
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [mergeOpen, setMergeOpen] = useState(false);
 
   const load = async () => {
     try {
@@ -75,11 +80,36 @@ export function CompaniesList({ onChanged }: Props) {
     !filter || c.name.toLowerCase().includes(filter.toLowerCase()) || c.industry?.toLowerCase().includes(filter.toLowerCase())
   );
 
+  const toggle = (id: string, on: boolean) =>
+    setSelected(s => (on ? [...s, id] : s.filter(x => x !== id)));
+
+  const runMerge = async (winnerId: string) => {
+    const winner = items.find(c => c.id === winnerId);
+    try {
+      await mergeAccounts(winnerId, selected, winner?.name || '');
+      toast({ title: `Merged ${selected.length - 1} account(s) into ${winner?.name}` });
+      setSelected([]);
+      load(); onChanged?.();
+    } catch (e: any) {
+      toast({ title: 'Merge failed', description: e.message, variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <Input placeholder="Search accounts…" value={filter} onChange={e => setFilter(e.target.value)} className="max-w-xs" />
-        <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> New Account</Button>
+        <div className="flex gap-2">
+          {selected.length > 1 && (
+            <Button variant="outline" onClick={() => setMergeOpen(true)}>
+              <Merge className="h-4 w-4 mr-2" /> Merge {selected.length}
+            </Button>
+          )}
+          {selected.length > 0 && (
+            <Button variant="ghost" onClick={() => setSelected([])}>Clear</Button>
+          )}
+          <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> New Account</Button>
+        </div>
       </div>
       {filtered.length === 0 ? (
         <Card><CardContent className="py-10 text-center text-muted-foreground">No accounts yet.</CardContent></Card>
@@ -92,6 +122,9 @@ export function CompaniesList({ onChanged }: Props) {
               onClick={() => navigate(`/crm/accounts/${c.id}`)}
             >
               <CardContent className="p-4 flex items-start justify-between gap-2">
+                <div onClick={e => e.stopPropagation()} className="pt-0.5">
+                  <Checkbox checked={selected.includes(c.id)} onCheckedChange={v => toggle(c.id, !!v)} />
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{c.name}</p>
                   {c.industry && <p className="text-xs text-muted-foreground">{c.industry}</p>}
@@ -135,6 +168,18 @@ export function CompaniesList({ onChanged }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MergeDialog
+        open={mergeOpen}
+        onOpenChange={setMergeOpen}
+        title="Merge accounts"
+        description="Choose the account to keep. Contacts, opportunities, notes, files and estimates from the others move to it."
+        candidates={selected.map(id => {
+          const c = items.find(x => x.id === id);
+          return { id, label: c?.name || id, sub: [c?.city, c?.state].filter(Boolean).join(', ') };
+        })}
+        onConfirm={runMerge}
+      />
     </div>
   );
 }

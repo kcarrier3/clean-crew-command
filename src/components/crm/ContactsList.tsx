@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Pencil, Mail, Phone, Trash2, Star } from 'lucide-react';
+import { Plus, Pencil, Mail, Phone, Trash2, Star, ArrowRightLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from './fetchAllRows';
+import { moveContactsToAccount } from './mergeUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { CrmCompany, CrmContact } from './types';
@@ -28,6 +29,9 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
   const [editing, setEditing] = useState<CrmContact | null>(null);
   const [form, setForm] = useState(blank);
   const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [moveTo, setMoveTo] = useState('');
+  const [moving, setMoving] = useState(false);
 
   const load = async () => {
     const [{ data: c }, co] = await Promise.all([
@@ -78,6 +82,19 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
 
   const companyName = (id: string | null) => companies.find(c => c.id === id)?.name;
 
+  const moveSelected = async () => {
+    if (!selected.length || !moveTo) return;
+    setMoving(true);
+    try {
+      await moveContactsToAccount(selected, moveTo === 'none' ? null : moveTo);
+      toast({ title: `Moved ${selected.length} contact(s)` });
+      setSelected([]); setMoveTo('');
+      load(); onChanged?.();
+    } catch (e: any) {
+      toast({ title: 'Move failed', description: e.message, variant: 'destructive' });
+    } finally { setMoving(false); }
+  };
+
   const filtered = items.filter(c => {
     if (!filter) return true;
     const f = filter.toLowerCase();
@@ -92,6 +109,22 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
         <Input placeholder="Search contacts…" value={filter} onChange={e => setFilter(e.target.value)} className="max-w-xs" />
         <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> New Contact</Button>
       </div>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-3 py-2">
+          <span className="text-sm text-muted-foreground">{selected.length} selected</span>
+          <Select value={moveTo} onValueChange={setMoveTo}>
+            <SelectTrigger className="w-64"><SelectValue placeholder="Move to account…" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No account</SelectItem>
+              {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button size="sm" disabled={!moveTo || moving} onClick={moveSelected}>
+            <ArrowRightLeft className="h-4 w-4 mr-2" />{moving ? 'Moving…' : 'Move'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelected([])}>Clear</Button>
+        </div>
+      )}
       {filtered.length === 0 ? (
         <Card><CardContent className="py-10 text-center text-muted-foreground">No contacts yet.</CardContent></Card>
       ) : (
@@ -99,6 +132,12 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
           {filtered.map(c => (
             <Card key={c.id}>
               <CardContent className="p-4 flex items-start justify-between gap-2">
+                <div className="pt-0.5">
+                  <Checkbox
+                    checked={selected.includes(c.id)}
+                    onCheckedChange={v => setSelected(s => (v ? [...s, c.id] : s.filter(x => x !== c.id)))}
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium">{c.first_name} {c.last_name}</p>
