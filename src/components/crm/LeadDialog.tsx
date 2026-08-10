@@ -14,6 +14,7 @@ import { Upload, FileText, Trash2, Download, Briefcase, Check, ChevronDown, Chev
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllRows } from './fetchAllRows';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact } from './types';
@@ -140,9 +141,11 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   };
 
   const loadCompanies = async () => {
-    const { data } = await (supabase as any)
-      .from('crm_companies').select('*').order('name');
-    setCompanies(data || []);
+    try {
+      setCompanies(await fetchAllRows('crm_companies', '*', { column: 'name' }));
+    } catch {
+      setCompanies([]);
+    }
   };
 
   const loadContacts = async () => {

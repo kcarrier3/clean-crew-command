@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Pencil, Globe, Phone, MapPin, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllRows } from './fetchAllRows';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { CrmCompany } from './types';
@@ -28,9 +29,12 @@ export function CompaniesList({ onChanged }: Props) {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const { data, error } = await (supabase as any).from('crm_companies').select('*').order('name');
-    if (error) toast({ title: 'Failed to load companies', description: error.message, variant: 'destructive' });
-    setItems(data || []);
+    try {
+      const data = await fetchAllRows<CrmCompany>('crm_companies', '*', { column: 'name' });
+      setItems(data);
+    } catch (error: any) {
+      toast({ title: 'Failed to load accounts', description: error?.message, variant: 'destructive' });
+    }
   };
   useEffect(() => { load(); }, []);
 
