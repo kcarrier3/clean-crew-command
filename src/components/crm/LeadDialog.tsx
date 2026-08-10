@@ -905,7 +905,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
           {files.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">No files yet</div>
           ) : (
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="divide-y">
               {files.map(f => <FileTile key={f.id} file={f} onOpen={() => downloadFile(f)} onDelete={() => deleteFile(f)} nameFor={nameFor} />)}
             </div>
           )}
