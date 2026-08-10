@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { RelatedNotesFiles } from '@/components/crm/RelatedNotesFiles';
 import { LeadDialog } from '@/components/crm/LeadDialog';
@@ -28,14 +33,18 @@ function HeaderField({ label, children }: { label: string; children: React.React
   );
 }
 
-function DetailField({ label, value }: { label: string; value?: React.ReactNode }) {
+function DetailField({ label, value, onEdit }: { label: string; value?: React.ReactNode; onEdit?: () => void }) {
   return (
     <div className="border-b border-border py-2.5 flex items-start justify-between gap-3 group">
       <div className="min-w-0">
         <p className="text-[11px] text-muted-foreground">{label}</p>
         <div className="text-sm break-words">{value || <span className="text-muted-foreground">—</span>}</div>
       </div>
-      <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0 mt-4" />
+      {onEdit && (
+        <button type="button" onClick={onEdit} aria-label={`Edit ${label}`} className="shrink-0 mt-4">
+          <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
+        </button>
+      )}
     </div>
   );
 }
@@ -60,12 +69,41 @@ function Section({ title, children, defaultOpen = false }: { title: string; chil
 export default function AccountDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [company, setCompany] = useState<CrmCompany | null>(null);
   const [ownerName, setOwnerName] = useState<string>('');
   const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [leads, setLeads] = useState<CrmLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [leadDialogOpen, setLeadDialogOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ name: '', industry: '', website: '', phone: '', address: '', city: '', state: '', zip: '', notes: '' });
+
+  const openEdit = () => {
+    if (!company) return;
+    setForm({
+      name: company.name || '', industry: company.industry || '', website: company.website || '',
+      phone: company.phone || '', address: company.address || '', city: company.city || '',
+      state: company.state || '', zip: company.zip || '', notes: company.notes || '',
+    });
+    setEditOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!company) return;
+    if (!form.name.trim()) { toast({ title: 'Name required', variant: 'destructive' }); return; }
+    setSaving(true);
+    const payload: any = Object.fromEntries(
+      Object.entries(form).map(([k, v]) => [k, k === 'name' ? v.trim() : (v || null)])
+    );
+    const { error } = await (supabase as any).from('crm_companies').update(payload).eq('id', company.id);
+    setSaving(false);
+    if (error) { toast({ title: 'Save failed', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Account updated' });
+    setEditOpen(false);
+    load();
+  };
 
   const load = async () => {
     if (!id) return;
@@ -105,9 +143,16 @@ export default function AccountDetailPage() {
         path={`/crm/accounts/${id ?? ''}`}
       />
       <div className="max-w-6xl mx-auto p-4 space-y-4">
-        <Button variant="ghost" size="sm" onClick={goBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
-        </Button>
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={goBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          </Button>
+          {company && (
+            <Button variant="outline" size="sm" onClick={openEdit}>
+              <Pencil className="h-4 w-4 mr-2" /> Edit
+            </Button>
+          )}
+        </div>
 
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
@@ -168,20 +213,20 @@ export default function AccountDetailPage() {
                 <TabsContent value="details" className="pt-4">
                   <div className="grid md:grid-cols-2 gap-x-8">
                     <DetailField label="Account Owner" value={ownerName} />
-                    <DetailField label="Phone" value={company.phone} />
-                    <DetailField label="Account Name" value={company.name} />
-                    <DetailField label="Industry" value={company.industry} />
-                    <DetailField label="Website" value={company.website} />
+                    <DetailField label="Phone" value={company.phone} onEdit={openEdit} />
+                    <DetailField label="Account Name" value={company.name} onEdit={openEdit} />
+                    <DetailField label="Industry" value={company.industry} onEdit={openEdit} />
+                    <DetailField label="Website" value={company.website} onEdit={openEdit} />
                     <DetailField label="Type" value="Customer" />
                   </div>
                   <Section title="Address Information">
-                    <DetailField label="Street" value={company.address} />
-                    <DetailField label="City" value={company.city} />
-                    <DetailField label="State" value={company.state} />
-                    <DetailField label="Zip" value={company.zip} />
+                    <DetailField label="Street" value={company.address} onEdit={openEdit} />
+                    <DetailField label="City" value={company.city} onEdit={openEdit} />
+                    <DetailField label="State" value={company.state} onEdit={openEdit} />
+                    <DetailField label="Zip" value={company.zip} onEdit={openEdit} />
                   </Section>
                   <Section title="Additional Information">
-                    <DetailField label="Notes" value={company.notes} />
+                    <DetailField label="Notes" value={company.notes} onEdit={openEdit} />
                   </Section>
                   <Section title="System Information" defaultOpen>
                     <DetailField label="Created" value={new Date(company.created_at).toLocaleString()} />
@@ -248,6 +293,31 @@ export default function AccountDetailPage() {
             </div>
 
             <LeadDialog open={leadDialogOpen} onOpenChange={setLeadDialogOpen} lead={null} onSaved={load} />
+
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+              <DialogContent className="max-w-lg">
+                <DialogHeader><DialogTitle>Edit Account</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>Name *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>Industry</Label><Input value={form.industry} onChange={e => setForm({ ...form, industry: e.target.value })} /></div>
+                    <div><Label>Website</Label><Input value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} /></div>
+                  </div>
+                  <div><Label>Phone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
+                  <div><Label>Address</Label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><Label>City</Label><Input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} /></div>
+                    <div><Label>State</Label><Input value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} /></div>
+                    <div><Label>Zip</Label><Input value={form.zip} onChange={e => setForm({ ...form, zip: e.target.value })} /></div>
+                  </div>
+                  <div><Label>Notes</Label><Textarea rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>Cancel</Button>
+                  <Button onClick={saveEdit} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </>
         )}
       </div>

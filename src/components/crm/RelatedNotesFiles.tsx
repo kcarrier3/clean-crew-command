@@ -256,20 +256,23 @@ export function RelatedNotesFiles({ parentType, parentId }: { parentType: Relate
         {files.length === 0 ? (
           <div className="py-10 text-center text-sm text-muted-foreground">No files yet</div>
         ) : (
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="divide-y">
             {files.map((f) => (
-              <div key={f.id} className="flex items-start gap-3 rounded-md border p-3 hover:bg-accent/40 transition-colors">
-                <div className="h-10 w-8 rounded-sm border bg-muted flex items-center justify-center shrink-0">
+              <div key={f.id} className="flex items-start gap-3 px-4 py-2.5 hover:bg-accent/40 transition-colors">
+                <div className="h-9 w-7 rounded-sm border bg-muted flex items-center justify-center shrink-0">
                   <span className="text-[9px] font-semibold uppercase text-muted-foreground">{extOf(f.file_name) || 'file'}</span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <button className="text-sm text-primary hover:underline text-left truncate block w-full" onClick={() => download(f)}>
+                  <button
+                    className="text-sm text-primary hover:underline text-left break-words w-full"
+                    title={f.file_name}
+                    onClick={() => download(f)}
+                  >
                     {f.file_name}
                   </button>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {new Date(f.created_at).toLocaleDateString()} • {f.file_size ? `${Math.round(f.file_size / 1024)}KB` : '—'} • {extOf(f.file_name) || 'file'}
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(f.created_at).toLocaleDateString()} • {f.file_size ? `${Math.round(f.file_size / 1024)}KB` : '—'} • {nameFor(f.uploaded_by)}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">{nameFor(f.uploaded_by)}</p>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
