@@ -77,6 +77,10 @@ interface FormData {
   active: boolean;
 }
 
+/** Split the phase textarea into trimmed phase names. */
+const parsePhaseNames = (raw: string) =>
+  raw.split('\n').map((s) => s.trim()).filter(Boolean);
+
 function NightlyAllowanceFields({
   idPrefix,
   nightlyHours,
