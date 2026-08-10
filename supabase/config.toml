@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.submit-porter-report]
 verify_jwt = false
+
+[functions.scan-business-card]
+verify_jwt = true

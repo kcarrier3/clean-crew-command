@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Pencil, Mail, Phone, Trash2, Star, ArrowRightLeft } from 'lucide-react';
+import { Plus, Pencil, Mail, Phone, Trash2, Star, ArrowRightLeft, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from './fetchAllRows';
 import { moveContactsToAccount } from './mergeUtils';
@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { CrmCompany, CrmContact } from './types';
 import { RelatedNotesFiles } from './RelatedNotesFiles';
+import { BusinessCardScanDialog } from './BusinessCardScanDialog';
 
 const blank = { first_name: '', last_name: '', email: '', phone: '', title: '', company_id: '', notes: '', is_primary: false };
 
@@ -32,6 +33,7 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [moveTo, setMoveTo] = useState('');
   const [moving, setMoving] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
   const load = async () => {
     const [{ data: c }, co] = await Promise.all([
@@ -107,8 +109,12 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <Input placeholder="Search contacts…" value={filter} onChange={e => setFilter(e.target.value)} className="max-w-xs" />
-        <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> New Contact</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setScanOpen(true)}><Camera className="h-4 w-4 mr-2" /> Scan Card</Button>
+          <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> New Contact</Button>
+        </div>
       </div>
+      <BusinessCardScanDialog open={scanOpen} onOpenChange={setScanOpen} onSaved={() => { load(); onChanged?.(); }} />
       {selected.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-3 py-2">
           <span className="text-sm text-muted-foreground">{selected.length} selected</span>

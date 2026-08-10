@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Pencil, Globe, Phone, MapPin, Trash2, Merge } from 'lucide-react';
+import { Plus, Pencil, Globe, Phone, MapPin, Trash2, Merge, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from './fetchAllRows';
 import { MergeDialog } from './MergeDialog';
+import { BusinessCardScanDialog } from './BusinessCardScanDialog';
 import { mergeAccounts } from './mergeUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +33,7 @@ export function CompaniesList({ onChanged }: Props) {
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
   const load = async () => {
     try {
@@ -108,9 +110,11 @@ export function CompaniesList({ onChanged }: Props) {
           {selected.length > 0 && (
             <Button variant="ghost" onClick={() => setSelected([])}>Clear</Button>
           )}
+          <Button variant="outline" onClick={() => setScanOpen(true)}><Camera className="h-4 w-4 mr-2" /> Scan Card</Button>
           <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> New Account</Button>
         </div>
       </div>
+      <BusinessCardScanDialog open={scanOpen} onOpenChange={setScanOpen} onSaved={() => { load(); onChanged?.(); }} />
       {filtered.length === 0 ? (
         <Card><CardContent className="py-10 text-center text-muted-foreground">No accounts yet.</CardContent></Card>
       ) : (
