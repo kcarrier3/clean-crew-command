@@ -905,8 +905,49 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
           {files.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted-foreground">No files yet</div>
           ) : (
-            <div className="divide-y">
-              {files.map(f => <FileTile key={f.id} file={f} onOpen={() => downloadFile(f)} onDelete={() => deleteFile(f)} nameFor={nameFor} />)}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="text-xs">File Name</TableHead>
+                    <TableHead className="text-xs w-28">Type</TableHead>
+                    <TableHead className="text-xs w-28">Size</TableHead>
+                    <TableHead className="text-xs w-40">Uploaded</TableHead>
+                    <TableHead className="text-xs w-40">Uploaded By</TableHead>
+                    <TableHead className="w-10" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {files.map(f => (
+                    <TableRow key={f.id}>
+                      <TableCell>
+                        <button
+                          className="text-sm text-primary hover:underline font-medium text-left break-words"
+                          onClick={() => downloadFile(f)}
+                          title={f.file_name}
+                        >
+                          {f.file_name}
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{fileExt(f.file_name)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{fileSize(f.file_size)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{fmtDate(f.created_at)}</TableCell>
+                      <TableCell className="text-sm text-primary">{nameFor(f.uploaded_by)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => downloadFile(f)}><Download className="h-3.5 w-3.5 mr-2" /> Download</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onSelect={() => deleteFile(f)}><Trash2 className="h-3.5 w-3.5 mr-2" /> Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>
