@@ -1,3 +1,11 @@
+/** Names too short or meaningless to match on (avoids "N/A" matching everything). */
+const JUNK_NAMES = new Set(['', 'n a', 'na', 'none', 'unknown', 'test', 'tbd', 'x']);
+
+/** Whole-word containment, so "n a" never matches "guardia[n a]larm". */
+function containsWords(haystack: string, needle: string): boolean {
+  return (' ' + haystack + ' ').includes(' ' + needle + ' ');
+}
+
 /** Fuzzy matching helpers so scanned cards link to an existing account instead of duplicating it. */
 
 const LEGAL_SUFFIXES = [
@@ -54,6 +62,7 @@ export function findAccountMatches<T extends AccountLike>(
   const domain = normalizeDomain(candidate.website) || normalizeDomain(candidate.email);
   const phone = normalizePhone(candidate.phone);
   if (!name && !domain && !phone) return [];
+  const nameUsable = name.length >= 4 && !JUNK_NAMES.has(name);
 
   const matches: AccountMatch<T>[] = [];
   for (const account of accounts) {
@@ -64,10 +73,10 @@ export function findAccountMatches<T extends AccountLike>(
     let score = 0;
     const reasons: string[] = [];
 
-    if (name && accountName) {
+    if (nameUsable && accountName.length >= 4 && !JUNK_NAMES.has(accountName)) {
       if (accountName === name) { score += 100; reasons.push('same name'); }
-      else if (accountName.startsWith(name) || name.startsWith(accountName)) { score += 70; reasons.push('similar name'); }
-      else if (accountName.includes(name) || name.includes(accountName)) { score += 50; reasons.push('similar name'); }
+      else if (accountName.startsWith(name + ' ') || name.startsWith(accountName + ' ')) { score += 70; reasons.push('similar name'); }
+      else if (containsWords(accountName, name) || containsWords(name, accountName)) { score += 50; reasons.push('similar name'); }
     }
     if (domain && accountDomain && domain === accountDomain) { score += 80; reasons.push('same website'); }
     if (phone && accountPhone && phone === accountPhone) { score += 80; reasons.push('same phone'); }
