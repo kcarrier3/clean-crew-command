@@ -75,6 +75,9 @@ interface FormData {
   nightly_hours: string;
   service_days: number[];
   active: boolean;
+  /** Project-only: phased job with named phases (one per line). */
+  is_phased?: boolean;
+  phase_names?: string;
 }
 
 /** Split the phase textarea into trimmed phase names. */
