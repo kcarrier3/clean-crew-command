@@ -3169,10 +3169,16 @@ export type Database = {
           access_instructions: string | null
           active: boolean
           address: string | null
+          billing_acknowledged_at: string | null
+          billing_acknowledged_by: string | null
           budget_info: string | null
           budgeted_hours: number | null
           city: string | null
           client_name: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_notes: string | null
+          completion_status: string
           contact_email: string | null
           contact_person: string | null
           contact_phone: string | null
@@ -3182,6 +3188,7 @@ export type Database = {
           estimated_duration: string | null
           id: string
           is_office: boolean
+          is_phased: boolean
           is_recurring_monthly: boolean | null
           job_cost_code: string | null
           last_reset_date: string | null
@@ -3205,10 +3212,16 @@ export type Database = {
           access_instructions?: string | null
           active?: boolean
           address?: string | null
+          billing_acknowledged_at?: string | null
+          billing_acknowledged_by?: string | null
           budget_info?: string | null
           budgeted_hours?: number | null
           city?: string | null
           client_name?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          completion_status?: string
           contact_email?: string | null
           contact_person?: string | null
           contact_phone?: string | null
@@ -3218,6 +3231,7 @@ export type Database = {
           estimated_duration?: string | null
           id?: string
           is_office?: boolean
+          is_phased?: boolean
           is_recurring_monthly?: boolean | null
           job_cost_code?: string | null
           last_reset_date?: string | null
@@ -3241,10 +3255,16 @@ export type Database = {
           access_instructions?: string | null
           active?: boolean
           address?: string | null
+          billing_acknowledged_at?: string | null
+          billing_acknowledged_by?: string | null
           budget_info?: string | null
           budgeted_hours?: number | null
           city?: string | null
           client_name?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          completion_status?: string
           contact_email?: string | null
           contact_person?: string | null
           contact_phone?: string | null
@@ -3254,6 +3274,7 @@ export type Database = {
           estimated_duration?: string | null
           id?: string
           is_office?: boolean
+          is_phased?: boolean
           is_recurring_monthly?: boolean | null
           job_cost_code?: string | null
           last_reset_date?: string | null
@@ -4050,6 +4071,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_phases: {
+        Row: {
+          billing_acknowledged_at: string | null
+          billing_acknowledged_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_notes: string | null
+          created_at: string
+          id: string
+          job_site_id: string
+          name: string
+          sequence: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          billing_acknowledged_at?: string | null
+          billing_acknowledged_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          created_at?: string
+          id?: string
+          job_site_id: string
+          name: string
+          sequence?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_acknowledged_at?: string | null
+          billing_acknowledged_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_notes?: string | null
+          created_at?: string
+          id?: string
+          job_site_id?: string
+          name?: string
+          sequence?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_phases_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pto_adjustments: {
         Row: {

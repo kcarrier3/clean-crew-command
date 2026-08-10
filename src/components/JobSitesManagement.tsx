@@ -75,7 +75,14 @@ interface FormData {
   nightly_hours: string;
   service_days: number[];
   active: boolean;
+  /** Project-only: phased job with named phases (one per line). */
+  is_phased?: boolean;
+  phase_names?: string;
 }
+
+/** Split the phase textarea into trimmed phase names. */
+const parsePhaseNames = (raw: string) =>
+  raw.split('\n').map((s) => s.trim()).filter(Boolean);
 
 function NightlyAllowanceFields({
   idPrefix,
@@ -233,7 +240,10 @@ export default function JobSitesManagement() {
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      const isProject = !formData.is_recurring_monthly;
+      const phaseNames = isProject && formData.is_phased ? parsePhaseNames(formData.phase_names || '') : [];
+
+      const { data: created, error } = await supabase
         .from('job_sites')
         .insert({
           name: formData.name.trim(),
@@ -257,10 +267,20 @@ export default function JobSitesManagement() {
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
           nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
           service_days: formData.service_days,
-          active: formData.active
-        });
+          active: formData.active,
+          is_phased: isProject && !!formData.is_phased
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
+
+      if (created && phaseNames.length > 0) {
+        const { error: phaseError } = await supabase.from('project_phases').insert(
+          phaseNames.map((name, i) => ({ job_site_id: created.id, name, sequence: i + 1 }))
+        );
+        if (phaseError) throw phaseError;
+      }
 
       toast({
         title: "Success",
@@ -662,6 +682,36 @@ export default function JobSitesManagement() {
                       serviceDays={formData.service_days}
                       onChange={(patch) => setFormData({ ...formData, ...patch })}
                     />
+                  )}
+
+                  {isProjectForm && (
+                    <div className="rounded-md border p-3 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <Label htmlFor="is_phased">Phased project</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Track completion by phase so billing can go out as each phase finishes.
+                          </p>
+                        </div>
+                        <Switch
+                          id="is_phased"
+                          checked={!!formData.is_phased}
+                          onCheckedChange={(checked) => setFormData({ ...formData, is_phased: checked })}
+                        />
+                      </div>
+                      {formData.is_phased && (
+                        <div>
+                          <Label htmlFor="phase_names">Phases (one per line)</Label>
+                          <Textarea
+                            id="phase_names"
+                            value={formData.phase_names || ''}
+                            onChange={(e) => setFormData({ ...formData, phase_names: e.target.value })}
+                            placeholder={'Phase 1 — Rough clean\nPhase 2 — Final clean'}
+                            className="min-h-[80px]"
+                          />
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   <p className="text-xs text-muted-foreground">
