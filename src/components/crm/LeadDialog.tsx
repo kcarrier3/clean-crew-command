@@ -990,46 +990,16 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   }
 }
 
-function FileTile({ file, onOpen, onDelete, nameFor }: { file: any; onOpen: () => void; onDelete: () => void; nameFor: (id?: string | null) => string }) {
-  const name: string = file.file_name || '';
-  const ext = (name.split('.').pop() || '').toLowerCase();
-  const size = file.file_size ? (file.file_size >= 1024 * 1024 ? `${(file.file_size / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(file.file_size / 1024))}KB`) : '';
-  const isImage = /^(png|jpg|jpeg|gif|webp|bmp|svg)$/.test(ext) || (file.content_type || '').startsWith('image/');
-  const isPdf = ext === 'pdf' || file.content_type === 'application/pdf';
-  const isSheet = /^(xls|xlsx|csv|numbers)$/.test(ext);
-  const isSlides = /^(ppt|pptx|key)$/.test(ext);
-  const isArchive = /^(zip|rar|7z|tar|gz)$/.test(ext);
+function fileExt(name?: string) {
+  if (!name) return '—';
+  const ext = name.split('.').pop()?.toLowerCase();
+  return ext ? ext.toUpperCase() : '—';
+}
 
-  const Icon = isImage ? ImageIcon : isPdf ? FileText : isSheet ? FileSpreadsheet : isSlides ? Presentation : isArchive ? FileArchive : FileIcon;
-  const iconBg = isPdf ? 'bg-red-100 text-red-700' : isSheet ? 'bg-emerald-100 text-emerald-700' : isSlides ? 'bg-orange-100 text-orange-700' : isArchive ? 'bg-amber-100 text-amber-700' : isImage ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-700';
-
-  const fmt = (d?: string) => d ? new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-
-  return (
-    <div className="group flex items-start gap-3 px-4 py-2.5 hover:bg-accent/40 transition-colors">
-      <button className={`h-9 w-9 rounded flex items-center justify-center shrink-0 ${iconBg}`} onClick={onOpen} title="Open">
-        <Icon className="h-4 w-4" />
-      </button>
-      <div className="flex-1 min-w-0">
-        <button className="text-sm text-primary hover:underline font-medium text-left break-words w-full" onClick={onOpen} title={name}>
-          {name}
-        </button>
-        <div className="text-xs text-muted-foreground">
-          {fmt(file.created_at)}{size ? ` • ${size}` : ''}{ext ? ` • ${ext.toUpperCase()}` : ''}
-          {file.uploaded_by && <span> • by {nameFor(file.uploaded_by)}</span>}
-        </div>
-      </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button size="icon" variant="ghost" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={onOpen}><Download className="h-3.5 w-3.5 mr-2" /> Open / Download</DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive" onSelect={onDelete}><Trash2 className="h-3.5 w-3.5 mr-2" /> Delete</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
+function fileSize(bytes?: number | null) {
+  if (bytes == null) return '—';
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
 function HighlightField({ label, value, link, strong, onClick }: { label: string; value: string; link?: boolean; strong?: boolean; onClick?: () => void }) {
