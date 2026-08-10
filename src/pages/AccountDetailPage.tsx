@@ -240,7 +240,11 @@ export default function AccountDetailPage() {
                   ) : (
                     <div className="space-y-2">
                       {contacts.map(c => (
-                        <Card key={c.id}>
+                        <Card
+                          key={c.id}
+                          className="cursor-pointer hover:bg-accent/50 transition-colors"
+                          onClick={() => navigate(`/crm/contacts/${c.id}`)}
+                        >
                           <CardContent className="p-3">
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-sm">{c.first_name} {c.last_name}</p>

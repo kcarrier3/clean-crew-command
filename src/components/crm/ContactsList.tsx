@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ const blank = { first_name: '', last_name: '', email: '', phone: '', title: '', 
 export function ContactsList({ onChanged }: { onChanged?: () => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [items, setItems] = useState<CrmContact[]>([]);
   const [companies, setCompanies] = useState<CrmCompany[]>([]);
   const [filter, setFilter] = useState('');
@@ -144,9 +146,12 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
                     onCheckedChange={v => setSelected(s => (v ? [...s, c.id] : s.filter(x => x !== c.id)))}
                   />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div
+                  className="min-w-0 flex-1 cursor-pointer"
+                  onClick={() => navigate(`/crm/contacts/${c.id}`)}
+                >
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium">{c.first_name} {c.last_name}</p>
+                    <p className="font-medium hover:underline">{c.first_name} {c.last_name}</p>
                     {c.is_primary && <Badge variant="secondary" className="text-xs"><Star className="h-3 w-3 mr-1" />Primary</Badge>}
                   </div>
                   {c.title && <p className="text-xs text-muted-foreground">{c.title}{c.company_id && ` • ${companyName(c.company_id)}`}</p>}
