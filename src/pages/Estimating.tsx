@@ -231,7 +231,7 @@ export default function Estimating() {
       >
         <div className="space-y-3">
           <Tabs value={tab} onValueChange={v => setTab(v as 'draft' | 'completed')}>
-            <TabsList className="grid grid-cols-2 w-full max-w-md">
+            <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
               <TabsTrigger value="draft">Draft Estimates</TabsTrigger>
               <TabsTrigger value="completed">Completed Estimates</TabsTrigger>
             </TabsList>

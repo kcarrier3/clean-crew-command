@@ -258,7 +258,7 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
 
       {/* Main Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className={`grid ${isProject ? 'grid-cols-5 max-w-xl' : 'grid-cols-4 max-w-lg'} w-full h-auto`}>
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="overview" className="text-xs md:text-sm px-1 py-1.5">Overview</TabsTrigger>
           <TabsTrigger value="workorders" className="text-xs md:text-sm px-1 py-1.5">
             <span className="truncate">Work Orders</span>

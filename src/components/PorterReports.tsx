@@ -67,7 +67,7 @@ export default function PorterReports() {
   return (
     <div className="space-y-4">
       <Tabs value={filter} onValueChange={(v: any) => setFilter(v)}>
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="open">Open ({reports.filter(r => r.status === "open").length})</TabsTrigger>
           <TabsTrigger value="acknowledged">In progress</TabsTrigger>
           <TabsTrigger value="resolved">Resolved</TabsTrigger>

@@ -160,7 +160,7 @@ const QualityControlDashboard = () => {
       </div>
 
       <Tabs defaultValue="inspections">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-4 h-auto w-full max-w-2xl mb-4">
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="inspections" className="whitespace-normal text-xs sm:text-sm py-2">
             <Camera className="h-4 w-4 mr-2" />
             Inspections
@@ -195,7 +195,7 @@ const QualityControlDashboard = () => {
 
         <TabsContent value="workorders">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-2 sm:grid-cols-5 h-auto w-full max-w-lg">
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="all" className="whitespace-normal text-xs sm:text-sm py-2">All ({counts.all})</TabsTrigger>
           <TabsTrigger value="open" className="whitespace-normal text-xs sm:text-sm py-2">Open ({counts.open})</TabsTrigger>
           <TabsTrigger value="in_progress" className="whitespace-normal text-xs sm:text-sm py-2">In Progress ({counts.in_progress})</TabsTrigger>

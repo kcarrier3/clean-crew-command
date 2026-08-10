@@ -599,7 +599,7 @@ export default function JobSitesManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="accounts">Account Management</TabsTrigger>
           <TabsTrigger value="projects">Project Management</TabsTrigger>
           <TabsTrigger value="quality">Quality Control</TabsTrigger>

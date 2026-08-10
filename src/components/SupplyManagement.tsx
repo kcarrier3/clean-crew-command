@@ -33,7 +33,7 @@ const SupplyManagement = () => {
       </Card>
 
       <Tabs defaultValue="stock" className="space-y-4">
-        <TabsList className="flex-wrap h-auto">
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="stock">Stock</TabsTrigger>
           <TabsTrigger value="items">Items</TabsTrigger>
           <TabsTrigger value="assets">Fixed Assets</TabsTrigger>
