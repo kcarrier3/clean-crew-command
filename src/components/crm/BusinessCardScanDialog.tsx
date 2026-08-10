@@ -135,6 +135,30 @@ export function BusinessCardScanDialog({
       }
 
       if (form.first_name.trim() || form.last_name.trim() || form.email.trim()) {
+        // Skip if this exact person is already on file (same email, or same name at the same account).
+        const email = form.email.trim().toLowerCase();
+        let dupe: any = null;
+        if (email) {
+          const { data } = await (supabase as any).from('crm_contacts')
+            .select('id').ilike('email', email).limit(1).maybeSingle();
+          dupe = data;
+        }
+        if (!dupe && companyId && form.last_name.trim()) {
+          const { data } = await (supabase as any).from('crm_contacts')
+            .select('id').eq('company_id', companyId)
+            .ilike('first_name', form.first_name.trim())
+            .ilike('last_name', form.last_name.trim())
+            .limit(1).maybeSingle();
+          dupe = data;
+        }
+        if (dupe) {
+          toast({ title: 'Contact already exists', description: 'Linked to the existing record instead of creating a duplicate.' });
+          reset();
+          onOpenChange(false);
+          onSaved?.();
+          return;
+        }
+
         const { error } = await (supabase as any).from('crm_contacts').insert({
           first_name: form.first_name.trim() || form.company_name.trim(),
           last_name: form.last_name || null,
