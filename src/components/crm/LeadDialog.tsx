@@ -965,24 +965,22 @@ function FileTile({ file, onOpen, onDelete, nameFor }: { file: any; onOpen: () =
   const fmt = (d?: string) => d ? new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
   return (
-    <div className="group border rounded-md p-3 flex items-start gap-3 hover:shadow-sm hover:border-primary/40 transition">
-      <button className={`h-14 w-14 rounded flex items-center justify-center shrink-0 ${iconBg}`} onClick={onOpen} title="Open">
-        <Icon className="h-6 w-6" />
+    <div className="group flex items-start gap-3 px-4 py-2.5 hover:bg-accent/40 transition-colors">
+      <button className={`h-9 w-9 rounded flex items-center justify-center shrink-0 ${iconBg}`} onClick={onOpen} title="Open">
+        <Icon className="h-4 w-4" />
       </button>
       <div className="flex-1 min-w-0">
-        <button className="text-sm text-primary hover:underline font-medium text-left block truncate w-full" onClick={onOpen} title={name}>
+        <button className="text-sm text-primary hover:underline font-medium text-left break-words w-full" onClick={onOpen} title={name}>
           {name}
         </button>
-        <div className="text-xs text-muted-foreground mt-0.5 truncate">
-          {fmt(file.created_at)}{size ? ` • ${size}` : ''}{ext ? ` • ${ext}` : ''}
+        <div className="text-xs text-muted-foreground">
+          {fmt(file.created_at)}{size ? ` • ${size}` : ''}{ext ? ` • ${ext.toUpperCase()}` : ''}
+          {file.uploaded_by && <span> • by {nameFor(file.uploaded_by)}</span>}
         </div>
-        {file.uploaded_by && (
-          <div className="text-xs text-muted-foreground truncate">by {nameFor(file.uploaded_by)}</div>
-        )}
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100"><MoreHorizontal className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={onOpen}><Download className="h-3.5 w-3.5 mr-2" /> Open / Download</DropdownMenuItem>
