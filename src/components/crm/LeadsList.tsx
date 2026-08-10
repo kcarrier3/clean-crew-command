@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Plus, Mail, Phone, Clock } from 'lucide-react';
+import { Plus, Mail, Phone, Clock, Merge } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -12,6 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { LeadDialog } from './LeadDialog';
+import { MergeDialog } from './MergeDialog';
+import { mergeOpportunities } from './mergeUtils';
 import { LEAD_STATUS_LABELS, type CrmLead, type CrmStage } from './types';
 
 const STATUS_COLORS: Record<CrmLead['status'], string> = {
@@ -40,6 +42,7 @@ export function LeadsList({ stages, onChanged }: Props) {
   const [ageDays, setAgeDays] = useState('365');
   const [selected, setSelected] = useState<string[]>([]);
   const [closing, setClosing] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -127,6 +130,18 @@ export function LeadsList({ stages, onChanged }: Props) {
     onChanged();
   };
 
+  const runMerge = async (winnerId: string) => {
+    try {
+      await mergeOpportunities(winnerId, selected);
+      toast({ title: `Merged ${selected.length - 1} opportunit${selected.length === 2 ? 'y' : 'ies'}` });
+      setSelected([]);
+      load();
+      onChanged();
+    } catch (e: any) {
+      toast({ title: 'Merge failed', description: e.message, variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-center justify-between">
@@ -162,9 +177,17 @@ export function LeadsList({ stages, onChanged }: Props) {
             className="max-w-xs"
           />
         </div>
-        <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" /> New Opportunity
-        </Button>
+        <div className="flex gap-2">
+          {selected.length > 1 && (
+            <Button variant="outline" onClick={() => setMergeOpen(true)}>
+              <Merge className="h-4 w-4 mr-2" /> Merge {selected.length}
+            </Button>
+          )}
+          {selected.length > 0 && <Button variant="ghost" onClick={() => setSelected([])}>Clear</Button>}
+          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" /> New Opportunity
+          </Button>
+        </div>
       </div>
 
       {view === 'aged' && filtered.length > 0 && (
@@ -206,16 +229,14 @@ export function LeadsList({ stages, onChanged }: Props) {
               onClick={() => navigate(`/crm/opportunities/${lead.id}`)}
             >
               <CardContent className="p-4 flex flex-wrap items-center gap-3 justify-between">
-                {view === 'aged' && (
-                  <div onClick={e => e.stopPropagation()} className="flex items-center">
-                    <Checkbox
-                      checked={selected.includes(lead.id)}
-                      onCheckedChange={c =>
-                        setSelected(s => (c ? [...s, lead.id] : s.filter(id => id !== lead.id)))
-                      }
-                    />
-                  </div>
-                )}
+                <div onClick={e => e.stopPropagation()} className="flex items-center">
+                  <Checkbox
+                    checked={selected.includes(lead.id)}
+                    onCheckedChange={c =>
+                      setSelected(s => (c ? [...s, lead.id] : s.filter(id => id !== lead.id)))
+                    }
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium">{lead.name || `${lead.company_name} opportunity`}</p>
@@ -249,6 +270,22 @@ export function LeadsList({ stages, onChanged }: Props) {
         onOpenChange={setDialogOpen}
         lead={editing}
         onSaved={() => { load(); onChanged(); }}
+      />
+
+      <MergeDialog
+        open={mergeOpen}
+        onOpenChange={setMergeOpen}
+        title="Merge opportunities"
+        description="Choose the opportunity to keep. Notes, files, tasks, activities and estimates from the others move to it."
+        candidates={selected.map(id => {
+          const l = leads.find(x => x.id === id);
+          return {
+            id,
+            label: l?.name || `${l?.company_name || ''} opportunity`,
+            sub: [l?.company_name, l?.created_at ? new Date(l.created_at).toLocaleDateString() : null].filter(Boolean).join(' • '),
+          };
+        })}
+        onConfirm={runMerge}
       />
     </div>
   );
