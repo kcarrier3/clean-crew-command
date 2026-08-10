@@ -240,7 +240,10 @@ export default function JobSitesManagement() {
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      const isProject = !formData.is_recurring_monthly;
+      const phaseNames = isProject && formData.is_phased ? parsePhaseNames(formData.phase_names || '') : [];
+
+      const { data: created, error } = await supabase
         .from('job_sites')
         .insert({
           name: formData.name.trim(),
@@ -264,10 +267,20 @@ export default function JobSitesManagement() {
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
           nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
           service_days: formData.service_days,
-          active: formData.active
-        });
+          active: formData.active,
+          is_phased: isProject && !!formData.is_phased
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
+
+      if (created && phaseNames.length > 0) {
+        const { error: phaseError } = await supabase.from('project_phases').insert(
+          phaseNames.map((name, i) => ({ job_site_id: created.id, name, sequence: i + 1 }))
+        );
+        if (phaseError) throw phaseError;
+      }
 
       toast({
         title: "Success",
