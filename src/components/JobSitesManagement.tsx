@@ -1129,15 +1129,15 @@ export default function JobSitesManagement() {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="grid gap-4">
+                    <div className="grid gap-3 md:gap-4">
                       {activeJobSites.map((jobSite) => (
-                        <Card key={jobSite.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedJobSite(jobSite)}>
+                        <Card key={jobSite.id} className="hover:shadow-md transition-shadow cursor-pointer active:bg-muted/40" onClick={() => setSelectedJobSite(jobSite)}>
                           <CardContent className="p-4 md:p-6">
-                            <div className="flex items-start justify-between gap-2 flex-wrap md:flex-nowrap">
+                            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 md:gap-2">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 md:gap-3 mb-2 flex-wrap">
-                                  <h3 className="text-base md:text-lg font-semibold break-words">{jobSite.name}</h3>
-                                  <div className="flex gap-2">
+                                <div className="space-y-2 mb-3">
+                                  <h3 className="text-base md:text-lg font-semibold leading-snug break-words">{jobSite.name}</h3>
+                                  <div className="flex gap-2 flex-wrap">
                                     <Badge variant="default">Active</Badge>
                                     <Badge variant="secondary">
                                       {jobSite.is_recurring_monthly ? 'Recurring' : 'Project'}
@@ -1145,31 +1145,58 @@ export default function JobSitesManagement() {
                                   </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                  <div className="space-y-2 min-w-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                                  <div className="space-y-3 min-w-0">
                                     {jobSite.client_name && (
-                                      <p className="text-sm break-words"><strong>Customer:</strong> {jobSite.client_name}</p>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Customer</p>
+                                        <p className="text-sm break-words">{jobSite.client_name}</p>
+                                      </div>
                                     )}
                                     {jobSite.address && (
-                                      <p className="text-sm break-words"><strong>{jobSite.is_recurring_monthly ? 'Address' : 'Site address'}:</strong> {jobSite.address}</p>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{jobSite.is_recurring_monthly ? 'Address' : 'Site address'}</p>
+                                        <p className="text-sm break-words">{jobSite.address}</p>
+                                      </div>
                                     )}
                                     {jobSite.contact_person && (
-                                      <p className="text-sm break-words"><strong>Site contact:</strong> {jobSite.contact_person}</p>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Site contact</p>
+                                        <p className="text-sm break-words">{jobSite.contact_person}</p>
+                                      </div>
                                     )}
                                     {jobSite.contact_phone && (
-                                      <p className="text-sm break-words"><strong>Phone:</strong> {jobSite.contact_phone}</p>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Phone</p>
+                                        <a
+                                          href={`tel:${jobSite.contact_phone}`}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="text-sm text-primary break-words underline-offset-2 hover:underline"
+                                        >
+                                          {jobSite.contact_phone}
+                                        </a>
+                                      </div>
                                     )}
                                     {jobSite.is_recurring_monthly && jobSite.contact_email && (
-                                      <p className="text-sm break-all"><strong>Email:</strong> {jobSite.contact_email}</p>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Email</p>
+                                        <p className="text-sm break-all">{jobSite.contact_email}</p>
+                                      </div>
                                     )}
                                   </div>
 
-                                  <div className="space-y-2 min-w-0">
+                                  <div className="space-y-3 min-w-0">
                                     {jobSite.estimated_duration && (
-                                      <p className="text-sm break-words"><strong>Duration:</strong> {jobSite.estimated_duration}</p>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</p>
+                                        <p className="text-sm break-words">{jobSite.estimated_duration}</p>
+                                      </div>
                                     )}
                                     {jobSite.budget_info && (
-                                      <p className="text-sm break-words"><strong>Budget:</strong> {jobSite.budget_info}</p>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Budget</p>
+                                        <p className="text-sm break-words">{jobSite.budget_info}</p>
+                                      </div>
                                     )}
                                   </div>
                                 </div>
@@ -1181,9 +1208,9 @@ export default function JobSitesManagement() {
                                   </div>
                                 )}
 
-                                {/* Instructions and Safety */}
+                                {/* Instructions and Safety — full detail on larger screens; tap the card on mobile */}
                                 {(jobSite.special_instructions || jobSite.access_instructions || jobSite.safety_requirements) && (
-                                  <div className="mt-4 space-y-2 pt-4 border-t">
+                                  <div className="mt-4 space-y-2 pt-4 border-t hidden md:block">
                                     {jobSite.special_instructions && (
                                       <div>
                                         <p className="text-sm font-semibold flex items-center gap-1">
@@ -1216,7 +1243,7 @@ export default function JobSitesManagement() {
                                 )}
                               </div>
 
-                              <div className="flex gap-2 md:ml-4 shrink-0">
+                              <div className="flex gap-2 md:ml-4 shrink-0 pt-1 md:pt-0 border-t md:border-t-0 mt-1 md:mt-0 justify-end">
                                 {(jobSite as any).qr_code_token && (
                                   <QRCodeDisplay
                                     jobSiteId={jobSite.id}
