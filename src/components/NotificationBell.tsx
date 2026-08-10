@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, X, Check, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 
 interface Notification {
@@ -24,45 +26,90 @@ interface NotificationBellProps {
 }
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ employeeId }) => {
-  // Demo notifications for now
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      title: 'Time-Off Request Deadline',
-      message: 'Reminder: Submit your time-off requests by end of day today for next week! Don\'t forget to plan ahead.',
-      type: 'timeoff_reminder',
-      read: false,
-      action_url: '/time-off',
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      title: 'New Work Order Assigned',
-      message: 'You have been assigned a new work order for Building A - Floor 2 cleaning.',
-      type: 'work_order',
-      read: false,
-      created_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-    },
-    {
-      id: '3',
-      title: 'Schedule Update',
-      message: 'Your schedule for next week has been updated. Please review your new assignments.',
-      type: 'schedule',
-      read: true,
-      created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-      read_at: new Date(Date.now() - 7200000).toISOString(),
-    },
-  ]);
-
+  const { user } = useAuth();
+  const userId = employeeId || user?.id;
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+
+  const stateKey = userId ? `notif_state_${userId}` : null;
+
+  const readState = useCallback((): Record<string, 'read' | 'dismissed'> => {
+    if (!stateKey) return {};
+    try {
+      return JSON.parse(localStorage.getItem(stateKey) || '{}');
+    } catch {
+      return {};
+    }
+  }, [stateKey]);
+
+  const writeState = useCallback(
+    (next: Record<string, 'read' | 'dismissed'>) => {
+      if (stateKey) localStorage.setItem(stateKey, JSON.stringify(next));
+    },
+    [stateKey]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      if (!userId) {
+        setNotifications([]);
+        return;
+      }
+
+      // Only work orders assigned to THIS user
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select('id, title, description, status, assigned_to, created_at')
+        .eq('assigned_to', userId)
+        .in('status', ['open', 'in_progress'])
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error || cancelled) return;
+
+      const state = readState();
+      const items: Notification[] = (data || [])
+        .filter((wo: any) => state[`wo_${wo.id}`] !== 'dismissed')
+        .map((wo: any) => ({
+          id: `wo_${wo.id}`,
+          title: 'Work Order Assigned',
+          message: wo.title,
+          type: 'work_order',
+          read: state[`wo_${wo.id}`] === 'read',
+          created_at: wo.created_at,
+        }));
+
+      setNotifications(items);
+    };
+
+    load();
+
+    if (!userId) return;
+    const channel = supabase
+      .channel(`work-order-notifications-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'work_orders', filter: `assigned_to=eq.${userId}` },
+        () => load()
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [userId, readState]);
 
   useEffect(() => {
     setUnreadCount(notifications.filter(n => !n.read).length);
   }, [notifications]);
 
   const markAsRead = (notificationId: string) => {
+    writeState({ ...readState(), [notificationId]: 'read' });
     setNotifications(prev => 
       prev.map(n => 
         n.id === notificationId 
@@ -77,6 +124,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ employeeId }
   };
 
   const markAllAsRead = () => {
+    const next = readState();
+    notifications.forEach(n => {
+      if (next[n.id] !== 'dismissed') next[n.id] = 'read';
+    });
+    writeState(next);
     setNotifications(prev => 
       prev.map(n => ({ 
         ...n, 
@@ -91,6 +143,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ employeeId }
   };
 
   const deleteNotification = (notificationId: string) => {
+    writeState({ ...readState(), [notificationId]: 'dismissed' });
     setNotifications(prev => prev.filter(n => n.id !== notificationId));
     
     toast({
