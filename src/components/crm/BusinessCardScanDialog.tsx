@@ -240,10 +240,48 @@ export function BusinessCardScanDialog({
               <Textarea rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
             </div>
             {!defaultCompanyId && (
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={createAccount} onCheckedChange={v => setCreateAccount(!!v)} />
-                Create the account if it doesn't exist yet
-              </label>
+              <>
+                {checkingMatches && (
+                  <p className="text-xs text-muted-foreground">Checking for existing accounts…</p>
+                )}
+                {matches.length > 0 && (
+                  <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      This account may already exist
+                    </p>
+                    {matches.map(m => (
+                      <label key={m.account.id} className="flex items-start gap-2 text-sm">
+                        <input
+                          type="radio"
+                          className="mt-1"
+                          checked={linkToId === m.account.id}
+                          onChange={() => setLinkToId(m.account.id)}
+                        />
+                        <span>
+                          <span className="font-medium">{m.account.name}</span>
+                          <span className="block text-xs text-muted-foreground">{m.reason}</span>
+                        </span>
+                      </label>
+                    ))}
+                    <label className="flex items-start gap-2 text-sm">
+                      <input
+                        type="radio"
+                        className="mt-1"
+                        checked={linkToId === null}
+                        onChange={() => setLinkToId(null)}
+                      />
+                      <span>None of these — create "{form.company_name.trim()}" as a new account</span>
+                    </label>
+                  </div>
+                )}
+                {matches.length === 0 && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={createAccount} onCheckedChange={v => setCreateAccount(!!v)} />
+                    Create the account if it doesn't exist yet
+                  </label>
+                )}
+              </>
             )}
           </div>
         )}
