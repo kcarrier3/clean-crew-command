@@ -15,6 +15,7 @@ import { AccountContacts } from './AccountContacts';
 import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 import { WorkOrderDetail } from './WorkOrderDetail';
 import { TMTickets } from './TMTickets';
+import { ProjectCompletion } from './ProjectCompletion';
 import { format } from 'date-fns';
 
 interface JobSite {
@@ -276,6 +277,11 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4 mt-4">
+          {/* Completion / billing hand-off (projects only) */}
+          {isProject && (
+            <ProjectCompletion jobSiteId={jobSite.id} jobSiteName={jobSite.name} />
+          )}
+
           {/* Contacts */}
           <Card>
             <CardContent className="p-4">
