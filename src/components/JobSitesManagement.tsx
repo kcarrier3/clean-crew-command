@@ -684,6 +684,36 @@ export default function JobSitesManagement() {
                     />
                   )}
 
+                  {isProjectForm && (
+                    <div className="rounded-md border p-3 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <Label htmlFor="is_phased">Phased project</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Track completion by phase so billing can go out as each phase finishes.
+                          </p>
+                        </div>
+                        <Switch
+                          id="is_phased"
+                          checked={!!formData.is_phased}
+                          onCheckedChange={(checked) => setFormData({ ...formData, is_phased: checked })}
+                        />
+                      </div>
+                      {formData.is_phased && (
+                        <div>
+                          <Label htmlFor="phase_names">Phases (one per line)</Label>
+                          <Textarea
+                            id="phase_names"
+                            value={formData.phase_names || ''}
+                            onChange={(e) => setFormData({ ...formData, phase_names: e.target.value })}
+                            placeholder={'Phase 1 — Rough clean\nPhase 2 — Final clean'}
+                            className="min-h-[80px]"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <p className="text-xs text-muted-foreground">
                     {isProjectForm
                       ? 'Project (one-time): billed once with a fixed hour budget that only changes with a change order.'
