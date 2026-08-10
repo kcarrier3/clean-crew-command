@@ -119,7 +119,7 @@ const PersonalWorkerDashboard = ({ selectedEmployee }: PersonalWorkerDashboardPr
       </Card>
 
       <Tabs defaultValue="schedule" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="schedule">My Schedule</TabsTrigger>
           <TabsTrigger value="timetracking">Time Tracking</TabsTrigger>
           <TabsTrigger value="timeoff">Time Off</TabsTrigger>

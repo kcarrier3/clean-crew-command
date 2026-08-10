@@ -241,7 +241,7 @@ export const DocumentsAdmin = () => {
       </div>
 
       <Tabs defaultValue="templates">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="templates">Templates ({docs.length})</TabsTrigger>
           <TabsTrigger value="submissions">Submissions ({submissions.length})</TabsTrigger>
         </TabsList>

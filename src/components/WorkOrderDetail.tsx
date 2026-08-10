@@ -274,7 +274,7 @@ export const WorkOrderDetail: React.FC<WorkOrderDetailProps> = ({
           </Card>
 
           <Tabs defaultValue="photos">
-            <TabsList className="grid grid-cols-2 w-full">
+            <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
               <TabsTrigger value="photos">Photos ({photos.length})</TabsTrigger>
               <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
             </TabsList>

@@ -152,7 +152,7 @@ export function DealDialog({ open, onOpenChange, deal, stages, leads, onChanged 
           </DialogHeader>
 
           <Tabs defaultValue="details">
-            <TabsList>
+            <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="activities" disabled={!deal}>Activities ({activities.length})</TabsTrigger>
               <TabsTrigger value="quotes" disabled={!deal}>Quotes ({quotes.length})</TabsTrigger>

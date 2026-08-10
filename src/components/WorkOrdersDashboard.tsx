@@ -116,7 +116,7 @@ export const WorkOrdersDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-5 w-full max-w-lg">
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="all">All ({counts.all})</TabsTrigger>
           <TabsTrigger value="open">Open ({counts.open})</TabsTrigger>
           <TabsTrigger value="in_progress">In Progress ({counts.in_progress})</TabsTrigger>

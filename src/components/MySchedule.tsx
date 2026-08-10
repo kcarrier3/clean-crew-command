@@ -272,7 +272,7 @@ const MySchedule = () => {
       </div>
 
       <Tabs defaultValue="schedule">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="schedule">
             <Calendar className="h-4 w-4 mr-2" />
             My Shifts

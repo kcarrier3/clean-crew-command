@@ -241,7 +241,7 @@ const PermissionManagement = () => {
       </div>
 
       <Tabs defaultValue="permissions" className="w-full">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="permissions">User Permissions</TabsTrigger>
           <TabsTrigger value="overview">Permissions Overview</TabsTrigger>
         </TabsList>

@@ -494,7 +494,7 @@ const TeamManagement = () => {
       </div>
 
       <Tabs defaultValue="employees" className="w-full">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="employees">Employees</TabsTrigger>
           <TabsTrigger value="departments">
             <Building2 className="h-4 w-4 mr-1" />
