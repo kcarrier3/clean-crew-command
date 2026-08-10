@@ -29,9 +29,9 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const [{ data: c }, { data: co }] = await Promise.all([
+    const [{ data: c }, co] = await Promise.all([
       (supabase as any).from('crm_contacts').select('*').order('last_name', { nullsFirst: false }),
-      (supabase as any).from('crm_companies').select('*').order('name'),
+      fetchAllRows('crm_companies', '*', { column: 'name' }).catch(() => []),
     ]);
     setItems(c || []); setCompanies(co || []);
   };

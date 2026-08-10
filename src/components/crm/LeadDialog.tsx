@@ -140,9 +140,11 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   };
 
   const loadCompanies = async () => {
-    const { data } = await (supabase as any)
-      .from('crm_companies').select('*').order('name');
-    setCompanies(data || []);
+    try {
+      setCompanies(await fetchAllRows('crm_companies', '*', { column: 'name' }));
+    } catch {
+      setCompanies([]);
+    }
   };
 
   const loadContacts = async () => {

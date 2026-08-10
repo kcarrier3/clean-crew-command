@@ -28,9 +28,12 @@ export function CompaniesList({ onChanged }: Props) {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const { data, error } = await (supabase as any).from('crm_companies').select('*').order('name');
-    if (error) toast({ title: 'Failed to load companies', description: error.message, variant: 'destructive' });
-    setItems(data || []);
+    try {
+      const data = await fetchAllRows<CrmCompany>('crm_companies', '*', { column: 'name' });
+      setItems(data);
+    } catch (error: any) {
+      toast({ title: 'Failed to load accounts', description: error?.message, variant: 'destructive' });
+    }
   };
   useEffect(() => { load(); }, []);
 
