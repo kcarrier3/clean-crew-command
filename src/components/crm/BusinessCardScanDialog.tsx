@@ -1,13 +1,14 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Camera, Loader2, Upload } from 'lucide-react';
+import { Camera, Loader2, Upload, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from './fetchAllRows';
+import { findAccountMatches, normalizeAccountName, type AccountMatch } from './accountMatching';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { CrmCompany } from './types';
@@ -52,8 +53,37 @@ export function BusinessCardScanDialog({
   const [scanned, setScanned] = useState(false);
   const [createAccount, setCreateAccount] = useState(true);
   const [form, setForm] = useState<Fields>(empty);
+  const [matches, setMatches] = useState<AccountMatch<CrmCompany>[]>([]);
+  const [linkToId, setLinkToId] = useState<string | null>(null);
+  const [checkingMatches, setCheckingMatches] = useState(false);
 
-  const reset = () => { setForm(empty); setScanned(false); setCreateAccount(true); };
+  const reset = () => {
+    setForm(empty); setScanned(false); setCreateAccount(true);
+    setMatches([]); setLinkToId(null);
+  };
+
+  // Look for accounts that already represent this company before we create another one.
+  useEffect(() => {
+    if (defaultCompanyId) return;
+    const name = form.company_name.trim();
+    if (!name && !form.website.trim() && !form.email.trim()) { setMatches([]); setLinkToId(null); return; }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setCheckingMatches(true);
+      try {
+        const companies = await fetchAllRows<CrmCompany>('crm_companies', 'id, name, website, phone', { column: 'name' });
+        const found = findAccountMatches(companies, {
+          name, website: form.website, email: form.email, phone: form.phone,
+        });
+        if (cancelled) return;
+        setMatches(found);
+        setLinkToId(found[0]?.account.id ?? null);
+      } finally {
+        if (!cancelled) setCheckingMatches(false);
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [form.company_name, form.website, form.email, form.phone, defaultCompanyId]);
 
   const scan = async (file: File) => {
     setScanning(true);
@@ -81,9 +111,16 @@ export function BusinessCardScanDialog({
       let companyId: string | null = defaultCompanyId ?? null;
       const name = form.company_name.trim();
 
+      // Prefer the account the user picked from the possible-duplicate list.
+      if (!companyId && linkToId) companyId = linkToId;
+
       if (!companyId && name) {
-        const companies = await fetchAllRows<CrmCompany>('crm_companies', 'id, name', { column: 'name' });
-        const existing = companies.find(c => c.name.trim().toLowerCase() === name.toLowerCase());
+        const companies = await fetchAllRows<CrmCompany>('crm_companies', 'id, name, website, phone', { column: 'name' });
+        const normalized = normalizeAccountName(name);
+        // Re-check at save time in case the list changed since the scan.
+        const existing = companies.find(c => normalizeAccountName(c.name) === normalized)
+          ?? findAccountMatches(companies, { name, website: form.website, email: form.email, phone: form.phone })
+              .find(m => m.score >= 100)?.account;
         if (existing) companyId = existing.id;
         else if (createAccount) {
           const { data, error } = await (supabase as any).from('crm_companies').insert({
