@@ -251,7 +251,15 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
             </div>
           </div>
           <div className="rounded-md border border-brand-orange/40 bg-brand-orange/5 p-3 space-y-1">
-            <Line label="Production rate" value={`${Math.round(dm.adjusted_sqft_per_crew_day).toLocaleString()} sf/crew-day`} />
+            <Line label="Baseline production (final clean)" value={`${Math.round(dm.adjusted_sqft_per_crew_day).toLocaleString()} sf/crew-day`} />
+            {dm.phases.map(p => (
+              <Line
+                key={p.id}
+                label={`${p.label} · ${Math.round(p.sqft_per_crew_day).toLocaleString()} sf/crew-day`}
+                value={`${p.crew_days.toFixed(2)} crew-days`}
+                muted
+              />
+            ))}
             <Line label="Estimated crew-days" value={`${dm.crew_days.toFixed(2)} (${dm.billable_days} billable)`} />
             <Line label="Estimated labor hours" value={hoursFmt(dm.labor_hours)} muted />
           </div>
@@ -286,7 +294,7 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
               onClick={() => patch({
                 phases: [...phases, {
                   id: `custom-${Date.now()}`, label: 'Custom work item', enabled: true,
-                  sqft: 0, production_rate_sqft_hour: 1000, extra_hours: 0, notes: '', custom: true,
+                  sqft: 0, production_rate_sqft_hour: 1000, sqft_per_crew_day: 0, extra_hours: 0, notes: '', custom: true,
                 }],
               })}
             >
@@ -321,13 +329,41 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
                 )}
               </div>
               {p.enabled && (crewDayMode ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <NumField id={`xh-${p.id}`} label="Extra hours (optional)" value={p.extra_hours} suffix="hr" disabled={readOnly} onChange={v => setPhase(p.id, { extra_hours: v })} />
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <NumField
+                      id={`pcd-${p.id}`}
+                      label="Production rate"
+                      value={p.sqft_per_crew_day || 0}
+                      suffix="sf/crew-day"
+                      disabled={readOnly}
+                      onChange={v => setPhase(p.id, { sqft_per_crew_day: v })}
+                    />
+                    <NumField
+                      id={`psf-${p.id}`}
+                      label="Square feet (blank = total)"
+                      value={p.sqft || 0}
+                      suffix="sq ft"
+                      disabled={readOnly}
+                      onChange={v => setPhase(p.id, { sqft: v })}
+                    />
+                  </div>
                   <div className="space-y-1.5">
                     <Label htmlFor={`nt-${p.id}`} className="text-xs">Notes</Label>
                     <Input id={`nt-${p.id}`} value={p.notes || ''} disabled={readOnly} onChange={e => setPhase(p.id, { notes: e.target.value })} className="h-11" />
                   </div>
-                </div>
+                  {(() => {
+                    const r = dm.phases.find(x => x.id === p.id);
+                    if (!r) return null;
+                    return (
+                      <p className="text-[11px] text-muted-foreground">
+                        {r.sqft.toLocaleString()} sq ft ÷ {Math.round(r.sqft_per_crew_day).toLocaleString()} sf/crew-day ={' '}
+                        {r.crew_days.toFixed(2)} crew-days · {hoursFmt(r.labor_hours)}
+                        {!r.production_overridden && ' (derived from the project baseline — override above)'}
+                      </p>
+                    );
+                  })()}
+                </>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <NumField id={`sf-${p.id}`} label="Square feet" value={p.sqft || 0} suffix="sq ft" disabled={readOnly} onChange={v => setPhase(p.id, { sqft: v })} />
