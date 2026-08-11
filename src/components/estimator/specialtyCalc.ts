@@ -105,7 +105,7 @@ export const complexityMultiplier = (v: unknown): number =>
   CONSTRUCTION_COMPLEXITY_LEVELS.find(c => c.value === v)?.multiplier ?? 1;
 
 /**
- * Speed of each construction phase relative to the project's baseline
+ * Default speed of each construction phase relative to the project's baseline
  * production rate (which represents the final clean).
  */
 export const PHASE_PRODUCTION_FACTORS: Record<string, number> = {
@@ -114,7 +114,24 @@ export const PHASE_PRODUCTION_FACTORS: Record<string, number> = {
   touchup: 2.5,
 };
 
-export const phaseProductionFactor = (id: string): number => PHASE_PRODUCTION_FACTORS[id] ?? 1;
+/**
+ * Project-type-specific phase speed factors. When a project type is present,
+ * these override the global defaults so each job type cleans at its own rate.
+ * Values are relative to the project baseline (final clean = 1×).
+ */
+export const PROJECT_PHASE_PRODUCTION_FACTORS: Record<ConstructionProjectType, Record<string, number>> = {
+  apartments: { rough: 1.5, final: 1, touchup: 0.2 },
+  schools: { rough: 1.6, final: 1, touchup: 2.5 },
+  open_office: { rough: 1.6, final: 1, touchup: 2.5 },
+  dense_restaurant: { rough: 1.6, final: 1, touchup: 2.5 },
+  custom: { rough: 1.6, final: 1, touchup: 2.5 },
+};
+
+export const phaseProductionFactor = (id: string, projectType?: ConstructionProjectType): number => {
+  const projectFactors = projectType ? PROJECT_PHASE_PRODUCTION_FACTORS[projectType] : undefined;
+  if (projectFactors && id in projectFactors) return projectFactors[id];
+  return PHASE_PRODUCTION_FACTORS[id] ?? 1;
+};
 
 /** Linear interpolation of the suggested day rate across the workload scale. */
 export function suggestedDayRate(position: unknown, min: number, max: number): number {
@@ -561,13 +578,14 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
 
   /* Each selected phase (rough / final / touch-up) carries its own production
      rate in sq ft per crew-day. Unset rates derive from the project baseline
-     using the phase speed factor, then the complexity multiplier is applied. */
+     using the project-type-specific phase speed factor, then the complexity
+     multiplier is applied. */
   const enabledPhases = (i.phases || []).filter(p => p.enabled);
   const phaseResults: ConstructionPhaseResult[] = enabledPhases.map(p => {
     const own = nn(p.sqft_per_crew_day);
     const prod = own > 0
       ? own * multiplier
-      : adjustedProduction * phaseProductionFactor(p.id);
+      : adjustedProduction * phaseProductionFactor(p.id, i.project_type);
     const sqft = nn(p.sqft) > 0 ? nn(p.sqft) : totalSqft;
     const days = prod > 0 ? sqft / prod : 0;
     return {
