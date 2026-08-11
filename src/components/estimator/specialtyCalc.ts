@@ -271,14 +271,18 @@ function price(
   lines: LaborLine[],
   sqft: number,
   extraMaterials = 0,
-  extras: { label: string; value: string }[] = []
+  extras: { label: string; value: string }[] = [],
+  opts: { materialsOverride?: number; supplyCost?: number } = {}
 ): SpecialtyOutputs {
   const laborHours = lines.reduce((s, l) => s + nn(l.hours), 0);
   const laborCost = lines.reduce((s, l) => s + nn(l.cost), 0);
   const loadedRate = nn(base.base_wage) * (1 + nn(base.labor_burden_percent) / 100);
-  const materials = nn(base.materials_cost) + nn(base.materials_cost_per_sqft) * nn(sqft) + nn(extraMaterials);
+  const materials = opts.materialsOverride !== undefined
+    ? nn(opts.materialsOverride)
+    : nn(base.materials_cost) + nn(base.materials_cost_per_sqft) * nn(sqft) + nn(extraMaterials);
   const equipment = nn(base.equipment_cost);
-  const direct = laborCost + materials + equipment;
+  const supply = nn(opts.supplyCost);
+  const direct = laborCost + materials + equipment + supply;
 
   const overheadPct = nn(base.overhead_percent);
   const profitPct = nn(base.target_margin_percent);
@@ -300,6 +304,7 @@ function price(
     calculated_price: safe(calculated),
     project_price: safe(finalPrice),
     minimum_applied: minimum > calculated && minimum > 0,
+    supply_cost: opts.supplyCost !== undefined ? safe(supply) : undefined,
     overhead_amount: safe(finalPrice * (overheadPct / 100)),
     profit_amount: safe(finalPrice - direct - finalPrice * (overheadPct / 100)),
     gross_margin_percent: safe(finalPrice > 0 ? ((finalPrice - direct) / finalPrice) * 100 : 0),
