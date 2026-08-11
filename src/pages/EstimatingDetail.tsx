@@ -631,6 +631,7 @@ export default function EstimatingDetail() {
               ) : (
                 <SpecialtySummaryPanel outputs={specialtyOutputs} />
               )}
+              <CostBreakdown model={breakdown} />
               <Button variant="outline" className="w-full" onClick={copySummary}>
                 <Copy className="h-4 w-4 mr-2" /> Copy Pricing Summary
               </Button>
