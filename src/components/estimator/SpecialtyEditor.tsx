@@ -767,7 +767,7 @@ export function buildSpecialtySummaryText(
     ...(o.day_model ? [
       `Pricing basis: ${o.day_model.price_basis}`,
       `Pricing position: ${o.day_model.pricing_position_label} (suggested ${money(o.day_model.suggested_day_rate)}/day, range ${money(o.day_model.suggested_day_rate_min)}–${money(o.day_model.suggested_day_rate_max)})`,
-      `Selected day rate: ${money(o.day_model.proposed_day_rate)}/day · day-rate price ${money(o.day_model.day_rate_project_price)}`,
+      `Selected day rate: ${money(o.day_model.proposed_day_rate)}/day${o.day_model.minimum_day_rate_applied ? ` (minimum ${money(o.day_model.applicable_minimum_day_rate)}/day applied)` : ''} · ${o.day_model.billable_days} billable day${o.day_model.billable_days === 1 ? '' : 's'} · day-rate price ${money(o.day_model.day_rate_project_price)}`,
       `Cost-based target-margin price: ${money(o.day_model.target_margin_price)} · break-even price ${money(o.day_model.breakeven_price)}`,
       `Effective day rate: ${money(o.day_model.effective_day_rate)}/day`,
       `Status: ${o.day_model.status_label}`,
