@@ -780,6 +780,12 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     multi_day: multiDay,
     applicable_minimum_day_rate: safe(minDayRate),
     minimum_day_rate_applied: basis === 'day_rate' && minDayRateApplied,
+    prevailing_margin_floor_active: prevailingFloorActive,
+    prevailing_min_margin_percent: safe(prevailingMarginPct),
+    prevailing_minimum_day_rate: safe(prevailingMinDayRate),
+    prevailing_minimum_applied:
+      basis === 'day_rate' && prevailingFloorActive &&
+      prevailingMinDayRate >= flatMinDayRate && prevailingMinDayRate > proposedDayRate,
     price_basis: basis,
     final_project_price: safe(finalPrice),
     effective_day_rate: safe(crewDays > 0 ? finalPrice / crewDays : 0),
