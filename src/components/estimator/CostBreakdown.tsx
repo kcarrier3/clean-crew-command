@@ -114,19 +114,23 @@ export function buildSpecialtyBreakdown(
 
   const laborLines = o.lines.filter(l => l.cost > 0);
   const customerLines: BreakdownLine[] = [];
+  const nonLabor = supplyCost + safe(o.materials_cost) + safe(o.equipment_cost);
+  const laborTotal = laborLines.reduce((s, l) => s + l.cost, 0);
   if (factor > 0 && laborLines.length > 0) {
     for (const l of laborLines) {
+      // Bake supplies, materials and equipment into each scope item,
+      // allocated in proportion to that item's share of labor.
+      const share = laborTotal > 0 ? l.cost / laborTotal : 1 / laborLines.length;
+      const allocatedCost = l.cost + nonLabor * share;
       customerLines.push({
         label: `${serviceLabel} — ${l.label}`,
-        amount: safe(l.cost * factor),
-        detail: l.hours ? `${l.hours.toFixed(2)} labor hr` : undefined,
-      });
-    }
-    const nonLabor = supplyCost + safe(o.materials_cost) + safe(o.equipment_cost);
-    if (nonLabor > 0) {
-      customerLines.push({
-        label: 'Supplies, materials & equipment',
-        amount: safe(nonLabor * factor),
+        amount: safe(allocatedCost * factor),
+        detail: [
+          l.hours ? `${l.hours.toFixed(2)} labor hr` : null,
+          nonLabor > 0 ? `includes ${money(nonLabor * share)} supplies, materials & equipment` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || undefined,
       });
     }
   } else {
@@ -150,7 +154,7 @@ export function buildSpecialtyBreakdown(
     marginPercent: safe(o.gross_margin_percent),
     footnote:
       factor > 0 && laborLines.length > 0
-        ? 'Overhead and profit are spread across each scope item in proportion to its cost.'
+        ? 'Supplies, materials, equipment, overhead and profit are baked into each scope item in proportion to its labor.'
         : undefined,
   };
 }
