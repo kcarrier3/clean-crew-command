@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+
 import { Checkbox } from '@/components/ui/checkbox';
 import { Camera, Loader2, Upload, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';

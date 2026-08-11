@@ -6,8 +6,8 @@ const corsHeaders = {
 const MODELS = ['google/gemini-2.5-flash', 'google/gemini-2.0-flash-001', 'openai/gpt-4o-mini'];
 
 const PROMPT = `You read business cards. Extract the details from this business card image and reply with ONLY a JSON object, no markdown, using exactly these keys:
-{"first_name":"","last_name":"","title":"","company_name":"","email":"","phone":"","mobile":"","website":"","address":"","city":"","state":"","zip":"","notes":""}
-Use empty strings for anything not present. Never invent data. "notes" may hold extra text printed on the card.`;
+{"first_name":"","last_name":"","title":"","company_name":"","email":"","phone":"","mobile":"","website":"","address":"","city":"","state":"","zip":""}
+Use empty strings for anything not present. Never invent data.`;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
         company_name: str(parsed.company_name), email: str(parsed.email),
         phone: str(parsed.phone) || str(parsed.mobile), website: str(parsed.website),
         address: str(parsed.address), city: str(parsed.city), state: str(parsed.state),
-        zip: str(parsed.zip), notes: str(parsed.notes),
+        zip: str(parsed.zip),
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
