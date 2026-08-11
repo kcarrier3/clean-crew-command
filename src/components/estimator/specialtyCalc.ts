@@ -257,6 +257,14 @@ export interface ConstructionDayModel {
   crew_days: number;
   hours_per_crew_day: number;
   labor_hours: number;
+  /** Crew composition (0 = legacy one-person crew-day). */
+  crew_size: number;
+  crew_lead_count: number;
+  crew_member_wage: number;
+  crew_lead_wage: number;
+  blended_hourly_wage: number;
+  labor_hours_per_crew_day: number;
+  labor_cost_per_crew_day: number;
   /** Cost-based price that exactly hits the target margin. */
   target_margin_price: number;
   /** Price that covers direct cost + overhead with zero profit. */
