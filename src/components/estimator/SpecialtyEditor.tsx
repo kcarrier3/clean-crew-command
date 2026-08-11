@@ -730,6 +730,12 @@ export function buildSpecialtySummaryText(
     `Owner: ${m.ownerName}`,
     '',
     'LABOR',
+    ...(o.day_model ? [
+      `Project type: ${o.day_model.project_type}`,
+      `Baseline production: ${Math.round(o.day_model.baseline_sqft_per_crew_day).toLocaleString()} sq ft/crew-day`,
+      `Complexity: ${o.day_model.complexity_label} (×${o.day_model.complexity_multiplier}) → ${Math.round(o.day_model.adjusted_sqft_per_crew_day).toLocaleString()} sq ft/crew-day${o.day_model.production_overridden ? ' (manual override)' : ''}`,
+      `Estimated crew-days: ${o.day_model.crew_days.toFixed(2)} × ${o.day_model.hours_per_crew_day} hr/day`,
+    ] : []),
     ...o.lines.map(l => `${l.label}: ${l.hours.toFixed(2)} hr · ${money(l.cost)}${l.detail ? ` (${l.detail})` : ''}`),
     `Total labor hours: ${o.labor_hours.toFixed(2)}`,
     o.labor_budget
@@ -758,6 +764,14 @@ export function buildSpecialtySummaryText(
     `Target profit ${pct(f.target_margin_percent)}: ${money(o.profit_amount)}`,
     o.minimum_applied ? `Minimum charge applied (calculated ${money(o.calculated_price)})` : null,
     `Project price: ${money(o.project_price)}`,
+    ...(o.day_model ? [
+      `Pricing basis: ${o.day_model.price_basis}`,
+      `Pricing position: ${o.day_model.pricing_position_label} (suggested ${money(o.day_model.suggested_day_rate)}/day, range ${money(o.day_model.suggested_day_rate_min)}–${money(o.day_model.suggested_day_rate_max)})`,
+      `Selected day rate: ${money(o.day_model.proposed_day_rate)}/day · day-rate price ${money(o.day_model.day_rate_project_price)}`,
+      `Cost-based target-margin price: ${money(o.day_model.target_margin_price)} · break-even price ${money(o.day_model.breakeven_price)}`,
+      `Effective day rate: ${money(o.day_model.effective_day_rate)}/day`,
+      `Status: ${o.day_model.status_label}`,
+    ] : []),
     `Price per sq ft: $${o.price_per_sqft.toFixed(4)}`,
     `Gross margin: ${pct(o.gross_margin_percent)} (equivalent markup ${pct(o.markup_on_direct_percent)})`,
     o.labor_budget ? `Max labor hours at target margin: ${o.labor_budget.max_hours_at_target_margin.toFixed(2)} hr` : null,
