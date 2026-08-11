@@ -306,12 +306,28 @@ export const DEFAULT_CONSTRUCTION_LABOR = {
   supply_cost_per_sqft: 0,
 };
 
+export const DEFAULT_CONSTRUCTION_DAY_MODEL = {
+  crew_day_mode: true,
+  project_type: 'apartments' as ConstructionProjectType,
+  baseline_sqft_per_crew_day: 5000,
+  complexity: 'typical' as ConstructionComplexity,
+  adjusted_sqft_per_crew_day_override: 0,
+  hours_per_crew_day: 8,
+  proposed_day_rate: 0,
+  pricing_position: 'normal' as PricingPosition,
+  suggested_day_rate_min: 800,
+  suggested_day_rate_max: 1600,
+  price_basis: 'cost' as ConstructionPriceBasis,
+  manual_project_price: 0,
+};
+
 export const DEFAULT_SPECIALTY_INPUTS = (service: ServiceType): SpecialtyInputs => {
   switch (service) {
     case 'construction_cleaning':
       return {
         ...DEFAULT_FINANCIALS,
         ...DEFAULT_CONSTRUCTION_LABOR,
+        ...DEFAULT_CONSTRUCTION_DAY_MODEL,
         total_square_feet: 0,
         phases: DEFAULT_CONSTRUCTION_PHASES(),
       };
