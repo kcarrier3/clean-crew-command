@@ -53,6 +53,8 @@ export interface ConstructionPhase {
   enabled: boolean;
   sqft: number;
   production_rate_sqft_hour: number;
+  /** Crew-day model: sq ft one crew covers in a day for this phase (0 = derive from baseline). */
+  sqft_per_crew_day?: number;
   extra_hours: number;
   notes: string;
   custom?: boolean;
@@ -101,6 +103,18 @@ export const PRICING_POSITIONS: { value: PricingPosition; label: string }[] = [
 
 export const complexityMultiplier = (v: unknown): number =>
   CONSTRUCTION_COMPLEXITY_LEVELS.find(c => c.value === v)?.multiplier ?? 1;
+
+/**
+ * Speed of each construction phase relative to the project's baseline
+ * production rate (which represents the final clean).
+ */
+export const PHASE_PRODUCTION_FACTORS: Record<string, number> = {
+  rough: 1.6,
+  final: 1,
+  touchup: 2.5,
+};
+
+export const phaseProductionFactor = (id: string): number => PHASE_PRODUCTION_FACTORS[id] ?? 1;
 
 /** Linear interpolation of the suggested day rate across the workload scale. */
 export function suggestedDayRate(position: unknown, min: number, max: number): number {
@@ -282,6 +296,8 @@ export interface ConstructionDayModel {
   day_rate_project_price: number;
   /** Whole days actually billed (crew-days rounded up). */
   billable_days: number;
+  /** Per-phase crew-day breakdown (rough / final / touch-up and custom items). */
+  phases: ConstructionPhaseResult[];
   multi_day: boolean;
   applicable_minimum_day_rate: number;
   minimum_day_rate_applied: boolean;
@@ -290,6 +306,16 @@ export interface ConstructionDayModel {
   effective_day_rate: number;
   status: 'target' | 'below_target' | 'below_breakeven';
   status_label: string;
+}
+
+export interface ConstructionPhaseResult {
+  id: string;
+  label: string;
+  sqft: number;
+  sqft_per_crew_day: number;
+  production_overridden: boolean;
+  crew_days: number;
+  labor_hours: number;
 }
 
 export const CARPET_METHODS: { value: string; label: string; rate: number }[] = [
@@ -314,9 +340,9 @@ export const FURNITURE_LEVELS: { value: CarpetInputs['furniture_level']; label: 
 /* --------------------------------------------------------------- defaults */
 
 export const DEFAULT_CONSTRUCTION_PHASES = (): ConstructionPhase[] => [
-  { id: 'rough', label: 'Rough Clean', enabled: false, sqft: 0, production_rate_sqft_hour: 1500, extra_hours: 0, notes: '' },
-  { id: 'final', label: 'Final Clean', enabled: true, sqft: 0, production_rate_sqft_hour: 800, extra_hours: 0, notes: '' },
-  { id: 'touchup', label: 'Touch-Up / Punch Clean', enabled: false, sqft: 0, production_rate_sqft_hour: 2500, extra_hours: 0, notes: '' },
+  { id: 'rough', label: 'Rough Clean', enabled: false, sqft: 0, production_rate_sqft_hour: 1500, sqft_per_crew_day: 0, extra_hours: 0, notes: '' },
+  { id: 'final', label: 'Final Clean', enabled: true, sqft: 0, production_rate_sqft_hour: 800, sqft_per_crew_day: 0, extra_hours: 0, notes: '' },
+  { id: 'touchup', label: 'Touch-Up Clean', enabled: false, sqft: 0, production_rate_sqft_hour: 2500, sqft_per_crew_day: 0, extra_hours: 0, notes: '' },
 ];
 
 export const DEFAULT_CONSTRUCTION_LABOR = {
@@ -532,14 +558,49 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   const crewSize = nn(i.crew_size);
   const crewMultiplier = crewSize > 0 ? crewSize : 1;
   const hoursPerCrewDay = hoursPerDay * crewMultiplier;
-  const crewDays = adjustedProduction > 0 ? totalSqft / adjustedProduction : 0;
+
+  /* Each selected phase (rough / final / touch-up) carries its own production
+     rate in sq ft per crew-day. Unset rates derive from the project baseline
+     using the phase speed factor, then the complexity multiplier is applied. */
+  const enabledPhases = (i.phases || []).filter(p => p.enabled);
+  const phaseResults: ConstructionPhaseResult[] = enabledPhases.map(p => {
+    const own = nn(p.sqft_per_crew_day);
+    const prod = own > 0
+      ? own * multiplier
+      : adjustedProduction * phaseProductionFactor(p.id);
+    const sqft = nn(p.sqft) > 0 ? nn(p.sqft) : totalSqft;
+    const days = prod > 0 ? sqft / prod : 0;
+    return {
+      id: p.id,
+      label: p.label || 'Phase',
+      sqft: safe(sqft),
+      sqft_per_crew_day: safe(prod),
+      production_overridden: own > 0,
+      crew_days: safe(days),
+      labor_hours: safe(days * hoursPerCrewDay),
+    };
+  });
+  const phaseCrewDays = phaseResults.reduce((s, p) => s + p.crew_days, 0);
+  const crewDays = crewDayMode
+    ? (phaseResults.length > 0
+        ? phaseCrewDays
+        : (adjustedProduction > 0 ? totalSqft / adjustedProduction : 0))
+    : (adjustedProduction > 0 ? totalSqft / adjustedProduction : 0);
 
   let lines: LaborLine[];
   if (crewDayMode) {
-    const extra = (i.phases || [])
-      .filter(p => p.enabled && nn(p.extra_hours) > 0)
-      .map(p => line(`${p.label || 'Phase'} — additional hours`, nn(p.extra_hours), rate));
-    lines = [
+    lines = phaseResults.length > 0
+      ? phaseResults.map(p =>
+          line(
+            p.label,
+            p.labor_hours,
+            rate,
+            p.sqft_per_crew_day > 0
+              ? `${p.sqft.toLocaleString()} sq ft ÷ ${Math.round(p.sqft_per_crew_day).toLocaleString()} sq ft/crew-day = ${p.crew_days.toFixed(2)} crew-days × ${crewMultiplier > 1 ? `${crewMultiplier} workers × ` : ''}${hoursPerDay} hr`
+              : undefined
+          )
+        )
+      : [
       line(
         'Construction cleaning crew',
         crewDays * hoursPerCrewDay,
@@ -548,7 +609,6 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
           ? `${totalSqft.toLocaleString()} sq ft ÷ ${Math.round(adjustedProduction).toLocaleString()} sq ft/crew-day = ${crewDays.toFixed(2)} crew-days × ${crewMultiplier > 1 ? `${crewMultiplier} workers × ` : ''}${hoursPerDay} hr`
           : undefined
       ),
-      ...extra,
     ];
   } else {
     lines = (i.phases || []).filter(p => p.enabled).map(p => {
@@ -674,6 +734,7 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     pricing_position_label: PRICING_POSITIONS.find(p => p.value === i.pricing_position)?.label || 'Normal',
     day_rate_project_price: safe(dayRatePrice),
     billable_days: billableDays,
+    phases: phaseResults,
     multi_day: multiDay,
     applicable_minimum_day_rate: safe(minDayRate),
     minimum_day_rate_applied: basis === 'day_rate' && minDayRateApplied,
@@ -834,6 +895,8 @@ export function validateSpecialty(service: ServiceType, i: SpecialtyInputs): str
           : nn(c.baseline_sqft_per_crew_day) * complexityMultiplier(c.complexity);
         if (!(adjusted > 0)) return 'Baseline production (sq ft per crew-day) must be greater than zero.';
         if (!(nn(c.hours_per_crew_day) > 0)) return 'Hours per crew-day must be greater than zero.';
+        if ((c.phases || []).filter(p => p.enabled).length === 0)
+          return 'Select at least one clean (rough, final or touch-up).';
         return null;
       }
       const active = (c.phases || []).filter(p => p.enabled);

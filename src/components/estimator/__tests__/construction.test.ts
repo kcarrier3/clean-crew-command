@@ -171,6 +171,34 @@ describe('construction crew-day model', () => {
 });
 
 describe('crew composition', () => {
+  it('phases each get their own crew-day production rate', () => {
+    const phases = DEFAULT_SPECIALTY_INPUTS('construction_cleaning') as ConstructionInputs;
+    const o = calculateConstruction({
+      ...crewBase(),
+      baseline_sqft_per_crew_day: 5000,
+      crew_size: 0,
+      phases: phases.phases.map(p => ({ ...p, enabled: p.id !== 'touchup' })),
+    });
+    const dm = o.day_model!;
+    expect(dm.phases.map(p => p.id)).toEqual(['rough', 'final']);
+    // rough runs 1.6x the baseline, final at the baseline
+    expect(dm.phases[0].sqft_per_crew_day).toBeCloseTo(8000);
+    expect(dm.phases[1].sqft_per_crew_day).toBeCloseTo(5000);
+    expect(dm.crew_days).toBeCloseTo(20000 / 8000 + 20000 / 5000);
+    expect(o.lines.map(l => l.label)).toEqual(['Rough Clean', 'Final Clean']);
+  });
+
+  it('an explicit phase production rate overrides the derived one', () => {
+    const dm = calculateConstruction({
+      ...crewBase(),
+      baseline_sqft_per_crew_day: 5000,
+      crew_size: 0,
+      phases: [{ id: 'touchup', label: 'Touch-Up Clean', enabled: true, sqft: 10000, production_rate_sqft_hour: 0, sqft_per_crew_day: 10000, extra_hours: 0, notes: '' }],
+    }).day_model!;
+    expect(dm.phases[0].production_overridden).toBe(true);
+    expect(dm.crew_days).toBeCloseTo(1);
+  });
+
   const withCrew = (over: Partial<ConstructionInputs> = {}) => calculateConstruction({
     ...(DEFAULT_SPECIALTY_INPUTS('construction_cleaning') as ConstructionInputs),
     price_basis: 'cost',
