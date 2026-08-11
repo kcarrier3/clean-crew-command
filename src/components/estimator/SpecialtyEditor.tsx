@@ -431,7 +431,13 @@ export function SpecialtyForm({
       {service === 'carpet_cleaning' && <CarpetForm i={inputs as CarpetInputs} patch={patch} readOnly={readOnly} />}
       {service === 'floor_scrubbing' && <ScrubForm i={inputs as ScrubInputs} patch={patch} readOnly={readOnly} />}
       {service === 'vct_strip_wax' && <VctForm i={inputs as VctInputs} patch={patch} readOnly={readOnly} />}
-      <FinancialsCard i={inputs as FinancialBase} patch={patch} readOnly={readOnly} />
+      <FinancialsCard
+        i={inputs as FinancialBase}
+        patch={patch}
+        readOnly={readOnly}
+        hideLabor={service === 'construction_cleaning'}
+        hideConsumables={service === 'construction_cleaning'}
+      />
     </>
   );
 }
@@ -465,9 +471,11 @@ export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }
           ))}
           <Separator className="my-2" />
           <Line label="Total labor hours" value={hoursFmt(outputs.labor_hours)} />
-          <Line label="Loaded labor rate" value={`${money(outputs.loaded_labor_rate)}/hr`} />
+          <Line label="Effective labor rate" value={`${money(outputs.loaded_labor_rate)}/hr`} />
           <Line label="Labor cost" value={money(outputs.labor_cost)} />
-          <Line label="Materials / consumables" value={money(outputs.materials_cost)} />
+          {outputs.supply_cost !== undefined
+            ? <Line label="Project supplies" value={money(outputs.supply_cost)} />
+            : <Line label="Materials / consumables" value={money(outputs.materials_cost)} />}
           <Line label="Equipment / direct" value={money(outputs.equipment_cost)} />
           <Line label="Total direct cost" value={money(outputs.total_direct_cost)} />
           {outputs.extras.map((e, idx) => <Line key={idx} label={e.label} value={e.value} muted />)}
@@ -479,6 +487,37 @@ export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }
           <Line label="Price / sq ft" value={`$${outputs.price_per_sqft.toFixed(4)}`} />
         </CardContent>
       </Card>
+      {outputs.labor_budget && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Labor budget</CardTitle></CardHeader>
+          <CardContent className="pt-0 space-y-1">
+            <Line
+              label="Labor type"
+              value={
+                outputs.labor_budget.labor_type === 'standard'
+                  ? 'Standard / Non-prevailing'
+                  : [outputs.labor_budget.union_project ? 'Union' : null,
+                     outputs.labor_budget.prevailing_wage_project ? 'Prevailing wage' : null]
+                      .filter(Boolean).join(' + ')
+              }
+            />
+            <Line label="Estimated labor hours" value={hoursFmt(outputs.labor_budget.labor_hours)} />
+            <Line label="Effective hourly labor cost" value={`${money(outputs.labor_budget.effective_hourly_labor_cost)}/hr`} />
+            <Line label="Total estimated labor cost" value={money(outputs.labor_budget.labor_cost)} />
+            <Line label="Cost per labor hour (incl. supplies)" value={`${money(outputs.labor_budget.cost_per_labor_hour)}/hr`} muted />
+            <Separator className="my-2" />
+            <Line label="Recommended project charge" value={money(outputs.project_price)} />
+            <Line label="Expected gross profit" value={money(outputs.project_price - outputs.total_direct_cost)} />
+            <Line label="Expected gross margin" value={pct(outputs.gross_margin_percent)} />
+            <Separator className="my-2" />
+            <Line label="Max hours at target margin" value={hoursFmt(outputs.labor_budget.max_hours_at_target_margin)} />
+            <Line label="Break-even hours" value={hoursFmt(outputs.labor_budget.breakeven_hours)} />
+            <p className="text-[11px] text-muted-foreground pt-1">
+              Max hours keeps the target profit intact. Break-even hours still covers overhead but leaves zero profit.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }
