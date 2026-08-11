@@ -325,6 +325,11 @@ export interface ConstructionDayModel {
   multi_day: boolean;
   applicable_minimum_day_rate: number;
   minimum_day_rate_applied: boolean;
+  /** Union / prevailing wage floor: crew-day labor cost held at a minimum margin. */
+  prevailing_margin_floor_active: boolean;
+  prevailing_min_margin_percent: number;
+  prevailing_minimum_day_rate: number;
+  prevailing_minimum_applied: boolean;
   price_basis: ConstructionPriceBasis;
   final_project_price: number;
   effective_day_rate: number;
