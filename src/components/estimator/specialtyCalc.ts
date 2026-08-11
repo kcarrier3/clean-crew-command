@@ -296,6 +296,8 @@ export interface ConstructionDayModel {
   day_rate_project_price: number;
   /** Whole days actually billed (crew-days rounded up). */
   billable_days: number;
+  /** Per-phase crew-day breakdown (rough / final / touch-up and custom items). */
+  phases: ConstructionPhaseResult[];
   multi_day: boolean;
   applicable_minimum_day_rate: number;
   minimum_day_rate_applied: boolean;
@@ -304,6 +306,16 @@ export interface ConstructionDayModel {
   effective_day_rate: number;
   status: 'target' | 'below_target' | 'below_breakeven';
   status_label: string;
+}
+
+export interface ConstructionPhaseResult {
+  id: string;
+  label: string;
+  sqft: number;
+  sqft_per_crew_day: number;
+  production_overridden: boolean;
+  crew_days: number;
+  labor_hours: number;
 }
 
 export const CARPET_METHODS: { value: string; label: string; rate: number }[] = [
