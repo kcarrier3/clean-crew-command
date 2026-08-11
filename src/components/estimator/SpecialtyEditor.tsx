@@ -605,6 +605,11 @@ export function SpecialtyForm({
 /* ---------------------------------------------------------------- summary */
 
 export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }) {
+  const dm = outputs.day_model;
+  const statusClass = !dm ? ''
+    : dm.status === 'target' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+    : dm.status === 'below_target' ? 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+    : 'border-destructive/50 bg-destructive/10 text-destructive';
   return (
     <>
       <Card className="border-brand-orange/40">
@@ -614,6 +619,11 @@ export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }
           <p className="text-xs text-muted-foreground mt-1">
             {hoursFmt(outputs.labor_hours)} · ${outputs.price_per_sqft.toFixed(4)}/sq ft
           </p>
+          {dm && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {dm.crew_days.toFixed(2)} crew-days · {money(dm.effective_day_rate)}/day effective
+            </p>
+          )}
           {outputs.minimum_applied && (
             <p className="text-[11px] text-muted-foreground mt-1">
               Minimum charge applied (calculated {money(outputs.calculated_price)})
@@ -621,6 +631,28 @@ export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }
           )}
         </CardContent>
       </Card>
+      {dm && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Day &amp; price decision</CardTitle></CardHeader>
+          <CardContent className="pt-0 space-y-1">
+            <div className={`rounded-md border p-2 text-xs font-medium ${statusClass}`}>{dm.status_label}</div>
+            <Line label="Estimated crew-days" value={dm.crew_days.toFixed(2)} />
+            <Line label="Estimated labor hours" value={hoursFmt(dm.labor_hours)} />
+            <Line label="Adjusted production" value={`${Math.round(dm.adjusted_sqft_per_crew_day).toLocaleString()} sf/crew-day`} muted />
+            <Separator className="my-2" />
+            <Line label="Cost-based target-margin price" value={money(dm.target_margin_price)} />
+            <Line label="Break-even price" value={money(dm.breakeven_price)} />
+            <Line label="Selected day rate" value={`${money(dm.proposed_day_rate)}/day`} />
+            <Line label="Day-rate project price" value={money(dm.day_rate_project_price)} />
+            <Line label="Final project price" value={money(dm.final_project_price)} />
+            <Line label="Effective day rate" value={`${money(dm.effective_day_rate)}/day`} />
+            <Separator className="my-2" />
+            <Line label="Expected profit" value={money(outputs.profit_amount)} />
+            <Line label="Expected gross margin" value={pct(outputs.gross_margin_percent)} />
+            <Line label="Price / sq ft" value={`$${outputs.price_per_sqft.toFixed(4)}`} />
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardContent className="pt-4 space-y-1 text-sm">
           {outputs.lines.map((l, idx) => (
