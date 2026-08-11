@@ -58,9 +58,22 @@ export interface ConstructionPhase {
   custom?: boolean;
 }
 
+export type ConstructionLaborType = 'standard' | 'prevailing';
+
 export interface ConstructionInputs extends FinancialBase {
   total_square_feet: number;
   phases: ConstructionPhase[];
+  /** Construction projects never carry janitorial consumables — supplies only. */
+  union_project: boolean;
+  prevailing_wage_project: boolean;
+  /** Wage inputs used when union and/or prevailing wage applies. */
+  prevailing_base_wage: number;
+  prevailing_fringe_per_hour: number;
+  prevailing_additional_burden_per_hour: number;
+  /** Project cleaning supplies, priced like janitorial: $ per productive labor hour. */
+  supply_rate_per_hour: number;
+  supply_cost_fixed: number;
+  supply_cost_per_sqft: number;
 }
 
 export interface CarpetInputs extends FinancialBase {
@@ -128,6 +141,35 @@ export interface SpecialtyOutputs {
   invalid: boolean;
   /** Extra service-specific readouts (e.g. gallons of finish). */
   extras: { label: string; value: string }[];
+  /** Construction only — supplies broken out separately from consumables. */
+  supply_cost?: number;
+  /** Construction only — labor budget analysis. */
+  labor_budget?: ConstructionLaborBudget;
+}
+
+export interface ConstructionLaborBudget {
+  labor_type: ConstructionLaborType;
+  union_project: boolean;
+  prevailing_wage_project: boolean;
+  base_wage: number;
+  burden_percent: number;
+  burden_amount: number;
+  fringe_per_hour: number;
+  additional_burden_per_hour: number;
+  /** Fully-loaded hourly labor cost actually used in the estimate. */
+  effective_hourly_labor_cost: number;
+  /** Supplies consumed per productive labor hour. */
+  supply_rate_per_hour: number;
+  /** Effective cost of one additional labor hour (labor + hourly supplies). */
+  cost_per_labor_hour: number;
+  labor_hours: number;
+  labor_cost: number;
+  /** Non-labor, non-hourly direct cost (equipment + fixed/sq ft supplies). */
+  fixed_direct_cost: number;
+  /** Max hours spendable while still hitting the target margin at this price. */
+  max_hours_at_target_margin: number;
+  /** Max hours before the job loses money (overhead still covered). */
+  breakeven_hours: number;
 }
 
 export const CARPET_METHODS: { value: string; label: string; rate: number }[] = [
