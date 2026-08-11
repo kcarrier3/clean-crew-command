@@ -228,8 +228,11 @@ export default function JobSitesManagement() {
       return;
     }
 
+    // The tab the user is on decides the record type, not stale form state
+    const createRecurring = activeTab !== 'projects';
+
     // Projects need a work city/state so punches report to the right municipality on payroll
-    if (!formData.is_recurring_monthly && (!formData.city.trim() || !formData.state.trim())) {
+    if (!createRecurring && (!formData.city.trim() || !formData.state.trim())) {
       toast({
         title: "Work location required",
         description: "Enter the project's city and state so payroll can report the correct municipality.",
@@ -240,7 +243,7 @@ export default function JobSitesManagement() {
 
     setLoading(true);
     try {
-      const isProject = !formData.is_recurring_monthly;
+      const isProject = !createRecurring;
       const phaseNames = isProject && formData.is_phased ? parsePhaseNames(formData.phase_names || '') : [];
 
       const { data: created, error } = await supabase
@@ -263,7 +266,7 @@ export default function JobSitesManagement() {
           special_instructions: formData.special_instructions.trim() || null,
           access_instructions: formData.access_instructions.trim() || null,
           safety_requirements: formData.safety_requirements.trim() || null,
-          is_recurring_monthly: formData.is_recurring_monthly,
+          is_recurring_monthly: createRecurring,
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
           nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
           service_days: formData.service_days,
@@ -631,7 +634,7 @@ export default function JobSitesManagement() {
                   Add {entityLabel}
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New {entityLabel}</DialogTitle>
                 </DialogHeader>
@@ -880,7 +883,7 @@ export default function JobSitesManagement() {
               setIsEditDialogOpen(open);
               if (!open) resetForm();
             }}>
-              <DialogContent>
+              <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Edit {isProjectForm ? 'Project' : 'Account'}</DialogTitle>
                 </DialogHeader>
