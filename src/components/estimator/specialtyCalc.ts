@@ -558,14 +558,49 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   const crewSize = nn(i.crew_size);
   const crewMultiplier = crewSize > 0 ? crewSize : 1;
   const hoursPerCrewDay = hoursPerDay * crewMultiplier;
-  const crewDays = adjustedProduction > 0 ? totalSqft / adjustedProduction : 0;
+
+  /* Each selected phase (rough / final / touch-up) carries its own production
+     rate in sq ft per crew-day. Unset rates derive from the project baseline
+     using the phase speed factor, then the complexity multiplier is applied. */
+  const enabledPhases = (i.phases || []).filter(p => p.enabled);
+  const phaseResults: ConstructionPhaseResult[] = enabledPhases.map(p => {
+    const own = nn(p.sqft_per_crew_day);
+    const prod = own > 0
+      ? own * multiplier
+      : adjustedProduction * phaseProductionFactor(p.id);
+    const sqft = nn(p.sqft) > 0 ? nn(p.sqft) : totalSqft;
+    const days = prod > 0 ? sqft / prod : 0;
+    return {
+      id: p.id,
+      label: p.label || 'Phase',
+      sqft: safe(sqft),
+      sqft_per_crew_day: safe(prod),
+      production_overridden: own > 0,
+      crew_days: safe(days),
+      labor_hours: safe(days * hoursPerCrewDay),
+    };
+  });
+  const phaseCrewDays = phaseResults.reduce((s, p) => s + p.crew_days, 0);
+  const crewDays = crewDayMode
+    ? (phaseResults.length > 0
+        ? phaseCrewDays
+        : (adjustedProduction > 0 ? totalSqft / adjustedProduction : 0))
+    : (adjustedProduction > 0 ? totalSqft / adjustedProduction : 0);
 
   let lines: LaborLine[];
   if (crewDayMode) {
-    const extra = (i.phases || [])
-      .filter(p => p.enabled && nn(p.extra_hours) > 0)
-      .map(p => line(`${p.label || 'Phase'} — additional hours`, nn(p.extra_hours), rate));
-    lines = [
+    lines = phaseResults.length > 0
+      ? phaseResults.map(p =>
+          line(
+            p.label,
+            p.labor_hours,
+            rate,
+            p.sqft_per_crew_day > 0
+              ? `${p.sqft.toLocaleString()} sq ft ÷ ${Math.round(p.sqft_per_crew_day).toLocaleString()} sq ft/crew-day = ${p.crew_days.toFixed(2)} crew-days × ${crewMultiplier > 1 ? `${crewMultiplier} workers × ` : ''}${hoursPerDay} hr`
+              : undefined
+          )
+        )
+      : [
       line(
         'Construction cleaning crew',
         crewDays * hoursPerCrewDay,
@@ -574,7 +609,6 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
           ? `${totalSqft.toLocaleString()} sq ft ÷ ${Math.round(adjustedProduction).toLocaleString()} sq ft/crew-day = ${crewDays.toFixed(2)} crew-days × ${crewMultiplier > 1 ? `${crewMultiplier} workers × ` : ''}${hoursPerDay} hr`
           : undefined
       ),
-      ...extra,
     ];
   } else {
     lines = (i.phases || []).filter(p => p.enabled).map(p => {
