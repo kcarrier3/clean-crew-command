@@ -16,12 +16,12 @@ import type { CrmCompany } from './types';
 type Fields = {
   first_name: string; last_name: string; title: string; company_name: string;
   email: string; phone: string; website: string; address: string;
-  city: string; state: string; zip: string; notes: string;
+  city: string; state: string; zip: string;
 };
 
 const empty: Fields = {
   first_name: '', last_name: '', title: '', company_name: '', email: '', phone: '',
-  website: '', address: '', city: '', state: '', zip: '', notes: '',
+  website: '', address: '', city: '', state: '', zip: '',
 };
 
 /** Downscale to keep the upload small and the model fast. */
@@ -166,7 +166,6 @@ export function BusinessCardScanDialog({
           phone: form.phone || null,
           title: form.title || null,
           company_id: companyId,
-          notes: form.notes || null,
           created_by: user?.id, owner_id: user?.id,
         });
         if (error) throw error;
@@ -234,10 +233,6 @@ export function BusinessCardScanDialog({
               {field('City', 'city')}
               {field('State', 'state')}
               {field('Zip', 'zip')}
-            </div>
-            <div>
-              <Label>Notes</Label>
-              <Textarea rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
             </div>
             {!defaultCompanyId && (
               <>
