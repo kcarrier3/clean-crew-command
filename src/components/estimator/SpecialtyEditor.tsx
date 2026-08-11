@@ -407,6 +407,37 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
             />
             Enforce the minimum day rate on this bid
           </label>
+          <Separator className="my-1" />
+          <div className="space-y-2 rounded-md border border-border p-3">
+            <p className="text-xs font-medium">Union / prevailing wage floor</p>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                id="applypwfloor"
+                checked={i.apply_prevailing_margin_floor !== false}
+                disabled={readOnly}
+                onCheckedChange={c => patch({ apply_prevailing_margin_floor: !!c })}
+              />
+              Hold a minimum margin over crew-day labor cost
+            </label>
+            <NumField
+              id="pwmargin"
+              label="Minimum margin on prevailing / union days"
+              value={i.prevailing_min_margin_percent}
+              suffix="%"
+              disabled={readOnly}
+              onChange={v => patch({ prevailing_min_margin_percent: v })}
+            />
+            {dm.prevailing_margin_floor_active ? (
+              <>
+                <Line label="Crew-day labor cost" value={`${money(dm.labor_cost_per_crew_day)}/day`} muted />
+                <Line label="Prevailing-wage minimum day rate" value={`${money(dm.prevailing_minimum_day_rate)}/day`} />
+              </>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                Applies automatically when the bid is marked union or prevailing wage.
+              </p>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3 items-end">
             <NumField id="dayrate" label="Proposed day rate" value={i.proposed_day_rate} suffix="$/day" disabled={readOnly} onChange={v => patch({ proposed_day_rate: v })} />
             {!readOnly && (
