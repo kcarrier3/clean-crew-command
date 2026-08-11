@@ -583,7 +583,17 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   const breakevenDivisor = 1 - overheadPct / 100;
   const breakevenPrice = breakevenDivisor > 0 ? direct / breakevenDivisor : 0;
   const proposedDayRate = nn(i.proposed_day_rate);
-  const dayRatePrice = crewDays * proposedDayRate;
+  /* Day-rate minimums: single-day jobs hold the higher floor; multi-day work
+     may be sold at the lower multi-day floor. */
+  const billableDays = crewDays > 0 ? Math.max(1, Math.ceil(crewDays - 1e-9)) : 0;
+  const multiDay = billableDays > 1;
+  const applyMin = i.apply_minimum_day_rate !== false;
+  const minDayRate = applyMin
+    ? (multiDay ? nn(i.multi_day_minimum_day_rate) || nn(i.minimum_day_rate) : nn(i.minimum_day_rate))
+    : 0;
+  const effectiveDayRate = Math.max(proposedDayRate, minDayRate);
+  const minDayRateApplied = minDayRate > 0 && minDayRate > proposedDayRate;
+  const dayRatePrice = crewDays * effectiveDayRate;
   const manualPrice = nn(i.manual_project_price);
   const basis: ConstructionPriceBasis =
     i.price_basis === 'day_rate' || i.price_basis === 'manual' ? i.price_basis : 'cost';
