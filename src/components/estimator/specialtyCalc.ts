@@ -60,6 +60,57 @@ export interface ConstructionPhase {
 
 export type ConstructionLaborType = 'standard' | 'prevailing';
 
+export type ConstructionProjectType =
+  | 'apartments' | 'schools' | 'open_office' | 'dense_restaurant' | 'custom';
+
+export type ConstructionComplexity =
+  | 'very_open' | 'open' | 'typical' | 'detailed' | 'dense';
+
+export type ConstructionPriceBasis = 'cost' | 'day_rate' | 'manual';
+
+export type PricingPosition =
+  | 'need_work' | 'competitive' | 'normal' | 'busy' | 'very_busy';
+
+export const CONSTRUCTION_PROJECT_TYPES: {
+  value: ConstructionProjectType; label: string; baseline: number;
+}[] = [
+  { value: 'apartments', label: 'Apartments', baseline: 5000 },
+  { value: 'schools', label: 'Schools', baseline: 5000 },
+  { value: 'open_office', label: 'Open Office Buildout', baseline: 7500 },
+  { value: 'dense_restaurant', label: 'Dense / Restaurant', baseline: 2500 },
+  { value: 'custom', label: 'Custom', baseline: 5000 },
+];
+
+export const CONSTRUCTION_COMPLEXITY_LEVELS: {
+  value: ConstructionComplexity; label: string; multiplier: number;
+}[] = [
+  { value: 'very_open', label: 'Very Open', multiplier: 1.3 },
+  { value: 'open', label: 'Open', multiplier: 1.15 },
+  { value: 'typical', label: 'Typical', multiplier: 1 },
+  { value: 'detailed', label: 'Detailed', multiplier: 0.8 },
+  { value: 'dense', label: 'Dense / Complex', multiplier: 0.6 },
+];
+
+export const PRICING_POSITIONS: { value: PricingPosition; label: string }[] = [
+  { value: 'need_work', label: 'Need the Work' },
+  { value: 'competitive', label: 'Competitive' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'busy', label: 'Busy' },
+  { value: 'very_busy', label: 'Very Busy' },
+];
+
+export const complexityMultiplier = (v: unknown): number =>
+  CONSTRUCTION_COMPLEXITY_LEVELS.find(c => c.value === v)?.multiplier ?? 1;
+
+/** Linear interpolation of the suggested day rate across the workload scale. */
+export function suggestedDayRate(position: unknown, min: number, max: number): number {
+  const idx = Math.max(0, PRICING_POSITIONS.findIndex(p => p.value === position));
+  const lo = nn(min);
+  const hi = nn(max);
+  const span = hi - lo;
+  return safe(lo + (span * idx) / (PRICING_POSITIONS.length - 1));
+}
+
 export interface ConstructionInputs extends FinancialBase {
   total_square_feet: number;
   phases: ConstructionPhase[];
@@ -74,6 +125,21 @@ export interface ConstructionInputs extends FinancialBase {
   supply_rate_per_hour: number;
   supply_cost_fixed: number;
   supply_cost_per_sqft: number;
+  /** Crew-day estimating (primary model). Legacy estimates stay phase-based. */
+  crew_day_mode: boolean;
+  project_type: ConstructionProjectType;
+  baseline_sqft_per_crew_day: number;
+  complexity: ConstructionComplexity;
+  /** >0 overrides the complexity-adjusted production rate. */
+  adjusted_sqft_per_crew_day_override: number;
+  hours_per_crew_day: number;
+  /** Day-rate pricing + decision support. */
+  proposed_day_rate: number;
+  pricing_position: PricingPosition;
+  suggested_day_rate_min: number;
+  suggested_day_rate_max: number;
+  price_basis: ConstructionPriceBasis;
+  manual_project_price: number;
 }
 
 export interface CarpetInputs extends FinancialBase {
@@ -170,6 +236,36 @@ export interface ConstructionLaborBudget {
   max_hours_at_target_margin: number;
   /** Max hours before the job loses money (overhead still covered). */
   breakeven_hours: number;
+}
+
+export interface ConstructionDayModel {
+  project_type: ConstructionProjectType;
+  baseline_sqft_per_crew_day: number;
+  complexity: ConstructionComplexity;
+  complexity_label: string;
+  complexity_multiplier: number;
+  calculated_sqft_per_crew_day: number;
+  adjusted_sqft_per_crew_day: number;
+  production_overridden: boolean;
+  crew_days: number;
+  hours_per_crew_day: number;
+  labor_hours: number;
+  /** Cost-based price that exactly hits the target margin. */
+  target_margin_price: number;
+  /** Price that covers direct cost + overhead with zero profit. */
+  breakeven_price: number;
+  proposed_day_rate: number;
+  suggested_day_rate: number;
+  suggested_day_rate_min: number;
+  suggested_day_rate_max: number;
+  pricing_position: PricingPosition;
+  pricing_position_label: string;
+  day_rate_project_price: number;
+  price_basis: ConstructionPriceBasis;
+  final_project_price: number;
+  effective_day_rate: number;
+  status: 'target' | 'below_target' | 'below_breakeven';
+  status_label: string;
 }
 
 export const CARPET_METHODS: { value: string; label: string; rate: number }[] = [
