@@ -636,13 +636,13 @@ export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }
           <CardHeader className="pb-2"><CardTitle className="text-sm">Day &amp; price decision</CardTitle></CardHeader>
           <CardContent className="pt-0 space-y-1">
             <div className={`rounded-md border p-2 text-xs font-medium ${statusClass}`}>{dm.status_label}</div>
-            <Line label="Estimated crew-days" value={dm.crew_days.toFixed(2)} />
+            <Line label="Estimated crew-days" value={`${dm.crew_days.toFixed(2)} (${dm.billable_days} billable)`} />
             <Line label="Estimated labor hours" value={hoursFmt(dm.labor_hours)} />
             <Line label="Adjusted production" value={`${Math.round(dm.adjusted_sqft_per_crew_day).toLocaleString()} sf/crew-day`} muted />
             <Separator className="my-2" />
             <Line label="Cost-based target-margin price" value={money(dm.target_margin_price)} />
             <Line label="Break-even price" value={money(dm.breakeven_price)} />
-            <Line label="Selected day rate" value={`${money(dm.proposed_day_rate)}/day`} />
+            <Line label="Selected day rate" value={`${money(dm.proposed_day_rate)}/day${dm.minimum_day_rate_applied ? ' (min)' : ''}`} />
             <Line label="Day-rate project price" value={money(dm.day_rate_project_price)} />
             <Line label="Final project price" value={money(dm.final_project_price)} />
             <Line label="Effective day rate" value={`${money(dm.effective_day_rate)}/day`} />
