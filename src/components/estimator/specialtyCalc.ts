@@ -593,7 +593,7 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     : 0;
   const effectiveDayRate = Math.max(proposedDayRate, minDayRate);
   const minDayRateApplied = minDayRate > 0 && minDayRate > proposedDayRate;
-  const dayRatePrice = crewDays * effectiveDayRate;
+  const dayRatePrice = billableDays * effectiveDayRate;
   const manualPrice = nn(i.manual_project_price);
   const basis: ConstructionPriceBasis =
     i.price_basis === 'day_rate' || i.price_basis === 'manual' ? i.price_basis : 'cost';
@@ -666,13 +666,17 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     labor_cost_per_crew_day: safe(hoursPerCrewDay * rate),
     target_margin_price: safe(solvable ? targetMarginPrice : 0),
     breakeven_price: safe(breakevenPrice),
-    proposed_day_rate: safe(proposedDayRate),
+    proposed_day_rate: safe(effectiveDayRate),
     suggested_day_rate: suggestedDayRate(i.pricing_position, i.suggested_day_rate_min, i.suggested_day_rate_max),
     suggested_day_rate_min: nn(i.suggested_day_rate_min),
     suggested_day_rate_max: nn(i.suggested_day_rate_max),
     pricing_position: i.pricing_position || 'normal',
     pricing_position_label: PRICING_POSITIONS.find(p => p.value === i.pricing_position)?.label || 'Normal',
     day_rate_project_price: safe(dayRatePrice),
+    billable_days: billableDays,
+    multi_day: multiDay,
+    applicable_minimum_day_rate: safe(minDayRate),
+    minimum_day_rate_applied: basis === 'day_rate' && minDayRateApplied,
     price_basis: basis,
     final_project_price: safe(finalPrice),
     effective_day_rate: safe(crewDays > 0 ? finalPrice / crewDays : 0),
