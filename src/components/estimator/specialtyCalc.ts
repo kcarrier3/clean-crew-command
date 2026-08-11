@@ -400,6 +400,8 @@ export const DEFAULT_CONSTRUCTION_DAY_MODEL = {
   apply_minimum_day_rate: true,
   minimum_day_rate: 1500,
   multi_day_minimum_day_rate: 1250,
+  apply_prevailing_margin_floor: true,
+  prevailing_min_margin_percent: 41.25,
 };
 
 export const DEFAULT_SPECIALTY_INPUTS = (service: ServiceType): SpecialtyInputs => {
