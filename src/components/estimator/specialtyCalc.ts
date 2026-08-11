@@ -211,6 +211,8 @@ export interface SpecialtyOutputs {
   supply_cost?: number;
   /** Construction only — labor budget analysis. */
   labor_budget?: ConstructionLaborBudget;
+  /** Construction only — crew-day / day-rate decision model. */
+  day_model?: ConstructionDayModel;
 }
 
 export interface ConstructionLaborBudget {
