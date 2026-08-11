@@ -53,6 +53,8 @@ export interface ConstructionPhase {
   enabled: boolean;
   sqft: number;
   production_rate_sqft_hour: number;
+  /** Crew-day model: sq ft one crew covers in a day for this phase (0 = derive from baseline). */
+  sqft_per_crew_day?: number;
   extra_hours: number;
   notes: string;
   custom?: boolean;
@@ -101,6 +103,18 @@ export const PRICING_POSITIONS: { value: PricingPosition; label: string }[] = [
 
 export const complexityMultiplier = (v: unknown): number =>
   CONSTRUCTION_COMPLEXITY_LEVELS.find(c => c.value === v)?.multiplier ?? 1;
+
+/**
+ * Speed of each construction phase relative to the project's baseline
+ * production rate (which represents the final clean).
+ */
+export const PHASE_PRODUCTION_FACTORS: Record<string, number> = {
+  rough: 1.6,
+  final: 1,
+  touchup: 2.5,
+};
+
+export const phaseProductionFactor = (id: string): number => PHASE_PRODUCTION_FACTORS[id] ?? 1;
 
 /** Linear interpolation of the suggested day rate across the workload scale. */
 export function suggestedDayRate(position: unknown, min: number, max: number): number {
