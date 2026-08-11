@@ -734,6 +734,7 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     pricing_position_label: PRICING_POSITIONS.find(p => p.value === i.pricing_position)?.label || 'Normal',
     day_rate_project_price: safe(dayRatePrice),
     billable_days: billableDays,
+    phases: phaseResults,
     multi_day: multiDay,
     applicable_minimum_day_rate: safe(minDayRate),
     minimum_day_rate_applied: basis === 'day_rate' && minDayRateApplied,
