@@ -7,6 +7,8 @@ import {
 const base = () => ({
   ...(DEFAULT_SPECIALTY_INPUTS('construction_cleaning') as ConstructionInputs),
   crew_day_mode: false,
+  price_basis: 'cost' as const,
+  apply_minimum_day_rate: false,
   total_square_feet: 20000,
   base_wage: 18, labor_burden_percent: 20, overhead_percent: 15, target_margin_percent: 25,
   supply_rate_per_hour: 0.5, equipment_cost: 500,
@@ -16,6 +18,8 @@ const base = () => ({
 
 const crewBase = () => ({
   ...(DEFAULT_SPECIALTY_INPUTS('construction_cleaning') as ConstructionInputs),
+  price_basis: 'cost' as const,
+  apply_minimum_day_rate: false,
   total_square_feet: 20000,
   base_wage: 18, labor_burden_percent: 20, overhead_percent: 15, target_margin_percent: 25,
   supply_rate_per_hour: 0.5, equipment_cost: 500,
