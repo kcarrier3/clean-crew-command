@@ -895,6 +895,8 @@ export function validateSpecialty(service: ServiceType, i: SpecialtyInputs): str
           : nn(c.baseline_sqft_per_crew_day) * complexityMultiplier(c.complexity);
         if (!(adjusted > 0)) return 'Baseline production (sq ft per crew-day) must be greater than zero.';
         if (!(nn(c.hours_per_crew_day) > 0)) return 'Hours per crew-day must be greater than zero.';
+        if ((c.phases || []).filter(p => p.enabled).length === 0)
+          return 'Select at least one clean (rough, final or touch-up).';
         return null;
       }
       const active = (c.phases || []).filter(p => p.enabled);
