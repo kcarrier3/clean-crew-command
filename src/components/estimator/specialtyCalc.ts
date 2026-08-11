@@ -469,9 +469,26 @@ const loaded = (b: FinancialBase) => nn(b.base_wage) * (1 + nn(b.labor_burden_pe
  * additional hourly burden are already dollar amounts, so they are never
  * burdened again (no double counting).
  */
+/**
+ * Blended crew wage: leads at the lead wage, everyone else at the member wage.
+ * Returns 0 when no crew composition is configured (legacy estimates).
+ */
+export function crewBlendedWage(i: ConstructionInputs): number {
+  const size = nn(i.crew_size);
+  if (size <= 0) return 0;
+  const leads = Math.min(Math.max(nn(i.crew_lead_count), 0), size);
+  const leadWage = nn(i.crew_lead_wage);
+  const memberWage = nn(i.crew_member_wage);
+  if (leadWage <= 0 && memberWage <= 0) return 0;
+  return safe((leads * leadWage + (size - leads) * memberWage) / size);
+}
+
 export function constructionLaborRate(i: ConstructionInputs) {
   const prevailing = !!i.union_project || !!i.prevailing_wage_project;
-  const wage = prevailing ? nn(i.prevailing_base_wage) || nn(i.base_wage) : nn(i.base_wage);
+  const blended = crewBlendedWage(i);
+  const wage = prevailing
+    ? nn(i.prevailing_base_wage) || blended || nn(i.base_wage)
+    : blended || nn(i.base_wage);
   const burdenPct = nn(i.labor_burden_percent);
   const burdenAmount = wage * (burdenPct / 100);
   const fringe = prevailing ? nn(i.prevailing_fringe_per_hour) : 0;
