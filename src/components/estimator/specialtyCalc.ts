@@ -517,6 +517,9 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   const overrideProduction = nn(i.adjusted_sqft_per_crew_day_override);
   const adjustedProduction = overrideProduction > 0 ? overrideProduction : calculatedProduction;
   const hoursPerDay = nn(i.hours_per_crew_day) || 8;
+  const crewSize = nn(i.crew_size);
+  const crewMultiplier = crewSize > 0 ? crewSize : 1;
+  const hoursPerCrewDay = hoursPerDay * crewMultiplier;
   const crewDays = adjustedProduction > 0 ? totalSqft / adjustedProduction : 0;
 
   let lines: LaborLine[];
@@ -527,10 +530,10 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     lines = [
       line(
         'Construction cleaning crew',
-        crewDays * hoursPerDay,
+        crewDays * hoursPerCrewDay,
         rate,
         adjustedProduction > 0
-          ? `${totalSqft.toLocaleString()} sq ft ÷ ${Math.round(adjustedProduction).toLocaleString()} sq ft/crew-day = ${crewDays.toFixed(2)} crew-days × ${hoursPerDay} hr`
+          ? `${totalSqft.toLocaleString()} sq ft ÷ ${Math.round(adjustedProduction).toLocaleString()} sq ft/crew-day = ${crewDays.toFixed(2)} crew-days × ${crewMultiplier > 1 ? `${crewMultiplier} workers × ` : ''}${hoursPerDay} hr`
           : undefined
       ),
       ...extra,
