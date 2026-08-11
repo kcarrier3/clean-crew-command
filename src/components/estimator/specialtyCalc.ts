@@ -145,6 +145,10 @@ export interface ConstructionInputs extends FinancialBase {
   suggested_day_rate_max: number;
   price_basis: ConstructionPriceBasis;
   manual_project_price: number;
+  /** Day-rate minimums. Single-day jobs hold a higher floor than multi-day work. */
+  apply_minimum_day_rate: boolean;
+  minimum_day_rate: number;
+  multi_day_minimum_day_rate: number;
 }
 
 export interface CarpetInputs extends FinancialBase {
@@ -276,6 +280,11 @@ export interface ConstructionDayModel {
   pricing_position: PricingPosition;
   pricing_position_label: string;
   day_rate_project_price: number;
+  /** Whole days actually billed (crew-days rounded up). */
+  billable_days: number;
+  multi_day: boolean;
+  applicable_minimum_day_rate: number;
+  minimum_day_rate_applied: boolean;
   price_basis: ConstructionPriceBasis;
   final_project_price: number;
   effective_day_rate: number;
@@ -336,8 +345,11 @@ export const DEFAULT_CONSTRUCTION_DAY_MODEL = {
   pricing_position: 'normal' as PricingPosition,
   suggested_day_rate_min: 800,
   suggested_day_rate_max: 1600,
-  price_basis: 'cost' as ConstructionPriceBasis,
+  price_basis: 'day_rate' as ConstructionPriceBasis,
   manual_project_price: 0,
+  apply_minimum_day_rate: true,
+  minimum_day_rate: 1500,
+  multi_day_minimum_day_rate: 1250,
 };
 
 export const DEFAULT_SPECIALTY_INPUTS = (service: ServiceType): SpecialtyInputs => {
