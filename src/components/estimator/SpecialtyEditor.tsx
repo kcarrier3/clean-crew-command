@@ -540,11 +540,23 @@ export function buildSpecialtySummaryText(
     'LABOR',
     ...o.lines.map(l => `${l.label}: ${l.hours.toFixed(2)} hr · ${money(l.cost)}${l.detail ? ` (${l.detail})` : ''}`),
     `Total labor hours: ${o.labor_hours.toFixed(2)}`,
-    `Base wage: ${money(f.base_wage)}/hr · burden ${pct(f.labor_burden_percent)} · loaded ${money(o.loaded_labor_rate)}/hr`,
+    o.labor_budget
+      ? `Labor type: ${o.labor_budget.labor_type === 'standard'
+          ? 'Standard / Non-prevailing'
+          : [o.labor_budget.union_project ? 'Union' : null, o.labor_budget.prevailing_wage_project ? 'Prevailing wage' : null].filter(Boolean).join(' + ')}`
+      : null,
+    o.labor_budget
+      ? `Wage ${money(o.labor_budget.base_wage)}/hr + burden ${pct(o.labor_budget.burden_percent)} (${money(o.labor_budget.burden_amount)}/hr)`
+        + (o.labor_budget.fringe_per_hour ? ` + fringe ${money(o.labor_budget.fringe_per_hour)}/hr` : '')
+        + (o.labor_budget.additional_burden_per_hour ? ` + additional ${money(o.labor_budget.additional_burden_per_hour)}/hr` : '')
+        + ` = effective ${money(o.labor_budget.effective_hourly_labor_cost)}/hr`
+      : `Base wage: ${money(f.base_wage)}/hr · burden ${pct(f.labor_burden_percent)} · loaded ${money(o.loaded_labor_rate)}/hr`,
     `Labor cost: ${money(o.labor_cost)}`,
     '',
     'DIRECT COST',
-    `Materials / consumables: ${money(o.materials_cost)}`,
+    o.supply_cost !== undefined
+      ? `Project supplies: ${money(o.supply_cost)}`
+      : `Materials / consumables: ${money(o.materials_cost)}`,
     `Equipment / rental: ${money(o.equipment_cost)}`,
     `Total direct cost: ${money(o.total_direct_cost)}`,
     ...o.extras.map(e => `${e.label}: ${e.value}`),
@@ -556,6 +568,8 @@ export function buildSpecialtySummaryText(
     `Project price: ${money(o.project_price)}`,
     `Price per sq ft: $${o.price_per_sqft.toFixed(4)}`,
     `Gross margin: ${pct(o.gross_margin_percent)} (equivalent markup ${pct(o.markup_on_direct_percent)})`,
+    o.labor_budget ? `Max labor hours at target margin: ${o.labor_budget.max_hours_at_target_margin.toFixed(2)} hr` : null,
+    o.labor_budget ? `Break-even labor hours: ${o.labor_budget.breakeven_hours.toFixed(2)} hr` : null,
     m.notes ? '' : null,
     m.notes ? 'INTERNAL NOTES' : null,
     m.notes || null,
