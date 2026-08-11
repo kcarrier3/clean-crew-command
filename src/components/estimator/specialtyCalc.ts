@@ -199,10 +199,26 @@ export const DEFAULT_CONSTRUCTION_PHASES = (): ConstructionPhase[] => [
   { id: 'touchup', label: 'Touch-Up / Punch Clean', enabled: false, sqft: 0, production_rate_sqft_hour: 2500, extra_hours: 0, notes: '' },
 ];
 
+export const DEFAULT_CONSTRUCTION_LABOR = {
+  union_project: false,
+  prevailing_wage_project: false,
+  prevailing_base_wage: 0,
+  prevailing_fringe_per_hour: 0,
+  prevailing_additional_burden_per_hour: 0,
+  supply_rate_per_hour: 0.35,
+  supply_cost_fixed: 0,
+  supply_cost_per_sqft: 0,
+};
+
 export const DEFAULT_SPECIALTY_INPUTS = (service: ServiceType): SpecialtyInputs => {
   switch (service) {
     case 'construction_cleaning':
-      return { ...DEFAULT_FINANCIALS, total_square_feet: 0, phases: DEFAULT_CONSTRUCTION_PHASES() };
+      return {
+        ...DEFAULT_FINANCIALS,
+        ...DEFAULT_CONSTRUCTION_LABOR,
+        total_square_feet: 0,
+        phases: DEFAULT_CONSTRUCTION_PHASES(),
+      };
     case 'carpet_cleaning':
       return {
         ...DEFAULT_FINANCIALS,
