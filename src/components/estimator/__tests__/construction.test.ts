@@ -147,6 +147,8 @@ describe('construction crew-day model', () => {
 describe('crew composition', () => {
   const withCrew = (over: Partial<ConstructionInputs> = {}) => calculateConstruction({
     ...(DEFAULT_SPECIALTY_INPUTS('construction_cleaning') as ConstructionInputs),
+    price_basis: 'cost',
+    apply_minimum_day_rate: false,
     total_square_feet: 10000,
     baseline_sqft_per_crew_day: 5000,
     complexity: 'typical',
