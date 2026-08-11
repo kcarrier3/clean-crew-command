@@ -578,13 +578,14 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
 
   /* Each selected phase (rough / final / touch-up) carries its own production
      rate in sq ft per crew-day. Unset rates derive from the project baseline
-     using the phase speed factor, then the complexity multiplier is applied. */
+     using the project-type-specific phase speed factor, then the complexity
+     multiplier is applied. */
   const enabledPhases = (i.phases || []).filter(p => p.enabled);
   const phaseResults: ConstructionPhaseResult[] = enabledPhases.map(p => {
     const own = nn(p.sqft_per_crew_day);
     const prod = own > 0
       ? own * multiplier
-      : adjustedProduction * phaseProductionFactor(p.id);
+      : adjustedProduction * phaseProductionFactor(p.id, i.project_type);
     const sqft = nn(p.sqft) > 0 ? nn(p.sqft) : totalSqft;
     const days = prod > 0 ? sqft / prod : 0;
     return {
