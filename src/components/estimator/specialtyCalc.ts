@@ -771,6 +771,14 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
     // Estimates saved before the crew-day model keep their phase-based math and
     // therefore their historical totals; only new estimates default to crew-days.
     if (!('crew_day_mode' in raw)) c.crew_day_mode = false;
+    // Crew composition is new: existing estimates keep one-person crew-day math
+    // and their saved wage until a crew is entered.
+    if (!('crew_size' in raw)) {
+      c.crew_size = 0;
+      c.crew_lead_count = 0;
+      c.crew_member_wage = 0;
+      c.crew_lead_wage = 0;
+    }
     c.materials_cost = 0;
     c.materials_cost_per_sqft = 0;
   }
