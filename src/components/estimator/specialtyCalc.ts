@@ -133,6 +133,11 @@ export interface ConstructionInputs extends FinancialBase {
   /** >0 overrides the complexity-adjusted production rate. */
   adjusted_sqft_per_crew_day_override: number;
   hours_per_crew_day: number;
+  /** Crew composition per crew-day (0 crew size = legacy single-person crew-day). */
+  crew_size: number;
+  crew_lead_count: number;
+  crew_member_wage: number;
+  crew_lead_wage: number;
   /** Day-rate pricing + decision support. */
   proposed_day_rate: number;
   pricing_position: PricingPosition;
