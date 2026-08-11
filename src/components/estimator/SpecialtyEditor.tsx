@@ -359,7 +359,9 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
 
       <Card>
         <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm">Phases &amp; work items</CardTitle>
+          <CardTitle className="text-sm">
+            {crewDayMode ? 'Phases & extra work items (optional)' : 'Phases & work items'}
+          </CardTitle>
           {!readOnly && (
             <Button
               variant="ghost"
@@ -376,6 +378,11 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
           )}
         </CardHeader>
         <CardContent className="space-y-3">
+          {crewDayMode && (
+            <p className="text-[11px] text-muted-foreground">
+              Crew-day estimating drives the hours. Only the additional fixed hours below are added on top — production rates here are ignored.
+            </p>
+          )}
           {phases.map(p => (
             <div key={p.id} className="rounded-lg border border-border p-3 space-y-3">
               <div className="flex items-center gap-2">
