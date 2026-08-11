@@ -724,6 +724,9 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
       c.supply_cost_fixed = nn(raw.materials_cost);
       c.supply_cost_per_sqft = nn(raw.materials_cost_per_sqft);
     }
+    // Estimates saved before the crew-day model keep their phase-based math and
+    // therefore their historical totals; only new estimates default to crew-days.
+    if (!('crew_day_mode' in raw)) c.crew_day_mode = false;
     c.materials_cost = 0;
     c.materials_cost_per_sqft = 0;
   }
@@ -741,6 +744,14 @@ export function validateSpecialty(service: ServiceType, i: SpecialtyInputs): str
       if (!(nn(c.total_square_feet) > 0)) return 'Total project square feet must be greater than zero.';
       if ((c.union_project || c.prevailing_wage_project) && !(nn(c.prevailing_base_wage) > 0))
         return 'Enter the union / prevailing base hourly wage.';
+      if (c.crew_day_mode !== false) {
+        const adjusted = nn(c.adjusted_sqft_per_crew_day_override) > 0
+          ? nn(c.adjusted_sqft_per_crew_day_override)
+          : nn(c.baseline_sqft_per_crew_day) * complexityMultiplier(c.complexity);
+        if (!(adjusted > 0)) return 'Baseline production (sq ft per crew-day) must be greater than zero.';
+        if (!(nn(c.hours_per_crew_day) > 0)) return 'Hours per crew-day must be greater than zero.';
+        return null;
+      }
       const active = (c.phases || []).filter(p => p.enabled);
       if (active.length === 0) return 'Select at least one phase or work item.';
       if (active.some(p => !(nn(p.production_rate_sqft_hour) > 0) && !(nn(p.extra_hours) > 0)))
