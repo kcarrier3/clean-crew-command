@@ -7,12 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Slider } from '@/components/ui/slider';
+import { Badge } from '@/components/ui/badge';
 import { money, pct, hoursFmt } from './calc';
 import { SERVICE_LABELS, type ServiceType } from './serviceTypes';
 import {
   CARPET_METHODS, FURNITURE_LEVELS, SOIL_LEVELS,
   DEFAULT_CONSTRUCTION_PHASES,
   constructionLaborRate,
+  calculateConstruction,
+  CONSTRUCTION_COMPLEXITY_LEVELS, CONSTRUCTION_PROJECT_TYPES, PRICING_POSITIONS,
+  complexityMultiplier, suggestedDayRate,
   type CarpetInputs, type ConstructionInputs, type FinancialBase,
   type ScrubInputs, type SpecialtyInputs, type SpecialtyOutputs, type VctInputs,
 } from './specialtyCalc';
