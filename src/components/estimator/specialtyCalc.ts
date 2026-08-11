@@ -509,6 +509,17 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
   if (service === 'construction_cleaning') {
     const c = merged as ConstructionInputs;
     if (!Array.isArray(c.phases) || c.phases.length === 0) c.phases = DEFAULT_CONSTRUCTION_PHASES();
+    // Legacy estimates predate the construction supply model: keep their totals
+    // identical by moving old consumables dollars into the supply buckets and
+    // defaulting the hourly supply rate to zero rather than the new default.
+    const legacy = !('supply_rate_per_hour' in raw);
+    if (legacy) {
+      c.supply_rate_per_hour = 0;
+      c.supply_cost_fixed = nn(raw.materials_cost);
+      c.supply_cost_per_sqft = nn(raw.materials_cost_per_sqft);
+    }
+    c.materials_cost = 0;
+    c.materials_cost_per_sqft = 0;
   }
   return merged;
 }
