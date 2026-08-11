@@ -91,16 +91,16 @@ describe('construction crew-day model', () => {
   });
 
   it('day-rate pricing, effective rate and status', () => {
-    const i = { ...crewBase(), baseline_sqft_per_crew_day: 5000, proposed_day_rate: 1200, price_basis: 'day_rate' as const };
+    const i = { ...crewBase(), baseline_sqft_per_crew_day: 5000, proposed_day_rate: 450, price_basis: 'day_rate' as const };
     const o = calculateConstruction(i);
     const dm = o.day_model!;
-    expect(dm.day_rate_project_price).toBeCloseTo(4800);
-    expect(o.project_price).toBeCloseTo(4800);
-    expect(dm.effective_day_rate).toBeCloseTo(1200);
+    expect(dm.day_rate_project_price).toBeCloseTo(1800);
+    expect(o.project_price).toBeCloseTo(1800);
+    expect(dm.effective_day_rate).toBeCloseTo(450);
     expect(dm.target_margin_price).toBeCloseTo((32 * 21.6 + 16 + 500) / 0.6);
     expect(dm.status).toBe('below_target');
     expect(dm.breakeven_price).toBeCloseTo(o.total_direct_cost / 0.85);
-    expect(o.profit_amount).toBeCloseTo(4800 - o.total_direct_cost - 4800 * 0.15);
+    expect(o.profit_amount).toBeCloseTo(1800 - o.total_direct_cost - 1800 * 0.15);
 
     const rich = calculateConstruction({ ...i, proposed_day_rate: 3000 }).day_model!;
     expect(rich.status).toBe('target');
