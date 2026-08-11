@@ -36,6 +36,9 @@ import {
   hydrateJanitorialInputs, janitorialRevisionPayload, monthlyPriceDrift,
 } from '@/components/estimator/janitorial';
 import { ConvertToAccountDialog } from '@/components/estimator/ConvertToAccountDialog';
+import {
+  CostBreakdown, breakdownText, buildJanitorialBreakdown, buildSpecialtyBreakdown,
+} from '@/components/estimator/CostBreakdown';
 
 const SPECIALTY_COLUMNS = (i: SpecialtyInputs, o: SpecialtyOutputs) => ({
   specialty_inputs: i,
@@ -115,6 +118,12 @@ export default function EstimatingDetail() {
     [serviceType, specialty]
   );
   const solvable = isPricingSolvable(inputs.overhead_percent, inputs.target_margin_percent);
+  const breakdown = useMemo(
+    () => (isJanitorial
+      ? buildJanitorialBreakdown(inputs, outputs)
+      : buildSpecialtyBreakdown(serviceType, specialty, specialtyOutputs)),
+    [isJanitorial, inputs, outputs, serviceType, specialty, specialtyOutputs]
+  );
 
   // Snapshot drift: the saved monthly_price vs what the current calculator produces
   // from the same saved inputs. Only meaningful before the user starts editing.
@@ -301,7 +310,7 @@ export default function EstimatingDetail() {
       ? buildSummaryText(inputs, outputs, meta)
       : buildSpecialtySummaryText(serviceType, specialty, specialtyOutputs, meta);
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(`${text}\n${breakdownText(breakdown)}`);
       toast({ title: 'Pricing summary copied' });
     } catch {
       toast({ title: 'Copy failed', description: 'Select and copy the summary manually.', variant: 'destructive' });
@@ -405,6 +414,7 @@ export default function EstimatingDetail() {
               <Badge variant="secondary">{SERVICE_LABELS[serviceType]}</Badge>
               <span className="text-xs text-muted-foreground">Read-only. Choose “Edit estimate” to reopen and revise it.</span>
             </div>
+            <CostBreakdown model={breakdown} />
             {isJanitorial ? (
               <PricingSummary
                 inputs={inputs}
@@ -621,6 +631,7 @@ export default function EstimatingDetail() {
               ) : (
                 <SpecialtySummaryPanel outputs={specialtyOutputs} />
               )}
+              <CostBreakdown model={breakdown} />
               <Button variant="outline" className="w-full" onClick={copySummary}>
                 <Copy className="h-4 w-4 mr-2" /> Copy Pricing Summary
               </Button>
