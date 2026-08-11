@@ -121,6 +121,7 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
   const phases = i.phases?.length ? i.phases : DEFAULT_CONSTRUCTION_PHASES();
   const setPhase = (id: string, p: Partial<ConstructionInputs['phases'][number]>) =>
     patch({ phases: phases.map(x => (x.id === id ? { ...x, ...p } : x)) });
+  const wage = constructionLaborRate(i);
 
   return (
     <>
@@ -128,6 +129,78 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
         <CardHeader className="pb-3"><CardTitle className="text-sm">Project scope</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 gap-3">
           <NumField id="tsqft" label="Total project square feet" value={i.total_square_feet} suffix="sq ft" disabled={readOnly} onChange={v => patch({ total_square_feet: v })} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Labor requirements</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-[11px] text-muted-foreground">
+            Default is Standard / Non-prevailing. Check either box below if union or prevailing wage rules apply.
+          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                id="union"
+                checked={!!i.union_project}
+                disabled={readOnly}
+                onCheckedChange={c => patch({ union_project: !!c })}
+              />
+              Union project
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                id="prevailing"
+                checked={!!i.prevailing_wage_project}
+                disabled={readOnly}
+                onCheckedChange={c => patch({ prevailing_wage_project: !!c })}
+              />
+              Prevailing wage project
+            </label>
+          </div>
+
+          {!wage.prevailing ? (
+            <div className="grid grid-cols-2 gap-3">
+              <NumField id="cwage" label="Base wage" value={i.base_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ base_wage: v })} />
+              <NumField id="cburden" label="Labor burden" value={i.labor_burden_percent} suffix="%" disabled={readOnly} onChange={v => patch({ labor_burden_percent: v })} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <NumField id="pwage" label="Prevailing / union base wage" value={i.prevailing_base_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_base_wage: v })} />
+              <NumField id="pfringe" label="Fringe / benefits" value={i.prevailing_fringe_per_hour} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_fringe_per_hour: v })} />
+              <NumField id="cburden2" label="Payroll burden (on wage)" value={i.labor_burden_percent} suffix="%" disabled={readOnly} onChange={v => patch({ labor_burden_percent: v })} />
+              <NumField id="pextra" label="Additional hourly burden" value={i.prevailing_additional_burden_per_hour} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_additional_burden_per_hour: v })} />
+            </div>
+          )}
+
+          <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
+            <Line label="Base wage" value={`${money(wage.wage)}/hr`} />
+            <Line label={`Payroll burden (${pct(wage.burdenPct)} of wage)`} value={`${money(wage.burdenAmount)}/hr`} />
+            {wage.prevailing && <Line label="Fringe / benefits" value={`${money(wage.fringe)}/hr`} />}
+            {wage.prevailing && <Line label="Additional burden" value={`${money(wage.extra)}/hr`} />}
+            <Separator className="my-1" />
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-medium">Effective hourly labor cost</span>
+              <span className="tabular-nums text-sm font-semibold">{money(wage.effective)}/hr</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground pt-1">
+              Burden % applies to the wage only — fringe and additional hourly burden are dollar amounts and are never burdened twice.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Project cleaning supplies</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <NumField id="csupr" label="Supply rate" value={i.supply_rate_per_hour} suffix="$/labor hr" disabled={readOnly} onChange={v => patch({ supply_rate_per_hour: v })} />
+            <NumField id="csupf" label="Fixed supply cost" value={i.supply_cost_fixed} suffix="$" disabled={readOnly} onChange={v => patch({ supply_cost_fixed: v })} />
+            <NumField id="csupsf" label="Supply cost per sq ft" value={i.supply_cost_per_sqft} suffix="$/sf" disabled={readOnly} onChange={v => patch({ supply_cost_per_sqft: v })} />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Construction projects carry no janitorial consumables. Supplies are a direct project cost and are included in the total cost, price and margin.
+          </p>
         </CardContent>
       </Card>
 
