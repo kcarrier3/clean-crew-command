@@ -69,8 +69,8 @@ type Patch = (patch: Record<string, unknown>) => void;
 /* --------------------------------------------------------------- sections */
 
 function FinancialsCard({
-  i, patch, readOnly, hideLabor, hideConsumables,
-}: { i: FinancialBase; patch: Patch; readOnly?: boolean; hideLabor?: boolean; hideConsumables?: boolean }) {
+  i, patch, readOnly, hideLabor, hideConsumables, hideEquipment,
+}: { i: FinancialBase; patch: Patch; readOnly?: boolean; hideLabor?: boolean; hideConsumables?: boolean; hideEquipment?: boolean }) {
   const solvable = (i.overhead_percent || 0) + (i.target_margin_percent || 0) < 100;
   return (
     <>
@@ -84,6 +84,7 @@ function FinancialsCard({
       </Card>
       )}
 
+      {!(hideConsumables && hideEquipment) && (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">{hideConsumables ? 'Equipment' : 'Materials & equipment'}</CardTitle>
@@ -95,10 +96,13 @@ function FinancialsCard({
               <NumField id="matsf" label="Consumables per sq ft" value={i.materials_cost_per_sqft} suffix="$/sf" disabled={readOnly} onChange={v => patch({ materials_cost_per_sqft: v })} />
             </>
           )}
-          <NumField id="equip" label="Equipment / rental" value={i.equipment_cost} suffix="$" disabled={readOnly} onChange={v => patch({ equipment_cost: v })} />
+          {!hideEquipment && (
+            <NumField id="equip" label="Equipment / rental" value={i.equipment_cost} suffix="$" disabled={readOnly} onChange={v => patch({ equipment_cost: v })} />
+          )}
           <NumField id="min" label="Minimum charge (optional)" value={i.minimum_charge} suffix="$" disabled={readOnly} onChange={v => patch({ minimum_charge: v })} />
         </CardContent>
       </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Overhead &amp; profit</CardTitle></CardHeader>
@@ -592,6 +596,7 @@ export function SpecialtyForm({
         readOnly={readOnly}
         hideLabor={service === 'construction_cleaning'}
         hideConsumables={service === 'construction_cleaning'}
+        hideEquipment={service === 'construction_cleaning'}
       />
     </>
   );
