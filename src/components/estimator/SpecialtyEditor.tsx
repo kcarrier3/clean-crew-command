@@ -12,6 +12,7 @@ import { SERVICE_LABELS, type ServiceType } from './serviceTypes';
 import {
   CARPET_METHODS, FURNITURE_LEVELS, SOIL_LEVELS,
   DEFAULT_CONSTRUCTION_PHASES,
+  constructionLaborRate,
   type CarpetInputs, type ConstructionInputs, type FinancialBase,
   type ScrubInputs, type SpecialtyInputs, type SpecialtyOutputs, type VctInputs,
 } from './specialtyCalc';
@@ -62,10 +63,13 @@ type Patch = (patch: Record<string, unknown>) => void;
 
 /* --------------------------------------------------------------- sections */
 
-function FinancialsCard({ i, patch, readOnly }: { i: FinancialBase; patch: Patch; readOnly?: boolean }) {
+function FinancialsCard({
+  i, patch, readOnly, hideLabor, hideConsumables,
+}: { i: FinancialBase; patch: Patch; readOnly?: boolean; hideLabor?: boolean; hideConsumables?: boolean }) {
   const solvable = (i.overhead_percent || 0) + (i.target_margin_percent || 0) < 100;
   return (
     <>
+      {!hideLabor && (
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Labor</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 gap-3">
@@ -73,12 +77,19 @@ function FinancialsCard({ i, patch, readOnly }: { i: FinancialBase; patch: Patch
           <NumField id="burden" label="Labor burden" value={i.labor_burden_percent} suffix="%" disabled={readOnly} onChange={v => patch({ labor_burden_percent: v })} />
         </CardContent>
       </Card>
+      )}
 
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm">Materials &amp; equipment</CardTitle></CardHeader>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">{hideConsumables ? 'Equipment' : 'Materials & equipment'}</CardTitle>
+        </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3">
-          <NumField id="mat" label="Consumables (fixed)" value={i.materials_cost} suffix="$" disabled={readOnly} onChange={v => patch({ materials_cost: v })} />
-          <NumField id="matsf" label="Consumables per sq ft" value={i.materials_cost_per_sqft} suffix="$/sf" disabled={readOnly} onChange={v => patch({ materials_cost_per_sqft: v })} />
+          {!hideConsumables && (
+            <>
+              <NumField id="mat" label="Consumables (fixed)" value={i.materials_cost} suffix="$" disabled={readOnly} onChange={v => patch({ materials_cost: v })} />
+              <NumField id="matsf" label="Consumables per sq ft" value={i.materials_cost_per_sqft} suffix="$/sf" disabled={readOnly} onChange={v => patch({ materials_cost_per_sqft: v })} />
+            </>
+          )}
           <NumField id="equip" label="Equipment / rental" value={i.equipment_cost} suffix="$" disabled={readOnly} onChange={v => patch({ equipment_cost: v })} />
           <NumField id="min" label="Minimum charge (optional)" value={i.minimum_charge} suffix="$" disabled={readOnly} onChange={v => patch({ minimum_charge: v })} />
         </CardContent>
@@ -110,6 +121,7 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
   const phases = i.phases?.length ? i.phases : DEFAULT_CONSTRUCTION_PHASES();
   const setPhase = (id: string, p: Partial<ConstructionInputs['phases'][number]>) =>
     patch({ phases: phases.map(x => (x.id === id ? { ...x, ...p } : x)) });
+  const wage = constructionLaborRate(i);
 
   return (
     <>
@@ -117,6 +129,78 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
         <CardHeader className="pb-3"><CardTitle className="text-sm">Project scope</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 gap-3">
           <NumField id="tsqft" label="Total project square feet" value={i.total_square_feet} suffix="sq ft" disabled={readOnly} onChange={v => patch({ total_square_feet: v })} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Labor requirements</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-[11px] text-muted-foreground">
+            Default is Standard / Non-prevailing. Check either box below if union or prevailing wage rules apply.
+          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                id="union"
+                checked={!!i.union_project}
+                disabled={readOnly}
+                onCheckedChange={c => patch({ union_project: !!c })}
+              />
+              Union project
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                id="prevailing"
+                checked={!!i.prevailing_wage_project}
+                disabled={readOnly}
+                onCheckedChange={c => patch({ prevailing_wage_project: !!c })}
+              />
+              Prevailing wage project
+            </label>
+          </div>
+
+          {!wage.prevailing ? (
+            <div className="grid grid-cols-2 gap-3">
+              <NumField id="cwage" label="Base wage" value={i.base_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ base_wage: v })} />
+              <NumField id="cburden" label="Labor burden" value={i.labor_burden_percent} suffix="%" disabled={readOnly} onChange={v => patch({ labor_burden_percent: v })} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <NumField id="pwage" label="Prevailing / union base wage" value={i.prevailing_base_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_base_wage: v })} />
+              <NumField id="pfringe" label="Fringe / benefits" value={i.prevailing_fringe_per_hour} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_fringe_per_hour: v })} />
+              <NumField id="cburden2" label="Payroll burden (on wage)" value={i.labor_burden_percent} suffix="%" disabled={readOnly} onChange={v => patch({ labor_burden_percent: v })} />
+              <NumField id="pextra" label="Additional hourly burden" value={i.prevailing_additional_burden_per_hour} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_additional_burden_per_hour: v })} />
+            </div>
+          )}
+
+          <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
+            <Line label="Base wage" value={`${money(wage.wage)}/hr`} />
+            <Line label={`Payroll burden (${pct(wage.burdenPct)} of wage)`} value={`${money(wage.burdenAmount)}/hr`} />
+            {wage.prevailing && <Line label="Fringe / benefits" value={`${money(wage.fringe)}/hr`} />}
+            {wage.prevailing && <Line label="Additional burden" value={`${money(wage.extra)}/hr`} />}
+            <Separator className="my-1" />
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-medium">Effective hourly labor cost</span>
+              <span className="tabular-nums text-sm font-semibold">{money(wage.effective)}/hr</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground pt-1">
+              Burden % applies to the wage only — fringe and additional hourly burden are dollar amounts and are never burdened twice.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Project cleaning supplies</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <NumField id="csupr" label="Supply rate" value={i.supply_rate_per_hour} suffix="$/labor hr" disabled={readOnly} onChange={v => patch({ supply_rate_per_hour: v })} />
+            <NumField id="csupf" label="Fixed supply cost" value={i.supply_cost_fixed} suffix="$" disabled={readOnly} onChange={v => patch({ supply_cost_fixed: v })} />
+            <NumField id="csupsf" label="Supply cost per sq ft" value={i.supply_cost_per_sqft} suffix="$/sf" disabled={readOnly} onChange={v => patch({ supply_cost_per_sqft: v })} />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Construction projects carry no janitorial consumables. Supplies are a direct project cost and are included in the total cost, price and margin.
+          </p>
         </CardContent>
       </Card>
 
@@ -347,7 +431,13 @@ export function SpecialtyForm({
       {service === 'carpet_cleaning' && <CarpetForm i={inputs as CarpetInputs} patch={patch} readOnly={readOnly} />}
       {service === 'floor_scrubbing' && <ScrubForm i={inputs as ScrubInputs} patch={patch} readOnly={readOnly} />}
       {service === 'vct_strip_wax' && <VctForm i={inputs as VctInputs} patch={patch} readOnly={readOnly} />}
-      <FinancialsCard i={inputs as FinancialBase} patch={patch} readOnly={readOnly} />
+      <FinancialsCard
+        i={inputs as FinancialBase}
+        patch={patch}
+        readOnly={readOnly}
+        hideLabor={service === 'construction_cleaning'}
+        hideConsumables={service === 'construction_cleaning'}
+      />
     </>
   );
 }
@@ -381,9 +471,11 @@ export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }
           ))}
           <Separator className="my-2" />
           <Line label="Total labor hours" value={hoursFmt(outputs.labor_hours)} />
-          <Line label="Loaded labor rate" value={`${money(outputs.loaded_labor_rate)}/hr`} />
+          <Line label="Effective labor rate" value={`${money(outputs.loaded_labor_rate)}/hr`} />
           <Line label="Labor cost" value={money(outputs.labor_cost)} />
-          <Line label="Materials / consumables" value={money(outputs.materials_cost)} />
+          {outputs.supply_cost !== undefined
+            ? <Line label="Project supplies" value={money(outputs.supply_cost)} />
+            : <Line label="Materials / consumables" value={money(outputs.materials_cost)} />}
           <Line label="Equipment / direct" value={money(outputs.equipment_cost)} />
           <Line label="Total direct cost" value={money(outputs.total_direct_cost)} />
           {outputs.extras.map((e, idx) => <Line key={idx} label={e.label} value={e.value} muted />)}
@@ -395,6 +487,37 @@ export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }
           <Line label="Price / sq ft" value={`$${outputs.price_per_sqft.toFixed(4)}`} />
         </CardContent>
       </Card>
+      {outputs.labor_budget && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Labor budget</CardTitle></CardHeader>
+          <CardContent className="pt-0 space-y-1">
+            <Line
+              label="Labor type"
+              value={
+                outputs.labor_budget.labor_type === 'standard'
+                  ? 'Standard / Non-prevailing'
+                  : [outputs.labor_budget.union_project ? 'Union' : null,
+                     outputs.labor_budget.prevailing_wage_project ? 'Prevailing wage' : null]
+                      .filter(Boolean).join(' + ')
+              }
+            />
+            <Line label="Estimated labor hours" value={hoursFmt(outputs.labor_budget.labor_hours)} />
+            <Line label="Effective hourly labor cost" value={`${money(outputs.labor_budget.effective_hourly_labor_cost)}/hr`} />
+            <Line label="Total estimated labor cost" value={money(outputs.labor_budget.labor_cost)} />
+            <Line label="Cost per labor hour (incl. supplies)" value={`${money(outputs.labor_budget.cost_per_labor_hour)}/hr`} muted />
+            <Separator className="my-2" />
+            <Line label="Recommended project charge" value={money(outputs.project_price)} />
+            <Line label="Expected gross profit" value={money(outputs.project_price - outputs.total_direct_cost)} />
+            <Line label="Expected gross margin" value={pct(outputs.gross_margin_percent)} />
+            <Separator className="my-2" />
+            <Line label="Max hours at target margin" value={hoursFmt(outputs.labor_budget.max_hours_at_target_margin)} />
+            <Line label="Break-even hours" value={hoursFmt(outputs.labor_budget.breakeven_hours)} />
+            <p className="text-[11px] text-muted-foreground pt-1">
+              Max hours keeps the target profit intact. Break-even hours still covers overhead but leaves zero profit.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }
@@ -417,11 +540,23 @@ export function buildSpecialtySummaryText(
     'LABOR',
     ...o.lines.map(l => `${l.label}: ${l.hours.toFixed(2)} hr · ${money(l.cost)}${l.detail ? ` (${l.detail})` : ''}`),
     `Total labor hours: ${o.labor_hours.toFixed(2)}`,
-    `Base wage: ${money(f.base_wage)}/hr · burden ${pct(f.labor_burden_percent)} · loaded ${money(o.loaded_labor_rate)}/hr`,
+    o.labor_budget
+      ? `Labor type: ${o.labor_budget.labor_type === 'standard'
+          ? 'Standard / Non-prevailing'
+          : [o.labor_budget.union_project ? 'Union' : null, o.labor_budget.prevailing_wage_project ? 'Prevailing wage' : null].filter(Boolean).join(' + ')}`
+      : null,
+    o.labor_budget
+      ? `Wage ${money(o.labor_budget.base_wage)}/hr + burden ${pct(o.labor_budget.burden_percent)} (${money(o.labor_budget.burden_amount)}/hr)`
+        + (o.labor_budget.fringe_per_hour ? ` + fringe ${money(o.labor_budget.fringe_per_hour)}/hr` : '')
+        + (o.labor_budget.additional_burden_per_hour ? ` + additional ${money(o.labor_budget.additional_burden_per_hour)}/hr` : '')
+        + ` = effective ${money(o.labor_budget.effective_hourly_labor_cost)}/hr`
+      : `Base wage: ${money(f.base_wage)}/hr · burden ${pct(f.labor_burden_percent)} · loaded ${money(o.loaded_labor_rate)}/hr`,
     `Labor cost: ${money(o.labor_cost)}`,
     '',
     'DIRECT COST',
-    `Materials / consumables: ${money(o.materials_cost)}`,
+    o.supply_cost !== undefined
+      ? `Project supplies: ${money(o.supply_cost)}`
+      : `Materials / consumables: ${money(o.materials_cost)}`,
     `Equipment / rental: ${money(o.equipment_cost)}`,
     `Total direct cost: ${money(o.total_direct_cost)}`,
     ...o.extras.map(e => `${e.label}: ${e.value}`),
@@ -433,6 +568,8 @@ export function buildSpecialtySummaryText(
     `Project price: ${money(o.project_price)}`,
     `Price per sq ft: $${o.price_per_sqft.toFixed(4)}`,
     `Gross margin: ${pct(o.gross_margin_percent)} (equivalent markup ${pct(o.markup_on_direct_percent)})`,
+    o.labor_budget ? `Max labor hours at target margin: ${o.labor_budget.max_hours_at_target_margin.toFixed(2)} hr` : null,
+    o.labor_budget ? `Break-even labor hours: ${o.labor_budget.breakeven_hours.toFixed(2)} hr` : null,
     m.notes ? '' : null,
     m.notes ? 'INTERNAL NOTES' : null,
     m.notes || null,

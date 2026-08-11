@@ -58,9 +58,22 @@ export interface ConstructionPhase {
   custom?: boolean;
 }
 
+export type ConstructionLaborType = 'standard' | 'prevailing';
+
 export interface ConstructionInputs extends FinancialBase {
   total_square_feet: number;
   phases: ConstructionPhase[];
+  /** Construction projects never carry janitorial consumables — supplies only. */
+  union_project: boolean;
+  prevailing_wage_project: boolean;
+  /** Wage inputs used when union and/or prevailing wage applies. */
+  prevailing_base_wage: number;
+  prevailing_fringe_per_hour: number;
+  prevailing_additional_burden_per_hour: number;
+  /** Project cleaning supplies, priced like janitorial: $ per productive labor hour. */
+  supply_rate_per_hour: number;
+  supply_cost_fixed: number;
+  supply_cost_per_sqft: number;
 }
 
 export interface CarpetInputs extends FinancialBase {
@@ -128,6 +141,35 @@ export interface SpecialtyOutputs {
   invalid: boolean;
   /** Extra service-specific readouts (e.g. gallons of finish). */
   extras: { label: string; value: string }[];
+  /** Construction only — supplies broken out separately from consumables. */
+  supply_cost?: number;
+  /** Construction only — labor budget analysis. */
+  labor_budget?: ConstructionLaborBudget;
+}
+
+export interface ConstructionLaborBudget {
+  labor_type: ConstructionLaborType;
+  union_project: boolean;
+  prevailing_wage_project: boolean;
+  base_wage: number;
+  burden_percent: number;
+  burden_amount: number;
+  fringe_per_hour: number;
+  additional_burden_per_hour: number;
+  /** Fully-loaded hourly labor cost actually used in the estimate. */
+  effective_hourly_labor_cost: number;
+  /** Supplies consumed per productive labor hour. */
+  supply_rate_per_hour: number;
+  /** Effective cost of one additional labor hour (labor + hourly supplies). */
+  cost_per_labor_hour: number;
+  labor_hours: number;
+  labor_cost: number;
+  /** Non-labor, non-hourly direct cost (equipment + fixed/sq ft supplies). */
+  fixed_direct_cost: number;
+  /** Max hours spendable while still hitting the target margin at this price. */
+  max_hours_at_target_margin: number;
+  /** Max hours before the job loses money (overhead still covered). */
+  breakeven_hours: number;
 }
 
 export const CARPET_METHODS: { value: string; label: string; rate: number }[] = [
@@ -157,10 +199,26 @@ export const DEFAULT_CONSTRUCTION_PHASES = (): ConstructionPhase[] => [
   { id: 'touchup', label: 'Touch-Up / Punch Clean', enabled: false, sqft: 0, production_rate_sqft_hour: 2500, extra_hours: 0, notes: '' },
 ];
 
+export const DEFAULT_CONSTRUCTION_LABOR = {
+  union_project: false,
+  prevailing_wage_project: false,
+  prevailing_base_wage: 0,
+  prevailing_fringe_per_hour: 0,
+  prevailing_additional_burden_per_hour: 0,
+  supply_rate_per_hour: 0.35,
+  supply_cost_fixed: 0,
+  supply_cost_per_sqft: 0,
+};
+
 export const DEFAULT_SPECIALTY_INPUTS = (service: ServiceType): SpecialtyInputs => {
   switch (service) {
     case 'construction_cleaning':
-      return { ...DEFAULT_FINANCIALS, total_square_feet: 0, phases: DEFAULT_CONSTRUCTION_PHASES() };
+      return {
+        ...DEFAULT_FINANCIALS,
+        ...DEFAULT_CONSTRUCTION_LABOR,
+        total_square_feet: 0,
+        phases: DEFAULT_CONSTRUCTION_PHASES(),
+      };
     case 'carpet_cleaning':
       return {
         ...DEFAULT_FINANCIALS,
@@ -213,14 +271,18 @@ function price(
   lines: LaborLine[],
   sqft: number,
   extraMaterials = 0,
-  extras: { label: string; value: string }[] = []
+  extras: { label: string; value: string }[] = [],
+  opts: { materialsOverride?: number; supplyCost?: number } = {}
 ): SpecialtyOutputs {
   const laborHours = lines.reduce((s, l) => s + nn(l.hours), 0);
   const laborCost = lines.reduce((s, l) => s + nn(l.cost), 0);
   const loadedRate = nn(base.base_wage) * (1 + nn(base.labor_burden_percent) / 100);
-  const materials = nn(base.materials_cost) + nn(base.materials_cost_per_sqft) * nn(sqft) + nn(extraMaterials);
+  const materials = opts.materialsOverride !== undefined
+    ? nn(opts.materialsOverride)
+    : nn(base.materials_cost) + nn(base.materials_cost_per_sqft) * nn(sqft) + nn(extraMaterials);
   const equipment = nn(base.equipment_cost);
-  const direct = laborCost + materials + equipment;
+  const supply = nn(opts.supplyCost);
+  const direct = laborCost + materials + equipment + supply;
 
   const overheadPct = nn(base.overhead_percent);
   const profitPct = nn(base.target_margin_percent);
@@ -242,6 +304,7 @@ function price(
     calculated_price: safe(calculated),
     project_price: safe(finalPrice),
     minimum_applied: minimum > calculated && minimum > 0,
+    supply_cost: opts.supplyCost !== undefined ? safe(supply) : undefined,
     overhead_amount: safe(finalPrice * (overheadPct / 100)),
     profit_amount: safe(finalPrice - direct - finalPrice * (overheadPct / 100)),
     gross_margin_percent: safe(finalPrice > 0 ? ((finalPrice - direct) / finalPrice) * 100 : 0),
@@ -261,11 +324,41 @@ const line = (label: string, hours: number, rate: number, detail?: string): Labo
 
 const loaded = (b: FinancialBase) => nn(b.base_wage) * (1 + nn(b.labor_burden_percent) / 100);
 
-/* ------------------------------------------------------------- 
+/* -------------------------------------------------------------
  * Construction cleaning
  * ------------------------------------------------------------- */
+
+/**
+ * Effective hourly labor cost for a construction project.
+ *
+ * Standard / non-prevailing: base wage × (1 + burden%)
+ * Union / prevailing wage:   prevailing base × (1 + burden%) + fringe + extra hourly burden
+ *
+ * The existing payroll burden % is applied to the wage only — fringe and any
+ * additional hourly burden are already dollar amounts, so they are never
+ * burdened again (no double counting).
+ */
+export function constructionLaborRate(i: ConstructionInputs) {
+  const prevailing = !!i.union_project || !!i.prevailing_wage_project;
+  const wage = prevailing ? nn(i.prevailing_base_wage) || nn(i.base_wage) : nn(i.base_wage);
+  const burdenPct = nn(i.labor_burden_percent);
+  const burdenAmount = wage * (burdenPct / 100);
+  const fringe = prevailing ? nn(i.prevailing_fringe_per_hour) : 0;
+  const extra = prevailing ? nn(i.prevailing_additional_burden_per_hour) : 0;
+  return {
+    prevailing,
+    wage,
+    burdenPct,
+    burdenAmount,
+    fringe,
+    extra,
+    effective: wage + burdenAmount + fringe + extra,
+  };
+}
+
 export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
-  const rate = loaded(i);
+  const wageInfo = constructionLaborRate(i);
+  const rate = wageInfo.effective;
   const phases = (i.phases || []).filter(p => p.enabled);
   const lines = phases.map(p => {
     const sqft = nn(p.sqft) || nn(i.total_square_feet);
@@ -278,7 +371,46 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
       prod > 0 ? `${sqft.toLocaleString()} sq ft @ ${prod.toLocaleString()} sq ft/hr` : undefined
     );
   });
-  return price(i, lines, nn(i.total_square_feet));
+
+  const totalSqft = nn(i.total_square_feet);
+  const laborHours = lines.reduce((s, l) => s + nn(l.hours), 0);
+  const supplyRate = nn(i.supply_rate_per_hour);
+  const supplyCost =
+    laborHours * supplyRate + nn(i.supply_cost_fixed) + nn(i.supply_cost_per_sqft) * totalSqft;
+
+  // Construction carries no consumables — supplies replace that bucket entirely.
+  const out = price(i, lines, totalSqft, 0, [], { materialsOverride: 0, supplyCost });
+  out.loaded_labor_rate = safe(rate);
+
+  // Labor budget headroom at the final selling price.
+  const priceOut = out.project_price;
+  const overheadPct = nn(i.overhead_percent);
+  const profitPct = nn(i.target_margin_percent);
+  const fixedDirect =
+    nn(i.equipment_cost) + nn(i.supply_cost_fixed) + nn(i.supply_cost_per_sqft) * totalSqft;
+  const costPerHour = rate + supplyRate;
+  const allowanceAtTarget = priceOut * (1 - overheadPct / 100 - profitPct / 100) - fixedDirect;
+  const allowanceBreakeven = priceOut * (1 - overheadPct / 100) - fixedDirect;
+
+  out.labor_budget = {
+    labor_type: wageInfo.prevailing ? 'prevailing' : 'standard',
+    union_project: !!i.union_project,
+    prevailing_wage_project: !!i.prevailing_wage_project,
+    base_wage: safe(wageInfo.wage),
+    burden_percent: safe(wageInfo.burdenPct),
+    burden_amount: safe(wageInfo.burdenAmount),
+    fringe_per_hour: safe(wageInfo.fringe),
+    additional_burden_per_hour: safe(wageInfo.extra),
+    effective_hourly_labor_cost: safe(rate),
+    supply_rate_per_hour: safe(supplyRate),
+    cost_per_labor_hour: safe(costPerHour),
+    labor_hours: safe(laborHours),
+    labor_cost: safe(out.labor_cost),
+    fixed_direct_cost: safe(fixedDirect),
+    max_hours_at_target_margin: safe(costPerHour > 0 ? Math.max(0, allowanceAtTarget / costPerHour) : 0),
+    breakeven_hours: safe(costPerHour > 0 ? Math.max(0, allowanceBreakeven / costPerHour) : 0),
+  };
+  return out;
 }
 
 /* ------------------------------------------------------------- 
@@ -377,6 +509,17 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
   if (service === 'construction_cleaning') {
     const c = merged as ConstructionInputs;
     if (!Array.isArray(c.phases) || c.phases.length === 0) c.phases = DEFAULT_CONSTRUCTION_PHASES();
+    // Legacy estimates predate the construction supply model: keep their totals
+    // identical by moving old consumables dollars into the supply buckets and
+    // defaulting the hourly supply rate to zero rather than the new default.
+    const legacy = !('supply_rate_per_hour' in raw);
+    if (legacy) {
+      c.supply_rate_per_hour = 0;
+      c.supply_cost_fixed = nn(raw.materials_cost);
+      c.supply_cost_per_sqft = nn(raw.materials_cost_per_sqft);
+    }
+    c.materials_cost = 0;
+    c.materials_cost_per_sqft = 0;
   }
   return merged;
 }
@@ -390,6 +533,8 @@ export function validateSpecialty(service: ServiceType, i: SpecialtyInputs): str
     case 'construction_cleaning': {
       const c = i as ConstructionInputs;
       if (!(nn(c.total_square_feet) > 0)) return 'Total project square feet must be greater than zero.';
+      if ((c.union_project || c.prevailing_wage_project) && !(nn(c.prevailing_base_wage) > 0))
+        return 'Enter the union / prevailing base hourly wage.';
       const active = (c.phases || []).filter(p => p.enabled);
       if (active.length === 0) return 'Select at least one phase or work item.';
       if (active.some(p => !(nn(p.production_rate_sqft_hour) > 0) && !(nn(p.extra_hours) > 0)))
