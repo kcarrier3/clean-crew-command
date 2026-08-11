@@ -414,6 +414,7 @@ export default function EstimatingDetail() {
               <Badge variant="secondary">{SERVICE_LABELS[serviceType]}</Badge>
               <span className="text-xs text-muted-foreground">Read-only. Choose “Edit estimate” to reopen and revise it.</span>
             </div>
+            <CostBreakdown model={breakdown} />
             {isJanitorial ? (
               <PricingSummary
                 inputs={inputs}
