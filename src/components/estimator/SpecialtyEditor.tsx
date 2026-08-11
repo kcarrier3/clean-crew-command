@@ -498,6 +498,12 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
               Multi-day project — the lower multi-day minimum applies.
             </p>
           )}
+          {dm.prevailing_minimum_applied && (
+            <p className="text-[11px] text-brand-orange">
+              Prevailing / union wage floor applied — billing at {money(dm.applicable_minimum_day_rate)}/day to hold{' '}
+              {dm.prevailing_min_margin_percent.toFixed(1)}% margin over crew-day labor cost.
+            </p>
+          )}
         </CardContent>
       </Card>
 
