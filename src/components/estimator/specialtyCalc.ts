@@ -180,6 +180,13 @@ export interface ConstructionInputs extends FinancialBase {
   apply_minimum_day_rate: boolean;
   minimum_day_rate: number;
   multi_day_minimum_day_rate: number;
+  /**
+   * Union / prevailing-wage jobs: instead of a flat dollar floor, hold a
+   * minimum margin over the actual loaded crew-day labor cost so a higher
+   * wage scale can never erode the day rate into a loss.
+   */
+  apply_prevailing_margin_floor: boolean;
+  prevailing_min_margin_percent: number;
 }
 
 export interface CarpetInputs extends FinancialBase {
