@@ -181,10 +181,10 @@ describe('crew composition', () => {
     });
     const dm = o.day_model!;
     expect(dm.phases.map(p => p.id)).toEqual(['rough', 'final']);
-    // rough runs 1.6x the baseline, final at the baseline
-    expect(dm.phases[0].sqft_per_crew_day).toBeCloseTo(8000);
+    // apartments: rough 1.5x baseline, final at baseline
+    expect(dm.phases[0].sqft_per_crew_day).toBeCloseTo(7500);
     expect(dm.phases[1].sqft_per_crew_day).toBeCloseTo(5000);
-    expect(dm.crew_days).toBeCloseTo(20000 / 8000 + 20000 / 5000);
+    expect(dm.crew_days).toBeCloseTo(20000 / 7500 + 20000 / 5000);
     expect(o.lines.map(l => l.label)).toEqual(['Rough Clean', 'Final Clean']);
   });
 
