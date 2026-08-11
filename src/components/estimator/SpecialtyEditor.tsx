@@ -12,6 +12,7 @@ import { SERVICE_LABELS, type ServiceType } from './serviceTypes';
 import {
   CARPET_METHODS, FURNITURE_LEVELS, SOIL_LEVELS,
   DEFAULT_CONSTRUCTION_PHASES,
+  constructionLaborRate,
   type CarpetInputs, type ConstructionInputs, type FinancialBase,
   type ScrubInputs, type SpecialtyInputs, type SpecialtyOutputs, type VctInputs,
 } from './specialtyCalc';
@@ -62,10 +63,13 @@ type Patch = (patch: Record<string, unknown>) => void;
 
 /* --------------------------------------------------------------- sections */
 
-function FinancialsCard({ i, patch, readOnly }: { i: FinancialBase; patch: Patch; readOnly?: boolean }) {
+function FinancialsCard({
+  i, patch, readOnly, hideLabor, hideConsumables,
+}: { i: FinancialBase; patch: Patch; readOnly?: boolean; hideLabor?: boolean; hideConsumables?: boolean }) {
   const solvable = (i.overhead_percent || 0) + (i.target_margin_percent || 0) < 100;
   return (
     <>
+      {!hideLabor && (
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Labor</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 gap-3">
@@ -73,12 +77,19 @@ function FinancialsCard({ i, patch, readOnly }: { i: FinancialBase; patch: Patch
           <NumField id="burden" label="Labor burden" value={i.labor_burden_percent} suffix="%" disabled={readOnly} onChange={v => patch({ labor_burden_percent: v })} />
         </CardContent>
       </Card>
+      )}
 
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm">Materials &amp; equipment</CardTitle></CardHeader>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">{hideConsumables ? 'Equipment' : 'Materials & equipment'}</CardTitle>
+        </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3">
-          <NumField id="mat" label="Consumables (fixed)" value={i.materials_cost} suffix="$" disabled={readOnly} onChange={v => patch({ materials_cost: v })} />
-          <NumField id="matsf" label="Consumables per sq ft" value={i.materials_cost_per_sqft} suffix="$/sf" disabled={readOnly} onChange={v => patch({ materials_cost_per_sqft: v })} />
+          {!hideConsumables && (
+            <>
+              <NumField id="mat" label="Consumables (fixed)" value={i.materials_cost} suffix="$" disabled={readOnly} onChange={v => patch({ materials_cost: v })} />
+              <NumField id="matsf" label="Consumables per sq ft" value={i.materials_cost_per_sqft} suffix="$/sf" disabled={readOnly} onChange={v => patch({ materials_cost_per_sqft: v })} />
+            </>
+          )}
           <NumField id="equip" label="Equipment / rental" value={i.equipment_cost} suffix="$" disabled={readOnly} onChange={v => patch({ equipment_cost: v })} />
           <NumField id="min" label="Minimum charge (optional)" value={i.minimum_charge} suffix="$" disabled={readOnly} onChange={v => patch({ minimum_charge: v })} />
         </CardContent>
