@@ -324,11 +324,41 @@ const line = (label: string, hours: number, rate: number, detail?: string): Labo
 
 const loaded = (b: FinancialBase) => nn(b.base_wage) * (1 + nn(b.labor_burden_percent) / 100);
 
-/* ------------------------------------------------------------- 
+/* -------------------------------------------------------------
  * Construction cleaning
  * ------------------------------------------------------------- */
+
+/**
+ * Effective hourly labor cost for a construction project.
+ *
+ * Standard / non-prevailing: base wage × (1 + burden%)
+ * Union / prevailing wage:   prevailing base × (1 + burden%) + fringe + extra hourly burden
+ *
+ * The existing payroll burden % is applied to the wage only — fringe and any
+ * additional hourly burden are already dollar amounts, so they are never
+ * burdened again (no double counting).
+ */
+export function constructionLaborRate(i: ConstructionInputs) {
+  const prevailing = !!i.union_project || !!i.prevailing_wage_project;
+  const wage = prevailing ? nn(i.prevailing_base_wage) || nn(i.base_wage) : nn(i.base_wage);
+  const burdenPct = nn(i.labor_burden_percent);
+  const burdenAmount = wage * (burdenPct / 100);
+  const fringe = prevailing ? nn(i.prevailing_fringe_per_hour) : 0;
+  const extra = prevailing ? nn(i.prevailing_additional_burden_per_hour) : 0;
+  return {
+    prevailing,
+    wage,
+    burdenPct,
+    burdenAmount,
+    fringe,
+    extra,
+    effective: wage + burdenAmount + fringe + extra,
+  };
+}
+
 export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
-  const rate = loaded(i);
+  const wageInfo = constructionLaborRate(i);
+  const rate = wageInfo.effective;
   const phases = (i.phases || []).filter(p => p.enabled);
   const lines = phases.map(p => {
     const sqft = nn(p.sqft) || nn(i.total_square_feet);
@@ -341,7 +371,46 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
       prod > 0 ? `${sqft.toLocaleString()} sq ft @ ${prod.toLocaleString()} sq ft/hr` : undefined
     );
   });
-  return price(i, lines, nn(i.total_square_feet));
+
+  const totalSqft = nn(i.total_square_feet);
+  const laborHours = lines.reduce((s, l) => s + nn(l.hours), 0);
+  const supplyRate = nn(i.supply_rate_per_hour);
+  const supplyCost =
+    laborHours * supplyRate + nn(i.supply_cost_fixed) + nn(i.supply_cost_per_sqft) * totalSqft;
+
+  // Construction carries no consumables — supplies replace that bucket entirely.
+  const out = price(i, lines, totalSqft, 0, [], { materialsOverride: 0, supplyCost });
+  out.loaded_labor_rate = safe(rate);
+
+  // Labor budget headroom at the final selling price.
+  const priceOut = out.project_price;
+  const overheadPct = nn(i.overhead_percent);
+  const profitPct = nn(i.target_margin_percent);
+  const fixedDirect =
+    nn(i.equipment_cost) + nn(i.supply_cost_fixed) + nn(i.supply_cost_per_sqft) * totalSqft;
+  const costPerHour = rate + supplyRate;
+  const allowanceAtTarget = priceOut * (1 - overheadPct / 100 - profitPct / 100) - fixedDirect;
+  const allowanceBreakeven = priceOut * (1 - overheadPct / 100) - fixedDirect;
+
+  out.labor_budget = {
+    labor_type: wageInfo.prevailing ? 'prevailing' : 'standard',
+    union_project: !!i.union_project,
+    prevailing_wage_project: !!i.prevailing_wage_project,
+    base_wage: safe(wageInfo.wage),
+    burden_percent: safe(wageInfo.burdenPct),
+    burden_amount: safe(wageInfo.burdenAmount),
+    fringe_per_hour: safe(wageInfo.fringe),
+    additional_burden_per_hour: safe(wageInfo.extra),
+    effective_hourly_labor_cost: safe(rate),
+    supply_rate_per_hour: safe(supplyRate),
+    cost_per_labor_hour: safe(costPerHour),
+    labor_hours: safe(laborHours),
+    labor_cost: safe(out.labor_cost),
+    fixed_direct_cost: safe(fixedDirect),
+    max_hours_at_target_margin: safe(costPerHour > 0 ? Math.max(0, allowanceAtTarget / costPerHour) : 0),
+    breakeven_hours: safe(costPerHour > 0 ? Math.max(0, allowanceBreakeven / costPerHour) : 0),
+  };
+  return out;
 }
 
 /* ------------------------------------------------------------- 
