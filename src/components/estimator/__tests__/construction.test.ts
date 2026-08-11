@@ -142,6 +142,32 @@ describe('construction crew-day model', () => {
     expect(suggestedDayRate('normal', 800, 1600)).toBeCloseTo(1200);
     expect(suggestedDayRate('very_busy', 800, 1600)).toBeCloseTo(1600);
   });
+
+  it('minimum day rate floors single-day jobs at $1,500', () => {
+    const o = calculateConstruction({
+      ...crewBase(), total_square_feet: 3000, baseline_sqft_per_crew_day: 5000,
+      price_basis: 'day_rate', apply_minimum_day_rate: true,
+      minimum_day_rate: 1500, multi_day_minimum_day_rate: 1250, proposed_day_rate: 900,
+    });
+    const dm = o.day_model!;
+    expect(dm.billable_days).toBe(1);
+    expect(dm.multi_day).toBe(false);
+    expect(dm.proposed_day_rate).toBeCloseTo(1500);
+    expect(dm.minimum_day_rate_applied).toBe(true);
+    expect(o.project_price).toBeCloseTo(1500);
+  });
+
+  it('multi-day jobs fall back to the lower multi-day minimum', () => {
+    const dm = calculateConstruction({
+      ...crewBase(), total_square_feet: 12000, baseline_sqft_per_crew_day: 5000,
+      price_basis: 'day_rate', apply_minimum_day_rate: true,
+      minimum_day_rate: 1500, multi_day_minimum_day_rate: 1250, proposed_day_rate: 0,
+    }).day_model!;
+    expect(dm.billable_days).toBe(3);
+    expect(dm.multi_day).toBe(true);
+    expect(dm.applicable_minimum_day_rate).toBeCloseTo(1250);
+    expect(dm.day_rate_project_price).toBeCloseTo(3750);
+  });
 });
 
 describe('crew composition', () => {
