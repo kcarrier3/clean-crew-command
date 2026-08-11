@@ -680,9 +680,19 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   const billableDays = crewDays > 0 ? Math.max(1, Math.ceil(crewDays - 1e-9)) : 0;
   const multiDay = billableDays > 1;
   const applyMin = i.apply_minimum_day_rate !== false;
-  const minDayRate = applyMin
+  const flatMinDayRate = applyMin
     ? (multiDay ? nn(i.multi_day_minimum_day_rate) || nn(i.minimum_day_rate) : nn(i.minimum_day_rate))
     : 0;
+  /* Union / prevailing wage: wage scales vary job to job, so the floor is a
+     margin over the real loaded crew-day labor cost rather than a fixed dollar. */
+  const crewDayLaborCost = safe(hoursPerCrewDay * rate);
+  const prevailingFloorActive =
+    wageInfo.prevailing && i.apply_prevailing_margin_floor !== false && crewDayLaborCost > 0;
+  const prevailingMarginPct = Math.min(99, Math.max(0, nn(i.prevailing_min_margin_percent)));
+  const prevailingMinDayRate = prevailingFloorActive
+    ? safe(crewDayLaborCost / (1 - prevailingMarginPct / 100))
+    : 0;
+  const minDayRate = Math.max(flatMinDayRate, prevailingMinDayRate);
   const effectiveDayRate = Math.max(proposedDayRate, minDayRate);
   const minDayRateApplied = minDayRate > 0 && minDayRate > proposedDayRate;
   const dayRatePrice = billableDays * effectiveDayRate;
