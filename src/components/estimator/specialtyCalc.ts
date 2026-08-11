@@ -533,6 +533,8 @@ export function validateSpecialty(service: ServiceType, i: SpecialtyInputs): str
     case 'construction_cleaning': {
       const c = i as ConstructionInputs;
       if (!(nn(c.total_square_feet) > 0)) return 'Total project square feet must be greater than zero.';
+      if ((c.union_project || c.prevailing_wage_project) && !(nn(c.prevailing_base_wage) > 0))
+        return 'Enter the union / prevailing base hourly wage.';
       const active = (c.phases || []).filter(p => p.enabled);
       if (active.length === 0) return 'Select at least one phase or work item.';
       if (active.some(p => !(nn(p.production_rate_sqft_hour) > 0) && !(nn(p.extra_hours) > 0)))
