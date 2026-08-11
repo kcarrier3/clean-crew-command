@@ -918,6 +918,7 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
     // and are never re-floored to the new minimum.
     if (!('apply_minimum_day_rate' in raw)) {
       c.apply_minimum_day_rate = false;
+      if (!('apply_prevailing_margin_floor' in raw)) c.apply_prevailing_margin_floor = false;
       if (!('price_basis' in raw)) c.price_basis = 'cost';
     }
     c.materials_cost = 0;
