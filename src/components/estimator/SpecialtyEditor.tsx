@@ -170,6 +170,31 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
       </Card>
 
       <Card>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">Crew composition per day</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <NumField id="crewsize" label="Workers per crew-day" value={i.crew_size} disabled={readOnly} onChange={v => patch({ crew_size: v })} />
+            <NumField id="crewleads" label="Crew leads / managers" value={i.crew_lead_count} disabled={readOnly} onChange={v => patch({ crew_lead_count: v })} />
+            <NumField id="crewwage" label="Worker wage" value={i.crew_member_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ crew_member_wage: v })} />
+            <NumField id="leadwage" label="Crew lead wage" value={i.crew_lead_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ crew_lead_wage: v })} />
+          </div>
+          <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
+            <Line label="Blended hourly wage" value={dm.blended_hourly_wage > 0 ? money(dm.blended_hourly_wage) : 'Using base wage'} />
+            <Line label="Loaded hourly labor cost" value={money(wage.effective)} />
+            <Line label="Labor hours per crew-day" value={hoursFmt(dm.labor_hours_per_crew_day)} />
+            <Separator className="my-1" />
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-medium">Labor cost per crew-day</span>
+              <span className="tabular-nums text-sm font-semibold">{money(dm.labor_cost_per_crew_day)}</span>
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Crew size × hours per crew-day drives total labor hours, and the blended wage replaces the base wage unless union / prevailing rates apply.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Complexity / density</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
