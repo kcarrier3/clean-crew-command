@@ -19,6 +19,7 @@ const crewBase = () => ({
   total_square_feet: 20000,
   base_wage: 18, labor_burden_percent: 20, overhead_percent: 15, target_margin_percent: 25,
   supply_rate_per_hour: 0.5, equipment_cost: 500,
+  hours_per_crew_day: 8,
   phases: [],
   crew_size: 0, crew_lead_count: 0, crew_member_wage: 0, crew_lead_wage: 0,
 });
