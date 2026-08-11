@@ -11,6 +11,7 @@ const base = () => ({
   base_wage: 18, labor_burden_percent: 20, overhead_percent: 15, target_margin_percent: 25,
   supply_rate_per_hour: 0.5, equipment_cost: 500,
   phases: [{ id: 'final', label: 'Final Clean', enabled: true, sqft: 20000, production_rate_sqft_hour: 800, extra_hours: 0, notes: '' }],
+  crew_size: 0, crew_lead_count: 0, crew_member_wage: 0, crew_lead_wage: 0,
 });
 
 const crewBase = () => ({
@@ -18,7 +19,9 @@ const crewBase = () => ({
   total_square_feet: 20000,
   base_wage: 18, labor_burden_percent: 20, overhead_percent: 15, target_margin_percent: 25,
   supply_rate_per_hour: 0.5, equipment_cost: 500,
+  hours_per_crew_day: 8,
   phases: [],
+  crew_size: 0, crew_lead_count: 0, crew_member_wage: 0, crew_lead_wage: 0,
 });
 
 describe('construction', () => {
@@ -134,5 +137,49 @@ describe('construction crew-day model', () => {
     expect(suggestedDayRate('need_work', 800, 1600)).toBeCloseTo(800);
     expect(suggestedDayRate('normal', 800, 1600)).toBeCloseTo(1200);
     expect(suggestedDayRate('very_busy', 800, 1600)).toBeCloseTo(1600);
+  });
+});
+
+describe('crew composition', () => {
+  const withCrew = (over: Partial<ConstructionInputs> = {}) => calculateConstruction({
+    ...(DEFAULT_SPECIALTY_INPUTS('construction_cleaning') as ConstructionInputs),
+    total_square_feet: 10000,
+    baseline_sqft_per_crew_day: 5000,
+    complexity: 'typical',
+    labor_burden_percent: 0,
+    supply_rate_per_hour: 0,
+    equipment_cost: 0,
+    phases: [],
+    ...over,
+  } as ConstructionInputs);
+
+  it('defaults to 5 workers, 9.5 hr, blended $16/$19 wage', () => {
+    const dm = withCrew().day_model!;
+    expect(dm.crew_size).toBe(5);
+    expect(dm.hours_per_crew_day).toBe(9.5);
+    expect(dm.blended_hourly_wage).toBeCloseTo((4 * 16 + 19) / 5); // 16.60
+    expect(dm.labor_hours_per_crew_day).toBeCloseTo(47.5);
+    expect(dm.crew_days).toBeCloseTo(2);
+    expect(dm.labor_hours).toBeCloseTo(95);
+    expect(dm.labor_cost_per_crew_day).toBeCloseTo(47.5 * 16.6);
+  });
+
+  it('labor cost uses the blended wage across the full crew', () => {
+    const o = withCrew();
+    expect(o.loaded_labor_rate).toBeCloseTo(16.6);
+    expect(o.labor_cost).toBeCloseTo(95 * 16.6);
+  });
+
+  it('prevailing wage overrides the blended crew wage but keeps crew hours', () => {
+    const o = withCrew({ prevailing_wage_project: true, prevailing_base_wage: 30, prevailing_fringe_per_hour: 12 });
+    expect(o.loaded_labor_rate).toBeCloseTo(42);
+    expect(o.labor_hours).toBeCloseTo(95);
+  });
+
+  it('legacy estimates without crew composition keep one-person crew-days', () => {
+    const h = hydrateSpecialtyInputs('construction_cleaning', { crew_day_mode: true, hours_per_crew_day: 8, base_wage: 18, total_square_feet: 10000, baseline_sqft_per_crew_day: 5000 }) as ConstructionInputs;
+    expect(h.crew_size).toBe(0);
+    const dm = calculateConstruction(h).day_model!;
+    expect(dm.labor_hours).toBeCloseTo(16);
   });
 });

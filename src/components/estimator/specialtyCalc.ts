@@ -133,6 +133,11 @@ export interface ConstructionInputs extends FinancialBase {
   /** >0 overrides the complexity-adjusted production rate. */
   adjusted_sqft_per_crew_day_override: number;
   hours_per_crew_day: number;
+  /** Crew composition per crew-day (0 crew size = legacy single-person crew-day). */
+  crew_size: number;
+  crew_lead_count: number;
+  crew_member_wage: number;
+  crew_lead_wage: number;
   /** Day-rate pricing + decision support. */
   proposed_day_rate: number;
   pricing_position: PricingPosition;
@@ -252,6 +257,14 @@ export interface ConstructionDayModel {
   crew_days: number;
   hours_per_crew_day: number;
   labor_hours: number;
+  /** Crew composition (0 = legacy one-person crew-day). */
+  crew_size: number;
+  crew_lead_count: number;
+  crew_member_wage: number;
+  crew_lead_wage: number;
+  blended_hourly_wage: number;
+  labor_hours_per_crew_day: number;
+  labor_cost_per_crew_day: number;
   /** Cost-based price that exactly hits the target margin. */
   target_margin_price: number;
   /** Price that covers direct cost + overhead with zero profit. */
@@ -314,7 +327,11 @@ export const DEFAULT_CONSTRUCTION_DAY_MODEL = {
   baseline_sqft_per_crew_day: 5000,
   complexity: 'typical' as ConstructionComplexity,
   adjusted_sqft_per_crew_day_override: 0,
-  hours_per_crew_day: 8,
+  hours_per_crew_day: 9.5,
+  crew_size: 5,
+  crew_lead_count: 1,
+  crew_member_wage: 16,
+  crew_lead_wage: 19,
   proposed_day_rate: 0,
   pricing_position: 'normal' as PricingPosition,
   suggested_day_rate_min: 800,
@@ -452,9 +469,26 @@ const loaded = (b: FinancialBase) => nn(b.base_wage) * (1 + nn(b.labor_burden_pe
  * additional hourly burden are already dollar amounts, so they are never
  * burdened again (no double counting).
  */
+/**
+ * Blended crew wage: leads at the lead wage, everyone else at the member wage.
+ * Returns 0 when no crew composition is configured (legacy estimates).
+ */
+export function crewBlendedWage(i: ConstructionInputs): number {
+  const size = nn(i.crew_size);
+  if (size <= 0) return 0;
+  const leads = Math.min(Math.max(nn(i.crew_lead_count), 0), size);
+  const leadWage = nn(i.crew_lead_wage);
+  const memberWage = nn(i.crew_member_wage);
+  if (leadWage <= 0 && memberWage <= 0) return 0;
+  return safe((leads * leadWage + (size - leads) * memberWage) / size);
+}
+
 export function constructionLaborRate(i: ConstructionInputs) {
   const prevailing = !!i.union_project || !!i.prevailing_wage_project;
-  const wage = prevailing ? nn(i.prevailing_base_wage) || nn(i.base_wage) : nn(i.base_wage);
+  const blended = crewBlendedWage(i);
+  const wage = prevailing
+    ? nn(i.prevailing_base_wage) || blended || nn(i.base_wage)
+    : blended || nn(i.base_wage);
   const burdenPct = nn(i.labor_burden_percent);
   const burdenAmount = wage * (burdenPct / 100);
   const fringe = prevailing ? nn(i.prevailing_fringe_per_hour) : 0;
@@ -483,6 +517,9 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   const overrideProduction = nn(i.adjusted_sqft_per_crew_day_override);
   const adjustedProduction = overrideProduction > 0 ? overrideProduction : calculatedProduction;
   const hoursPerDay = nn(i.hours_per_crew_day) || 8;
+  const crewSize = nn(i.crew_size);
+  const crewMultiplier = crewSize > 0 ? crewSize : 1;
+  const hoursPerCrewDay = hoursPerDay * crewMultiplier;
   const crewDays = adjustedProduction > 0 ? totalSqft / adjustedProduction : 0;
 
   let lines: LaborLine[];
@@ -493,10 +530,10 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     lines = [
       line(
         'Construction cleaning crew',
-        crewDays * hoursPerDay,
+        crewDays * hoursPerCrewDay,
         rate,
         adjustedProduction > 0
-          ? `${totalSqft.toLocaleString()} sq ft ÷ ${Math.round(adjustedProduction).toLocaleString()} sq ft/crew-day = ${crewDays.toFixed(2)} crew-days × ${hoursPerDay} hr`
+          ? `${totalSqft.toLocaleString()} sq ft ÷ ${Math.round(adjustedProduction).toLocaleString()} sq ft/crew-day = ${crewDays.toFixed(2)} crew-days × ${crewMultiplier > 1 ? `${crewMultiplier} workers × ` : ''}${hoursPerDay} hr`
           : undefined
       ),
       ...extra,
@@ -598,6 +635,13 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     crew_days: safe(crewDays),
     hours_per_crew_day: safe(hoursPerDay),
     labor_hours: safe(laborHours),
+    crew_size: safe(crewSize),
+    crew_lead_count: safe(nn(i.crew_lead_count)),
+    crew_member_wage: safe(nn(i.crew_member_wage)),
+    crew_lead_wage: safe(nn(i.crew_lead_wage)),
+    blended_hourly_wage: safe(crewBlendedWage(i)),
+    labor_hours_per_crew_day: safe(hoursPerCrewDay),
+    labor_cost_per_crew_day: safe(hoursPerCrewDay * rate),
     target_margin_price: safe(solvable ? targetMarginPrice : 0),
     breakeven_price: safe(breakevenPrice),
     proposed_day_rate: safe(proposedDayRate),
@@ -727,6 +771,14 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
     // Estimates saved before the crew-day model keep their phase-based math and
     // therefore their historical totals; only new estimates default to crew-days.
     if (!('crew_day_mode' in raw)) c.crew_day_mode = false;
+    // Crew composition is new: existing estimates keep one-person crew-day math
+    // and their saved wage until a crew is entered.
+    if (!('crew_size' in raw)) {
+      c.crew_size = 0;
+      c.crew_lead_count = 0;
+      c.crew_member_wage = 0;
+      c.crew_lead_wage = 0;
+    }
     c.materials_cost = 0;
     c.materials_cost_per_sqft = 0;
   }
