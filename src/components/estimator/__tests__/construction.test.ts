@@ -168,6 +168,23 @@ describe('construction crew-day model', () => {
     expect(dm.applicable_minimum_day_rate).toBeCloseTo(1250);
     expect(dm.day_rate_project_price).toBeCloseTo(3750);
   });
+
+  it('prevailing wage holds a minimum margin over crew-day labor cost', () => {
+    const o = calculateConstruction({
+      ...crewBase(), total_square_feet: 5000, baseline_sqft_per_crew_day: 5000,
+      price_basis: 'day_rate', apply_minimum_day_rate: false, proposed_day_rate: 900,
+      crew_size: 4, crew_lead_count: 0, crew_member_wage: 16, crew_lead_wage: 0,
+      hours_per_crew_day: 9.5, labor_burden_percent: 25.625,
+      apply_prevailing_margin_floor: true, prevailing_min_margin_percent: 41.25,
+      prevailing_wage_project: true, prevailing_base_wage: 16,
+      prevailing_fringe_per_hour: 4.1, prevailing_additional_burden_per_hour: 0,
+    });
+    const dm = o.day_model!;
+    expect(dm.prevailing_margin_floor_active).toBe(true);
+    expect(dm.prevailing_minimum_day_rate).toBeCloseTo(dm.labor_cost_per_crew_day / (1 - 0.4125));
+    expect(dm.prevailing_minimum_applied).toBe(true);
+    expect(o.project_price).toBeCloseTo(dm.prevailing_minimum_day_rate);
+  });
 });
 
 describe('crew composition', () => {

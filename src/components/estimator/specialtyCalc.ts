@@ -180,6 +180,13 @@ export interface ConstructionInputs extends FinancialBase {
   apply_minimum_day_rate: boolean;
   minimum_day_rate: number;
   multi_day_minimum_day_rate: number;
+  /**
+   * Union / prevailing-wage jobs: instead of a flat dollar floor, hold a
+   * minimum margin over the actual loaded crew-day labor cost so a higher
+   * wage scale can never erode the day rate into a loss.
+   */
+  apply_prevailing_margin_floor: boolean;
+  prevailing_min_margin_percent: number;
 }
 
 export interface CarpetInputs extends FinancialBase {
@@ -318,6 +325,11 @@ export interface ConstructionDayModel {
   multi_day: boolean;
   applicable_minimum_day_rate: number;
   minimum_day_rate_applied: boolean;
+  /** Union / prevailing wage floor: crew-day labor cost held at a minimum margin. */
+  prevailing_margin_floor_active: boolean;
+  prevailing_min_margin_percent: number;
+  prevailing_minimum_day_rate: number;
+  prevailing_minimum_applied: boolean;
   price_basis: ConstructionPriceBasis;
   final_project_price: number;
   effective_day_rate: number;
@@ -393,6 +405,8 @@ export const DEFAULT_CONSTRUCTION_DAY_MODEL = {
   apply_minimum_day_rate: true,
   minimum_day_rate: 1500,
   multi_day_minimum_day_rate: 1250,
+  apply_prevailing_margin_floor: true,
+  prevailing_min_margin_percent: 41.25,
 };
 
 export const DEFAULT_SPECIALTY_INPUTS = (service: ServiceType): SpecialtyInputs => {
@@ -666,9 +680,19 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   const billableDays = crewDays > 0 ? Math.max(1, Math.ceil(crewDays - 1e-9)) : 0;
   const multiDay = billableDays > 1;
   const applyMin = i.apply_minimum_day_rate !== false;
-  const minDayRate = applyMin
+  const flatMinDayRate = applyMin
     ? (multiDay ? nn(i.multi_day_minimum_day_rate) || nn(i.minimum_day_rate) : nn(i.minimum_day_rate))
     : 0;
+  /* Union / prevailing wage: wage scales vary job to job, so the floor is a
+     margin over the real loaded crew-day labor cost rather than a fixed dollar. */
+  const crewDayLaborCost = safe(hoursPerCrewDay * rate);
+  const prevailingFloorActive =
+    wageInfo.prevailing && i.apply_prevailing_margin_floor !== false && crewDayLaborCost > 0;
+  const prevailingMarginPct = Math.min(99, Math.max(0, nn(i.prevailing_min_margin_percent)));
+  const prevailingMinDayRate = prevailingFloorActive
+    ? safe(crewDayLaborCost / (1 - prevailingMarginPct / 100))
+    : 0;
+  const minDayRate = Math.max(flatMinDayRate, prevailingMinDayRate);
   const effectiveDayRate = Math.max(proposedDayRate, minDayRate);
   const minDayRateApplied = minDayRate > 0 && minDayRate > proposedDayRate;
   const dayRatePrice = billableDays * effectiveDayRate;
@@ -756,6 +780,12 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     multi_day: multiDay,
     applicable_minimum_day_rate: safe(minDayRate),
     minimum_day_rate_applied: basis === 'day_rate' && minDayRateApplied,
+    prevailing_margin_floor_active: prevailingFloorActive,
+    prevailing_min_margin_percent: safe(prevailingMarginPct),
+    prevailing_minimum_day_rate: safe(prevailingMinDayRate),
+    prevailing_minimum_applied:
+      basis === 'day_rate' && prevailingFloorActive &&
+      prevailingMinDayRate >= flatMinDayRate && prevailingMinDayRate > proposedDayRate,
     price_basis: basis,
     final_project_price: safe(finalPrice),
     effective_day_rate: safe(crewDays > 0 ? finalPrice / crewDays : 0),
@@ -888,6 +918,7 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
     // and are never re-floored to the new minimum.
     if (!('apply_minimum_day_rate' in raw)) {
       c.apply_minimum_day_rate = false;
+      if (!('apply_prevailing_margin_floor' in raw)) c.apply_prevailing_margin_floor = false;
       if (!('price_basis' in raw)) c.price_basis = 'cost';
     }
     c.materials_cost = 0;
