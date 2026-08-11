@@ -634,7 +634,7 @@ export default function JobSitesManagement() {
                   Add {entityLabel}
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New {entityLabel}</DialogTitle>
                 </DialogHeader>
@@ -883,7 +883,7 @@ export default function JobSitesManagement() {
               setIsEditDialogOpen(open);
               if (!open) resetForm();
             }}>
-              <DialogContent>
+              <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Edit {isProjectForm ? 'Project' : 'Account'}</DialogTitle>
                 </DialogHeader>
