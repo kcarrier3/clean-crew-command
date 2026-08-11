@@ -84,10 +84,11 @@ function FinancialsCard({
       </Card>
       )}
 
-      {!(hideConsumables && hideEquipment) && (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">{hideConsumables ? 'Equipment' : 'Materials & equipment'}</CardTitle>
+          <CardTitle className="text-sm">
+            {hideConsumables && hideEquipment ? 'Project minimum' : hideConsumables ? 'Equipment' : 'Materials & equipment'}
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3">
           {!hideConsumables && (
@@ -99,10 +100,9 @@ function FinancialsCard({
           {!hideEquipment && (
             <NumField id="equip" label="Equipment / rental" value={i.equipment_cost} suffix="$" disabled={readOnly} onChange={v => patch({ equipment_cost: v })} />
           )}
-          <NumField id="min" label="Minimum charge (optional)" value={i.minimum_charge} suffix="$" disabled={readOnly} onChange={v => patch({ minimum_charge: v })} />
+          <NumField id="min" label="Minimum project charge (optional)" value={i.minimum_charge} suffix="$" disabled={readOnly} onChange={v => patch({ minimum_charge: v })} />
         </CardContent>
       </Card>
-      )}
 
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Overhead &amp; profit</CardTitle></CardHeader>
