@@ -271,7 +271,86 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
         </CardContent>
       </Card>
 
-      {/* 3 — pricing & minimums */}
+      {/* 3 — what we're pricing */}
+      <Card>
+        <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-sm">What are we pricing?</CardTitle>
+          {!readOnly && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => patch({
+                phases: [...phases, {
+                  id: `custom-${Date.now()}`, label: 'Custom work item', enabled: true,
+                  sqft: 0, production_rate_sqft_hour: 1000, extra_hours: 0, notes: '', custom: true,
+                }],
+              })}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add item
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {phases.map(p => (
+            <div key={p.id} className="rounded-lg border border-border p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={p.enabled}
+                  disabled={readOnly}
+                  onCheckedChange={c => setPhase(p.id, { enabled: !!c })}
+                  id={`ph-${p.id}`}
+                />
+                {p.custom ? (
+                  <Input
+                    value={p.label}
+                    disabled={readOnly}
+                    onChange={e => setPhase(p.id, { label: e.target.value })}
+                    className="h-9"
+                  />
+                ) : (
+                  <Label htmlFor={`ph-${p.id}`} className="text-sm font-medium">{p.label}</Label>
+                )}
+                {p.custom && !readOnly && (
+                  <Button variant="ghost" size="icon" className="ml-auto" onClick={() => patch({ phases: phases.filter(x => x.id !== p.id) })}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {p.enabled && (crewDayMode ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <NumField id={`xh-${p.id}`} label="Extra hours (optional)" value={p.extra_hours} suffix="hr" disabled={readOnly} onChange={v => setPhase(p.id, { extra_hours: v })} />
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`nt-${p.id}`} className="text-xs">Notes</Label>
+                    <Input id={`nt-${p.id}`} value={p.notes || ''} disabled={readOnly} onChange={e => setPhase(p.id, { notes: e.target.value })} className="h-11" />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <NumField id={`sf-${p.id}`} label="Square feet" value={p.sqft || 0} suffix="sq ft" disabled={readOnly} onChange={v => setPhase(p.id, { sqft: v })} />
+                  <NumField id={`pr-${p.id}`} label="Production rate" value={p.production_rate_sqft_hour} suffix="sf/hr" disabled={readOnly} onChange={v => setPhase(p.id, { production_rate_sqft_hour: v })} />
+                  <NumField id={`xh2-${p.id}`} label="Additional fixed hours" value={p.extra_hours} suffix="hr" disabled={readOnly} onChange={v => setPhase(p.id, { extra_hours: v })} />
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`nt2-${p.id}`} className="text-xs">Notes</Label>
+                    <Input id={`nt2-${p.id}`} value={p.notes || ''} disabled={readOnly} onChange={e => setPhase(p.id, { notes: e.target.value })} className="h-11" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+          <Separator className="my-1" />
+          <div className="grid grid-cols-2 gap-3">
+            <NumField id="csupr" label="Supplies" value={i.supply_rate_per_hour} suffix="$/labor hr" disabled={readOnly} onChange={v => patch({ supply_rate_per_hour: v })} />
+            <NumField id="csupf" label="Fixed supply cost" value={i.supply_cost_fixed} suffix="$" disabled={readOnly} onChange={v => patch({ supply_cost_fixed: v })} />
+            <NumField id="csupsf" label="Supply cost per sq ft" value={i.supply_cost_per_sqft} suffix="$/sf" disabled={readOnly} onChange={v => patch({ supply_cost_per_sqft: v })} />
+            <NumField id="cequip" label="Equipment / rental" value={i.equipment_cost} suffix="$" disabled={readOnly} onChange={v => patch({ equipment_cost: v })} />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Checked items are what the bid covers. Crew-day production drives the hours; extra hours are added on top.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* 4 — pricing & minimums */}
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm">Pricing &amp; minimums</CardTitle></CardHeader>
         <CardContent className="space-y-3">
