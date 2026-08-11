@@ -60,6 +60,57 @@ export interface ConstructionPhase {
 
 export type ConstructionLaborType = 'standard' | 'prevailing';
 
+export type ConstructionProjectType =
+  | 'apartments' | 'schools' | 'open_office' | 'dense_restaurant' | 'custom';
+
+export type ConstructionComplexity =
+  | 'very_open' | 'open' | 'typical' | 'detailed' | 'dense';
+
+export type ConstructionPriceBasis = 'cost' | 'day_rate' | 'manual';
+
+export type PricingPosition =
+  | 'need_work' | 'competitive' | 'normal' | 'busy' | 'very_busy';
+
+export const CONSTRUCTION_PROJECT_TYPES: {
+  value: ConstructionProjectType; label: string; baseline: number;
+}[] = [
+  { value: 'apartments', label: 'Apartments', baseline: 5000 },
+  { value: 'schools', label: 'Schools', baseline: 5000 },
+  { value: 'open_office', label: 'Open Office Buildout', baseline: 7500 },
+  { value: 'dense_restaurant', label: 'Dense / Restaurant', baseline: 2500 },
+  { value: 'custom', label: 'Custom', baseline: 5000 },
+];
+
+export const CONSTRUCTION_COMPLEXITY_LEVELS: {
+  value: ConstructionComplexity; label: string; multiplier: number;
+}[] = [
+  { value: 'very_open', label: 'Very Open', multiplier: 1.3 },
+  { value: 'open', label: 'Open', multiplier: 1.15 },
+  { value: 'typical', label: 'Typical', multiplier: 1 },
+  { value: 'detailed', label: 'Detailed', multiplier: 0.8 },
+  { value: 'dense', label: 'Dense / Complex', multiplier: 0.6 },
+];
+
+export const PRICING_POSITIONS: { value: PricingPosition; label: string }[] = [
+  { value: 'need_work', label: 'Need the Work' },
+  { value: 'competitive', label: 'Competitive' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'busy', label: 'Busy' },
+  { value: 'very_busy', label: 'Very Busy' },
+];
+
+export const complexityMultiplier = (v: unknown): number =>
+  CONSTRUCTION_COMPLEXITY_LEVELS.find(c => c.value === v)?.multiplier ?? 1;
+
+/** Linear interpolation of the suggested day rate across the workload scale. */
+export function suggestedDayRate(position: unknown, min: number, max: number): number {
+  const idx = Math.max(0, PRICING_POSITIONS.findIndex(p => p.value === position));
+  const lo = nn(min);
+  const hi = nn(max);
+  const span = hi - lo;
+  return safe(lo + (span * idx) / (PRICING_POSITIONS.length - 1));
+}
+
 export interface ConstructionInputs extends FinancialBase {
   total_square_feet: number;
   phases: ConstructionPhase[];
@@ -74,6 +125,21 @@ export interface ConstructionInputs extends FinancialBase {
   supply_rate_per_hour: number;
   supply_cost_fixed: number;
   supply_cost_per_sqft: number;
+  /** Crew-day estimating (primary model). Legacy estimates stay phase-based. */
+  crew_day_mode: boolean;
+  project_type: ConstructionProjectType;
+  baseline_sqft_per_crew_day: number;
+  complexity: ConstructionComplexity;
+  /** >0 overrides the complexity-adjusted production rate. */
+  adjusted_sqft_per_crew_day_override: number;
+  hours_per_crew_day: number;
+  /** Day-rate pricing + decision support. */
+  proposed_day_rate: number;
+  pricing_position: PricingPosition;
+  suggested_day_rate_min: number;
+  suggested_day_rate_max: number;
+  price_basis: ConstructionPriceBasis;
+  manual_project_price: number;
 }
 
 export interface CarpetInputs extends FinancialBase {
@@ -145,6 +211,8 @@ export interface SpecialtyOutputs {
   supply_cost?: number;
   /** Construction only — labor budget analysis. */
   labor_budget?: ConstructionLaborBudget;
+  /** Construction only — crew-day / day-rate decision model. */
+  day_model?: ConstructionDayModel;
 }
 
 export interface ConstructionLaborBudget {
@@ -170,6 +238,36 @@ export interface ConstructionLaborBudget {
   max_hours_at_target_margin: number;
   /** Max hours before the job loses money (overhead still covered). */
   breakeven_hours: number;
+}
+
+export interface ConstructionDayModel {
+  project_type: ConstructionProjectType;
+  baseline_sqft_per_crew_day: number;
+  complexity: ConstructionComplexity;
+  complexity_label: string;
+  complexity_multiplier: number;
+  calculated_sqft_per_crew_day: number;
+  adjusted_sqft_per_crew_day: number;
+  production_overridden: boolean;
+  crew_days: number;
+  hours_per_crew_day: number;
+  labor_hours: number;
+  /** Cost-based price that exactly hits the target margin. */
+  target_margin_price: number;
+  /** Price that covers direct cost + overhead with zero profit. */
+  breakeven_price: number;
+  proposed_day_rate: number;
+  suggested_day_rate: number;
+  suggested_day_rate_min: number;
+  suggested_day_rate_max: number;
+  pricing_position: PricingPosition;
+  pricing_position_label: string;
+  day_rate_project_price: number;
+  price_basis: ConstructionPriceBasis;
+  final_project_price: number;
+  effective_day_rate: number;
+  status: 'target' | 'below_target' | 'below_breakeven';
+  status_label: string;
 }
 
 export const CARPET_METHODS: { value: string; label: string; rate: number }[] = [
@@ -210,12 +308,28 @@ export const DEFAULT_CONSTRUCTION_LABOR = {
   supply_cost_per_sqft: 0,
 };
 
+export const DEFAULT_CONSTRUCTION_DAY_MODEL = {
+  crew_day_mode: true,
+  project_type: 'apartments' as ConstructionProjectType,
+  baseline_sqft_per_crew_day: 5000,
+  complexity: 'typical' as ConstructionComplexity,
+  adjusted_sqft_per_crew_day_override: 0,
+  hours_per_crew_day: 8,
+  proposed_day_rate: 0,
+  pricing_position: 'normal' as PricingPosition,
+  suggested_day_rate_min: 800,
+  suggested_day_rate_max: 1600,
+  price_basis: 'cost' as ConstructionPriceBasis,
+  manual_project_price: 0,
+};
+
 export const DEFAULT_SPECIALTY_INPUTS = (service: ServiceType): SpecialtyInputs => {
   switch (service) {
     case 'construction_cleaning':
       return {
         ...DEFAULT_FINANCIALS,
         ...DEFAULT_CONSTRUCTION_LABOR,
+        ...DEFAULT_CONSTRUCTION_DAY_MODEL,
         total_square_feet: 0,
         phases: DEFAULT_CONSTRUCTION_PHASES(),
       };
@@ -359,20 +473,48 @@ export function constructionLaborRate(i: ConstructionInputs) {
 export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   const wageInfo = constructionLaborRate(i);
   const rate = wageInfo.effective;
-  const phases = (i.phases || []).filter(p => p.enabled);
-  const lines = phases.map(p => {
-    const sqft = nn(p.sqft) || nn(i.total_square_feet);
-    const prod = nn(p.production_rate_sqft_hour);
-    const hours = (prod > 0 ? sqft / prod : 0) + nn(p.extra_hours);
-    return line(
-      p.label || 'Phase',
-      hours,
-      rate,
-      prod > 0 ? `${sqft.toLocaleString()} sq ft @ ${prod.toLocaleString()} sq ft/hr` : undefined
-    );
-  });
-
   const totalSqft = nn(i.total_square_feet);
+  const crewDayMode = i.crew_day_mode !== false;
+
+  /* ---- crew-day production model ---- */
+  const baseline = nn(i.baseline_sqft_per_crew_day);
+  const multiplier = complexityMultiplier(i.complexity);
+  const calculatedProduction = baseline * multiplier;
+  const overrideProduction = nn(i.adjusted_sqft_per_crew_day_override);
+  const adjustedProduction = overrideProduction > 0 ? overrideProduction : calculatedProduction;
+  const hoursPerDay = nn(i.hours_per_crew_day) || 8;
+  const crewDays = adjustedProduction > 0 ? totalSqft / adjustedProduction : 0;
+
+  let lines: LaborLine[];
+  if (crewDayMode) {
+    const extra = (i.phases || [])
+      .filter(p => p.enabled && nn(p.extra_hours) > 0)
+      .map(p => line(`${p.label || 'Phase'} — additional hours`, nn(p.extra_hours), rate));
+    lines = [
+      line(
+        'Construction cleaning crew',
+        crewDays * hoursPerDay,
+        rate,
+        adjustedProduction > 0
+          ? `${totalSqft.toLocaleString()} sq ft ÷ ${Math.round(adjustedProduction).toLocaleString()} sq ft/crew-day = ${crewDays.toFixed(2)} crew-days × ${hoursPerDay} hr`
+          : undefined
+      ),
+      ...extra,
+    ];
+  } else {
+    lines = (i.phases || []).filter(p => p.enabled).map(p => {
+      const sqft = nn(p.sqft) || totalSqft;
+      const prod = nn(p.production_rate_sqft_hour);
+      const hours = (prod > 0 ? sqft / prod : 0) + nn(p.extra_hours);
+      return line(
+        p.label || 'Phase',
+        hours,
+        rate,
+        prod > 0 ? `${sqft.toLocaleString()} sq ft @ ${prod.toLocaleString()} sq ft/hr` : undefined
+      );
+    });
+  }
+
   const laborHours = lines.reduce((s, l) => s + nn(l.hours), 0);
   const supplyRate = nn(i.supply_rate_per_hour);
   const supplyCost =
@@ -382,10 +524,38 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   const out = price(i, lines, totalSqft, 0, [], { materialsOverride: 0, supplyCost });
   out.loaded_labor_rate = safe(rate);
 
-  // Labor budget headroom at the final selling price.
-  const priceOut = out.project_price;
   const overheadPct = nn(i.overhead_percent);
   const profitPct = nn(i.target_margin_percent);
+  const direct = out.total_direct_cost;
+  const solvable = isPricingSolvable(overheadPct, profitPct);
+
+  /* ---- pricing basis: cost-based, day rate, or manual ---- */
+  const targetMarginPrice = out.project_price; // cost-based, minimum charge applied
+  const breakevenDivisor = 1 - overheadPct / 100;
+  const breakevenPrice = breakevenDivisor > 0 ? direct / breakevenDivisor : 0;
+  const proposedDayRate = nn(i.proposed_day_rate);
+  const dayRatePrice = crewDays * proposedDayRate;
+  const manualPrice = nn(i.manual_project_price);
+  const basis: ConstructionPriceBasis =
+    i.price_basis === 'day_rate' || i.price_basis === 'manual' ? i.price_basis : 'cost';
+
+  let finalPrice = targetMarginPrice;
+  if (basis === 'day_rate' && dayRatePrice > 0) finalPrice = dayRatePrice;
+  if (basis === 'manual' && manualPrice > 0) finalPrice = manualPrice;
+  const minimum = nn(i.minimum_charge);
+  if (minimum > finalPrice) finalPrice = minimum;
+
+  // Re-derive every price-dependent output from the selected final price.
+  out.project_price = safe(finalPrice);
+  out.overhead_amount = safe(finalPrice * (overheadPct / 100));
+  out.profit_amount = safe(finalPrice - direct - finalPrice * (overheadPct / 100));
+  out.gross_margin_percent = safe(finalPrice > 0 ? ((finalPrice - direct) / finalPrice) * 100 : 0);
+  out.markup_on_direct_percent = safe(direct > 0 ? ((finalPrice - direct) / direct) * 100 : 0);
+  out.price_per_sqft = safe(totalSqft > 0 ? finalPrice / totalSqft : 0);
+  out.minimum_applied = minimum > 0 && minimum >= finalPrice;
+
+  // Labor budget headroom at the final selling price.
+  const priceOut = finalPrice;
   const fixedDirect =
     nn(i.equipment_cost) + nn(i.supply_cost_fixed) + nn(i.supply_cost_per_sqft) * totalSqft;
   const costPerHour = rate + supplyRate;
@@ -409,6 +579,42 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     fixed_direct_cost: safe(fixedDirect),
     max_hours_at_target_margin: safe(costPerHour > 0 ? Math.max(0, allowanceAtTarget / costPerHour) : 0),
     breakeven_hours: safe(costPerHour > 0 ? Math.max(0, allowanceBreakeven / costPerHour) : 0),
+  };
+
+  const status: ConstructionDayModel['status'] =
+    finalPrice + 1e-9 >= targetMarginPrice ? 'target'
+      : finalPrice >= breakevenPrice ? 'below_target'
+      : 'below_breakeven';
+
+  out.day_model = {
+    project_type: i.project_type || 'custom',
+    baseline_sqft_per_crew_day: safe(baseline),
+    complexity: i.complexity || 'typical',
+    complexity_label: CONSTRUCTION_COMPLEXITY_LEVELS.find(c => c.value === i.complexity)?.label || 'Typical',
+    complexity_multiplier: multiplier,
+    calculated_sqft_per_crew_day: safe(calculatedProduction),
+    adjusted_sqft_per_crew_day: safe(adjustedProduction),
+    production_overridden: overrideProduction > 0,
+    crew_days: safe(crewDays),
+    hours_per_crew_day: safe(hoursPerDay),
+    labor_hours: safe(laborHours),
+    target_margin_price: safe(solvable ? targetMarginPrice : 0),
+    breakeven_price: safe(breakevenPrice),
+    proposed_day_rate: safe(proposedDayRate),
+    suggested_day_rate: suggestedDayRate(i.pricing_position, i.suggested_day_rate_min, i.suggested_day_rate_max),
+    suggested_day_rate_min: nn(i.suggested_day_rate_min),
+    suggested_day_rate_max: nn(i.suggested_day_rate_max),
+    pricing_position: i.pricing_position || 'normal',
+    pricing_position_label: PRICING_POSITIONS.find(p => p.value === i.pricing_position)?.label || 'Normal',
+    day_rate_project_price: safe(dayRatePrice),
+    price_basis: basis,
+    final_project_price: safe(finalPrice),
+    effective_day_rate: safe(crewDays > 0 ? finalPrice / crewDays : 0),
+    status,
+    status_label:
+      status === 'target' ? 'Meets target margin'
+        : status === 'below_target' ? 'Below target margin'
+        : 'Below break-even',
   };
   return out;
 }
@@ -518,6 +724,9 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
       c.supply_cost_fixed = nn(raw.materials_cost);
       c.supply_cost_per_sqft = nn(raw.materials_cost_per_sqft);
     }
+    // Estimates saved before the crew-day model keep their phase-based math and
+    // therefore their historical totals; only new estimates default to crew-days.
+    if (!('crew_day_mode' in raw)) c.crew_day_mode = false;
     c.materials_cost = 0;
     c.materials_cost_per_sqft = 0;
   }
@@ -535,6 +744,14 @@ export function validateSpecialty(service: ServiceType, i: SpecialtyInputs): str
       if (!(nn(c.total_square_feet) > 0)) return 'Total project square feet must be greater than zero.';
       if ((c.union_project || c.prevailing_wage_project) && !(nn(c.prevailing_base_wage) > 0))
         return 'Enter the union / prevailing base hourly wage.';
+      if (c.crew_day_mode !== false) {
+        const adjusted = nn(c.adjusted_sqft_per_crew_day_override) > 0
+          ? nn(c.adjusted_sqft_per_crew_day_override)
+          : nn(c.baseline_sqft_per_crew_day) * complexityMultiplier(c.complexity);
+        if (!(adjusted > 0)) return 'Baseline production (sq ft per crew-day) must be greater than zero.';
+        if (!(nn(c.hours_per_crew_day) > 0)) return 'Hours per crew-day must be greater than zero.';
+        return null;
+      }
       const active = (c.phases || []).filter(p => p.enabled);
       if (active.length === 0) return 'Select at least one phase or work item.';
       if (active.some(p => !(nn(p.production_rate_sqft_hour) > 0) && !(nn(p.extra_hours) > 0)))
