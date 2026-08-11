@@ -328,9 +328,9 @@ export const FURNITURE_LEVELS: { value: CarpetInputs['furniture_level']; label: 
 /* --------------------------------------------------------------- defaults */
 
 export const DEFAULT_CONSTRUCTION_PHASES = (): ConstructionPhase[] => [
-  { id: 'rough', label: 'Rough Clean', enabled: false, sqft: 0, production_rate_sqft_hour: 1500, extra_hours: 0, notes: '' },
-  { id: 'final', label: 'Final Clean', enabled: true, sqft: 0, production_rate_sqft_hour: 800, extra_hours: 0, notes: '' },
-  { id: 'touchup', label: 'Touch-Up / Punch Clean', enabled: false, sqft: 0, production_rate_sqft_hour: 2500, extra_hours: 0, notes: '' },
+  { id: 'rough', label: 'Rough Clean', enabled: false, sqft: 0, production_rate_sqft_hour: 1500, sqft_per_crew_day: 0, extra_hours: 0, notes: '' },
+  { id: 'final', label: 'Final Clean', enabled: true, sqft: 0, production_rate_sqft_hour: 800, sqft_per_crew_day: 0, extra_hours: 0, notes: '' },
+  { id: 'touchup', label: 'Touch-Up Clean', enabled: false, sqft: 0, production_rate_sqft_hour: 2500, sqft_per_crew_day: 0, extra_hours: 0, notes: '' },
 ];
 
 export const DEFAULT_CONSTRUCTION_LABOR = {
