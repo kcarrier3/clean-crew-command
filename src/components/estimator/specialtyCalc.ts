@@ -145,6 +145,10 @@ export interface ConstructionInputs extends FinancialBase {
   suggested_day_rate_max: number;
   price_basis: ConstructionPriceBasis;
   manual_project_price: number;
+  /** Day-rate minimums. Single-day jobs hold a higher floor than multi-day work. */
+  apply_minimum_day_rate: boolean;
+  minimum_day_rate: number;
+  multi_day_minimum_day_rate: number;
 }
 
 export interface CarpetInputs extends FinancialBase {
@@ -276,6 +280,11 @@ export interface ConstructionDayModel {
   pricing_position: PricingPosition;
   pricing_position_label: string;
   day_rate_project_price: number;
+  /** Whole days actually billed (crew-days rounded up). */
+  billable_days: number;
+  multi_day: boolean;
+  applicable_minimum_day_rate: number;
+  minimum_day_rate_applied: boolean;
   price_basis: ConstructionPriceBasis;
   final_project_price: number;
   effective_day_rate: number;
@@ -336,8 +345,11 @@ export const DEFAULT_CONSTRUCTION_DAY_MODEL = {
   pricing_position: 'normal' as PricingPosition,
   suggested_day_rate_min: 800,
   suggested_day_rate_max: 1600,
-  price_basis: 'cost' as ConstructionPriceBasis,
+  price_basis: 'day_rate' as ConstructionPriceBasis,
   manual_project_price: 0,
+  apply_minimum_day_rate: true,
+  minimum_day_rate: 1500,
+  multi_day_minimum_day_rate: 1250,
 };
 
 export const DEFAULT_SPECIALTY_INPUTS = (service: ServiceType): SpecialtyInputs => {
@@ -571,7 +583,17 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   const breakevenDivisor = 1 - overheadPct / 100;
   const breakevenPrice = breakevenDivisor > 0 ? direct / breakevenDivisor : 0;
   const proposedDayRate = nn(i.proposed_day_rate);
-  const dayRatePrice = crewDays * proposedDayRate;
+  /* Day-rate minimums: single-day jobs hold the higher floor; multi-day work
+     may be sold at the lower multi-day floor. */
+  const billableDays = crewDays > 0 ? Math.max(1, Math.ceil(crewDays - 1e-9)) : 0;
+  const multiDay = billableDays > 1;
+  const applyMin = i.apply_minimum_day_rate !== false;
+  const minDayRate = applyMin
+    ? (multiDay ? nn(i.multi_day_minimum_day_rate) || nn(i.minimum_day_rate) : nn(i.minimum_day_rate))
+    : 0;
+  const effectiveDayRate = Math.max(proposedDayRate, minDayRate);
+  const minDayRateApplied = minDayRate > 0 && minDayRate > proposedDayRate;
+  const dayRatePrice = billableDays * effectiveDayRate;
   const manualPrice = nn(i.manual_project_price);
   const basis: ConstructionPriceBasis =
     i.price_basis === 'day_rate' || i.price_basis === 'manual' ? i.price_basis : 'cost';
@@ -644,13 +666,17 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
     labor_cost_per_crew_day: safe(hoursPerCrewDay * rate),
     target_margin_price: safe(solvable ? targetMarginPrice : 0),
     breakeven_price: safe(breakevenPrice),
-    proposed_day_rate: safe(proposedDayRate),
+    proposed_day_rate: safe(effectiveDayRate),
     suggested_day_rate: suggestedDayRate(i.pricing_position, i.suggested_day_rate_min, i.suggested_day_rate_max),
     suggested_day_rate_min: nn(i.suggested_day_rate_min),
     suggested_day_rate_max: nn(i.suggested_day_rate_max),
     pricing_position: i.pricing_position || 'normal',
     pricing_position_label: PRICING_POSITIONS.find(p => p.value === i.pricing_position)?.label || 'Normal',
     day_rate_project_price: safe(dayRatePrice),
+    billable_days: billableDays,
+    multi_day: multiDay,
+    applicable_minimum_day_rate: safe(minDayRate),
+    minimum_day_rate_applied: basis === 'day_rate' && minDayRateApplied,
     price_basis: basis,
     final_project_price: safe(finalPrice),
     effective_day_rate: safe(crewDays > 0 ? finalPrice / crewDays : 0),
@@ -778,6 +804,12 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
       c.crew_lead_count = 0;
       c.crew_member_wage = 0;
       c.crew_lead_wage = 0;
+    }
+    // Day-rate minimums are new: saved estimates keep their original pricing basis
+    // and are never re-floored to the new minimum.
+    if (!('apply_minimum_day_rate' in raw)) {
+      c.apply_minimum_day_rate = false;
+      if (!('price_basis' in raw)) c.price_basis = 'cost';
     }
     c.materials_cost = 0;
     c.materials_cost_per_sqft = 0;

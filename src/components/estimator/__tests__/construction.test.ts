@@ -7,6 +7,8 @@ import {
 const base = () => ({
   ...(DEFAULT_SPECIALTY_INPUTS('construction_cleaning') as ConstructionInputs),
   crew_day_mode: false,
+  price_basis: 'cost' as const,
+  apply_minimum_day_rate: false,
   total_square_feet: 20000,
   base_wage: 18, labor_burden_percent: 20, overhead_percent: 15, target_margin_percent: 25,
   supply_rate_per_hour: 0.5, equipment_cost: 500,
@@ -16,6 +18,8 @@ const base = () => ({
 
 const crewBase = () => ({
   ...(DEFAULT_SPECIALTY_INPUTS('construction_cleaning') as ConstructionInputs),
+  price_basis: 'cost' as const,
+  apply_minimum_day_rate: false,
   total_square_feet: 20000,
   base_wage: 18, labor_burden_percent: 20, overhead_percent: 15, target_margin_percent: 25,
   supply_rate_per_hour: 0.5, equipment_cost: 500,
@@ -138,11 +142,39 @@ describe('construction crew-day model', () => {
     expect(suggestedDayRate('normal', 800, 1600)).toBeCloseTo(1200);
     expect(suggestedDayRate('very_busy', 800, 1600)).toBeCloseTo(1600);
   });
+
+  it('minimum day rate floors single-day jobs at $1,500', () => {
+    const o = calculateConstruction({
+      ...crewBase(), total_square_feet: 3000, baseline_sqft_per_crew_day: 5000,
+      price_basis: 'day_rate', apply_minimum_day_rate: true,
+      minimum_day_rate: 1500, multi_day_minimum_day_rate: 1250, proposed_day_rate: 900,
+    });
+    const dm = o.day_model!;
+    expect(dm.billable_days).toBe(1);
+    expect(dm.multi_day).toBe(false);
+    expect(dm.proposed_day_rate).toBeCloseTo(1500);
+    expect(dm.minimum_day_rate_applied).toBe(true);
+    expect(o.project_price).toBeCloseTo(1500);
+  });
+
+  it('multi-day jobs fall back to the lower multi-day minimum', () => {
+    const dm = calculateConstruction({
+      ...crewBase(), total_square_feet: 12000, baseline_sqft_per_crew_day: 5000,
+      price_basis: 'day_rate', apply_minimum_day_rate: true,
+      minimum_day_rate: 1500, multi_day_minimum_day_rate: 1250, proposed_day_rate: 0,
+    }).day_model!;
+    expect(dm.billable_days).toBe(3);
+    expect(dm.multi_day).toBe(true);
+    expect(dm.applicable_minimum_day_rate).toBeCloseTo(1250);
+    expect(dm.day_rate_project_price).toBeCloseTo(3750);
+  });
 });
 
 describe('crew composition', () => {
   const withCrew = (over: Partial<ConstructionInputs> = {}) => calculateConstruction({
     ...(DEFAULT_SPECIALTY_INPUTS('construction_cleaning') as ConstructionInputs),
+    price_basis: 'cost',
+    apply_minimum_day_rate: false,
     total_square_feet: 10000,
     baseline_sqft_per_crew_day: 5000,
     complexity: 'typical',
