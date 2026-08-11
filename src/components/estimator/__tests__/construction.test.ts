@@ -11,6 +11,7 @@ const base = () => ({
   base_wage: 18, labor_burden_percent: 20, overhead_percent: 15, target_margin_percent: 25,
   supply_rate_per_hour: 0.5, equipment_cost: 500,
   phases: [{ id: 'final', label: 'Final Clean', enabled: true, sqft: 20000, production_rate_sqft_hour: 800, extra_hours: 0, notes: '' }],
+  crew_size: 0, crew_lead_count: 0, crew_member_wage: 0, crew_lead_wage: 0,
 });
 
 const crewBase = () => ({
@@ -19,6 +20,7 @@ const crewBase = () => ({
   base_wage: 18, labor_burden_percent: 20, overhead_percent: 15, target_margin_percent: 25,
   supply_rate_per_hour: 0.5, equipment_cost: 500,
   phases: [],
+  crew_size: 0, crew_lead_count: 0, crew_member_wage: 0, crew_lead_wage: 0,
 });
 
 describe('construction', () => {
