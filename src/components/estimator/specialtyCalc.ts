@@ -805,6 +805,12 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
       c.crew_member_wage = 0;
       c.crew_lead_wage = 0;
     }
+    // Day-rate minimums are new: saved estimates keep their original pricing basis
+    // and are never re-floored to the new minimum.
+    if (!('apply_minimum_day_rate' in raw)) {
+      c.apply_minimum_day_rate = false;
+      if (!('price_basis' in raw)) c.price_basis = 'cost';
+    }
     c.materials_cost = 0;
     c.materials_cost_per_sqft = 0;
   }
