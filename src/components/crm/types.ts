@@ -94,6 +94,7 @@ export interface CrmDeal {
 }
 
 export interface CrmActivity {
+  // (deal fields above include pipeline)
   id: string;
   deal_id: string | null;
   lead_id: string | null;
