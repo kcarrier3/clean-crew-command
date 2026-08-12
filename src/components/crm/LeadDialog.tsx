@@ -651,6 +651,14 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
           <FieldRow label="Opportunity Name">
             <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Opportunity name" />
           </FieldRow>
+          <FieldRow label="Opportunity Type" required>
+            <Select value={form.pipeline} onValueChange={v => changePipeline(v as CrmPipeline)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(PIPELINE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </FieldRow>
           <FieldRow label="Stage">
             <Select value={form.stage_id || undefined} onValueChange={v => setForm({ ...form, stage_id: v })}>
               <SelectTrigger><SelectValue placeholder="Select stage" /></SelectTrigger>
