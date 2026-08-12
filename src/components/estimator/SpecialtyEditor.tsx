@@ -127,6 +127,7 @@ function FinancialsCard({
 }
 
 function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch: Patch; readOnly?: boolean }) {
+  const [advanced, setAdvanced] = useState(false);
   const phases = i.phases?.length ? i.phases : DEFAULT_CONSTRUCTION_PHASES();
   const setPhase = (id: string, p: Partial<ConstructionInputs['phases'][number]>) =>
     patch({ phases: phases.map(x => (x.id === id ? { ...x, ...p } : x)) });
@@ -139,76 +140,9 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
 
   return (
     <>
-      {/* 1 — bidding settings (auto-populated, replaces crew composition) */}
+      {/* 1 — what are we cleaning */}
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm">Bidding settings</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-[11px] text-muted-foreground">
-            Your standing crew assumptions. They auto-populate on every construction bid and show your daily crew cost — they don&apos;t set the price.
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <NumField id="crewsize" label="Workers per crew-day" value={i.crew_size} disabled={readOnly} onChange={v => patch({ crew_size: v })} />
-            <NumField id="hpd" label="Hours per crew-day" value={i.hours_per_crew_day} suffix="hr" disabled={readOnly} onChange={v => patch({ hours_per_crew_day: v })} />
-            <NumField id="crewwage" label="Worker wage" value={i.crew_member_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ crew_member_wage: v })} />
-            <NumField id="leadwage" label="Crew lead wage" value={i.crew_lead_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ crew_lead_wage: v })} />
-            <NumField id="crewleads" label="Crew leads on the crew" value={i.crew_lead_count} disabled={readOnly} onChange={v => patch({ crew_lead_count: v })} />
-          </div>
-          <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
-            <Line label="Blended hourly wage" value={dm.blended_hourly_wage > 0 ? money(dm.blended_hourly_wage) : 'Using base wage'} />
-            <Line label="Loaded hourly labor cost" value={`${money(wage.effective)}/hr`} />
-            <Line label="Labor hours per crew-day" value={hoursFmt(dm.labor_hours_per_crew_day)} />
-            <Separator className="my-1" />
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-xs font-medium">Daily crew cost</span>
-              <span className="tabular-nums text-sm font-semibold">{money(dm.labor_cost_per_crew_day)}</span>
-            </div>
-          </div>
-          <Separator />
-          <div className="flex flex-wrap items-center gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                id="union"
-                checked={!!i.union_project}
-                disabled={readOnly}
-                onCheckedChange={c => patch({ union_project: !!c })}
-              />
-              Union project
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                id="prevailing"
-                checked={!!i.prevailing_wage_project}
-                disabled={readOnly}
-                onCheckedChange={c => patch({ prevailing_wage_project: !!c })}
-              />
-              Prevailing wage project
-            </label>
-          </div>
-
-          {!wage.prevailing ? (
-            <div className="grid grid-cols-2 gap-3">
-              <NumField id="cwage" label="Base wage" value={i.base_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ base_wage: v })} />
-              <NumField id="cburden" label="Labor burden" value={i.labor_burden_percent} suffix="%" disabled={readOnly} onChange={v => patch({ labor_burden_percent: v })} />
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <NumField id="pwage" label="Prevailing / union base wage" value={i.prevailing_base_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_base_wage: v })} />
-              <NumField id="pfringe" label="Fringe / benefits" value={i.prevailing_fringe_per_hour} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_fringe_per_hour: v })} />
-              <NumField id="cburden2" label="Payroll burden (on wage)" value={i.labor_burden_percent} suffix="%" disabled={readOnly} onChange={v => patch({ labor_burden_percent: v })} />
-              <NumField id="pextra" label="Additional hourly burden" value={i.prevailing_additional_burden_per_hour} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_additional_burden_per_hour: v })} />
-            </div>
-          )}
-          {wage.prevailing && (
-            <p className="text-[11px] text-muted-foreground">
-              Prevailing / union rates replace the blended crew wage for costing. Burden % applies to the wage only — fringe dollars are never burdened twice.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 2 — project scope & type */}
-      <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm">Project scope &amp; type</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">1. Project scope</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <NumField id="tsqft" label="Total project square feet" value={i.total_square_feet} suffix="sq ft" disabled={readOnly} onChange={v => patch({ total_square_feet: v })} />
           <div className="space-y-1.5">
@@ -250,43 +184,13 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
               {CONSTRUCTION_COMPLEXITY_LEVELS.map(c => <span key={c.value}>{c.label}</span>)}
             </div>
           </div>
-          <div className="rounded-md border border-brand-orange/40 bg-brand-orange/5 p-3 space-y-1">
-            <Line label="Baseline production (final clean)" value={`${Math.round(dm.adjusted_sqft_per_crew_day).toLocaleString()} sf/crew-day`} />
-            {dm.phases.map(p => (
-              <Line
-                key={p.id}
-                label={`${p.label} · ${Math.round(p.sqft_per_crew_day).toLocaleString()} sf/crew-day`}
-                value={`${p.crew_days.toFixed(2)} crew-days`}
-                muted
-              />
-            ))}
-            <Line label="Estimated crew-days" value={`${dm.crew_days.toFixed(2)} (${dm.billable_days} billable)`} />
-            <Line label="Estimated labor hours" value={hoursFmt(dm.labor_hours)} muted />
-          </div>
-          <div className="grid grid-cols-2 gap-3 items-end">
-            <NumField id="baseprod" label="Baseline production (editable)" value={i.baseline_sqft_per_crew_day} suffix="sf/crew-day" disabled={readOnly} onChange={v => patch({ baseline_sqft_per_crew_day: v })} />
-            <NumField id="prodover" label="Override production (optional)" value={i.adjusted_sqft_per_crew_day_override} suffix="sf/day" disabled={readOnly} onChange={v => patch({ adjusted_sqft_per_crew_day_override: v })} />
-          </div>
-          {!readOnly && dm.production_overridden && (
-            <Button variant="outline" size="sm" onClick={() => patch({ adjusted_sqft_per_crew_day_override: 0 })}>
-              Reset to calculated
-            </Button>
-          )}
-          {!crewDayMode && (
-            <p className="text-[11px] text-muted-foreground">
-              This estimate was saved with the older phase-based model, so its hours still come from the items below.
-              <Button variant="link" size="sm" className="h-auto p-0 ml-1 text-[11px]" disabled={readOnly} onClick={() => patch({ crew_day_mode: true })}>
-                Switch to crew-day estimating
-              </Button>
-            </p>
-          )}
         </CardContent>
       </Card>
 
-      {/* 3 — what we're pricing */}
+      {/* 2 — which cleans are we pricing */}
       <Card>
         <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm">What are we pricing?</CardTitle>
+          <CardTitle className="text-sm">2. Which cleans are we pricing?</CardTitle>
           {!readOnly && (
             <Button
               variant="ghost"
@@ -303,37 +207,48 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
           )}
         </CardHeader>
         <CardContent className="space-y-2">
-          {phases.map(p => (
-            <div key={p.id} className="rounded-lg border border-border p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={p.enabled}
-                  disabled={readOnly}
-                  onCheckedChange={c => setPhase(p.id, { enabled: !!c })}
-                  id={`ph-${p.id}`}
-                />
-                {p.custom ? (
-                  <Input
-                    value={p.label}
+          {phases.map(p => {
+            const r = dm.phases.find(x => x.id === p.id);
+            return (
+              <div key={p.id} className="rounded-lg border border-border p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={p.enabled}
                     disabled={readOnly}
-                    onChange={e => setPhase(p.id, { label: e.target.value })}
-                    className="h-9"
+                    onCheckedChange={c => setPhase(p.id, { enabled: !!c })}
+                    id={`ph-${p.id}`}
                   />
-                ) : (
-                  <Label htmlFor={`ph-${p.id}`} className="text-sm font-medium">{p.label}</Label>
+                  {p.custom ? (
+                    <Input
+                      value={p.label}
+                      disabled={readOnly}
+                      onChange={e => setPhase(p.id, { label: e.target.value })}
+                      className="h-9"
+                    />
+                  ) : (
+                    <Label htmlFor={`ph-${p.id}`} className="text-sm font-medium">{p.label}</Label>
+                  )}
+                  {p.enabled && r && (
+                    <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                      {r.crew_days.toFixed(2)} crew-days
+                    </span>
+                  )}
+                  {p.custom && !readOnly && (
+                    <Button variant="ghost" size="icon" onClick={() => patch({ phases: phases.filter(x => x.id !== p.id) })}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {p.enabled && r && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {r.sqft.toLocaleString()} sq ft ÷ {Math.round(r.sqft_per_crew_day).toLocaleString()} sf/crew-day · {hoursFmt(r.labor_hours)}
+                  </p>
                 )}
-                {p.custom && !readOnly && (
-                  <Button variant="ghost" size="icon" className="ml-auto" onClick={() => patch({ phases: phases.filter(x => x.id !== p.id) })}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              {p.enabled && (crewDayMode ? (
-                <>
+                {p.enabled && advanced && (crewDayMode ? (
                   <div className="grid grid-cols-2 gap-3">
                     <NumField
                       id={`pcd-${p.id}`}
-                      label="Production rate"
+                      label="Production rate override"
                       value={p.sqft_per_crew_day || 0}
                       suffix="sf/crew-day"
                       disabled={readOnly}
@@ -347,156 +262,58 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
                       disabled={readOnly}
                       onChange={v => setPhase(p.id, { sqft: v })}
                     />
+                    <div className="space-y-1.5 col-span-2">
+                      <Label htmlFor={`nt-${p.id}`} className="text-xs">Notes</Label>
+                      <Input id={`nt-${p.id}`} value={p.notes || ''} disabled={readOnly} onChange={e => setPhase(p.id, { notes: e.target.value })} className="h-11" />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`nt-${p.id}`} className="text-xs">Notes</Label>
-                    <Input id={`nt-${p.id}`} value={p.notes || ''} disabled={readOnly} onChange={e => setPhase(p.id, { notes: e.target.value })} className="h-11" />
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <NumField id={`sf-${p.id}`} label="Square feet" value={p.sqft || 0} suffix="sq ft" disabled={readOnly} onChange={v => setPhase(p.id, { sqft: v })} />
+                    <NumField id={`pr-${p.id}`} label="Production rate" value={p.production_rate_sqft_hour} suffix="sf/hr" disabled={readOnly} onChange={v => setPhase(p.id, { production_rate_sqft_hour: v })} />
+                    <NumField id={`xh2-${p.id}`} label="Additional fixed hours" value={p.extra_hours} suffix="hr" disabled={readOnly} onChange={v => setPhase(p.id, { extra_hours: v })} />
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`nt2-${p.id}`} className="text-xs">Notes</Label>
+                      <Input id={`nt2-${p.id}`} value={p.notes || ''} disabled={readOnly} onChange={e => setPhase(p.id, { notes: e.target.value })} className="h-11" />
+                    </div>
                   </div>
-                  {(() => {
-                    const r = dm.phases.find(x => x.id === p.id);
-                    if (!r) return null;
-                    return (
-                      <p className="text-[11px] text-muted-foreground">
-                        {r.sqft.toLocaleString()} sq ft ÷ {Math.round(r.sqft_per_crew_day).toLocaleString()} sf/crew-day ={' '}
-                        {r.crew_days.toFixed(2)} crew-days · {hoursFmt(r.labor_hours)}
-                        {!r.production_overridden && ' (derived from the project baseline — override above)'}
-                      </p>
-                    );
-                  })()}
-                </>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <NumField id={`sf-${p.id}`} label="Square feet" value={p.sqft || 0} suffix="sq ft" disabled={readOnly} onChange={v => setPhase(p.id, { sqft: v })} />
-                  <NumField id={`pr-${p.id}`} label="Production rate" value={p.production_rate_sqft_hour} suffix="sf/hr" disabled={readOnly} onChange={v => setPhase(p.id, { production_rate_sqft_hour: v })} />
-                  <NumField id={`xh2-${p.id}`} label="Additional fixed hours" value={p.extra_hours} suffix="hr" disabled={readOnly} onChange={v => setPhase(p.id, { extra_hours: v })} />
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`nt2-${p.id}`} className="text-xs">Notes</Label>
-                    <Input id={`nt2-${p.id}`} value={p.notes || ''} disabled={readOnly} onChange={e => setPhase(p.id, { notes: e.target.value })} className="h-11" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-          <Separator className="my-1" />
-          <div className="grid grid-cols-2 gap-3">
-            <NumField id="csupr" label="Supplies" value={i.supply_rate_per_hour} suffix="$/labor hr" disabled={readOnly} onChange={v => patch({ supply_rate_per_hour: v })} />
-            <NumField id="csupf" label="Fixed supply cost" value={i.supply_cost_fixed} suffix="$" disabled={readOnly} onChange={v => patch({ supply_cost_fixed: v })} />
-            <NumField id="csupsf" label="Supply cost per sq ft" value={i.supply_cost_per_sqft} suffix="$/sf" disabled={readOnly} onChange={v => patch({ supply_cost_per_sqft: v })} />
-            <NumField id="cequip" label="Equipment / rental" value={i.equipment_cost} suffix="$" disabled={readOnly} onChange={v => patch({ equipment_cost: v })} />
+                ))}
+              </div>
+            );
+          })}
+          <div className="rounded-md border border-brand-orange/40 bg-brand-orange/5 p-3 space-y-1">
+            <Line label="Production (final clean baseline)" value={`${Math.round(dm.adjusted_sqft_per_crew_day).toLocaleString()} sf/crew-day`} muted />
+            <Line label="Total crew-days" value={`${dm.crew_days.toFixed(2)} (${dm.billable_days} billable)`} />
+            <Line label="Total labor hours" value={hoursFmt(dm.labor_hours)} muted />
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            Checked items are what the bid covers. Crew-day production drives the hours; extra hours are added on top.
-          </p>
         </CardContent>
       </Card>
 
-      {/* 4 — pricing & minimums */}
+      {/* 3 — price */}
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm">Pricing &amp; minimums</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm">3. Price</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <NumField id="minday" label="Minimum day rate (1 day)" value={i.minimum_day_rate} suffix="$/day" disabled={readOnly} onChange={v => patch({ minimum_day_rate: v })} />
-            <NumField id="minmulti" label="Minimum day rate (multi-day)" value={i.multi_day_minimum_day_rate} suffix="$/day" disabled={readOnly} onChange={v => patch({ multi_day_minimum_day_rate: v })} />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              id="applymin"
-              checked={i.apply_minimum_day_rate !== false}
-              disabled={readOnly}
-              onCheckedChange={c => patch({ apply_minimum_day_rate: !!c })}
-            />
-            Enforce the minimum day rate on this bid
-          </label>
-          <Separator className="my-1" />
-          <div className="space-y-2 rounded-md border border-border p-3">
-            <p className="text-xs font-medium">Union / prevailing wage floor</p>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                id="applypwfloor"
-                checked={i.apply_prevailing_margin_floor !== false}
-                disabled={readOnly}
-                onCheckedChange={c => patch({ apply_prevailing_margin_floor: !!c })}
-              />
-              Hold a minimum margin over crew-day labor cost
-            </label>
-            <NumField
-              id="pwmargin"
-              label="Minimum margin on prevailing / union days"
-              value={i.prevailing_min_margin_percent}
-              suffix="%"
-              disabled={readOnly}
-              onChange={v => patch({ prevailing_min_margin_percent: v })}
-            />
-            {dm.prevailing_margin_floor_active ? (
-              <>
-                <Line label="Crew-day labor cost" value={`${money(dm.labor_cost_per_crew_day)}/day`} muted />
-                <Line label="Prevailing-wage minimum day rate" value={`${money(dm.prevailing_minimum_day_rate)}/day`} />
-              </>
-            ) : (
-              <p className="text-[11px] text-muted-foreground">
-                Applies automatically when the bid is marked union or prevailing wage.
-              </p>
-            )}
-          </div>
           <div className="grid grid-cols-2 gap-3 items-end">
-            <NumField id="dayrate" label="Proposed day rate" value={i.proposed_day_rate} suffix="$/day" disabled={readOnly} onChange={v => patch({ proposed_day_rate: v })} />
+            <NumField id="dayrate" label="Day rate" value={i.proposed_day_rate} suffix="$/day" disabled={readOnly} onChange={v => patch({ proposed_day_rate: v })} />
             {!readOnly && (
               <Button variant="outline" size="sm" onClick={() => patch({ proposed_day_rate: Math.round(suggested) })}>
                 Use suggested {money(suggested)}
               </Button>
             )}
+            <NumField id="minday" label="Minimum day rate (1 day)" value={i.minimum_day_rate} suffix="$/day" disabled={readOnly} onChange={v => patch({ minimum_day_rate: v })} />
+            <NumField id="minmulti" label="Minimum day rate (multi-day)" value={i.multi_day_minimum_day_rate} suffix="$/day" disabled={readOnly} onChange={v => patch({ multi_day_minimum_day_rate: v })} />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Pricing position / workload — guidance only</Label>
-            <Slider
-              value={[positionIdx]}
-              min={0}
-              max={PRICING_POSITIONS.length - 1}
-              step={1}
-              disabled={readOnly}
-              onValueChange={([v]) => patch({ pricing_position: PRICING_POSITIONS[v].value })}
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              {PRICING_POSITIONS.map(p => <span key={p.value}>{p.label}</span>)}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <NumField id="drmin" label="Suggested range min" value={i.suggested_day_rate_min} suffix="$" disabled={readOnly} onChange={v => patch({ suggested_day_rate_min: v })} />
-              <NumField id="drmax" label="Suggested range max" value={i.suggested_day_rate_max} suffix="$" disabled={readOnly} onChange={v => patch({ suggested_day_rate_max: v })} />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Final project price basis</Label>
-            <ToggleGroup
-              type="single"
-              value={dm.price_basis}
-              disabled={readOnly}
-              onValueChange={v => v && patch({ price_basis: v })}
-              className="justify-start flex-wrap"
-            >
-              <ToggleGroupItem value="day_rate" size="sm" className="text-xs">Day rate</ToggleGroupItem>
-              <ToggleGroupItem value="cost" size="sm" className="text-xs">Cost-based</ToggleGroupItem>
-              <ToggleGroupItem value="manual" size="sm" className="text-xs">Manual price</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          {dm.price_basis === 'manual' && (
-            <NumField id="manprice" label="Manual final project price" value={i.manual_project_price} suffix="$" disabled={readOnly} onChange={v => patch({ manual_project_price: v })} />
-          )}
           <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
             <Line label="Billing day rate" value={`${money(dm.proposed_day_rate)}/day${dm.minimum_day_rate_applied ? ' (minimum applied)' : ''}`} />
-            <Line label="Day-rate project price" value={`${money(dm.day_rate_project_price)} (${dm.billable_days} day${dm.billable_days === 1 ? '' : 's'})`} />
-            <Line label="Cost-based target-margin price" value={money(dm.target_margin_price)} muted />
-            <Line label="Break-even price" value={money(dm.breakeven_price)} muted />
+            <Line label="Billable days" value={`${dm.billable_days}`} muted />
             <Separator className="my-1" />
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-xs font-medium">Final project price</span>
               <span className="tabular-nums text-sm font-semibold">{money(dm.final_project_price)}</span>
             </div>
-            <Line label="Effective day rate" value={`${money(dm.effective_day_rate)}/day`} />
           </div>
           {dm.multi_day && (
-            <p className="text-[11px] text-muted-foreground">
-              Multi-day project — the lower multi-day minimum applies.
-            </p>
+            <p className="text-[11px] text-muted-foreground">Multi-day project — the lower multi-day minimum applies.</p>
           )}
           {dm.prevailing_minimum_applied && (
             <p className="text-[11px] text-brand-orange">
@@ -507,6 +324,197 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
         </CardContent>
       </Card>
 
+      {/* 4 — price by clean */}
+      {dm.phases.length > 0 && (
+        <Card className="border-brand-orange/50">
+          <CardHeader className="pb-3"><CardTitle className="text-sm">Price by clean</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {dm.phases.map(p => (
+              <div key={p.id} className="rounded-md border border-border p-2">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm font-medium">{p.label}</span>
+                  <span className="tabular-nums text-sm font-semibold text-brand-orange">{money(p.price)}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {p.crew_days.toFixed(2)} crew-days · {hoursFmt(p.labor_hours)} · cost {money(p.allocated_cost)}
+                  {p.sqft > 0 ? ` · $${(p.price / p.sqft).toFixed(3)}/sq ft` : ''}
+                </p>
+              </div>
+            ))}
+            <Separator className="my-1" />
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-medium">Total to customer</span>
+              <span className="tabular-nums text-sm font-semibold">{money(dm.final_project_price)}</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Each clean carries its share of supplies, equipment, overhead and profit, allocated by labor.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* advanced */}
+      <Button variant="outline" size="sm" className="w-full" onClick={() => setAdvanced(a => !a)}>
+        {advanced ? 'Hide advanced settings' : 'Advanced settings (crew, wages, supplies, pricing model)'}
+      </Button>
+
+      {advanced && (
+        <>
+          <Card>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">Crew &amp; wages</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-[11px] text-muted-foreground">
+                Standing crew assumptions. They show your daily crew cost — they don&apos;t set the price.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <NumField id="crewsize" label="Workers per crew-day" value={i.crew_size} disabled={readOnly} onChange={v => patch({ crew_size: v })} />
+                <NumField id="hpd" label="Hours per crew-day" value={i.hours_per_crew_day} suffix="hr" disabled={readOnly} onChange={v => patch({ hours_per_crew_day: v })} />
+                <NumField id="crewwage" label="Worker wage" value={i.crew_member_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ crew_member_wage: v })} />
+                <NumField id="leadwage" label="Crew lead wage" value={i.crew_lead_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ crew_lead_wage: v })} />
+                <NumField id="crewleads" label="Crew leads on the crew" value={i.crew_lead_count} disabled={readOnly} onChange={v => patch({ crew_lead_count: v })} />
+              </div>
+              <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
+                <Line label="Blended hourly wage" value={dm.blended_hourly_wage > 0 ? money(dm.blended_hourly_wage) : 'Using base wage'} />
+                <Line label="Loaded hourly labor cost" value={`${money(wage.effective)}/hr`} />
+                <Separator className="my-1" />
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-xs font-medium">Daily crew cost</span>
+                  <span className="tabular-nums text-sm font-semibold">{money(dm.labor_cost_per_crew_day)}</span>
+                </div>
+              </div>
+              <Separator />
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox id="union" checked={!!i.union_project} disabled={readOnly} onCheckedChange={c => patch({ union_project: !!c })} />
+                  Union project
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox id="prevailing" checked={!!i.prevailing_wage_project} disabled={readOnly} onCheckedChange={c => patch({ prevailing_wage_project: !!c })} />
+                  Prevailing wage project
+                </label>
+              </div>
+              {!wage.prevailing ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <NumField id="cwage" label="Base wage" value={i.base_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ base_wage: v })} />
+                  <NumField id="cburden" label="Labor burden" value={i.labor_burden_percent} suffix="%" disabled={readOnly} onChange={v => patch({ labor_burden_percent: v })} />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <NumField id="pwage" label="Prevailing / union base wage" value={i.prevailing_base_wage} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_base_wage: v })} />
+                  <NumField id="pfringe" label="Fringe / benefits" value={i.prevailing_fringe_per_hour} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_fringe_per_hour: v })} />
+                  <NumField id="cburden2" label="Payroll burden (on wage)" value={i.labor_burden_percent} suffix="%" disabled={readOnly} onChange={v => patch({ labor_burden_percent: v })} />
+                  <NumField id="pextra" label="Additional hourly burden" value={i.prevailing_additional_burden_per_hour} suffix="$/hr" disabled={readOnly} onChange={v => patch({ prevailing_additional_burden_per_hour: v })} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">Production &amp; supplies</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 items-end">
+                <NumField id="baseprod" label="Baseline production" value={i.baseline_sqft_per_crew_day} suffix="sf/crew-day" disabled={readOnly} onChange={v => patch({ baseline_sqft_per_crew_day: v })} />
+                <NumField id="prodover" label="Override production (optional)" value={i.adjusted_sqft_per_crew_day_override} suffix="sf/day" disabled={readOnly} onChange={v => patch({ adjusted_sqft_per_crew_day_override: v })} />
+              </div>
+              {!readOnly && dm.production_overridden && (
+                <Button variant="outline" size="sm" onClick={() => patch({ adjusted_sqft_per_crew_day_override: 0 })}>
+                  Reset to calculated
+                </Button>
+              )}
+              {!crewDayMode && (
+                <p className="text-[11px] text-muted-foreground">
+                  This estimate was saved with the older phase-based model, so its hours still come from the items above.
+                  <Button variant="link" size="sm" className="h-auto p-0 ml-1 text-[11px]" disabled={readOnly} onClick={() => patch({ crew_day_mode: true })}>
+                    Switch to crew-day estimating
+                  </Button>
+                </p>
+              )}
+              <Separator />
+              <div className="grid grid-cols-2 gap-3">
+                <NumField id="csupr" label="Supplies" value={i.supply_rate_per_hour} suffix="$/labor hr" disabled={readOnly} onChange={v => patch({ supply_rate_per_hour: v })} />
+                <NumField id="csupf" label="Fixed supply cost" value={i.supply_cost_fixed} suffix="$" disabled={readOnly} onChange={v => patch({ supply_cost_fixed: v })} />
+                <NumField id="csupsf" label="Supply cost per sq ft" value={i.supply_cost_per_sqft} suffix="$/sf" disabled={readOnly} onChange={v => patch({ supply_cost_per_sqft: v })} />
+                <NumField id="cequip" label="Equipment / rental" value={i.equipment_cost} suffix="$" disabled={readOnly} onChange={v => patch({ equipment_cost: v })} />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3"><CardTitle className="text-sm">Pricing model</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox id="applymin" checked={i.apply_minimum_day_rate !== false} disabled={readOnly} onCheckedChange={c => patch({ apply_minimum_day_rate: !!c })} />
+                Enforce the minimum day rate on this bid
+              </label>
+              <div className="space-y-2 rounded-md border border-border p-3">
+                <p className="text-xs font-medium">Union / prevailing wage floor</p>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox id="applypwfloor" checked={i.apply_prevailing_margin_floor !== false} disabled={readOnly} onCheckedChange={c => patch({ apply_prevailing_margin_floor: !!c })} />
+                  Hold a minimum margin over crew-day labor cost
+                </label>
+                <NumField
+                  id="pwmargin"
+                  label="Minimum margin on prevailing / union days"
+                  value={i.prevailing_min_margin_percent}
+                  suffix="%"
+                  disabled={readOnly}
+                  onChange={v => patch({ prevailing_min_margin_percent: v })}
+                />
+                {dm.prevailing_margin_floor_active ? (
+                  <>
+                    <Line label="Crew-day labor cost" value={`${money(dm.labor_cost_per_crew_day)}/day`} muted />
+                    <Line label="Prevailing-wage minimum day rate" value={`${money(dm.prevailing_minimum_day_rate)}/day`} />
+                  </>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    Applies automatically when the bid is marked union or prevailing wage.
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Pricing position / workload — guidance only</Label>
+                <Slider
+                  value={[positionIdx]}
+                  min={0}
+                  max={PRICING_POSITIONS.length - 1}
+                  step={1}
+                  disabled={readOnly}
+                  onValueChange={([v]) => patch({ pricing_position: PRICING_POSITIONS[v].value })}
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  {PRICING_POSITIONS.map(p => <span key={p.value}>{p.label}</span>)}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <NumField id="drmin" label="Suggested range min" value={i.suggested_day_rate_min} suffix="$" disabled={readOnly} onChange={v => patch({ suggested_day_rate_min: v })} />
+                  <NumField id="drmax" label="Suggested range max" value={i.suggested_day_rate_max} suffix="$" disabled={readOnly} onChange={v => patch({ suggested_day_rate_max: v })} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Final project price basis</Label>
+                <ToggleGroup
+                  type="single"
+                  value={dm.price_basis}
+                  disabled={readOnly}
+                  onValueChange={v => v && patch({ price_basis: v })}
+                  className="justify-start flex-wrap"
+                >
+                  <ToggleGroupItem value="day_rate" size="sm" className="text-xs">Day rate</ToggleGroupItem>
+                  <ToggleGroupItem value="cost" size="sm" className="text-xs">Cost-based</ToggleGroupItem>
+                  <ToggleGroupItem value="manual" size="sm" className="text-xs">Manual price</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              {dm.price_basis === 'manual' && (
+                <NumField id="manprice" label="Manual final project price" value={i.manual_project_price} suffix="$" disabled={readOnly} onChange={v => patch({ manual_project_price: v })} />
+              )}
+              <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
+                <Line label="Cost-based target-margin price" value={money(dm.target_margin_price)} muted />
+                <Line label="Break-even price" value={money(dm.breakeven_price)} muted />
+                <Line label="Effective day rate" value={`${money(dm.effective_day_rate)}/day`} />
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </>
   );
 }
