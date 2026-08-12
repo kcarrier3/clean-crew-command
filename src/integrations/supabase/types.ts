@@ -232,6 +232,739 @@ export type Database = {
           },
         ]
       }
+      billing_account_preferences: {
+        Row: {
+          additional_recipients: string[]
+          auto_send_allowed: boolean
+          cc_recipients: string[]
+          consolidated_invoicing: boolean
+          created_at: string
+          crm_company_id: string | null
+          default_terms: string | null
+          id: string
+          notes: string | null
+          po_required: boolean
+          primary_billing_email: string | null
+          updated_at: string
+        }
+        Insert: {
+          additional_recipients?: string[]
+          auto_send_allowed?: boolean
+          cc_recipients?: string[]
+          consolidated_invoicing?: boolean
+          created_at?: string
+          crm_company_id?: string | null
+          default_terms?: string | null
+          id?: string
+          notes?: string | null
+          po_required?: boolean
+          primary_billing_email?: string | null
+          updated_at?: string
+        }
+        Update: {
+          additional_recipients?: string[]
+          auto_send_allowed?: boolean
+          cc_recipients?: string[]
+          consolidated_invoicing?: boolean
+          created_at?: string
+          crm_company_id?: string | null
+          default_terms?: string | null
+          id?: string
+          notes?: string | null
+          po_required?: boolean
+          primary_billing_email?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_account_preferences_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: true
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_deposit_batches: {
+        Row: {
+          bank_account_label: string | null
+          created_at: string
+          created_by: string | null
+          deposit_date: string
+          id: string
+          name: string
+          notes: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          bank_account_label?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_date?: string
+          id?: string
+          name: string
+          notes?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          bank_account_label?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_date?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      billing_email_messages: {
+        Row: {
+          attachment_paths: string[]
+          bcc_recipients: string[]
+          body: string
+          cc_recipients: string[]
+          created_at: string
+          created_by: string | null
+          crm_lead_id: string | null
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          invoice_id: string | null
+          opened_at: string | null
+          provider: string | null
+          provider_message_id: string | null
+          queued_at: string | null
+          retry_count: number
+          sent_at: string | null
+          status: string
+          subject: string
+          template_key: string | null
+          to_recipients: string[]
+          updated_at: string
+          webhook_at: string | null
+          webhook_status: string | null
+        }
+        Insert: {
+          attachment_paths?: string[]
+          bcc_recipients?: string[]
+          body?: string
+          cc_recipients?: string[]
+          created_at?: string
+          created_by?: string | null
+          crm_lead_id?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_id?: string | null
+          opened_at?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          queued_at?: string | null
+          retry_count?: number
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template_key?: string | null
+          to_recipients?: string[]
+          updated_at?: string
+          webhook_at?: string | null
+          webhook_status?: string | null
+        }
+        Update: {
+          attachment_paths?: string[]
+          bcc_recipients?: string[]
+          body?: string
+          cc_recipients?: string[]
+          created_at?: string
+          created_by?: string | null
+          crm_lead_id?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_id?: string | null
+          opened_at?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          queued_at?: string | null
+          retry_count?: number
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template_key?: string | null
+          to_recipients?: string[]
+          updated_at?: string
+          webhook_at?: string | null
+          webhook_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_email_messages_crm_lead_id_fkey"
+            columns: ["crm_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_email_messages_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "billing_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_email_templates: {
+        Row: {
+          active: boolean
+          body: string
+          created_at: string
+          id: string
+          key: string
+          name: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          body: string
+          created_at?: string
+          id?: string
+          key: string
+          name: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          body?: string
+          created_at?: string
+          id?: string
+          key?: string
+          name?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      billing_events: {
+        Row: {
+          amount: number
+          billing_email: string | null
+          billing_percent: number | null
+          completed_at: string
+          contract_amount: number | null
+          created_at: string
+          created_by: string | null
+          crm_company_id: string | null
+          crm_lead_id: string | null
+          description: string | null
+          hold_at: string | null
+          hold_by: string | null
+          hold_reason: string | null
+          id: string
+          invoice_id: string | null
+          invoiced_at: string | null
+          job_site_id: string | null
+          label: string
+          milestone_id: string | null
+          notes: string | null
+          po_number: string | null
+          project_phase_id: string | null
+          ready_at: string
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          billing_email?: string | null
+          billing_percent?: number | null
+          completed_at?: string
+          contract_amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          crm_company_id?: string | null
+          crm_lead_id?: string | null
+          description?: string | null
+          hold_at?: string | null
+          hold_by?: string | null
+          hold_reason?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoiced_at?: string | null
+          job_site_id?: string | null
+          label: string
+          milestone_id?: string | null
+          notes?: string | null
+          po_number?: string | null
+          project_phase_id?: string | null
+          ready_at?: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billing_email?: string | null
+          billing_percent?: number | null
+          completed_at?: string
+          contract_amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          crm_company_id?: string | null
+          crm_lead_id?: string | null
+          description?: string | null
+          hold_at?: string | null
+          hold_by?: string | null
+          hold_reason?: string | null
+          id?: string
+          invoice_id?: string | null
+          invoiced_at?: string | null
+          job_site_id?: string | null
+          label?: string
+          milestone_id?: string | null
+          notes?: string | null
+          po_number?: string | null
+          project_phase_id?: string | null
+          ready_at?: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_events_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_crm_lead_id_fkey"
+            columns: ["crm_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "billing_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "billing_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_project_phase_id_fkey"
+            columns: ["project_phase_id"]
+            isOneToOne: false
+            referencedRelation: "project_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_invoice_history: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          detail: string | null
+          event_type: string
+          from_status: string | null
+          id: string
+          invoice_id: string
+          to_status: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: string | null
+          event_type: string
+          from_status?: string | null
+          id?: string
+          invoice_id: string
+          to_status?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: string | null
+          event_type?: string
+          from_status?: string | null
+          id?: string
+          invoice_id?: string
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_invoice_history_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "billing_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_invoice_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          line_total: number
+          quantity: number
+          sort_order: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          line_total?: number
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          line_total?: number
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "billing_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_invoices: {
+        Row: {
+          amount_paid: number
+          balance_due: number
+          billing_contact_name: string | null
+          billing_email: string | null
+          created_at: string
+          created_by: string | null
+          crm_company_id: string | null
+          crm_lead_id: string | null
+          customer_name: string | null
+          due_date: string | null
+          earliest_completed_at: string | null
+          generated_at: string
+          id: string
+          invoice_date: string
+          invoice_number: string
+          job_site_id: string | null
+          notes: string | null
+          paid_at: string | null
+          payment_terms: string | null
+          pdf_path: string | null
+          po_number: string | null
+          qb_external_id: string | null
+          qb_sync_error: string | null
+          qb_sync_status: string
+          qb_synced_at: string | null
+          sent_at: string | null
+          status: string
+          subtotal: number
+          tax: number
+          tax_rate: number
+          total: number
+          updated_at: string
+          voided_at: string | null
+        }
+        Insert: {
+          amount_paid?: number
+          balance_due?: number
+          billing_contact_name?: string | null
+          billing_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_company_id?: string | null
+          crm_lead_id?: string | null
+          customer_name?: string | null
+          due_date?: string | null
+          earliest_completed_at?: string | null
+          generated_at?: string
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          job_site_id?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_terms?: string | null
+          pdf_path?: string | null
+          po_number?: string | null
+          qb_external_id?: string | null
+          qb_sync_error?: string | null
+          qb_sync_status?: string
+          qb_synced_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax?: number
+          tax_rate?: number
+          total?: number
+          updated_at?: string
+          voided_at?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          balance_due?: number
+          billing_contact_name?: string | null
+          billing_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_company_id?: string | null
+          crm_lead_id?: string | null
+          customer_name?: string | null
+          due_date?: string | null
+          earliest_completed_at?: string | null
+          generated_at?: string
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          job_site_id?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_terms?: string | null
+          pdf_path?: string | null
+          po_number?: string | null
+          qb_external_id?: string | null
+          qb_sync_error?: string | null
+          qb_sync_status?: string
+          qb_synced_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax?: number
+          tax_rate?: number
+          total?: number
+          updated_at?: string
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_invoices_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_invoices_crm_lead_id_fkey"
+            columns: ["crm_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_invoices_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_milestones: {
+        Row: {
+          billing_amount: number | null
+          billing_percent: number | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          job_site_id: string
+          name: string
+          notes: string | null
+          sequence: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          billing_amount?: number | null
+          billing_percent?: number | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          job_site_id: string
+          name: string
+          notes?: string | null
+          sequence?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_amount?: number | null
+          billing_percent?: number | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          job_site_id?: string
+          name?: string
+          notes?: string | null
+          sequence?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_milestones_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_payment_allocations: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string
+          payment_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          payment_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_payment_allocations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "billing_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "billing_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          crm_company_id: string | null
+          deposit_account_label: string | null
+          deposit_batch_id: string | null
+          deposit_date: string | null
+          entered_by: string | null
+          id: string
+          method: string
+          notes: string | null
+          payer_name: string | null
+          payment_date: string
+          qb_external_id: string | null
+          qb_sync_error: string | null
+          qb_sync_status: string
+          qb_synced_at: string | null
+          reference_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          crm_company_id?: string | null
+          deposit_account_label?: string | null
+          deposit_batch_id?: string | null
+          deposit_date?: string | null
+          entered_by?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          payer_name?: string | null
+          payment_date?: string
+          qb_external_id?: string | null
+          qb_sync_error?: string | null
+          qb_sync_status?: string
+          qb_synced_at?: string | null
+          reference_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          crm_company_id?: string | null
+          deposit_account_label?: string | null
+          deposit_batch_id?: string | null
+          deposit_date?: string | null
+          entered_by?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          payer_name?: string | null
+          payment_date?: string
+          qb_external_id?: string | null
+          qb_sync_error?: string | null
+          qb_sync_status?: string
+          qb_synced_at?: string | null
+          reference_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_payments_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_payments_deposit_batch_id_fkey"
+            columns: ["deposit_batch_id"]
+            isOneToOne: false
+            referencedRelation: "billing_deposit_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_drafts: {
         Row: {
           all_day: boolean
@@ -3171,6 +3904,12 @@ export type Database = {
           address: string | null
           billing_acknowledged_at: string | null
           billing_acknowledged_by: string | null
+          billing_contact_name: string | null
+          billing_email: string | null
+          billing_mode: string
+          billing_notes: string | null
+          billing_po_number: string | null
+          billing_terms: string | null
           budget_info: string | null
           budgeted_hours: number | null
           city: string | null
@@ -3182,7 +3921,10 @@ export type Database = {
           contact_email: string | null
           contact_person: string | null
           contact_phone: string | null
+          contract_amount: number | null
           created_at: string
+          crm_company_id: string | null
+          crm_lead_id: string | null
           current_month_used_hours: number | null
           current_month_year: string | null
           estimated_duration: string | null
@@ -3214,6 +3956,12 @@ export type Database = {
           address?: string | null
           billing_acknowledged_at?: string | null
           billing_acknowledged_by?: string | null
+          billing_contact_name?: string | null
+          billing_email?: string | null
+          billing_mode?: string
+          billing_notes?: string | null
+          billing_po_number?: string | null
+          billing_terms?: string | null
           budget_info?: string | null
           budgeted_hours?: number | null
           city?: string | null
@@ -3225,7 +3973,10 @@ export type Database = {
           contact_email?: string | null
           contact_person?: string | null
           contact_phone?: string | null
+          contract_amount?: number | null
           created_at?: string
+          crm_company_id?: string | null
+          crm_lead_id?: string | null
           current_month_used_hours?: number | null
           current_month_year?: string | null
           estimated_duration?: string | null
@@ -3257,6 +4008,12 @@ export type Database = {
           address?: string | null
           billing_acknowledged_at?: string | null
           billing_acknowledged_by?: string | null
+          billing_contact_name?: string | null
+          billing_email?: string | null
+          billing_mode?: string
+          billing_notes?: string | null
+          billing_po_number?: string | null
+          billing_terms?: string | null
           budget_info?: string | null
           budgeted_hours?: number | null
           city?: string | null
@@ -3268,7 +4025,10 @@ export type Database = {
           contact_email?: string | null
           contact_person?: string | null
           contact_phone?: string | null
+          contract_amount?: number | null
           created_at?: string
+          crm_company_id?: string | null
+          crm_lead_id?: string | null
           current_month_used_hours?: number | null
           current_month_year?: string | null
           estimated_duration?: string | null
@@ -3294,7 +4054,22 @@ export type Database = {
           updated_at?: string
           used_hours?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "job_sites_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_sites_crm_lead_id_fkey"
+            columns: ["crm_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       late_notifications: {
         Row: {
@@ -4076,6 +4851,8 @@ export type Database = {
         Row: {
           billing_acknowledged_at: string | null
           billing_acknowledged_by: string | null
+          billing_amount: number | null
+          billing_percent: number | null
           completed_at: string | null
           completed_by: string | null
           completion_notes: string | null
@@ -4090,6 +4867,8 @@ export type Database = {
         Insert: {
           billing_acknowledged_at?: string | null
           billing_acknowledged_by?: string | null
+          billing_amount?: number | null
+          billing_percent?: number | null
           completed_at?: string | null
           completed_by?: string | null
           completion_notes?: string | null
@@ -4104,6 +4883,8 @@ export type Database = {
         Update: {
           billing_acknowledged_at?: string | null
           billing_acknowledged_by?: string | null
+          billing_amount?: number | null
+          billing_percent?: number | null
           completed_at?: string | null
           completed_by?: string | null
           completion_notes?: string | null
@@ -5365,6 +6146,7 @@ export type Database = {
       can_approve_estimate: { Args: { _user_id: string }; Returns: boolean }
       can_approve_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_estimate: { Args: { _user_id: string }; Returns: boolean }
+      can_manage_billing: { Args: { _user_id: string }; Returns: boolean }
       can_manage_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_message_user: {
         Args: { _recipient_id: string; _sender_id: string }
@@ -5509,6 +6291,11 @@ export type Database = {
       monthly_hours_from_nightly: {
         Args: { _month: string; _nightly: number; _service_days: number[] }
         Returns: number
+      }
+      next_invoice_number: { Args: never; Returns: string }
+      recalc_invoice_balance: {
+        Args: { _invoice_id: string }
+        Returns: undefined
       }
       regenerate_job_site_qr_token: {
         Args: { _job_site_id: string }
