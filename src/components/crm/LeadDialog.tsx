@@ -18,6 +18,8 @@ import { fetchAllRows } from './fetchAllRows';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact } from './types';
+import { ClosedLostDialog } from './ClosedLostDialog';
+import type { LostDetails } from './types';
 import { cn } from '@/lib/utils';
 
 const NOTE_CATEGORIES: { value: string; label: string; className: string }[] = [
@@ -67,6 +69,8 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const [owner, setOwner] = useState<{ full_name: string | null } | null>(null);
   const [addlOpen, setAddlOpen] = useState(true);
   const [sysOpen, setSysOpen] = useState(true);
+  const [lostPrompt, setLostPrompt] = useState<null | { stageId?: string; payload?: any }>(null);
+  const [lostSaving, setLostSaving] = useState(false);
   const [form, setForm] = useState({
     name: '',
     company_id: '',
@@ -295,7 +299,10 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     loadFiles();
   };
 
-  const save = async () => {
+  const isLostStage = (stageId?: string | null) =>
+    !!stageId && stages.some(s => s.id === stageId && s.is_lost);
+
+  const save = async (lostDetails?: LostDetails) => {
     if (!form.company_id) {
       toast({
         title: 'Account required',
@@ -325,6 +332,13 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       next_step: form.next_step || null,
       stage_id: form.stage_id || null,
     };
+    const willBeLost = payload.status === 'unqualified' || isLostStage(payload.stage_id);
+    if (willBeLost && !lostDetails && !lead?.lost_reason) {
+      setSaving(false);
+      setLostPrompt({ payload });
+      return;
+    }
+    if (lostDetails) Object.assign(payload, lostDetails);
     let error;
     if (lead) {
       ({ error } = await (supabase as any).from('crm_leads').update(payload).eq('id', lead.id));
@@ -350,11 +364,17 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     : -1;
   const currentStage = currentStageIdx >= 0 ? stages[currentStageIdx] : null;
 
-  const persistStage = async (stageId: string) => {
+  const persistStage = async (stageId: string, lostDetails?: LostDetails) => {
+    if (isLostStage(stageId) && !lostDetails && !lead?.lost_reason) {
+      setLostPrompt({ stageId });
+      return;
+    }
     setForm(f => ({ ...f, stage_id: stageId }));
     if (lead?.id) {
       const { error } = await (supabase as any)
-        .from('crm_leads').update({ stage_id: stageId }).eq('id', lead.id);
+        .from('crm_leads')
+        .update({ stage_id: stageId, ...(lostDetails ? { ...lostDetails, status: 'unqualified' } : {}) })
+        .eq('id', lead.id);
       if (error) {
         toast({ title: 'Failed to update stage', description: error.message, variant: 'destructive' });
         return;
@@ -364,6 +384,24 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
         await ensureDealForLead(newStage.id);
       }
       onSaved?.();
+    }
+  };
+
+  const confirmLost = async (details: LostDetails) => {
+    const prompt = lostPrompt;
+    if (!prompt) return;
+    setLostSaving(true);
+    try {
+      if (prompt.stageId) {
+        await persistStage(prompt.stageId, details);
+        setForm(f => ({ ...f, status: 'unqualified' }));
+        toast({ title: 'Opportunity marked Closed Lost' });
+      } else {
+        await save(details);
+      }
+      setLostPrompt(null);
+    } finally {
+      setLostSaving(false);
     }
   };
 
@@ -446,6 +484,19 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
 
         {/* Pipeline path */}
         {stages.length > 0 && (
+          <>
+          {lead?.lost_reason && (
+            <div className="px-6 py-3 bg-destructive/10 border-b">
+              <p className="text-xs font-semibold uppercase tracking-wide text-destructive">Closed Lost — {lead.lost_reason}</p>
+              {lead.lost_competitor && <p className="text-sm mt-1">Competitor: {lead.lost_competitor}</p>}
+              {lead.lost_notes && <p className="text-sm mt-1 whitespace-pre-wrap">{lead.lost_notes}</p>}
+              {lead.lost_at && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Logged {new Date(lead.lost_at).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
           <div className="px-6 py-4 bg-background border-b">
             <div className="flex items-stretch gap-3">
               <div className="flex-1 min-w-0">
@@ -465,6 +516,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
               </Button>
             </div>
           </div>
+          </>
         )}
 
         {/* Tabs */}
@@ -512,10 +564,16 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
               <Button variant="outline" onClick={() => onOpenChange?.(false)} disabled={saving}>Close</Button>
             )}
             {(tab === 'details' || !lead?.id) && editMode && (
-              <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
+              <Button onClick={() => save()} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
             )}
           </div>
         )}
+        <ClosedLostDialog
+          open={!!lostPrompt}
+          onOpenChange={o => { if (!o) setLostPrompt(null); }}
+          saving={lostSaving}
+          onConfirm={confirmLost}
+        />
       </>
   );
 

@@ -13,8 +13,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { LeadDialog } from './LeadDialog';
 import { MergeDialog } from './MergeDialog';
+import { ClosedLostDialog } from './ClosedLostDialog';
 import { mergeOpportunities } from './mergeUtils';
-import { LEAD_STATUS_LABELS, type CrmLead, type CrmStage } from './types';
+import { LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type LostDetails } from './types';
 
 const STATUS_COLORS: Record<CrmLead['status'], string> = {
   new: 'bg-blue-100 text-blue-800',
@@ -43,6 +44,7 @@ export function LeadsList({ stages, onChanged }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [closing, setClosing] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [lostOpen, setLostOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -111,13 +113,13 @@ export function LeadsList({ stages, onChanged }: Props) {
       l.email?.toLowerCase().includes(filter.toLowerCase())
     );
 
-  const closeOutSelected = async () => {
+  const closeOutSelected = async (details: LostDetails) => {
     if (!selected.length) return;
     setClosing(true);
     const lostStage = stages.find(s => s.is_lost);
     const { error } = await (supabase as any)
       .from('crm_leads')
-      .update({ status: 'unqualified', ...(lostStage ? { stage_id: lostStage.id } : {}) })
+      .update({ status: 'unqualified', ...details, ...(lostStage ? { stage_id: lostStage.id } : {}) })
       .in('id', selected);
     setClosing(false);
     if (error) {
@@ -125,6 +127,7 @@ export function LeadsList({ stages, onChanged }: Props) {
       return;
     }
     toast({ title: `Closed ${selected.length} opportunit${selected.length === 1 ? 'y' : 'ies'} as lost` });
+    setLostOpen(false);
     setSelected([]);
     load();
     onChanged();
@@ -203,12 +206,20 @@ export function LeadsList({ stages, onChanged }: Props) {
             size="sm"
             variant="destructive"
             disabled={!selected.length || closing}
-            onClick={closeOutSelected}
+            onClick={() => setLostOpen(true)}
           >
             {closing ? 'Closing…' : 'Close out as Lost'}
           </Button>
         </div>
       )}
+
+      <ClosedLostDialog
+        open={lostOpen}
+        onOpenChange={setLostOpen}
+        count={selected.length}
+        saving={closing}
+        onConfirm={closeOutSelected}
+      />
 
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
