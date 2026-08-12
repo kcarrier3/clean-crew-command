@@ -18,6 +18,8 @@ import { fetchAllRows } from './fetchAllRows';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact } from './types';
+import { ClosedLostDialog } from './ClosedLostDialog';
+import type { LostDetails } from './types';
 import { cn } from '@/lib/utils';
 
 const NOTE_CATEGORIES: { value: string; label: string; className: string }[] = [
@@ -67,6 +69,8 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const [owner, setOwner] = useState<{ full_name: string | null } | null>(null);
   const [addlOpen, setAddlOpen] = useState(true);
   const [sysOpen, setSysOpen] = useState(true);
+  const [lostPrompt, setLostPrompt] = useState<null | { stageId?: string; payload?: any }>(null);
+  const [lostSaving, setLostSaving] = useState(false);
   const [form, setForm] = useState({
     name: '',
     company_id: '',
