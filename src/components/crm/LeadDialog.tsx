@@ -554,6 +554,12 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
             )}
           </div>
         )}
+        <ClosedLostDialog
+          open={!!lostPrompt}
+          onOpenChange={o => { if (!o) setLostPrompt(null); }}
+          saving={lostSaving}
+          onConfirm={confirmLost}
+        />
       </>
   );
 
