@@ -1,6 +1,6 @@
 import {
   BookOpen, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardCheck,
-  FileSpreadsheet, Home, MapPin, MessageSquare, Package, PlaneTakeoff, Users as UsersIcon,
+  FileSpreadsheet, Home, MapPin, MessageSquare, Package, PlaneTakeoff, Receipt, Users as UsersIcon,
 } from 'lucide-react';
 import type { SidebarItem } from './AppSidebar';
 
@@ -18,6 +18,7 @@ export const buildNavItems = ({ isManager, isCrmUser, canEstimate }: NavFlags): 
         { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
         { v: 'managerlog', label: 'Manager Log',     icon: BookOpen },
         { v: 'jobsites',   label: 'Accounts',        icon: MapPin },
+        { v: 'billing',    label: 'Billing',         icon: Receipt },
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
