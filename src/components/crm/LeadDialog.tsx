@@ -795,6 +795,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       { label: 'Opportunity Owner', value: ownerName },
       { label: 'Close Date', value: closeDateDisplay },
       { label: 'Opportunity Name', value: form.name || '—' },
+      { label: 'Opportunity Type', value: PIPELINE_LABELS[form.pipeline] || '—' },
       { label: 'Stage', value: stageName },
       { label: 'Account Name', value: accountDisplay },
       { label: 'Primary Contact', value: contactDisplay },
