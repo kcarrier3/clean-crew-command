@@ -724,6 +724,23 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   out.price_per_sqft = safe(totalSqft > 0 ? finalPrice / totalSqft : 0);
   out.minimum_applied = minimum > 0 && minimum >= finalPrice;
 
+  /* ---- per-clean (rough / final / touch-up) cost and price breakout ----
+     Non-labor direct cost and the customer price are allocated to each clean
+     in proportion to its share of labor cost. */
+  const phaseLaborTotal = phaseResults.reduce((s, p) => s + p.labor_cost, 0);
+  const nonLaborDirect = Math.max(0, direct - phaseLaborTotal);
+  if (phaseResults.length > 0) {
+    phaseResults.forEach((p, idx) => {
+      const share = phaseLaborTotal > 0 ? p.labor_cost / phaseLaborTotal : 1 / phaseResults.length;
+      p.allocated_cost = safe(p.labor_cost + nonLaborDirect * share);
+      p.price = safe(finalPrice * share);
+      if (idx === phaseResults.length - 1) {
+        const sum = phaseResults.reduce((s, x) => s + x.price, 0);
+        p.price = safe(p.price + (finalPrice - sum));
+      }
+    });
+  }
+
   // Labor budget headroom at the final selling price.
   const priceOut = finalPrice;
   const fixedDirect =
