@@ -34,6 +34,28 @@ export interface CrmLead {
   stage_id?: string | null;
   sf_created_date?: string | null;
   sf_last_modified_date?: string | null;
+  lost_reason?: string | null;
+  lost_notes?: string | null;
+  lost_competitor?: string | null;
+  lost_at?: string | null;
+}
+
+export const LOST_REASONS = [
+  'Price too high',
+  'Lost to competitor',
+  'Budget / no funding',
+  'Timing — postponed',
+  'Scope not a fit',
+  'No response / went dark',
+  'Kept service in-house',
+  'Duplicate / bad data',
+  'Other',
+];
+
+export interface LostDetails {
+  lost_reason: string;
+  lost_competitor: string | null;
+  lost_notes: string | null;
 }
 
 export interface CrmDeal {
