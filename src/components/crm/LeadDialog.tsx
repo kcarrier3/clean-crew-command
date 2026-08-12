@@ -364,11 +364,17 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     : -1;
   const currentStage = currentStageIdx >= 0 ? stages[currentStageIdx] : null;
 
-  const persistStage = async (stageId: string) => {
+  const persistStage = async (stageId: string, lostDetails?: LostDetails) => {
+    if (isLostStage(stageId) && !lostDetails && !lead?.lost_reason) {
+      setLostPrompt({ stageId });
+      return;
+    }
     setForm(f => ({ ...f, stage_id: stageId }));
     if (lead?.id) {
       const { error } = await (supabase as any)
-        .from('crm_leads').update({ stage_id: stageId }).eq('id', lead.id);
+        .from('crm_leads')
+        .update({ stage_id: stageId, ...(lostDetails ? { ...lostDetails, status: 'unqualified' } : {}) })
+        .eq('id', lead.id);
       if (error) {
         toast({ title: 'Failed to update stage', description: error.message, variant: 'destructive' });
         return;
@@ -378,6 +384,24 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
         await ensureDealForLead(newStage.id);
       }
       onSaved?.();
+    }
+  };
+
+  const confirmLost = async (details: LostDetails) => {
+    const prompt = lostPrompt;
+    if (!prompt) return;
+    setLostSaving(true);
+    try {
+      if (prompt.stageId) {
+        await persistStage(prompt.stageId, details);
+        setForm(f => ({ ...f, status: 'unqualified' }));
+        toast({ title: 'Opportunity marked Closed Lost' });
+      } else {
+        await save(details);
+      }
+      setLostPrompt(null);
+    } finally {
+      setLostSaving(false);
     }
   };
 
@@ -526,7 +550,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
               <Button variant="outline" onClick={() => onOpenChange?.(false)} disabled={saving}>Close</Button>
             )}
             {(tab === 'details' || !lead?.id) && editMode && (
-              <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
+              <Button onClick={() => save()} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
             )}
           </div>
         )}
