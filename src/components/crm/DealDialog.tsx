@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { QuoteBuilder } from './QuoteBuilder';
+import { OpportunityBillingTab } from './OpportunityBillingTab';
 import type { CrmDeal, CrmStage, CrmActivity, CrmLead, CrmQuote, CrmQuoteItem } from './types';
 import { generateQuotePdf } from './generateQuotePdf';
 
@@ -156,6 +157,7 @@ export function DealDialog({ open, onOpenChange, deal, stages, leads, onChanged 
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="activities" disabled={!deal}>Activities ({activities.length})</TabsTrigger>
               <TabsTrigger value="quotes" disabled={!deal}>Quotes ({quotes.length})</TabsTrigger>
+              <TabsTrigger value="billing" disabled={!deal}>Billing</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details" className="space-y-3 mt-4">
@@ -290,6 +292,9 @@ export function DealDialog({ open, onOpenChange, deal, stages, leads, onChanged 
                   </CardContent>
                 </Card>
               ))}
+            </TabsContent>
+            <TabsContent value="billing">
+              {deal && <OpportunityBillingTab dealId={deal.id} companyId={(deal as any).company_id ?? null} />}
             </TabsContent>
           </Tabs>
 

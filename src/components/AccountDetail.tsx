@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { ProjectBillingSetupCard } from '@/components/billing/ProjectBillingSetupCard';
+import { RecurringBillingSetupCard } from '@/components/billing/RecurringBillingSetupCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -355,10 +357,15 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
                     </p>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{jobSite.safety_requirements}</p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                 )}
+               </CardContent>
+             </Card>
+           )}
+
+          {/* Billing setup */}
+          {isProject
+            ? <ProjectBillingSetupCard jobSiteId={jobSite.id} jobSiteName={jobSite.name} />
+            : <RecurringBillingSetupCard jobSiteId={jobSite.id} jobSiteName={jobSite.name} />}
         </TabsContent>
 
         {/* Work Orders Tab */}

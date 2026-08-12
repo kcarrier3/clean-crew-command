@@ -60,10 +60,12 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
     setHistory(hist ?? []);
     setPayments(allocs ?? []);
     setEmails(em ?? []);
+    let siteName: string | null = null;
     if (inv?.job_site_id) {
       const { data: site } = await db.from('job_sites').select('name').eq('id', inv.job_site_id).maybeSingle();
-      setProjectName(site?.name ?? null);
-    } else setProjectName(null);
+      siteName = site?.name ?? null;
+    }
+    setProjectName(siteName);
 
     if (inv) {
       const { data: tpl } = await db.from('billing_email_templates')
@@ -71,7 +73,7 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
       const vars = {
         customer_name: inv.billing_contact_name || inv.customer_name || 'there',
         invoice_number: inv.invoice_number,
-        project_name: projectName || inv.customer_name || '',
+        project_name: siteName || inv.customer_name || '',
         amount: money(inv.total),
         due_date: inv.due_date ?? '',
         po_number: inv.po_number ?? '',
@@ -118,12 +120,24 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
 
   const voidInvoice = async () => {
     if (!invoice) return;
+    if (Number(invoice.amount_paid) > 0) {
+      toast({
+        title: 'Cannot void a paid invoice',
+        description: 'Remove or reallocate the applied payments first, then void.',
+        variant: 'destructive',
+      });
+      return;
+    }
     const { error } = await db.from('billing_invoices')
       .update({ status: 'void', voided_at: new Date().toISOString() }).eq('id', invoice.id);
     if (error) return toast({ title: 'Error', description: error.message, variant: 'destructive' });
     await db.from('billing_events').update({ status: 'ready', invoice_id: null, invoiced_at: null })
       .eq('invoice_id', invoice.id);
-    toast({ title: 'Invoice voided', description: 'Its billable items returned to Ready to Bill.' });
+    // Recurring invoices: reopen the period so it can be regenerated.
+    await db.from('recurring_billing_periods')
+      .update({ status: 'ready', invoice_id: null, generated_at: null })
+      .eq('invoice_id', invoice.id);
+    toast({ title: 'Invoice voided', description: 'Its billable items returned to the billing queue.' });
     load(); onChanged?.();
   };
 

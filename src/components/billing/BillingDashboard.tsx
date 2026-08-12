@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReadyToBillTab } from './ReadyToBillTab';
+import { RecurringInvoicingTab } from './RecurringInvoicingTab';
 import { InvoicesTab } from './InvoicesTab';
 import { PaymentsTab } from './PaymentsTab';
 import { BillingPerformanceTab } from './BillingPerformanceTab';
@@ -24,6 +25,7 @@ export const BillingDashboard = () => {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="ready">Ready to Bill</TabsTrigger>
+          <TabsTrigger value="recurring">Recurring Invoicing</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
@@ -32,6 +34,9 @@ export const BillingDashboard = () => {
 
         <TabsContent value="ready" className="mt-4">
           <ReadyToBillTab onInvoiceCreated={openInvoice} />
+        </TabsContent>
+        <TabsContent value="recurring" className="mt-4">
+          <RecurringInvoicingTab onOpenInvoice={openInvoice} />
         </TabsContent>
         <TabsContent value="invoices" className="mt-4">
           <InvoicesTab focusInvoiceId={focusInvoiceId} onFocusHandled={() => setFocusInvoiceId(null)} />
