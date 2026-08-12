@@ -59,7 +59,7 @@ export function LeadsList({ stages, onChanged }: Props) {
   };
 
   useEffect(() => { load(); }, []);
-  useEffect(() => { setSelected([]); }, [view, ageDays]);
+  useEffect(() => { setSelected([]); }, [view, ageDays, pipeline]);
 
   const convertToDeal = async (lead: CrmLead) => {
     const firstStage = stages.find(s => !s.is_won && !s.is_lost) || stages[0];
