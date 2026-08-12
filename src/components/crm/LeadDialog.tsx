@@ -299,7 +299,10 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     loadFiles();
   };
 
-  const save = async () => {
+  const isLostStage = (stageId?: string | null) =>
+    !!stageId && stages.some(s => s.id === stageId && s.is_lost);
+
+  const save = async (lostDetails?: LostDetails) => {
     if (!form.company_id) {
       toast({
         title: 'Account required',
@@ -329,6 +332,13 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       next_step: form.next_step || null,
       stage_id: form.stage_id || null,
     };
+    const willBeLost = payload.status === 'unqualified' || isLostStage(payload.stage_id);
+    if (willBeLost && !lostDetails && !lead?.lost_reason) {
+      setSaving(false);
+      setLostPrompt({ payload });
+      return;
+    }
+    if (lostDetails) Object.assign(payload, lostDetails);
     let error;
     if (lead) {
       ({ error } = await (supabase as any).from('crm_leads').update(payload).eq('id', lead.id));
