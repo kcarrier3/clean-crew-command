@@ -6,7 +6,20 @@ export interface CrmStage {
   is_won: boolean;
   is_lost: boolean;
   active: boolean;
+  pipeline?: CrmPipeline;
 }
+
+export type CrmPipeline = 'project' | 'janitorial';
+
+export const PIPELINE_LABELS: Record<CrmPipeline, string> = {
+  project: 'Project',
+  janitorial: 'Janitorial (Account)',
+};
+
+export const PIPELINE_SHORT_LABELS: Record<CrmPipeline, string> = {
+  project: 'Projects',
+  janitorial: 'Janitorial',
+};
 
 export interface CrmLead {
   id: string;
