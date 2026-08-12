@@ -152,12 +152,6 @@ export function RelatedNotesFiles({ parentType, parentId }: { parentType: Relate
     load();
   };
 
-  const _unusedDownload = async (f: FileRow) => {
-    const { data, error } = await supabase.storage.from('crm-files').createSignedUrl(f.file_path, 60);
-    if (error || !data?.signedUrl) { toast({ title: 'Download failed', description: error?.message, variant: 'destructive' }); return; }
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
-  };
-
   if (loading) return <p className="text-sm text-muted-foreground py-6 text-center">Loading…</p>;
 
   return (
