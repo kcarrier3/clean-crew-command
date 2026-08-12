@@ -89,6 +89,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     description: '',
     next_step: '',
     stage_id: '' as string,
+    pipeline: 'project' as CrmPipeline,
   });
 
   useEffect(() => {
@@ -111,12 +112,13 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
         description: lead.description || '',
         next_step: lead.next_step || '',
         stage_id: lead.stage_id || '',
+        pipeline: (lead.pipeline as CrmPipeline) || 'project',
       });
       setEditMode(false);
     } else {
       setForm({
         name: '', company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new',
-        close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '',
+        close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '', pipeline: 'project',
       });
       setEditMode(true);
     }
@@ -141,7 +143,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const loadStages = async () => {
     const { data } = await (supabase as any)
       .from('crm_pipeline_stages').select('*').eq('active', true).order('sort_order');
-    setStages(data || []);
+    setAllStages(data || []);
   };
 
   const loadCompanies = async () => {
