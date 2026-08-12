@@ -345,6 +345,12 @@ export interface ConstructionPhaseResult {
   production_overridden: boolean;
   crew_days: number;
   labor_hours: number;
+  /** Loaded labor cost for this clean. */
+  labor_cost: number;
+  /** Labor + its share of supplies, materials and equipment. */
+  allocated_cost: number;
+  /** Customer price for this clean (share of the final project price). */
+  price: number;
 }
 
 export const CARPET_METHODS: { value: string; label: string; rate: number }[] = [
@@ -610,6 +616,9 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
       production_overridden: own > 0,
       crew_days: safe(days),
       labor_hours: safe(days * hoursPerCrewDay),
+      labor_cost: safe(days * hoursPerCrewDay * rate),
+      allocated_cost: 0,
+      price: 0,
     };
   });
   const phaseCrewDays = phaseResults.reduce((s, p) => s + p.crew_days, 0);
@@ -714,6 +723,23 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
   out.markup_on_direct_percent = safe(direct > 0 ? ((finalPrice - direct) / direct) * 100 : 0);
   out.price_per_sqft = safe(totalSqft > 0 ? finalPrice / totalSqft : 0);
   out.minimum_applied = minimum > 0 && minimum >= finalPrice;
+
+  /* ---- per-clean (rough / final / touch-up) cost and price breakout ----
+     Non-labor direct cost and the customer price are allocated to each clean
+     in proportion to its share of labor cost. */
+  const phaseLaborTotal = phaseResults.reduce((s, p) => s + p.labor_cost, 0);
+  const nonLaborDirect = Math.max(0, direct - phaseLaborTotal);
+  if (phaseResults.length > 0) {
+    phaseResults.forEach((p, idx) => {
+      const share = phaseLaborTotal > 0 ? p.labor_cost / phaseLaborTotal : 1 / phaseResults.length;
+      p.allocated_cost = safe(p.labor_cost + nonLaborDirect * share);
+      p.price = safe(finalPrice * share);
+      if (idx === phaseResults.length - 1) {
+        const sum = phaseResults.reduce((s, x) => s + x.price, 0);
+        p.price = safe(p.price + (finalPrice - sum));
+      }
+    });
+  }
 
   // Labor budget headroom at the final selling price.
   const priceOut = finalPrice;
