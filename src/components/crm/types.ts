@@ -51,6 +51,7 @@ export interface CrmLead {
   lost_notes?: string | null;
   lost_competitor?: string | null;
   lost_at?: string | null;
+  pipeline?: CrmPipeline;
 }
 
 export const LOST_REASONS = [
