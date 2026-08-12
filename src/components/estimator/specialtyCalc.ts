@@ -616,6 +616,9 @@ export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
       production_overridden: own > 0,
       crew_days: safe(days),
       labor_hours: safe(days * hoursPerCrewDay),
+      labor_cost: safe(days * hoursPerCrewDay * rate),
+      allocated_cost: 0,
+      price: 0,
     };
   });
   const phaseCrewDays = phaseResults.reduce((s, p) => s + p.crew_days, 0);
