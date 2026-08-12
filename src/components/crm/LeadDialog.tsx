@@ -345,6 +345,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       description: form.description || null,
       next_step: form.next_step || null,
       stage_id: form.stage_id || null,
+      pipeline: form.pipeline || 'project',
     };
     const willBeLost = payload.status === 'unqualified' || isLostStage(payload.stage_id);
     if (willBeLost && !lostDetails && !lead?.lost_reason) {
