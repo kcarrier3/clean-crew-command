@@ -146,6 +146,18 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     setAllStages(data || []);
   };
 
+  // Stages are pipeline-specific: Projects and Janitorial (Accounts) run separate paths.
+  const stages = useMemo(
+    () => allStages.filter(s => (s.pipeline || 'project') === form.pipeline),
+    [allStages, form.pipeline],
+  );
+
+  const changePipeline = (p: CrmPipeline) => {
+    const next = allStages.filter(s => (s.pipeline || 'project') === p);
+    const first = next.find(s => !s.is_won && !s.is_lost) || next[0];
+    setForm(f => ({ ...f, pipeline: p, stage_id: first?.id || '' }));
+  };
+
   const loadCompanies = async () => {
     try {
       setCompanies(await fetchAllRows('crm_companies', '*', { column: 'name' }));
