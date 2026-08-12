@@ -156,6 +156,17 @@ export function LeadsList({ stages, onChanged }: Props) {
         <div className="flex flex-wrap items-center gap-3">
           <ToggleGroup
             type="single"
+            value={pipeline}
+            onValueChange={v => v && setPipeline(v as 'all' | CrmPipeline)}
+            variant="outline"
+            size="sm"
+          >
+            <ToggleGroupItem value="all">All</ToggleGroupItem>
+            <ToggleGroupItem value="project">{PIPELINE_SHORT_LABELS.project}</ToggleGroupItem>
+            <ToggleGroupItem value="janitorial">{PIPELINE_SHORT_LABELS.janitorial}</ToggleGroupItem>
+          </ToggleGroup>
+          <ToggleGroup
+            type="single"
             value={view}
             onValueChange={v => v && setView(v as 'active' | 'aged' | 'lost')}
             variant="outline"
