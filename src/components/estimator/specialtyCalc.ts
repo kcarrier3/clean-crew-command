@@ -345,6 +345,12 @@ export interface ConstructionPhaseResult {
   production_overridden: boolean;
   crew_days: number;
   labor_hours: number;
+  /** Loaded labor cost for this clean. */
+  labor_cost: number;
+  /** Labor + its share of supplies, materials and equipment. */
+  allocated_cost: number;
+  /** Customer price for this clean (share of the final project price). */
+  price: number;
 }
 
 export const CARPET_METHODS: { value: string; label: string; rate: number }[] = [
