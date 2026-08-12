@@ -484,6 +484,19 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
 
         {/* Pipeline path */}
         {stages.length > 0 && (
+          <>
+          {lead?.lost_reason && (
+            <div className="px-6 py-3 bg-destructive/10 border-b">
+              <p className="text-xs font-semibold uppercase tracking-wide text-destructive">Closed Lost — {lead.lost_reason}</p>
+              {lead.lost_competitor && <p className="text-sm mt-1">Competitor: {lead.lost_competitor}</p>}
+              {lead.lost_notes && <p className="text-sm mt-1 whitespace-pre-wrap">{lead.lost_notes}</p>}
+              {lead.lost_at && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Logged {new Date(lead.lost_at).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
           <div className="px-6 py-4 bg-background border-b">
             <div className="flex items-stretch gap-3">
               <div className="flex-1 min-w-0">
@@ -503,6 +516,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
               </Button>
             </div>
           </div>
+          </>
         )}
 
         {/* Tabs */}
