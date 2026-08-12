@@ -2080,6 +2080,10 @@ export type Database = {
           follow_up: boolean
           id: string
           lead_source: string | null
+          lost_at: string | null
+          lost_competitor: string | null
+          lost_notes: string | null
+          lost_reason: string | null
           name: string | null
           next_step: string | null
           notes: string | null
@@ -2116,6 +2120,10 @@ export type Database = {
           follow_up?: boolean
           id?: string
           lead_source?: string | null
+          lost_at?: string | null
+          lost_competitor?: string | null
+          lost_notes?: string | null
+          lost_reason?: string | null
           name?: string | null
           next_step?: string | null
           notes?: string | null
@@ -2152,6 +2160,10 @@ export type Database = {
           follow_up?: boolean
           id?: string
           lead_source?: string | null
+          lost_at?: string | null
+          lost_competitor?: string | null
+          lost_notes?: string | null
+          lost_reason?: string | null
           name?: string | null
           next_step?: string | null
           notes?: string | null
