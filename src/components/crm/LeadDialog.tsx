@@ -374,10 +374,14 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     onSaved?.();
   };
 
+  // The janitorial pipeline ends at "Won"; closing lost happens through a button
+  // instead of a stage chevron.
+  const pathStages = form.pipeline === 'janitorial' ? stages.filter(s => !s.is_lost) : stages;
+  const lostStage = stages.find(s => s.is_lost) || null;
   const currentStageIdx = form.stage_id
-    ? stages.findIndex(s => s.id === form.stage_id)
+    ? pathStages.findIndex(s => s.id === form.stage_id)
     : -1;
-  const currentStage = currentStageIdx >= 0 ? stages[currentStageIdx] : null;
+  const currentStage = currentStageIdx >= 0 ? pathStages[currentStageIdx] : null;
 
   const persistStage = async (stageId: string, lostDetails?: LostDetails) => {
     if (isLostStage(stageId) && !lostDetails && !lead?.lost_reason) {
@@ -443,9 +447,9 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   };
 
   const markStageComplete = async () => {
-    if (!stages.length) return;
-    const nextIdx = currentStageIdx < 0 ? 0 : Math.min(currentStageIdx + 1, stages.length - 1);
-    const next = stages[nextIdx];
+    if (!pathStages.length) return;
+    const nextIdx = currentStageIdx < 0 ? 0 : Math.min(currentStageIdx + 1, pathStages.length - 1);
+    const next = pathStages[nextIdx];
     if (!next) return;
     await persistStage(next.id);
     toast({ title: `Stage: ${next.name}` });
@@ -498,7 +502,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
         </div>
 
         {/* Pipeline path */}
-        {stages.length > 0 && (
+        {pathStages.length > 0 && (
           <>
           {lead?.lost_reason && (
             <div className="px-6 py-3 bg-destructive/10 border-b">
@@ -516,14 +520,24 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
             <div className="flex items-stretch gap-3">
               <div className="flex-1 min-w-0">
                 <StagePath
-                  stages={stages}
+                  stages={pathStages}
                   currentIdx={currentStageIdx}
                   onSelect={persistStage}
                 />
               </div>
+              {form.pipeline === 'janitorial' && lostStage && !lead?.lost_reason && (
+                <Button
+                  variant="outline"
+                  onClick={() => persistStage(lostStage.id)}
+                  className="shrink-0 h-9 text-destructive border-destructive/40 hover:bg-destructive/10"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Closed Lost
+                </Button>
+              )}
               <Button
                 onClick={markStageComplete}
-                disabled={currentStageIdx >= stages.length - 1}
+                disabled={currentStageIdx >= pathStages.length - 1}
                 className="shrink-0 h-9 bg-primary hover:bg-primary/90"
               >
                 <Check className="h-4 w-4 mr-1" />
