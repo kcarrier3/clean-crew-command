@@ -845,6 +845,11 @@ export function buildSpecialtySummaryText(
     `Target profit ${pct(f.target_margin_percent)}: ${money(o.profit_amount)}`,
     o.minimum_applied ? `Minimum charge applied (calculated ${money(o.calculated_price)})` : null,
     `Project price: ${money(o.project_price)}`,
+    ...(o.day_model && o.day_model.phases.length > 0 ? [
+      'PRICE BY CLEAN',
+      ...o.day_model.phases.map(p =>
+        `  ${p.label}: ${money(p.price)} (${p.crew_days.toFixed(2)} crew-days · ${p.labor_hours.toFixed(2)} hr · cost ${money(p.allocated_cost)})`),
+    ] : []),
     ...(o.day_model ? [
       `Pricing basis: ${o.day_model.price_basis}`,
       `Pricing position: ${o.day_model.pricing_position_label} (suggested ${money(o.day_model.suggested_day_rate)}/day, range ${money(o.day_model.suggested_day_rate_min)}–${money(o.day_model.suggested_day_rate_max)})`,
