@@ -313,6 +313,15 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     loadFiles();
   };
 
+  // Renames only the display name; the stored object path is left untouched.
+  const renameFile = async (f: any) => {
+    const next = window.prompt('File name', f.file_name)?.trim();
+    if (!next || next === f.file_name) return;
+    const { error } = await (supabase as any).from('crm_lead_files').update({ file_name: next }).eq('id', f.id);
+    if (error) { toast({ title: 'Failed to rename', description: error.message, variant: 'destructive' }); return; }
+    loadFiles();
+  };
+
   const isLostStage = (stageId?: string | null) =>
     !!stageId && stages.some(s => s.id === stageId && s.is_lost);
 
@@ -1038,6 +1047,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onSelect={() => downloadFile(f)}><Download className="h-3.5 w-3.5 mr-2" /> Download</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => renameFile(f)}><Pencil className="h-3.5 w-3.5 mr-2" /> Rename</DropdownMenuItem>
                             <DropdownMenuItem className="text-destructive" onSelect={() => deleteFile(f)}><Trash2 className="h-3.5 w-3.5 mr-2" /> Delete</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
