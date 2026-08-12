@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from './fetchAllRows';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact } from './types';
+import { LEAD_SOURCES, LEAD_STATUS_LABELS, PIPELINE_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact, type CrmPipeline } from './types';
 import { ClosedLostDialog } from './ClosedLostDialog';
 import type { LostDetails } from './types';
 import { cn } from '@/lib/utils';
@@ -61,7 +61,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const [uploading, setUploading] = useState(false);
   const [userNames, setUserNames] = useState<Record<string, string>>({});
   const [noteEditor, setNoteEditor] = useState<null | { id?: string; title: string; content: string; category: string }>(null);
-  const [stages, setStages] = useState<CrmStage[]>([]);
+  const [allStages, setAllStages] = useState<CrmStage[]>([]);
   const [companies, setCompanies] = useState<CrmCompany[]>([]);
   const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
