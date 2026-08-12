@@ -632,6 +632,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
                   description: lead.description || '',
                   next_step: lead.next_step || '',
                   stage_id: lead.stage_id || '',
+                  pipeline: (lead.pipeline as CrmPipeline) || 'project',
                 });
                 setEditMode(false);
               }}
