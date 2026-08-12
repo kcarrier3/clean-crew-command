@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { ProjectBillingSetupCard } from '@/components/billing/ProjectBillingSetupCard';
+import { RecurringBillingSetupCard } from '@/components/billing/RecurringBillingSetupCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
