@@ -1504,6 +1504,7 @@ export type Database = {
           name: string
           notes: string | null
           owner_id: string | null
+          pipeline: string
           primary_contact_id: string | null
           probability: number | null
           sf_account_id: string | null
@@ -1525,6 +1526,7 @@ export type Database = {
           name: string
           notes?: string | null
           owner_id?: string | null
+          pipeline?: string
           primary_contact_id?: string | null
           probability?: number | null
           sf_account_id?: string | null
@@ -1546,6 +1548,7 @@ export type Database = {
           name?: string
           notes?: string | null
           owner_id?: string | null
+          pipeline?: string
           primary_contact_id?: string | null
           probability?: number | null
           sf_account_id?: string | null
@@ -2089,6 +2092,7 @@ export type Database = {
           notes: string | null
           owner_id: string | null
           phone: string | null
+          pipeline: string
           primary_contact_id: string | null
           probability: number | null
           salesforce_id: string | null
@@ -2129,6 +2133,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          pipeline?: string
           primary_contact_id?: string | null
           probability?: number | null
           salesforce_id?: string | null
@@ -2169,6 +2174,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          pipeline?: string
           primary_contact_id?: string | null
           probability?: number | null
           salesforce_id?: string | null
@@ -2338,6 +2344,7 @@ export type Database = {
           is_lost: boolean
           is_won: boolean
           name: string
+          pipeline: string
           sort_order: number
           updated_at: string
         }
@@ -2349,6 +2356,7 @@ export type Database = {
           is_lost?: boolean
           is_won?: boolean
           name: string
+          pipeline?: string
           sort_order?: number
           updated_at?: string
         }
@@ -2360,6 +2368,7 @@ export type Database = {
           is_lost?: boolean
           is_won?: boolean
           name?: string
+          pipeline?: string
           sort_order?: number
           updated_at?: string
         }
