@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link2, Loader2, Receipt } from 'lucide-react';
 import { db } from '@/components/billing/billingApi';
-import { CrmLinkPicker } from '@/components/billing/CrmLinkPicker';
 import { useToast } from '@/hooks/use-toast';
 import { INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL, money, type Invoice } from '@/lib/billing/types';
 
