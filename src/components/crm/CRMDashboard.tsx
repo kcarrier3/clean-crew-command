@@ -16,6 +16,7 @@ import { CompaniesList } from './CompaniesList';
 import { ContactsList } from './ContactsList';
 import { TasksList } from './TasksList';
 import { CRMReports } from './CRMReports';
+import { LostReport } from './LostReport';
 import { LEAD_STATUS_LABELS, type CrmDeal, type CrmLead, type CrmStage } from './types';
 
 const STATUS_COLORS: Record<CrmLead['status'], string> = {
@@ -323,7 +324,10 @@ export default function CRMDashboard() {
         </TabsContent>
 
         <TabsContent value="reports" className="mt-4">
-          <CRMReports />
+          <div className="space-y-4">
+            <CRMReports />
+            <LostReport />
+          </div>
         </TabsContent>
 
         <TabsContent value="activities" className="mt-4">
