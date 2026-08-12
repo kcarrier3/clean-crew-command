@@ -91,10 +91,10 @@ export interface CrmDeal {
   updated_at: string;
   company_id?: string | null;
   primary_contact_id?: string | null;
+  pipeline?: CrmPipeline;
 }
 
 export interface CrmActivity {
-  // (deal fields above include pipeline)
   id: string;
   deal_id: string | null;
   lead_id: string | null;
