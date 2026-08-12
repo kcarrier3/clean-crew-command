@@ -463,6 +463,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           crm_company_id: string | null
+          crm_deal_id: string | null
           crm_lead_id: string | null
           description: string | null
           hold_at: string | null
@@ -491,6 +492,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           crm_company_id?: string | null
+          crm_deal_id?: string | null
           crm_lead_id?: string | null
           description?: string | null
           hold_at?: string | null
@@ -519,6 +521,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           crm_company_id?: string | null
+          crm_deal_id?: string | null
           crm_lead_id?: string | null
           description?: string | null
           hold_at?: string | null
@@ -544,6 +547,13 @@ export type Database = {
             columns: ["crm_company_id"]
             isOneToOne: false
             referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_crm_deal_id_fkey"
+            columns: ["crm_deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
             referencedColumns: ["id"]
           },
           {
@@ -674,6 +684,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           crm_company_id: string | null
+          crm_deal_id: string | null
           crm_lead_id: string | null
           customer_name: string | null
           due_date: string | null
@@ -682,6 +693,7 @@ export type Database = {
           id: string
           invoice_date: string
           invoice_number: string
+          is_recurring: boolean
           job_site_id: string | null
           notes: string | null
           paid_at: string | null
@@ -692,6 +704,8 @@ export type Database = {
           qb_sync_error: string | null
           qb_sync_status: string
           qb_synced_at: string | null
+          recurring_period_end: string | null
+          recurring_period_start: string | null
           sent_at: string | null
           status: string
           subtotal: number
@@ -709,6 +723,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           crm_company_id?: string | null
+          crm_deal_id?: string | null
           crm_lead_id?: string | null
           customer_name?: string | null
           due_date?: string | null
@@ -717,6 +732,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number: string
+          is_recurring?: boolean
           job_site_id?: string | null
           notes?: string | null
           paid_at?: string | null
@@ -727,6 +743,8 @@ export type Database = {
           qb_sync_error?: string | null
           qb_sync_status?: string
           qb_synced_at?: string | null
+          recurring_period_end?: string | null
+          recurring_period_start?: string | null
           sent_at?: string | null
           status?: string
           subtotal?: number
@@ -744,6 +762,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           crm_company_id?: string | null
+          crm_deal_id?: string | null
           crm_lead_id?: string | null
           customer_name?: string | null
           due_date?: string | null
@@ -752,6 +771,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number?: string
+          is_recurring?: boolean
           job_site_id?: string | null
           notes?: string | null
           paid_at?: string | null
@@ -762,6 +782,8 @@ export type Database = {
           qb_sync_error?: string | null
           qb_sync_status?: string
           qb_synced_at?: string | null
+          recurring_period_end?: string | null
+          recurring_period_start?: string | null
           sent_at?: string | null
           status?: string
           subtotal?: number
@@ -777,6 +799,13 @@ export type Database = {
             columns: ["crm_company_id"]
             isOneToOne: false
             referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_invoices_crm_deal_id_fkey"
+            columns: ["crm_deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
             referencedColumns: ["id"]
           },
           {
@@ -3924,6 +3953,7 @@ export type Database = {
           contract_amount: number | null
           created_at: string
           crm_company_id: string | null
+          crm_deal_id: string | null
           crm_lead_id: string | null
           current_month_used_hours: number | null
           current_month_year: string | null
@@ -3976,6 +4006,7 @@ export type Database = {
           contract_amount?: number | null
           created_at?: string
           crm_company_id?: string | null
+          crm_deal_id?: string | null
           crm_lead_id?: string | null
           current_month_used_hours?: number | null
           current_month_year?: string | null
@@ -4028,6 +4059,7 @@ export type Database = {
           contract_amount?: number | null
           created_at?: string
           crm_company_id?: string | null
+          crm_deal_id?: string | null
           crm_lead_id?: string | null
           current_month_used_hours?: number | null
           current_month_year?: string | null
@@ -4060,6 +4092,13 @@ export type Database = {
             columns: ["crm_company_id"]
             isOneToOne: false
             referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_sites_crm_deal_id_fkey"
+            columns: ["crm_deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
             referencedColumns: ["id"]
           },
           {
@@ -4977,6 +5016,173 @@ export type Database = {
           years_of_service?: number
         }
         Relationships: []
+      }
+      recurring_billing_periods: {
+        Row: {
+          amount: number | null
+          created_at: string
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          invoice_id: string | null
+          job_site_id: string
+          period_end: string
+          period_start: string
+          reason: string | null
+          schedule_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          invoice_id?: string | null
+          job_site_id: string
+          period_end: string
+          period_start: string
+          reason?: string | null
+          schedule_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          invoice_id?: string | null
+          job_site_id?: string
+          period_end?: string
+          period_start?: string
+          reason?: string | null
+          schedule_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_billing_periods_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "billing_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_billing_periods_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_billing_periods_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_billing_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_billing_schedules: {
+        Row: {
+          active: boolean
+          amount: number
+          billing_contact_name: string | null
+          billing_day: number
+          billing_day_rule: string
+          billing_email: string | null
+          created_at: string
+          created_by: string | null
+          crm_company_id: string | null
+          crm_deal_id: string | null
+          frequency: string
+          id: string
+          invoice_description: string | null
+          job_site_id: string
+          next_invoice_date: string | null
+          notes: string | null
+          payment_terms: string | null
+          po_number: string | null
+          po_required: boolean
+          service_period: string
+          tax_rate: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          amount?: number
+          billing_contact_name?: string | null
+          billing_day?: number
+          billing_day_rule?: string
+          billing_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_company_id?: string | null
+          crm_deal_id?: string | null
+          frequency?: string
+          id?: string
+          invoice_description?: string | null
+          job_site_id: string
+          next_invoice_date?: string | null
+          notes?: string | null
+          payment_terms?: string | null
+          po_number?: string | null
+          po_required?: boolean
+          service_period?: string
+          tax_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          billing_contact_name?: string | null
+          billing_day?: number
+          billing_day_rule?: string
+          billing_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_company_id?: string | null
+          crm_deal_id?: string | null
+          frequency?: string
+          id?: string
+          invoice_description?: string | null
+          job_site_id?: string
+          next_invoice_date?: string | null
+          notes?: string | null
+          payment_terms?: string | null
+          po_number?: string | null
+          po_required?: boolean
+          service_period?: string
+          tax_rate?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_billing_schedules_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_billing_schedules_crm_deal_id_fkey"
+            columns: ["crm_deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_billing_schedules_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: true
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_permissions: {
         Row: {
