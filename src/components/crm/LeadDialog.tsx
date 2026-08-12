@@ -432,6 +432,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       name: `${form.company_name || lead.company_name} — Award`,
       lead_id: lead.id,
       stage_id: stageId,
+      pipeline: form.pipeline || 'project',
       amount: form.amount ? Number(form.amount) : null,
       probability: form.probability ? Number(form.probability) : 100,
       close_date: form.close_date || null,

@@ -62,7 +62,9 @@ export function LeadsList({ stages, onChanged }: Props) {
   useEffect(() => { setSelected([]); }, [view, ageDays, pipeline]);
 
   const convertToDeal = async (lead: CrmLead) => {
-    const firstStage = stages.find(s => !s.is_won && !s.is_lost) || stages[0];
+    const leadPipeline = (lead.pipeline as CrmPipeline) || 'project';
+    const pipelineStages = stages.filter(s => (s.pipeline || 'project') === leadPipeline);
+    const firstStage = pipelineStages.find(s => !s.is_won && !s.is_lost) || pipelineStages[0];
     if (!firstStage) {
       toast({ title: 'No pipeline stages configured', variant: 'destructive' });
       return;
@@ -71,6 +73,7 @@ export function LeadsList({ stages, onChanged }: Props) {
       name: `${lead.company_name} opportunity`,
       lead_id: lead.id,
       stage_id: firstStage.id,
+      pipeline: leadPipeline,
       owner_id: user?.id,
       created_by: user?.id,
     });
