@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from './fetchAllRows';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { LEAD_SOURCES, LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact } from './types';
+import { LEAD_SOURCES, LEAD_STATUS_LABELS, PIPELINE_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact, type CrmPipeline } from './types';
 import { ClosedLostDialog } from './ClosedLostDialog';
 import type { LostDetails } from './types';
 import { cn } from '@/lib/utils';
@@ -61,7 +61,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const [uploading, setUploading] = useState(false);
   const [userNames, setUserNames] = useState<Record<string, string>>({});
   const [noteEditor, setNoteEditor] = useState<null | { id?: string; title: string; content: string; category: string }>(null);
-  const [stages, setStages] = useState<CrmStage[]>([]);
+  const [allStages, setAllStages] = useState<CrmStage[]>([]);
   const [companies, setCompanies] = useState<CrmCompany[]>([]);
   const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
@@ -89,6 +89,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     description: '',
     next_step: '',
     stage_id: '' as string,
+    pipeline: 'project' as CrmPipeline,
   });
 
   useEffect(() => {
@@ -111,12 +112,13 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
         description: lead.description || '',
         next_step: lead.next_step || '',
         stage_id: lead.stage_id || '',
+        pipeline: (lead.pipeline as CrmPipeline) || 'project',
       });
       setEditMode(false);
     } else {
       setForm({
         name: '', company_id: '', company_name: '', primary_contact_id: '', contact_name: '', email: '', phone: '', source: '', status: 'new',
-        close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '',
+        close_date: '', amount: '', probability: '', type: '', follow_up: false, description: '', next_step: '', stage_id: '', pipeline: 'project',
       });
       setEditMode(true);
     }
@@ -141,7 +143,19 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const loadStages = async () => {
     const { data } = await (supabase as any)
       .from('crm_pipeline_stages').select('*').eq('active', true).order('sort_order');
-    setStages(data || []);
+    setAllStages(data || []);
+  };
+
+  // Stages are pipeline-specific: Projects and Janitorial (Accounts) run separate paths.
+  const stages = useMemo(
+    () => allStages.filter(s => (s.pipeline || 'project') === form.pipeline),
+    [allStages, form.pipeline],
+  );
+
+  const changePipeline = (p: CrmPipeline) => {
+    const next = allStages.filter(s => (s.pipeline || 'project') === p);
+    const first = next.find(s => !s.is_won && !s.is_lost) || next[0];
+    setForm(f => ({ ...f, pipeline: p, stage_id: first?.id || '' }));
   };
 
   const loadCompanies = async () => {
@@ -331,6 +345,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       description: form.description || null,
       next_step: form.next_step || null,
       stage_id: form.stage_id || null,
+      pipeline: form.pipeline || 'project',
     };
     const willBeLost = payload.status === 'unqualified' || isLostStage(payload.stage_id);
     if (willBeLost && !lostDetails && !lead?.lost_reason) {
@@ -359,10 +374,14 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     onSaved?.();
   };
 
+  // The janitorial pipeline ends at "Won"; closing lost happens through a button
+  // instead of a stage chevron.
+  const pathStages = form.pipeline === 'janitorial' ? stages.filter(s => !s.is_lost) : stages;
+  const lostStage = stages.find(s => s.is_lost) || null;
   const currentStageIdx = form.stage_id
-    ? stages.findIndex(s => s.id === form.stage_id)
+    ? pathStages.findIndex(s => s.id === form.stage_id)
     : -1;
-  const currentStage = currentStageIdx >= 0 ? stages[currentStageIdx] : null;
+  const currentStage = currentStageIdx >= 0 ? pathStages[currentStageIdx] : null;
 
   const persistStage = async (stageId: string, lostDetails?: LostDetails) => {
     if (isLostStage(stageId) && !lostDetails && !lead?.lost_reason) {
@@ -413,6 +432,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       name: `${form.company_name || lead.company_name} — Award`,
       lead_id: lead.id,
       stage_id: stageId,
+      pipeline: form.pipeline || 'project',
       amount: form.amount ? Number(form.amount) : null,
       probability: form.probability ? Number(form.probability) : 100,
       close_date: form.close_date || null,
@@ -428,9 +448,9 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   };
 
   const markStageComplete = async () => {
-    if (!stages.length) return;
-    const nextIdx = currentStageIdx < 0 ? 0 : Math.min(currentStageIdx + 1, stages.length - 1);
-    const next = stages[nextIdx];
+    if (!pathStages.length) return;
+    const nextIdx = currentStageIdx < 0 ? 0 : Math.min(currentStageIdx + 1, pathStages.length - 1);
+    const next = pathStages[nextIdx];
     if (!next) return;
     await persistStage(next.id);
     toast({ title: `Stage: ${next.name}` });
@@ -483,7 +503,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
         </div>
 
         {/* Pipeline path */}
-        {stages.length > 0 && (
+        {pathStages.length > 0 && (
           <>
           {lead?.lost_reason && (
             <div className="px-6 py-3 bg-destructive/10 border-b">
@@ -501,14 +521,24 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
             <div className="flex items-stretch gap-3">
               <div className="flex-1 min-w-0">
                 <StagePath
-                  stages={stages}
+                  stages={pathStages}
                   currentIdx={currentStageIdx}
                   onSelect={persistStage}
                 />
               </div>
+              {form.pipeline === 'janitorial' && lostStage && !lead?.lost_reason && (
+                <Button
+                  variant="outline"
+                  onClick={() => persistStage(lostStage.id)}
+                  className="shrink-0 h-9 text-destructive border-destructive/40 hover:bg-destructive/10"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Closed Lost
+                </Button>
+              )}
               <Button
                 onClick={markStageComplete}
-                disabled={currentStageIdx >= stages.length - 1}
+                disabled={currentStageIdx >= pathStages.length - 1}
                 className="shrink-0 h-9 bg-primary hover:bg-primary/90"
               >
                 <Check className="h-4 w-4 mr-1" />
@@ -618,6 +648,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
                   description: lead.description || '',
                   next_step: lead.next_step || '',
                   stage_id: lead.stage_id || '',
+                  pipeline: (lead.pipeline as CrmPipeline) || 'project',
                 });
                 setEditMode(false);
               }}
@@ -635,6 +666,14 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
           </FieldRow>
           <FieldRow label="Opportunity Name">
             <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Opportunity name" />
+          </FieldRow>
+          <FieldRow label="Opportunity Type" required>
+            <Select value={form.pipeline} onValueChange={v => changePipeline(v as CrmPipeline)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(PIPELINE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </FieldRow>
           <FieldRow label="Stage">
             <Select value={form.stage_id || undefined} onValueChange={v => setForm({ ...form, stage_id: v })}>
@@ -757,6 +796,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
       { label: 'Opportunity Owner', value: ownerName },
       { label: 'Close Date', value: closeDateDisplay },
       { label: 'Opportunity Name', value: form.name || '—' },
+      { label: 'Opportunity Type', value: PIPELINE_LABELS[form.pipeline] || '—' },
       { label: 'Stage', value: stageName },
       { label: 'Account Name', value: accountDisplay },
       { label: 'Primary Contact', value: contactDisplay },

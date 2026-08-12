@@ -6,7 +6,20 @@ export interface CrmStage {
   is_won: boolean;
   is_lost: boolean;
   active: boolean;
+  pipeline?: CrmPipeline;
 }
+
+export type CrmPipeline = 'project' | 'janitorial';
+
+export const PIPELINE_LABELS: Record<CrmPipeline, string> = {
+  project: 'Project',
+  janitorial: 'Janitorial (Account)',
+};
+
+export const PIPELINE_SHORT_LABELS: Record<CrmPipeline, string> = {
+  project: 'Projects',
+  janitorial: 'Janitorial',
+};
 
 export interface CrmLead {
   id: string;
@@ -38,6 +51,7 @@ export interface CrmLead {
   lost_notes?: string | null;
   lost_competitor?: string | null;
   lost_at?: string | null;
+  pipeline?: CrmPipeline;
 }
 
 export const LOST_REASONS = [
@@ -77,6 +91,7 @@ export interface CrmDeal {
   updated_at: string;
   company_id?: string | null;
   primary_contact_id?: string | null;
+  pipeline?: CrmPipeline;
 }
 
 export interface CrmActivity {

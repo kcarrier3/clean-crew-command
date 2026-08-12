@@ -15,7 +15,7 @@ import { LeadDialog } from './LeadDialog';
 import { MergeDialog } from './MergeDialog';
 import { ClosedLostDialog } from './ClosedLostDialog';
 import { mergeOpportunities } from './mergeUtils';
-import { LEAD_STATUS_LABELS, type CrmLead, type CrmStage, type LostDetails } from './types';
+import { LEAD_STATUS_LABELS, PIPELINE_SHORT_LABELS, type CrmLead, type CrmStage, type CrmPipeline, type LostDetails } from './types';
 
 const STATUS_COLORS: Record<CrmLead['status'], string> = {
   new: 'bg-blue-100 text-blue-800',
@@ -40,6 +40,7 @@ export function LeadsList({ stages, onChanged }: Props) {
   const [editing, setEditing] = useState<CrmLead | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [view, setView] = useState<'active' | 'aged' | 'lost'>('active');
+  const [pipeline, setPipeline] = useState<'all' | CrmPipeline>('all');
   const [ageDays, setAgeDays] = useState('365');
   const [selected, setSelected] = useState<string[]>([]);
   const [closing, setClosing] = useState(false);
@@ -58,10 +59,12 @@ export function LeadsList({ stages, onChanged }: Props) {
   };
 
   useEffect(() => { load(); }, []);
-  useEffect(() => { setSelected([]); }, [view, ageDays]);
+  useEffect(() => { setSelected([]); }, [view, ageDays, pipeline]);
 
   const convertToDeal = async (lead: CrmLead) => {
-    const firstStage = stages.find(s => !s.is_won && !s.is_lost) || stages[0];
+    const leadPipeline = (lead.pipeline as CrmPipeline) || 'project';
+    const pipelineStages = stages.filter(s => (s.pipeline || 'project') === leadPipeline);
+    const firstStage = pipelineStages.find(s => !s.is_won && !s.is_lost) || pipelineStages[0];
     if (!firstStage) {
       toast({ title: 'No pipeline stages configured', variant: 'destructive' });
       return;
@@ -70,6 +73,7 @@ export function LeadsList({ stages, onChanged }: Props) {
       name: `${lead.company_name} opportunity`,
       lead_id: lead.id,
       stage_id: firstStage.id,
+      pipeline: leadPipeline,
       owner_id: user?.id,
       created_by: user?.id,
     });
@@ -95,11 +99,15 @@ export function LeadsList({ stages, onChanged }: Props) {
     l.sf_last_modified_date || l.sf_created_date || l.updated_at || l.created_at;
   const isAged = (l: CrmLead) => !isLost(l) && daysSince(lastActivity(l)) >= Number(ageDays);
 
-  const lostCount = leads.filter(isLost).length;
-  const activeCount = leads.length - lostCount;
-  const agedCount = leads.filter(isAged).length;
+  const inPipeline = (l: CrmLead) =>
+    pipeline === 'all' || (l.pipeline || 'project') === pipeline;
 
-  const filtered = leads
+  const scoped = leads.filter(inPipeline);
+  const lostCount = scoped.filter(isLost).length;
+  const activeCount = scoped.length - lostCount;
+  const agedCount = scoped.filter(isAged).length;
+
+  const filtered = scoped
     .filter(l => (view === 'lost' ? isLost(l) : view === 'aged' ? isAged(l) : !isLost(l)))
     .sort((a, b) =>
       view === 'aged'
@@ -149,6 +157,17 @@ export function LeadsList({ stages, onChanged }: Props) {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <div className="flex flex-wrap items-center gap-3">
+          <ToggleGroup
+            type="single"
+            value={pipeline}
+            onValueChange={v => v && setPipeline(v as 'all' | CrmPipeline)}
+            variant="outline"
+            size="sm"
+          >
+            <ToggleGroupItem value="all">All</ToggleGroupItem>
+            <ToggleGroupItem value="project">{PIPELINE_SHORT_LABELS.project}</ToggleGroupItem>
+            <ToggleGroupItem value="janitorial">{PIPELINE_SHORT_LABELS.janitorial}</ToggleGroupItem>
+          </ToggleGroup>
           <ToggleGroup
             type="single"
             value={view}

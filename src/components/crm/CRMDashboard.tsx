@@ -17,7 +17,8 @@ import { ContactsList } from './ContactsList';
 import { TasksList } from './TasksList';
 import { CRMReports } from './CRMReports';
 import { LostReport } from './LostReport';
-import { LEAD_STATUS_LABELS, type CrmDeal, type CrmLead, type CrmStage } from './types';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { LEAD_STATUS_LABELS, PIPELINE_SHORT_LABELS, type CrmDeal, type CrmLead, type CrmStage, type CrmPipeline } from './types';
 
 const STATUS_COLORS: Record<CrmLead['status'], string> = {
   new: 'bg-blue-100 text-blue-800',
@@ -38,6 +39,7 @@ export default function CRMDashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<CrmDeal | null>(null);
   const [tab, setTab] = useState('recent');
+  const [boardPipeline, setBoardPipeline] = useState<CrmPipeline>('project');
   const [recent, setRecent] = useState<Array<{ lead: CrmLead; lastAt: number }>>([]);
   const [recentLoading, setRecentLoading] = useState(true);
 
@@ -298,9 +300,20 @@ export default function CRMDashboard() {
         </TabsContent>
 
         <TabsContent value="pipeline" className="mt-4">
+          <ToggleGroup
+            type="single"
+            value={boardPipeline}
+            onValueChange={v => v && setBoardPipeline(v as CrmPipeline)}
+            variant="outline"
+            size="sm"
+            className="mb-4"
+          >
+            <ToggleGroupItem value="project">{PIPELINE_SHORT_LABELS.project}</ToggleGroupItem>
+            <ToggleGroupItem value="janitorial">{PIPELINE_SHORT_LABELS.janitorial}</ToggleGroupItem>
+          </ToggleGroup>
           <PipelineBoard
-            stages={stages}
-            deals={deals}
+            stages={stages.filter(s => (s.pipeline || 'project') === boardPipeline)}
+            deals={deals.filter(d => (d.pipeline || 'project') === boardPipeline)}
             onChanged={loadAll}
             onDealClick={d => { setEditingDeal(d); setDialogOpen(true); }}
             onNewDeal={() => { setEditingDeal(null); setDialogOpen(true); }}
