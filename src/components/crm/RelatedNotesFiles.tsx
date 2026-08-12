@@ -143,6 +143,15 @@ export function RelatedNotesFiles({ parentType, parentId }: { parentType: Relate
     window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
   };
 
+  // Renames only the display name; the stored object path is left untouched.
+  const renameFile = async (f: FileRow) => {
+    const next = window.prompt('File name', f.file_name)?.trim();
+    if (!next || next === f.file_name) return;
+    const { error } = await (supabase as any).from('crm_lead_files').update({ file_name: next }).eq('id', f.id);
+    if (error) { toast({ title: 'Could not rename file', description: error.message, variant: 'destructive' }); return; }
+    load();
+  };
+
   if (loading) return <p className="text-sm text-muted-foreground py-6 text-center">Loading…</p>;
 
   return (
@@ -280,6 +289,7 @@ export function RelatedNotesFiles({ parentType, parentId }: { parentType: Relate
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => download(f)}><Download className="h-3.5 w-3.5 mr-2" /> Download</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => renameFile(f)}><Pencil className="h-3.5 w-3.5 mr-2" /> Rename</DropdownMenuItem>
                     <DropdownMenuItem className="text-destructive" onSelect={() => deleteFile(f)}>
                       <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
                     </DropdownMenuItem>
