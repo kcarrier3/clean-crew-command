@@ -355,10 +355,15 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
                     </p>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{jobSite.safety_requirements}</p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                 )}
+               </CardContent>
+             </Card>
+           )}
+
+          {/* Billing setup */}
+          {isProject
+            ? <ProjectBillingSetupCard jobSiteId={jobSite.id} jobSiteName={jobSite.name} />
+            : <RecurringBillingSetupCard jobSiteId={jobSite.id} jobSiteName={jobSite.name} />}
         </TabsContent>
 
         {/* Work Orders Tab */}
