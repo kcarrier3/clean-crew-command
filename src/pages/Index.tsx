@@ -175,6 +175,7 @@ const Index = () => {
         { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
         { v: 'managerlog', label: 'Manager Log',     icon: BookOpen },
         { v: 'jobsites',   label: 'Accounts',        icon: MapPin },
+        { v: 'billing',    label: 'Billing',         icon: Receipt },
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
@@ -412,6 +413,12 @@ const Index = () => {
             {isManager() && (
               <TabsContent value="jobsites" className="mt-6">
                 <JobSitesManagement />
+              </TabsContent>
+            )}
+
+            {isManager() && (
+              <TabsContent value="billing" className="mt-6">
+                <BillingDashboard />
               </TabsContent>
             )}
 
