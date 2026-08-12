@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Banknote, Plus } from 'lucide-react';
+import { Banknote, Plus, Camera } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
+import { ScanCheckDialog } from './ScanCheckDialog';
 import { money } from '@/lib/billing/types';
 
 export const PaymentsTab = () => {
@@ -14,6 +15,8 @@ export const PaymentsTab = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [savingDeposit, setSavingDeposit] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -27,6 +30,18 @@ export const PaymentsTab = () => {
   };
 
   useEffect(() => { load(); }, []);
+
+  /** Deposit day can differ from the day the check was received. */
+  const updateDeposit = async (id: string, value: string) => {
+    setSavingDeposit(id);
+    const { error } = await db.from('billing_payments').update({ deposit_date: value || null }).eq('id', id);
+    setSavingDeposit(null);
+    if (error) {
+      toast({ title: 'Could not update deposit date', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setPayments(prev => prev.map(p => (p.id === id ? { ...p, deposit_date: value || null } : p)));
+  };
 
   const total = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
   const unapplied = payments.filter(p =>
@@ -52,9 +67,14 @@ export const PaymentsTab = () => {
       <Card>
         <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2"><Banknote className="h-4 w-4" /> Payments received</CardTitle>
-          <Button size="sm" onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Record check / payment
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => setScanOpen(true)}>
+              <Camera className="h-4 w-4 mr-1" /> Scan check
+            </Button>
+            <Button size="sm" onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Record check / payment
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {loading ? <p className="text-sm text-muted-foreground">Loading…</p>
@@ -79,7 +99,6 @@ export const PaymentsTab = () => {
                     <p className="text-xs text-muted-foreground mt-1">
                       {p.payer_name ? `${p.payer_name} · ` : ''}
                       Received {format(new Date(`${p.payment_date}T00:00:00`), 'MMM d, yyyy')}
-                      {p.deposit_date ? ` · Deposited ${p.deposit_date}` : ''}
                       {p.deposit_account_label ? ` · ${p.deposit_account_label}` : ''}
                     </p>
                     {!!(p.allocations ?? []).length && (
@@ -87,6 +106,17 @@ export const PaymentsTab = () => {
                         Applied to {(p.allocations ?? []).map((a: any) => a.invoice?.invoice_number).filter(Boolean).join(', ')}
                       </p>
                     )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-muted-foreground" htmlFor={`dep_${p.id}`}>Deposited</label>
+                    <input
+                      id={`dep_${p.id}`}
+                      type="date"
+                      className="h-8 rounded-md border bg-background px-2 text-xs"
+                      value={p.deposit_date ?? ''}
+                      disabled={savingDeposit === p.id}
+                      onChange={e => updateDeposit(p.id, e.target.value)}
+                    />
                   </div>
                 </div>
               );
@@ -98,6 +128,7 @@ export const PaymentsTab = () => {
       </Card>
 
       <RecordPaymentDialog open={open} onOpenChange={setOpen} invoice={null} onSaved={load} />
+      <ScanCheckDialog open={scanOpen} onOpenChange={setScanOpen} onSaved={load} />
     </div>
   );
 };
