@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useIsNativeApp } from '@/hooks/useIsNativeApp';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
+import { useModuleSettings } from '@/hooks/useModuleSettings';
 
 /**
  * Wraps routed (non-tab) pages so the Crew Compass sidebar stays available
@@ -17,6 +18,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const { user, profile, isManager, isCrmUser, canEstimate, signOut, sendPasswordResetEmail } = useAuth();
   const isNative = useIsNativeApp() || useIsMobile();
+  const { isModuleEnabled } = useModuleSettings();
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('cc.sidebar.collapsed') === '1';
@@ -34,6 +36,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
     isManager: !!isManager?.(),
     isCrmUser: !!isCrmUser?.(),
     canEstimate: !!canEstimate?.(),
+    isModuleEnabled,
   });
 
   const active = location.pathname.startsWith('/estimating')
