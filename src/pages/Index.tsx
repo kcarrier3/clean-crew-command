@@ -43,6 +43,7 @@ import SupplyManagement from '@/components/SupplyManagement';
 import TeamRoster from '@/components/TeamRoster';
 import CompanyContacts from '@/components/CompanyContacts';
 import { SEO } from '@/components/SEO';
+import { useModuleSettings } from '@/hooks/useModuleSettings';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -51,6 +52,7 @@ const Index = () => {
   const { user, loading, profile, isManager, canManageEmployees, isCrmUser, canEstimate, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
   const isNativeShell = useIsNativeApp();
   const isPhone = useIsMobile();
+  const { isModuleEnabled } = useModuleSettings();
   // Treat phone-sized browsers the same as the native app so the mobile web
   // experience mirrors the phone app (hides web-only tabs like CRM, Accounts,
   // Team, Manager reports).
