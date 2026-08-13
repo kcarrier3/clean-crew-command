@@ -411,55 +411,61 @@ const Index = () => {
               {isManager() ? <ManagerDashboard /> : <EmployeeDashboard />}
             </TabsContent>
             
-            {isManager() && (
+            {isManager() && isModuleEnabled('scheduling') && (
               <TabsContent value="scheduling" className="mt-6">
                 <SchedulingDashboard />
               </TabsContent>
             )}
 
-            <TabsContent value="calendar" className="mt-6">
-              <CalendarPlanner />
-            </TabsContent>
+            {isModuleEnabled('calendar') && (
+              <TabsContent value="calendar" className="mt-6">
+                <CalendarPlanner />
+              </TabsContent>
+            )}
 
-            <TabsContent value="supplies" className="mt-6">
-              <SupplyManagement />
-            </TabsContent>
+            {isModuleEnabled('supplies') && (
+              <TabsContent value="supplies" className="mt-6">
+                <SupplyManagement />
+              </TabsContent>
+            )}
 
-            {isManager() && (
+            {isManager() && isModuleEnabled('jobsites') && (
               <TabsContent value="jobsites" className="mt-6">
                 <JobSitesManagement />
               </TabsContent>
             )}
 
-            {isManager() && (
+            {isManager() && isModuleEnabled('billing') && (
               <TabsContent value="billing" className="mt-6">
                 <BillingDashboard />
               </TabsContent>
             )}
 
-            {isCrmUser() && (
+            {isCrmUser() && isModuleEnabled('crm') && (
               <TabsContent value="crm" className="mt-6">
                 <CRMDashboard />
               </TabsContent>
             )}
             
-            {!isManager() && (
+            {!isManager() && isModuleEnabled('myschedule') && (
               <TabsContent value="myschedule" className="mt-6">
                 <MySchedule />
               </TabsContent>
             )}
 
-            {isManager() && (
+            {isManager() && isModuleEnabled('quality') && (
               <TabsContent value="quality" className="mt-6">
                 <QualityControlDashboard />
               </TabsContent>
             )}
 
-            <TabsContent value="messages" className="mt-6">
-              <MessagingCenter />
-            </TabsContent>
+            {isModuleEnabled('messages') && (
+              <TabsContent value="messages" className="mt-6">
+                <MessagingCenter />
+              </TabsContent>
+            )}
 
-            {!isManager() && (
+            {!isManager() && isModuleEnabled('timeoff') && (
               <TabsContent value="timeoff" className="mt-6">
                 <div className="space-y-6">
                   <PtoBalanceCard employeeId={profile?.id} />
@@ -468,12 +474,13 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {isManager() && (
+            {isManager() && isModuleEnabled('managerlog') && (
               <TabsContent value="managerlog" className="mt-6">
                 <ManagerLog />
               </TabsContent>
             )}
 
+            {isModuleEnabled('team') && (
             <TabsContent value="team" className="mt-6">
                 {canManageEmployees() ? (
                   <Tabs defaultValue="directory" className="w-full">
@@ -492,17 +499,22 @@ const Index = () => {
                   <TeamRoster />
                 )}
             </TabsContent>
+            )}
 
-            <TabsContent value="contacts" className="mt-6">
-              <CompanyContacts />
-            </TabsContent>
+            {isModuleEnabled('contacts') && (
+              <TabsContent value="contacts" className="mt-6">
+                <CompanyContacts />
+              </TabsContent>
+            )}
 
             {/* Onboarding: employees complete docs, managers review */}
-            <TabsContent value="onboarding" className="mt-6">
-              {isManager() ? <OnboardingManager /> : <OnboardingCenter />}
-            </TabsContent>
+            {isModuleEnabled('onboarding') && (
+              <TabsContent value="onboarding" className="mt-6">
+                {isManager() ? <OnboardingManager /> : <OnboardingCenter />}
+              </TabsContent>
+            )}
 
-            {isManager() && (
+            {isManager() && isModuleEnabled('documents') && (
               <TabsContent value="documents" className="mt-6">
                 <DocumentsAdmin />
               </TabsContent>
