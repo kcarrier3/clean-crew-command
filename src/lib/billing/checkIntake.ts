@@ -159,7 +159,8 @@ export async function saveIntake(draft: IntakeDraft, status: IntakeStatus = 'rev
 
   if (draft.id) {
     const { data, error } = await db.from('billing_check_intakes')
-      .update(payload).eq('id', draft.id).select().single();
+      .upsert({ id: draft.id, ...payload, created_by: userData?.user?.id ?? null })
+      .select().single();
     if (error) throw error;
     await logIntakeEvent(data.id, 'updated');
     return data;
