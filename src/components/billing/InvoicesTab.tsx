@@ -4,10 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Search } from 'lucide-react';
+import { FileText, Mail, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { fetchInvoices } from './billingApi';
 import { InvoiceDetailDialog } from './InvoiceDetailDialog';
+import { SendInvoiceDialog } from './SendInvoiceDialog';
 import {
   INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL, money, type Invoice,
 } from '@/lib/billing/types';
@@ -21,6 +22,7 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('all');
   const [openId, setOpenId] = useState<string | null>(null);
+  const [sendId, setSendId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -94,8 +96,11 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
                 <p className="text-xs text-muted-foreground mt-1">Generate one from the Ready to Bill queue.</p>
               </div>
             ) : visible.map(i => (
-              <button key={i.id} onClick={() => setOpenId(i.id)}
-                      className="w-full rounded-lg border p-3 text-left transition hover:bg-muted/50">
+              <div key={i.id}
+                   role="button" tabIndex={0}
+                   onClick={() => setOpenId(i.id)}
+                   onKeyDown={e => { if (e.key === 'Enter') setOpenId(i.id); }}
+                   className="w-full rounded-lg border p-3 text-left transition hover:bg-muted/50 cursor-pointer">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -103,6 +108,11 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
                       <Badge className={INVOICE_STATUS_CLASS[i.status] ?? ''}>
                         {INVOICE_STATUS_LABEL[i.status] ?? i.status}
                       </Badge>
+                      {i.email_status && (
+                        <Badge variant="outline" className="text-xs">
+                          Email: {i.email_status}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {i.customer_name ?? 'No customer'} · Issued {i.invoice_date}
@@ -112,9 +122,16 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
                   <div className="text-right">
                     <p className="font-semibold tabular-nums">{money(i.total)}</p>
                     <p className="text-xs text-muted-foreground tabular-nums">Balance {money(i.balance_due)}</p>
+                    {i.status !== 'void' && (
+                      <Button size="sm" variant="ghost" className="mt-1 h-7 px-2"
+                              onClick={e => { e.stopPropagation(); setSendId(i.id); }}>
+                        <Mail className="h-3.5 w-3.5 mr-1" />
+                        {i.last_emailed_at ? 'Resend' : 'Send'}
+                      </Button>
+                    )}
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
         </CardContent>
       </Card>
@@ -123,6 +140,13 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
         invoiceId={openId}
         onOpenChange={o => !o && setOpenId(null)}
         onChanged={load}
+      />
+
+      <SendInvoiceDialog
+        invoiceId={sendId}
+        open={!!sendId}
+        onOpenChange={o => !o && setSendId(null)}
+        onSent={load}
       />
     </div>
   );
