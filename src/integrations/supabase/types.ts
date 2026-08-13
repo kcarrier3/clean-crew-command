@@ -236,43 +236,61 @@ export type Database = {
         Row: {
           additional_recipients: string[]
           auto_send_allowed: boolean
+          billing_contact_name: string | null
+          billing_phone: string | null
           cc_recipients: string[]
           consolidated_invoicing: boolean
           created_at: string
           crm_company_id: string | null
+          default_po_number: string | null
           default_terms: string | null
+          delivery_method: string
           id: string
           notes: string | null
           po_required: boolean
           primary_billing_email: string | null
+          reply_to_email: string | null
+          special_instructions: string | null
           updated_at: string
         }
         Insert: {
           additional_recipients?: string[]
           auto_send_allowed?: boolean
+          billing_contact_name?: string | null
+          billing_phone?: string | null
           cc_recipients?: string[]
           consolidated_invoicing?: boolean
           created_at?: string
           crm_company_id?: string | null
+          default_po_number?: string | null
           default_terms?: string | null
+          delivery_method?: string
           id?: string
           notes?: string | null
           po_required?: boolean
           primary_billing_email?: string | null
+          reply_to_email?: string | null
+          special_instructions?: string | null
           updated_at?: string
         }
         Update: {
           additional_recipients?: string[]
           auto_send_allowed?: boolean
+          billing_contact_name?: string | null
+          billing_phone?: string | null
           cc_recipients?: string[]
           consolidated_invoicing?: boolean
           created_at?: string
           crm_company_id?: string | null
+          default_po_number?: string | null
           default_terms?: string | null
+          delivery_method?: string
           id?: string
           notes?: string | null
           po_required?: boolean
           primary_billing_email?: string | null
+          reply_to_email?: string | null
+          special_instructions?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -326,17 +344,23 @@ export type Database = {
       }
       billing_email_messages: {
         Row: {
+          attachment_path: string | null
           attachment_paths: string[]
           bcc_recipients: string[]
           body: string
           cc_recipients: string[]
           created_at: string
           created_by: string | null
+          crm_company_id: string | null
           crm_lead_id: string | null
           delivered_at: string | null
           error_message: string | null
+          failed_at: string | null
+          failure_reason: string | null
           id: string
+          idempotency_key: string | null
           invoice_id: string | null
+          message_kind: string
           opened_at: string | null
           provider: string | null
           provider_message_id: string | null
@@ -352,17 +376,23 @@ export type Database = {
           webhook_status: string | null
         }
         Insert: {
+          attachment_path?: string | null
           attachment_paths?: string[]
           bcc_recipients?: string[]
           body?: string
           cc_recipients?: string[]
           created_at?: string
           created_by?: string | null
+          crm_company_id?: string | null
           crm_lead_id?: string | null
           delivered_at?: string | null
           error_message?: string | null
+          failed_at?: string | null
+          failure_reason?: string | null
           id?: string
+          idempotency_key?: string | null
           invoice_id?: string | null
+          message_kind?: string
           opened_at?: string | null
           provider?: string | null
           provider_message_id?: string | null
@@ -378,17 +408,23 @@ export type Database = {
           webhook_status?: string | null
         }
         Update: {
+          attachment_path?: string | null
           attachment_paths?: string[]
           bcc_recipients?: string[]
           body?: string
           cc_recipients?: string[]
           created_at?: string
           created_by?: string | null
+          crm_company_id?: string | null
           crm_lead_id?: string | null
           delivered_at?: string | null
           error_message?: string | null
+          failed_at?: string | null
+          failure_reason?: string | null
           id?: string
+          idempotency_key?: string | null
           invoice_id?: string | null
+          message_kind?: string
           opened_at?: string | null
           provider?: string | null
           provider_message_id?: string | null
@@ -689,12 +725,15 @@ export type Database = {
           customer_name: string | null
           due_date: string | null
           earliest_completed_at: string | null
+          email_count: number
+          email_status: string | null
           generated_at: string
           id: string
           invoice_date: string
           invoice_number: string
           is_recurring: boolean
           job_site_id: string | null
+          last_emailed_at: string | null
           notes: string | null
           paid_at: string | null
           payment_terms: string | null
@@ -728,12 +767,15 @@ export type Database = {
           customer_name?: string | null
           due_date?: string | null
           earliest_completed_at?: string | null
+          email_count?: number
+          email_status?: string | null
           generated_at?: string
           id?: string
           invoice_date?: string
           invoice_number: string
           is_recurring?: boolean
           job_site_id?: string | null
+          last_emailed_at?: string | null
           notes?: string | null
           paid_at?: string | null
           payment_terms?: string | null
@@ -767,12 +809,15 @@ export type Database = {
           customer_name?: string | null
           due_date?: string | null
           earliest_completed_at?: string | null
+          email_count?: number
+          email_status?: string | null
           generated_at?: string
           id?: string
           invoice_date?: string
           invoice_number?: string
           is_recurring?: boolean
           job_site_id?: string | null
+          last_emailed_at?: string | null
           notes?: string | null
           paid_at?: string | null
           payment_terms?: string | null

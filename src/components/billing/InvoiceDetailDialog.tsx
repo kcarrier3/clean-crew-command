@@ -2,22 +2,18 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Loader2, Mail, Send, Ban, History, CreditCard } from 'lucide-react';
+import { Download, Mail, Send, Ban, History, CreditCard, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
+import { SendInvoiceDialog } from './SendInvoiceDialog';
 import { saveInvoicePdf } from '@/lib/billing/invoicePdf';
 import {
+  EMAIL_STATUS_CLASS, EMAIL_STATUS_LABEL,
   INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL, money, type Invoice, type InvoiceItem,
 } from '@/lib/billing/types';
-import {
-  isEmailConfigured, renderTemplate, sendInvoiceEmail, EMAIL_TEMPLATE_VARIABLES,
-} from '@/lib/billing/emailService';
 import { businessDays, calendarDays } from '@/lib/billing/kpi';
 
 interface Props {
@@ -36,13 +32,7 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
   const [projectName, setProjectName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
-  const [to, setTo] = useState('');
-  const [cc, setCc] = useState('');
-  const [sending, setSending] = useState(false);
-
-  const emailReady = isEmailConfigured();
+  const [sendOpen, setSendOpen] = useState(false);
 
   const load = async () => {
     if (!invoiceId) return;
@@ -66,24 +56,6 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
       siteName = site?.name ?? null;
     }
     setProjectName(siteName);
-
-    if (inv) {
-      const { data: tpl } = await db.from('billing_email_templates')
-        .select('*').eq('key', 'invoice_default').maybeSingle();
-      const vars = {
-        customer_name: inv.billing_contact_name || inv.customer_name || 'there',
-        invoice_number: inv.invoice_number,
-        project_name: siteName || inv.customer_name || '',
-        amount: money(inv.total),
-        due_date: inv.due_date ?? '',
-        po_number: inv.po_number ?? '',
-        company_name: 'Summit Facilities Group',
-        company_contact: 'Summit Facilities Group — Billing',
-      };
-      setSubject(renderTemplate(tpl?.subject ?? 'Invoice {{invoice_number}}', vars));
-      setBody(renderTemplate(tpl?.body ?? '', vars));
-      setTo(inv.billing_email ?? '');
-    }
     setLoading(false);
   };
 
@@ -138,24 +110,6 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
       .update({ status: 'ready', invoice_id: null, generated_at: null })
       .eq('invoice_id', invoice.id);
     toast({ title: 'Invoice voided', description: 'Its billable items returned to the billing queue.' });
-    load(); onChanged?.();
-  };
-
-  const doSend = async () => {
-    if (!invoice) return;
-    setSending(true);
-    const res = await sendInvoiceEmail({
-      invoice_id: invoice.id,
-      crm_lead_id: invoice.crm_lead_id,
-      template_key: 'invoice_default',
-      to: to.split(',').map(s => s.trim()).filter(Boolean),
-      cc: cc.split(',').map(s => s.trim()).filter(Boolean),
-      subject, body,
-    });
-    setSending(false);
-    toast(res.ok
-      ? { title: 'Invoice emailed' }
-      : { title: 'Email not sent', description: res.error, variant: 'destructive' });
     load(); onChanged?.();
   };
 
@@ -251,6 +205,11 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
                   <Button size="sm" onClick={() => setPayOpen(true)} disabled={invoice.status === 'void'}>
                     <CreditCard className="h-4 w-4 mr-1" /> Record payment
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => setSendOpen(true)}
+                          disabled={invoice.status === 'void'}>
+                    <Mail className="h-4 w-4 mr-1" />
+                    {invoice.last_emailed_at ? 'Resend invoice' : 'Send invoice'}
+                  </Button>
                   {!invoice.sent_at && invoice.status !== 'void' && (
                     <Button size="sm" variant="outline" onClick={markSentManually}>
                       <Send className="h-4 w-4 mr-1" /> Mark as sent
@@ -288,57 +247,48 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
               </TabsContent>
 
               <TabsContent value="email" className="space-y-3 mt-4">
-                {!emailReady && (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                    <p className="font-medium">Email provider not configured</p>
-                    <p className="text-xs mt-1">
-                      Draft and preview the message now. Sending unlocks once Resend, Postmark, SendGrid or SES
-                      is connected in Billing → Settings — nothing is sent until then.
-                    </p>
-                  </div>
-                )}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="em_to">To (comma separated)</Label>
-                    <Input id="em_to" value={to} onChange={e => setTo(e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="em_cc">CC</Label>
-                    <Input id="em_cc" value={cc} onChange={e => setCc(e.target.value)} />
-                  </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" onClick={() => setSendOpen(true)} disabled={invoice.status === 'void'}>
+                    <Mail className="h-4 w-4 mr-1" />
+                    {emails.some(m => m.status === 'sent' || m.status === 'delivered')
+                      ? 'Resend invoice' : 'Send invoice'}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Review the message before it goes out — nothing sends from this screen directly.
+                  </span>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="em_subject">Subject</Label>
-                  <Input id="em_subject" value={subject} onChange={e => setSubject(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="em_body">Message</Label>
-                  <Textarea id="em_body" rows={8} value={body} onChange={e => setBody(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">
-                    Variables: {EMAIL_TEMPLATE_VARIABLES.join(' ')}
-                  </p>
-                </div>
-                <Button size="sm" disabled={!emailReady || sending} onClick={doSend}>
-                  {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Mail className="h-4 w-4 mr-1" />}
-                  {emailReady ? 'Send invoice' : 'Send (provider required)'}
-                </Button>
 
-                {!!emails.length && (
+                {!emails.length ? (
+                  <p className="text-sm text-muted-foreground">This invoice has not been emailed yet.</p>
+                ) : (
                   <div className="space-y-2 pt-2">
                     <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Delivery history</p>
                     {emails.map(m => (
-                      <div key={m.id} className="rounded-md border p-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={['failed', 'bounced'].includes(m.status) ? 'destructive' : 'secondary'}>
-                            {m.status}
+                      <div key={m.id} className="rounded-md border p-2 text-xs space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge className={EMAIL_STATUS_CLASS[m.status] ?? ''}>
+                            {EMAIL_STATUS_LABEL[m.status] ?? m.status}
                           </Badge>
                           <span className="text-muted-foreground">
                             {format(new Date(m.created_at), 'MMM d, yyyy p')} · {m.provider ?? 'no provider'}
                           </span>
                         </div>
-                        <p className="mt-1">{m.subject}</p>
-                        <p className="text-muted-foreground">To: {(m.to_recipients ?? []).join(', ')}</p>
-                        {m.error_message && <p className="text-destructive mt-1">{m.error_message}</p>}
+                        <p>{m.subject}</p>
+                        <p className="text-muted-foreground break-words">
+                          To: {(m.to_recipients ?? []).join(', ')}
+                          {m.cc_recipients?.length ? ` · CC: ${m.cc_recipients.join(', ')}` : ''}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {m.sent_at ? `Sent ${format(new Date(m.sent_at), 'MMM d, p')}` : 'Not sent'}
+                          {m.delivered_at ? ` · Delivered ${format(new Date(m.delivered_at), 'MMM d, p')}` : ''}
+                          {m.opened_at ? ` · Opened ${format(new Date(m.opened_at), 'MMM d, p')}` : ''}
+                        </p>
+                        {(m.failure_reason || m.error_message) && (
+                          <p className="text-destructive flex items-start gap-1">
+                            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                            {m.failure_reason || m.error_message}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -373,6 +323,13 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
         onOpenChange={setPayOpen}
         invoice={invoice}
         onSaved={() => { load(); onChanged?.(); }}
+      />
+
+      <SendInvoiceDialog
+        invoiceId={invoiceId}
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        onSent={() => { load(); onChanged?.(); }}
       />
     </>
   );

@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Mail, Save, Settings2, Building2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
-import { EMAIL_TEMPLATE_VARIABLES, FUTURE_EMAIL_HOOKS, isEmailConfigured, getEmailProvider } from '@/lib/billing/emailService';
+import {
+  EMAIL_TEMPLATE_VARIABLES, FUTURE_EMAIL_HOOKS, fetchEmailConfig, type EmailConfig,
+} from '@/lib/billing/emailService';
 
 export const BillingSettingsTab = () => {
   const { toast } = useToast();
@@ -18,6 +20,7 @@ export const BillingSettingsTab = () => {
   const [prefs, setPrefs] = useState<Record<string, any>>({});
   const [companyId, setCompanyId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [emailConfig, setEmailConfig] = useState<EmailConfig | null>(null);
 
   const load = async () => {
     const [{ data: t }, { data: c }] = await Promise.all([
@@ -28,6 +31,7 @@ export const BillingSettingsTab = () => {
     setCompanies(c ?? []);
   };
   useEffect(() => { load(); }, []);
+  useEffect(() => { fetchEmailConfig(true).then(setEmailConfig); }, []);
 
   const loadPrefs = async (id: string) => {
     setCompanyId(id);
@@ -46,6 +50,12 @@ export const BillingSettingsTab = () => {
     const { error } = await db.from('billing_account_preferences').upsert({
       crm_company_id: companyId,
       primary_billing_email: prefs.primary_billing_email || null,
+      billing_contact_name: prefs.billing_contact_name || null,
+      billing_phone: prefs.billing_phone || null,
+      default_po_number: prefs.default_po_number || null,
+      delivery_method: prefs.delivery_method || 'email',
+      reply_to_email: prefs.reply_to_email || null,
+      special_instructions: prefs.special_instructions || null,
       additional_recipients: prefs.additional_recipients ?? [],
       cc_recipients: prefs.cc_recipients ?? [],
       po_required: !!prefs.po_required,
@@ -80,15 +90,33 @@ export const BillingSettingsTab = () => {
         <CardContent className="space-y-3 text-sm">
           <div className="flex flex-wrap items-center gap-2">
             <span>Provider:</span>
-            <Badge variant={isEmailConfigured() ? 'secondary' : 'destructive'}>
-              {isEmailConfigured() ? getEmailProvider().name : 'Not configured'}
+            <Badge variant={emailConfig?.configured ? 'secondary' : 'destructive'}>
+              {emailConfig?.configured ? emailConfig.provider : 'Not configured'}
             </Badge>
           </div>
+          <div className="grid gap-1 sm:grid-cols-2">
+            <p><span className="text-muted-foreground">Sender:</span> {emailConfig?.from ?? 'billing@summitfacilitiesgroup.com'}</p>
+            <p><span className="text-muted-foreground">Reply-to:</span> {emailConfig?.reply_to ?? 'Uses the sender address'}</p>
+          </div>
           <p className="text-muted-foreground">
-            Billing talks to one provider-agnostic email service. Connect Resend, Postmark, SendGrid or SES later and
-            sending turns on everywhere — invoices, reminders, statements, overdue notices, receipts and credit memos.
-            Until then, messages can be drafted and previewed but never sent, and every attempt is stored for audit.
+            Invoice emails are sent server-side through the <code>send-invoice-email</code> function, so no API key
+            ever reaches the browser. Every attempt is logged in Email Activity, and an invoice is only marked sent
+            once the provider accepts the message.
           </p>
+          {!emailConfig?.configured && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900">
+              <p className="font-medium">One-time setup still needed</p>
+              <ul className="mt-1 list-disc pl-5 text-xs space-y-0.5">
+                <li>Verify the sending domain (summitfacilitiesgroup.com) with Resend.</li>
+                <li>Add the <code>RESEND_API_KEY</code> secret.</li>
+                <li>Optional: <code>BILLING_FROM_EMAIL</code> and <code>BILLING_REPLY_TO_EMAIL</code> to override the sender and reply-to.</li>
+                <li>For delivery tracking, point a Resend webhook at the <code>resend-webhook</code> function and add <code>RESEND_WEBHOOK_SECRET</code>.</li>
+              </ul>
+              <p className="text-xs mt-1">
+                Until then messages can be composed and reviewed — they are stored as drafts and never sent.
+              </p>
+            </div>
+          )}
           <div className="flex flex-wrap gap-1">
             {FUTURE_EMAIL_HOOKS.map(h => (
               <Badge key={h} variant="outline" className="capitalize">{h.replace(/_/g, ' ')} — planned</Badge>
@@ -152,9 +180,43 @@ export const BillingSettingsTab = () => {
                          onChange={e => setPrefs(p => ({ ...p, primary_billing_email: e.target.value }))} />
                 </div>
                 <div className="space-y-1.5">
+                  <Label htmlFor="pref_contact">Billing contact name</Label>
+                  <Input id="pref_contact" value={prefs.billing_contact_name ?? ''}
+                         onChange={e => setPrefs(p => ({ ...p, billing_contact_name: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pref_phone">Billing phone</Label>
+                  <Input id="pref_phone" value={prefs.billing_phone ?? ''}
+                         onChange={e => setPrefs(p => ({ ...p, billing_phone: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
                   <Label htmlFor="pref_terms">Default terms</Label>
                   <Input id="pref_terms" value={prefs.default_terms ?? ''}
                          onChange={e => setPrefs(p => ({ ...p, default_terms: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pref_po">Default PO number</Label>
+                  <Input id="pref_po" value={prefs.default_po_number ?? ''}
+                         onChange={e => setPrefs(p => ({ ...p, default_po_number: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pref_delivery">Invoice delivery method</Label>
+                  <select
+                    id="pref_delivery"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={prefs.delivery_method ?? 'email'}
+                    onChange={e => setPrefs(p => ({ ...p, delivery_method: e.target.value }))}
+                  >
+                    <option value="email">Email</option>
+                    <option value="portal">Customer portal upload</option>
+                    <option value="mail">Postal mail</option>
+                    <option value="none">Do not send</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pref_reply">Reply-to for this account</Label>
+                  <Input id="pref_reply" value={prefs.reply_to_email ?? ''}
+                         onChange={e => setPrefs(p => ({ ...p, reply_to_email: e.target.value }))} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="pref_more">Additional recipients</Label>
@@ -166,6 +228,11 @@ export const BillingSettingsTab = () => {
                   <Input id="pref_cc" value={csv(prefs.cc_recipients)}
                          onChange={e => setPrefs(p => ({ ...p, cc_recipients: parseCsv(e.target.value) }))} />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pref_instructions">Special billing instructions</Label>
+                <Textarea id="pref_instructions" rows={3} value={prefs.special_instructions ?? ''}
+                          onChange={e => setPrefs(p => ({ ...p, special_instructions: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <label className="flex items-center justify-between rounded-md border p-2 text-sm">

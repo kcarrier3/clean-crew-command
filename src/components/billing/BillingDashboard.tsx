@@ -4,6 +4,7 @@ import { ReadyToBillTab } from './ReadyToBillTab';
 import { RecurringInvoicingTab } from './RecurringInvoicingTab';
 import { InvoicesTab } from './InvoicesTab';
 import { PaymentsTab } from './PaymentsTab';
+import { EmailActivityTab } from './EmailActivityTab';
 import { BillingPerformanceTab } from './BillingPerformanceTab';
 import { BillingSettingsTab } from './BillingSettingsTab';
 
@@ -28,6 +29,7 @@ export const BillingDashboard = () => {
           <TabsTrigger value="recurring">Recurring Invoicing</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="email">Email Activity</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -42,6 +44,7 @@ export const BillingDashboard = () => {
           <InvoicesTab focusInvoiceId={focusInvoiceId} onFocusHandled={() => setFocusInvoiceId(null)} />
         </TabsContent>
         <TabsContent value="payments" className="mt-4"><PaymentsTab /></TabsContent>
+        <TabsContent value="email" className="mt-4"><EmailActivityTab /></TabsContent>
         <TabsContent value="performance" className="mt-4"><BillingPerformanceTab /></TabsContent>
         <TabsContent value="settings" className="mt-4"><BillingSettingsTab /></TabsContent>
       </Tabs>

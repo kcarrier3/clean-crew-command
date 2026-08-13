@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.billing_invoice_email_rollup() FROM PUBLIC, anon;
