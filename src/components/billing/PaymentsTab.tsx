@@ -79,6 +79,41 @@ export const PaymentsTab = () => {
       <Card>
         <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2"><Banknote className="h-4 w-4" /> Payments received</CardTitle>
+      {!!intakes.length && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" /> Checks needing review ({intakes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {intakes.map(i => (
+              <button
+                key={i.id}
+                type="button"
+                onClick={() => { setActiveIntake(i); setIntakeOpen(true); }}
+                className="w-full text-left flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 hover:bg-accent"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{money(i.amount)}</span>
+                    {i.check_number && <span className="text-xs text-muted-foreground">#{i.check_number}</span>}
+                    <Badge className={INTAKE_STATUS_CLASS[i.status]}>{INTAKE_STATUS_LABEL[i.status]}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {i.payer_name ? `${i.payer_name} · ` : ''}Received {i.received_date}
+                  </p>
+                </div>
+                <span className="text-xs font-medium">Finish matching →</span>
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base flex items-center gap-2"><Banknote className="h-4 w-4" /> Payments received</CardTitle>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={() => { setActiveIntake(null); setIntakeOpen(true); }}>
               <ScanLine className="h-4 w-4 mr-1" /> Receive check
