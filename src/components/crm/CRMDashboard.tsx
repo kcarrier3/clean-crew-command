@@ -38,7 +38,10 @@ export default function CRMDashboard() {
   const [openActsCount, setOpenActsCount] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<CrmDeal | null>(null);
-  const [tab, setTab] = useState('recent');
+  const [tab, setTab] = useState(() => {
+    if (typeof window === 'undefined') return 'recent';
+    return new URLSearchParams(window.location.search).get('crmTab') || 'recent';
+  });
   const [boardPipeline, setBoardPipeline] = useState<CrmPipeline>('project');
   const [recent, setRecent] = useState<Array<{ lead: CrmLead; lastAt: number }>>([]);
   const [recentLoading, setRecentLoading] = useState(true);
