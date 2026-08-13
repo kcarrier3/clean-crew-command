@@ -341,9 +341,13 @@ export type Database = {
       billing_check_intakes: {
         Row: {
           amount: number
+          apply_mode: string | null
+          auto_eligible: boolean
+          blocked_reasons: Json
           check_date: string | null
           check_image_path: string | null
           check_number: string | null
+          confidence: Json
           created_at: string
           created_by: string | null
           crm_company_id: string | null
@@ -365,9 +369,13 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          apply_mode?: string | null
+          auto_eligible?: boolean
+          blocked_reasons?: Json
           check_date?: string | null
           check_image_path?: string | null
           check_number?: string | null
+          confidence?: Json
           created_at?: string
           created_by?: string | null
           crm_company_id?: string | null
@@ -389,9 +397,13 @@ export type Database = {
         }
         Update: {
           amount?: number
+          apply_mode?: string | null
+          auto_eligible?: boolean
+          blocked_reasons?: Json
           check_date?: string | null
           check_image_path?: string | null
           check_number?: string | null
+          confidence?: Json
           created_at?: string
           created_by?: string | null
           crm_company_id?: string | null
@@ -1095,6 +1107,7 @@ export type Database = {
           deposit_batch_id: string | null
           deposit_date: string | null
           entered_by: string | null
+          entry_source: string
           id: string
           method: string
           notes: string | null
@@ -1115,6 +1128,7 @@ export type Database = {
           deposit_batch_id?: string | null
           deposit_date?: string | null
           entered_by?: string | null
+          entry_source?: string
           id?: string
           method?: string
           notes?: string | null
@@ -1135,6 +1149,7 @@ export type Database = {
           deposit_batch_id?: string | null
           deposit_date?: string | null
           entered_by?: string | null
+          entry_source?: string
           id?: string
           method?: string
           notes?: string | null
