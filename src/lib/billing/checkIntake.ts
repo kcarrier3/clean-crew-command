@@ -166,6 +166,90 @@ export interface IntakeDraft {
   warnings: string[];
   proposed_allocations: { invoice_id: string | null; invoice_number: string; amount: number }[];
   notes: string | null;
+  confidence?: Record<string, unknown>;
+  auto_eligible?: boolean;
+  blocked_reasons?: string[];
+}
+
+export interface AutoPostDecision {
+  eligible: boolean;
+  /** Plain-English reasons the check must be reviewed by a person. */
+  reasons: string[];
+  confidence: Record<string, number>;
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Exception-based accounting gate: a check auto-posts only when every confidence,
+ * matching and reconciliation condition passes. Any doubt → Review needed.
+ */
+export function evaluateAutoPost(input: {
+  amount: number;
+  checkNumber: string;
+  payer: string;
+  lines: MatchLine[];
+  extraction: any;
+  warnings: string[];
+  duplicates: unknown[];
+}): AutoPostDecision {
+  const { amount, checkNumber, payer, lines, extraction, warnings, duplicates } = input;
+  const reasons: string[] = [];
+  const c = (extraction?.check?.confidence ?? {}) as Record<string, number>;
+  const confidence = {
+    amount: Number(c.amount ?? 0),
+    check_number: Number(c.check_number ?? 0),
+    payer_name: Number(c.payer_name ?? 0),
+    invoices: Number(extraction?.stub?.confidence ?? 0),
+  };
+
+  if (!extraction || !extraction.check) reasons.push('No automatic extraction result — details were entered by hand.');
+  if (!amount || amount <= 0) reasons.push('The check amount is missing or unreadable.');
+  else if (confidence.amount < AUTO_CONFIDENCE_THRESHOLD) reasons.push('The check amount was not read with high confidence.');
+  if (!checkNumber.trim()) reasons.push('The check number is missing.');
+  else if (confidence.check_number < AUTO_CONFIDENCE_THRESHOLD) reasons.push('The check number was not read with high confidence.');
+
+  if (!lines.length) reasons.push('No invoice numbers were matched from the remittance stub.');
+  if (confidence.invoices < AUTO_CONFIDENCE_THRESHOLD) reasons.push('The remittance stub invoice list was not read with high confidence.');
+  if (lines.some(l => !l.invoice)) reasons.push('At least one stub invoice number did not match an open invoice.');
+  if (lines.some(l => !(Number(l.amount || 0) > 0))) reasons.push('An invoice line has no amount to apply.');
+  if (lines.some(l => l.invoice && Number(l.amount || 0) - l.invoice.balance_due > 0.005)) {
+    reasons.push('An applied amount is larger than the invoice balance.');
+  }
+  // Ambiguous partial: stub must state the amount explicitly for a short pay.
+  const stubInvoices: { invoice_number: string; amount: string }[] = extraction?.stub?.invoices ?? [];
+  lines.forEach(l => {
+    if (!l.invoice) return;
+    const applied = Number(l.amount || 0);
+    if (Math.abs(applied - l.invoice.balance_due) <= 0.005) return;
+    const stated = stubInvoices.find(s =>
+      normalizeInvoiceNumber(s.invoice_number) === normalizeInvoiceNumber(l.invoice!.invoice_number));
+    if (!stated || !stated.amount || Math.abs(Number(stated.amount) - applied) > 0.005) {
+      reasons.push(`Partial payment on ${l.invoice.invoice_number} is not explicitly stated on the stub.`);
+    }
+  });
+
+  const appliedTotal = round2(lines.reduce((s, l) => s + (l.invoice ? Number(l.amount || 0) : 0), 0));
+  if (round2(appliedTotal - amount) !== 0) {
+    reasons.push('Proposed applications do not equal the check amount to the cent.');
+  }
+
+  // Payer must not conflict with the invoice customers.
+  const companyIds = new Set(lines.map(l => l.invoice?.crm_company_id).filter(Boolean));
+  if (companyIds.size > 1) reasons.push('The matched invoices belong to more than one account.');
+  if (payer.trim() && lines.length) {
+    const names = lines.map(l => (l.invoice?.customer_name ?? '').toLowerCase()).filter(Boolean);
+    const p = payer.trim().toLowerCase();
+    const token = (s: string) => s.replace(/[^a-z0-9]/g, '');
+    const consistent = !names.length || names.some(n =>
+      token(n).includes(token(p)) || token(p).includes(token(n)));
+    if (!consistent) reasons.push('The payer name does not match the invoice customer.');
+  }
+
+  if (duplicates.length) reasons.push('A payment with this check number and amount already exists.');
+  if (warnings.length) reasons.push('The scan returned warnings that need a human look.');
+
+  return { eligible: reasons.length === 0, reasons: [...new Set(reasons)], confidence };
 }
 
 /** Creates or updates a check intake row without touching invoice balances. */
