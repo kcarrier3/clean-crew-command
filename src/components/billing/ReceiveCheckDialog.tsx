@@ -7,14 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Camera, Upload, Loader2, AlertTriangle, Check, Trash2, Plus, Search, ShieldAlert,
+  Camera, Upload, Loader2, AlertTriangle, Check, Trash2, Plus, Search, ShieldAlert, Sparkles,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { money } from '@/lib/billing/types';
 import {
-  applyIntake, fetchOpenInvoices, findDuplicateChecks, imageToDataUrl, matchStubInvoices,
-  saveIntake, uploadCheckImage, type IntakeDraft, type MatchLine, type OpenInvoice,
+  applyIntake, evaluateAutoPost, fetchAutoApplyEnabled, fetchOpenInvoices, findDuplicateChecks,
+  imageToDataUrl, matchStubInvoices, saveIntake, uploadCheckImage,
+  type AutoPostDecision, type IntakeDraft, type MatchLine, type OpenInvoice,
 } from '@/lib/billing/checkIntake';
 
 interface Props {
@@ -25,7 +26,7 @@ interface Props {
   onSaved?: () => void;
 }
 
-type Step = 'check' | 'stub' | 'review' | 'match' | 'confirm';
+type Step = 'check' | 'stub' | 'processing' | 'review' | 'match' | 'confirm' | 'done';
 const STEPS: { key: Step; label: string }[] = [
   { key: 'check', label: 'Check photo' },
   { key: 'stub', label: 'Stub photo' },
