@@ -76,9 +76,6 @@ export const PaymentsTab = () => {
         </CardContent></Card>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base flex items-center gap-2"><Banknote className="h-4 w-4" /> Payments received</CardTitle>
       {!!intakes.length && (
         <Card>
           <CardHeader className="pb-3">
