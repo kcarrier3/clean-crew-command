@@ -242,57 +242,48 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
               </TabsContent>
 
               <TabsContent value="email" className="space-y-3 mt-4">
-                {!emailReady && (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                    <p className="font-medium">Email provider not configured</p>
-                    <p className="text-xs mt-1">
-                      Draft and preview the message now. Sending unlocks once Resend, Postmark, SendGrid or SES
-                      is connected in Billing → Settings — nothing is sent until then.
-                    </p>
-                  </div>
-                )}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="em_to">To (comma separated)</Label>
-                    <Input id="em_to" value={to} onChange={e => setTo(e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="em_cc">CC</Label>
-                    <Input id="em_cc" value={cc} onChange={e => setCc(e.target.value)} />
-                  </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" onClick={() => setSendOpen(true)} disabled={invoice.status === 'void'}>
+                    <Mail className="h-4 w-4 mr-1" />
+                    {emails.some(m => m.status === 'sent' || m.status === 'delivered')
+                      ? 'Resend invoice' : 'Send invoice'}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Review the message before it goes out — nothing sends from this screen directly.
+                  </span>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="em_subject">Subject</Label>
-                  <Input id="em_subject" value={subject} onChange={e => setSubject(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="em_body">Message</Label>
-                  <Textarea id="em_body" rows={8} value={body} onChange={e => setBody(e.target.value)} />
-                  <p className="text-xs text-muted-foreground">
-                    Variables: {EMAIL_TEMPLATE_VARIABLES.join(' ')}
-                  </p>
-                </div>
-                <Button size="sm" disabled={!emailReady || sending} onClick={doSend}>
-                  {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Mail className="h-4 w-4 mr-1" />}
-                  {emailReady ? 'Send invoice' : 'Send (provider required)'}
-                </Button>
 
-                {!!emails.length && (
+                {!emails.length ? (
+                  <p className="text-sm text-muted-foreground">This invoice has not been emailed yet.</p>
+                ) : (
                   <div className="space-y-2 pt-2">
                     <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Delivery history</p>
                     {emails.map(m => (
-                      <div key={m.id} className="rounded-md border p-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={['failed', 'bounced'].includes(m.status) ? 'destructive' : 'secondary'}>
-                            {m.status}
+                      <div key={m.id} className="rounded-md border p-2 text-xs space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge className={EMAIL_STATUS_CLASS[m.status] ?? ''}>
+                            {EMAIL_STATUS_LABEL[m.status] ?? m.status}
                           </Badge>
                           <span className="text-muted-foreground">
                             {format(new Date(m.created_at), 'MMM d, yyyy p')} · {m.provider ?? 'no provider'}
                           </span>
                         </div>
-                        <p className="mt-1">{m.subject}</p>
-                        <p className="text-muted-foreground">To: {(m.to_recipients ?? []).join(', ')}</p>
-                        {m.error_message && <p className="text-destructive mt-1">{m.error_message}</p>}
+                        <p>{m.subject}</p>
+                        <p className="text-muted-foreground break-words">
+                          To: {(m.to_recipients ?? []).join(', ')}
+                          {m.cc_recipients?.length ? ` · CC: ${m.cc_recipients.join(', ')}` : ''}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {m.sent_at ? `Sent ${format(new Date(m.sent_at), 'MMM d, p')}` : 'Not sent'}
+                          {m.delivered_at ? ` · Delivered ${format(new Date(m.delivered_at), 'MMM d, p')}` : ''}
+                          {m.opened_at ? ` · Opened ${format(new Date(m.opened_at), 'MMM d, p')}` : ''}
+                        </p>
+                        {(m.failure_reason || m.error_message) && (
+                          <p className="text-destructive flex items-start gap-1">
+                            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                            {m.failure_reason || m.error_message}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
