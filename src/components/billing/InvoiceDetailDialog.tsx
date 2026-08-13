@@ -205,6 +205,11 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
                   <Button size="sm" onClick={() => setPayOpen(true)} disabled={invoice.status === 'void'}>
                     <CreditCard className="h-4 w-4 mr-1" /> Record payment
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => setSendOpen(true)}
+                          disabled={invoice.status === 'void'}>
+                    <Mail className="h-4 w-4 mr-1" />
+                    {invoice.last_emailed_at ? 'Resend invoice' : 'Send invoice'}
+                  </Button>
                   {!invoice.sent_at && invoice.status !== 'void' && (
                     <Button size="sm" variant="outline" onClick={markSentManually}>
                       <Send className="h-4 w-4 mr-1" /> Mark as sent
@@ -318,6 +323,13 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
         onOpenChange={setPayOpen}
         invoice={invoice}
         onSaved={() => { load(); onChanged?.(); }}
+      />
+
+      <SendInvoiceDialog
+        invoiceId={invoiceId}
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        onSent={() => { load(); onChanged?.(); }}
       />
     </>
   );

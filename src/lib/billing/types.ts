@@ -96,6 +96,9 @@ export interface Invoice {
   generated_at: string;
   sent_at: string | null;
   paid_at: string | null;
+  last_emailed_at?: string | null;
+  email_count?: number;
+  email_status?: string | null;
   earliest_completed_at: string | null;
   qb_sync_status: string;
   created_at: string;
