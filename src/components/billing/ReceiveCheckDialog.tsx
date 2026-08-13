@@ -249,7 +249,19 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
     return dupes;
   };
 
-  const buildDraft = async (): Promise<IntakeDraft> => {
+  const buildDraft = async (override?: Partial<{
+    payer: string; checkNumber: string; amount: number; lines: MatchLine[];
+    extraction: Record<string, unknown>; warnings: string[];
+    confidence: Record<string, unknown>; autoEligible: boolean; blockedReasons: string[];
+  }>): Promise<IntakeDraft> => {
+    const d = {
+      payer: override?.payer ?? payer,
+      checkNumber: override?.checkNumber ?? checkNumber,
+      amount: override?.amount ?? total,
+      lines: override?.lines ?? lines,
+      extraction: override?.extraction ?? extraction,
+      warnings: override?.warnings ?? warnings,
+    };
     const id = intakeId ?? crypto.randomUUID();
     if (!intakeId) setIntakeId(id);
     let checkPath = intake?.check_image_path ?? null;
@@ -258,24 +270,27 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
     if (stubImage) stubPath = await uploadCheckImage(id, 'stub', stubImage);
     return {
       id,
-      payer_name: payer.trim(),
-      crm_company_id: lines.find(l => l.invoice?.crm_company_id)?.invoice?.crm_company_id ?? null,
-      check_number: checkNumber.trim(),
+      payer_name: d.payer.trim(),
+      crm_company_id: d.lines.find(l => l.invoice?.crm_company_id)?.invoice?.crm_company_id ?? null,
+      check_number: d.checkNumber.trim(),
       check_date: checkDate || null,
       received_date: receivedDate || today(),
       deposit_date: depositDate || null,
       deposit_account_label: depositAccount.trim() || null,
-      amount: total,
+      amount: d.amount,
       check_image_path: checkPath,
       stub_image_path: stubPath,
-      extraction,
-      warnings,
-      proposed_allocations: lines.map(l => ({
+      extraction: d.extraction,
+      warnings: d.warnings,
+      proposed_allocations: d.lines.map(l => ({
         invoice_id: l.invoice?.id ?? null,
         invoice_number: l.invoice?.invoice_number ?? l.raw,
         amount: Number(l.amount || 0),
       })),
       notes: notes.trim() || null,
+      confidence: override?.confidence,
+      auto_eligible: override?.autoEligible,
+      blocked_reasons: override?.blockedReasons,
     };
   };
 
