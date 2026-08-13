@@ -298,7 +298,11 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
   const saveForLater = async () => {
     setSaving(true);
     try {
-      const draft = await buildDraft();
+      const draft = await buildDraft({
+        confidence: decision?.confidence,
+        autoEligible: false,
+        blockedReasons: decision?.reasons ?? [],
+      });
       const row = await saveIntake(draft, 'review_needed');
       setIntakeId(row.id);
       toast({ title: 'Saved for review', description: 'Finish matching it later from Payments.' });
@@ -710,6 +714,12 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
         )}
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
+          {step === 'done' ? (
+            <Button onClick={() => close(false)}>Done</Button>
+          ) : step === 'processing' ? (
+            <Button variant="ghost" disabled>Working…</Button>
+          ) : (
+          <>
           <Button variant="ghost" onClick={() => close(false)} disabled={saving}>Cancel</Button>
           <Button variant="outline" onClick={saveForLater} disabled={saving || extracting}>
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Save for review
@@ -721,6 +731,8 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
             <Button onClick={apply} disabled={saving || !total}>
               {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Apply check payment
             </Button>
+          )}
+          </>
           )}
         </DialogFooter>
       </DialogContent>
