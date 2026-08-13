@@ -198,6 +198,7 @@ export default function AccountDetailPage() {
                     ['details', 'Details'],
                     ['contacts', `Contacts (${contacts.length})`],
                     ['opportunities', `Opportunities (${leads.length})`],
+                    ['billing', 'Billing'],
                     ['notes', 'Notes & Files'],
                   ].map(([v, label]) => (
                     <TabsTrigger
@@ -292,6 +293,10 @@ export default function AccountDetailPage() {
 
                 <TabsContent value="notes" className="pt-4">
                   <RelatedNotesFiles parentType="account" parentId={company.id} />
+                </TabsContent>
+
+                <TabsContent value="billing" className="pt-4">
+                  <AccountBillingPreferencesCard companyId={company.id} />
                 </TabsContent>
               </Tabs>
             </div>
