@@ -22,6 +22,7 @@ import Estimating from './pages/Estimating';
 import EstimatingDetail from './pages/EstimatingDetail';
 import Settings from './pages/Settings';
 import AppShell from './components/layout/AppShell';
+import ModuleRoute from './components/layout/ModuleRoute';
 
 const queryClient = new QueryClient();
 
@@ -48,11 +49,11 @@ const AppContent = () => {
       <Route path="/get-a-quote" element={<LeadCapture />} />
       <Route path="/report/:jobSiteId" element={<ReportIssue />} />
       <Route path="/punch/:token" element={<PunchClock />} />
-      <Route path="/crm/opportunities/:id" element={<AppShell><OpportunityDetail /></AppShell>} />
-      <Route path="/crm/accounts/:id" element={<AppShell><AccountDetailPage /></AppShell>} />
-      <Route path="/crm/contacts/:id" element={<AppShell><ContactDetailPage /></AppShell>} />
-      <Route path="/estimating" element={<AppShell><Estimating /></AppShell>} />
-      <Route path="/estimating/:id" element={<AppShell><EstimatingDetail /></AppShell>} />
+      <Route path="/crm/opportunities/:id" element={<ModuleRoute><AppShell><OpportunityDetail /></AppShell></ModuleRoute>} />
+      <Route path="/crm/accounts/:id" element={<ModuleRoute><AppShell><AccountDetailPage /></AppShell></ModuleRoute>} />
+      <Route path="/crm/contacts/:id" element={<ModuleRoute><AppShell><ContactDetailPage /></AppShell></ModuleRoute>} />
+      <Route path="/estimating" element={<ModuleRoute><AppShell><Estimating /></AppShell></ModuleRoute>} />
+      <Route path="/estimating/:id" element={<ModuleRoute><AppShell><EstimatingDetail /></AppShell></ModuleRoute>} />
       <Route path="/settings" element={<AppShell><Settings /></AppShell>} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />

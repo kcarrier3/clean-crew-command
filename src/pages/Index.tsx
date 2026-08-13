@@ -43,6 +43,7 @@ import SupplyManagement from '@/components/SupplyManagement';
 import TeamRoster from '@/components/TeamRoster';
 import CompanyContacts from '@/components/CompanyContacts';
 import { SEO } from '@/components/SEO';
+import { useModuleSettings } from '@/hooks/useModuleSettings';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -51,6 +52,7 @@ const Index = () => {
   const { user, loading, profile, isManager, canManageEmployees, isCrmUser, canEstimate, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
   const isNativeShell = useIsNativeApp();
   const isPhone = useIsMobile();
+  const { isModuleEnabled } = useModuleSettings();
   // Treat phone-sized browsers the same as the native app so the mobile web
   // experience mirrors the phone app (hides web-only tabs like CRM, Accounts,
   // Team, Manager reports).
@@ -90,6 +92,13 @@ const Index = () => {
       setSearchParams(next, { replace: true });
     }
   }, [searchParams, setSearchParams]);
+
+  // If a module gets turned off company-wide, fall back to the dashboard.
+  useEffect(() => {
+    if (activeTab !== 'dashboard' && !isModuleEnabled(activeTab)) {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, isModuleEnabled]);
 
   // Require new hires to complete their profile before using the app
   useEffect(() => {
@@ -169,7 +178,7 @@ const Index = () => {
   // Single source of truth for navigation. The desktop sidebar and the mobile
   // "More" menu are both built from this list so phone users get every area
   // they have on the computer browser.
-  const navItems: SidebarItem[] = isManager()
+  const allNavItems: SidebarItem[] = isManager()
     ? [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
         { v: 'scheduling', label: 'Schedule',        icon: CalendarDays },
@@ -197,18 +206,23 @@ const Index = () => {
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ];
 
+  const navItems: SidebarItem[] = allNavItems.filter(
+    (i) => i.v === 'dashboard' || isModuleEnabled(i.v),
+  );
+
   // Extra destinations that only make sense outside the sidebar.
   const extraNavItems: SidebarItem[] = [
     ...(!isManager() ? [{ v: 'onboarding', label: 'Onboarding & Docs', icon: FileText }] : []),
     { v: 'contacts', label: 'Contacts', icon: Contact },
-  ];
+  ].filter((i) => isModuleEnabled(i.v));
 
   const sidebarItems = navItems;
 
   // Keys shown in the mobile bottom bar — everything else lands in the menu.
-  const bottomBarKeys = isManager()
+  const bottomBarKeys = (isManager()
     ? ['dashboard', 'scheduling', 'managerlog', isSupplyStaff ? 'supplies' : 'quality']
-    : ['dashboard', 'myschedule', isSupplyStaff ? 'supplies' : 'timeoff', 'messages'];
+    : ['dashboard', 'myschedule', isSupplyStaff ? 'supplies' : 'timeoff', 'messages']
+  ).filter((k) => k === 'dashboard' || isModuleEnabled(k));
 
   const mobileMenuItems = [...navItems, ...extraNavItems].filter(
     (item) => !bottomBarKeys.includes(item.v),
@@ -397,55 +411,61 @@ const Index = () => {
               {isManager() ? <ManagerDashboard /> : <EmployeeDashboard />}
             </TabsContent>
             
-            {isManager() && (
+            {isManager() && isModuleEnabled('scheduling') && (
               <TabsContent value="scheduling" className="mt-6">
                 <SchedulingDashboard />
               </TabsContent>
             )}
 
-            <TabsContent value="calendar" className="mt-6">
-              <CalendarPlanner />
-            </TabsContent>
+            {isModuleEnabled('calendar') && (
+              <TabsContent value="calendar" className="mt-6">
+                <CalendarPlanner />
+              </TabsContent>
+            )}
 
-            <TabsContent value="supplies" className="mt-6">
-              <SupplyManagement />
-            </TabsContent>
+            {isModuleEnabled('supplies') && (
+              <TabsContent value="supplies" className="mt-6">
+                <SupplyManagement />
+              </TabsContent>
+            )}
 
-            {isManager() && (
+            {isManager() && isModuleEnabled('jobsites') && (
               <TabsContent value="jobsites" className="mt-6">
                 <JobSitesManagement />
               </TabsContent>
             )}
 
-            {isManager() && (
+            {isManager() && isModuleEnabled('billing') && (
               <TabsContent value="billing" className="mt-6">
                 <BillingDashboard />
               </TabsContent>
             )}
 
-            {isCrmUser() && (
+            {isCrmUser() && isModuleEnabled('crm') && (
               <TabsContent value="crm" className="mt-6">
                 <CRMDashboard />
               </TabsContent>
             )}
             
-            {!isManager() && (
+            {!isManager() && isModuleEnabled('myschedule') && (
               <TabsContent value="myschedule" className="mt-6">
                 <MySchedule />
               </TabsContent>
             )}
 
-            {isManager() && (
+            {isManager() && isModuleEnabled('quality') && (
               <TabsContent value="quality" className="mt-6">
                 <QualityControlDashboard />
               </TabsContent>
             )}
 
-            <TabsContent value="messages" className="mt-6">
-              <MessagingCenter />
-            </TabsContent>
+            {isModuleEnabled('messages') && (
+              <TabsContent value="messages" className="mt-6">
+                <MessagingCenter />
+              </TabsContent>
+            )}
 
-            {!isManager() && (
+            {!isManager() && isModuleEnabled('timeoff') && (
               <TabsContent value="timeoff" className="mt-6">
                 <div className="space-y-6">
                   <PtoBalanceCard employeeId={profile?.id} />
@@ -454,12 +474,13 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {isManager() && (
+            {isManager() && isModuleEnabled('managerlog') && (
               <TabsContent value="managerlog" className="mt-6">
                 <ManagerLog />
               </TabsContent>
             )}
 
+            {isModuleEnabled('team') && (
             <TabsContent value="team" className="mt-6">
                 {canManageEmployees() ? (
                   <Tabs defaultValue="directory" className="w-full">
@@ -478,17 +499,22 @@ const Index = () => {
                   <TeamRoster />
                 )}
             </TabsContent>
+            )}
 
-            <TabsContent value="contacts" className="mt-6">
-              <CompanyContacts />
-            </TabsContent>
+            {isModuleEnabled('contacts') && (
+              <TabsContent value="contacts" className="mt-6">
+                <CompanyContacts />
+              </TabsContent>
+            )}
 
             {/* Onboarding: employees complete docs, managers review */}
-            <TabsContent value="onboarding" className="mt-6">
-              {isManager() ? <OnboardingManager /> : <OnboardingCenter />}
-            </TabsContent>
+            {isModuleEnabled('onboarding') && (
+              <TabsContent value="onboarding" className="mt-6">
+                {isManager() ? <OnboardingManager /> : <OnboardingCenter />}
+              </TabsContent>
+            )}
 
-            {isManager() && (
+            {isManager() && isModuleEnabled('documents') && (
               <TabsContent value="documents" className="mt-6">
                 <DocumentsAdmin />
               </TabsContent>
@@ -503,25 +529,33 @@ const Index = () => {
           {isManager() ? (
               <>
                 <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
-                <MobileTab active={activeTab === 'scheduling'} onClick={() => setActiveTab('scheduling')} icon={<Calendar className="h-5 w-5" />} label="Schedule" />
-                <MobileTab active={activeTab === 'managerlog'} onClick={() => setActiveTab('managerlog')} icon={<BookOpen className="h-5 w-5" />} label="Log" />
-                {isSupplyStaff ? (
-                  <MobileTab active={activeTab === 'supplies'} onClick={() => setActiveTab('supplies')} icon={<Package className="h-5 w-5" />} label="Supplies" />
-                ) : (
-                  <MobileTab active={activeTab === 'quality'} onClick={() => setActiveTab('quality')} icon={<ClipboardCheck className="h-5 w-5" />} label="QC" />
+                {isModuleEnabled('scheduling') && (
+                  <MobileTab active={activeTab === 'scheduling'} onClick={() => setActiveTab('scheduling')} icon={<Calendar className="h-5 w-5" />} label="Schedule" />
                 )}
+                {isModuleEnabled('managerlog') && (
+                  <MobileTab active={activeTab === 'managerlog'} onClick={() => setActiveTab('managerlog')} icon={<BookOpen className="h-5 w-5" />} label="Log" />
+                )}
+                {isSupplyStaff && isModuleEnabled('supplies') ? (
+                  <MobileTab active={activeTab === 'supplies'} onClick={() => setActiveTab('supplies')} icon={<Package className="h-5 w-5" />} label="Supplies" />
+                ) : !isSupplyStaff && isModuleEnabled('quality') ? (
+                  <MobileTab active={activeTab === 'quality'} onClick={() => setActiveTab('quality')} icon={<ClipboardCheck className="h-5 w-5" />} label="QC" />
+                ) : null}
                 <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
               </>
           ) : (
             <>
               <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
-              <MobileTab active={activeTab === 'myschedule'} onClick={() => setActiveTab('myschedule')} icon={<CalendarDays className="h-5 w-5" />} label="Schedule" />
-              {isSupplyStaff ? (
-                <MobileTab active={activeTab === 'supplies'} onClick={() => setActiveTab('supplies')} icon={<Package className="h-5 w-5" />} label="Supplies" />
-              ) : (
-                <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
+              {isModuleEnabled('myschedule') && (
+                <MobileTab active={activeTab === 'myschedule'} onClick={() => setActiveTab('myschedule')} icon={<CalendarDays className="h-5 w-5" />} label="Schedule" />
               )}
-              <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
+              {isSupplyStaff && isModuleEnabled('supplies') ? (
+                <MobileTab active={activeTab === 'supplies'} onClick={() => setActiveTab('supplies')} icon={<Package className="h-5 w-5" />} label="Supplies" />
+              ) : !isSupplyStaff && isModuleEnabled('timeoff') ? (
+                <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
+              ) : null}
+              {isModuleEnabled('messages') && (
+                <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
+              )}
               <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
             </>
           )}

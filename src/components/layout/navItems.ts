@@ -8,10 +8,12 @@ export interface NavFlags {
   isManager: boolean;
   isCrmUser: boolean;
   canEstimate: boolean;
+  /** Company-wide module gate; defaults to everything enabled. */
+  isModuleEnabled?: (key: string) => boolean;
 }
 
-export const buildNavItems = ({ isManager, isCrmUser, canEstimate }: NavFlags): SidebarItem[] =>
-  isManager
+export const buildNavItems = ({ isManager, isCrmUser, canEstimate, isModuleEnabled }: NavFlags): SidebarItem[] => {
+  const items: SidebarItem[] = isManager
     ? [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
         { v: 'scheduling', label: 'Schedule',        icon: CalendarDays },
@@ -38,3 +40,6 @@ export const buildNavItems = ({ isManager, isCrmUser, canEstimate }: NavFlags): 
         ...(canEstimate ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'messages',   label: 'Messaging',       icon: MessageSquare },
       ];
+
+  return isModuleEnabled ? items.filter((i) => i.v === 'dashboard' || isModuleEnabled(i.v)) : items;
+};
