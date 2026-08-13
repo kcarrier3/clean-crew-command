@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Banknote, Plus, Camera } from 'lucide-react';
+import { Banknote, Plus, Camera, ScanLine, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { ScanCheckDialog } from './ScanCheckDialog';
+import { ReceiveCheckDialog } from './ReceiveCheckDialog';
+import { INTAKE_STATUS_CLASS, INTAKE_STATUS_LABEL } from '@/lib/billing/checkIntake';
 import { money } from '@/lib/billing/types';
 
 export const PaymentsTab = () => {
@@ -17,6 +19,9 @@ export const PaymentsTab = () => {
   const [open, setOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [savingDeposit, setSavingDeposit] = useState<string | null>(null);
+  const [intakes, setIntakes] = useState<any[]>([]);
+  const [intakeOpen, setIntakeOpen] = useState(false);
+  const [activeIntake, setActiveIntake] = useState<any | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -27,6 +32,13 @@ export const PaymentsTab = () => {
     if (error) toast({ title: 'Could not load payments', description: error.message, variant: 'destructive' });
     setPayments(data ?? []);
     setLoading(false);
+
+    const { data: intakeRows } = await db
+      .from('billing_check_intakes')
+      .select('*')
+      .eq('status', 'review_needed')
+      .order('received_date', { ascending: false });
+    setIntakes(intakeRows ?? []);
   };
 
   useEffect(() => { load(); }, []);
@@ -64,14 +76,49 @@ export const PaymentsTab = () => {
         </CardContent></Card>
       </div>
 
+      {!!intakes.length && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" /> Checks needing review ({intakes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {intakes.map(i => (
+              <button
+                key={i.id}
+                type="button"
+                onClick={() => { setActiveIntake(i); setIntakeOpen(true); }}
+                className="w-full text-left flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 hover:bg-accent"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{money(i.amount)}</span>
+                    {i.check_number && <span className="text-xs text-muted-foreground">#{i.check_number}</span>}
+                    <Badge className={INTAKE_STATUS_CLASS[i.status]}>{INTAKE_STATUS_LABEL[i.status]}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {i.payer_name ? `${i.payer_name} · ` : ''}Received {i.received_date}
+                  </p>
+                </div>
+                <span className="text-xs font-medium">Finish matching →</span>
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2"><Banknote className="h-4 w-4" /> Payments received</CardTitle>
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => { setActiveIntake(null); setIntakeOpen(true); }}>
+              <ScanLine className="h-4 w-4 mr-1" /> Receive check
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setScanOpen(true)}>
               <Camera className="h-4 w-4 mr-1" /> Scan check
             </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
               <Plus className="h-4 w-4 mr-1" /> Record check / payment
             </Button>
           </div>
@@ -129,6 +176,12 @@ export const PaymentsTab = () => {
 
       <RecordPaymentDialog open={open} onOpenChange={setOpen} invoice={null} onSaved={load} />
       <ScanCheckDialog open={scanOpen} onOpenChange={setScanOpen} onSaved={load} />
+      <ReceiveCheckDialog
+        open={intakeOpen}
+        onOpenChange={o => { setIntakeOpen(o); if (!o) setActiveIntake(null); }}
+        intake={activeIntake}
+        onSaved={load}
+      />
     </div>
   );
 };
