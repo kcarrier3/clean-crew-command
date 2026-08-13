@@ -339,7 +339,12 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
     setSaving(true);
     try {
       const draft = await buildDraft();
-      await applyIntake(draft);
+      await applyIntake({
+        ...draft,
+        confidence: decision?.confidence ?? draft.confidence,
+        auto_eligible: false,
+        blocked_reasons: decision?.reasons ?? [],
+      }, 'manually_applied');
       toast({
         title: 'Check applied',
         description: `${money(total)} posted to ${draft.proposed_allocations.filter(a => a.invoice_id && a.amount > 0).length} invoice(s).`,
@@ -353,10 +358,72 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
     }
   };
 
+  /**
+   * Happy path: extract, evaluate the confidence gate and post automatically when every
+   * condition passes. Anything uncertain drops into the review UI instead.
+   */
+  const runAutoFlow = async () => {
+    setStep('processing');
+    const parsed = await extract(checkImage, stubImage);
+    if (!parsed) {
+      setDecision({
+        eligible: false,
+        reasons: ['Automatic extraction is unavailable — enter and match the check manually.'],
+        confidence: {} as any,
+      });
+      setStep('review');
+      return;
+    }
+
+    const dupes = await findDuplicateChecks(parsed.checkNumber, parsed.amount);
+    setDuplicates(dupes);
+    const verdict = evaluateAutoPost({
+      amount: parsed.amount,
+      checkNumber: parsed.checkNumber,
+      payer: parsed.payer,
+      lines: parsed.lines,
+      extraction: parsed.extraction,
+      warnings: parsed.warnings,
+      duplicates: dupes,
+    });
+    setDecision(verdict);
+
+    if (!autoEnabled || !verdict.eligible) {
+      if (!autoEnabled) {
+        setDecision({ ...verdict, eligible: false, reasons: ['Automatic posting is turned off in Billing settings.', ...verdict.reasons] });
+      }
+      setStep('review');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const draft = await buildDraft({
+        ...parsed,
+        confidence: verdict.confidence,
+        autoEligible: true,
+        blockedReasons: [],
+      });
+      await applyIntake(draft, 'auto_applied');
+      setResult({
+        amount: parsed.amount,
+        count: draft.proposed_allocations.filter(a => a.invoice_id && a.amount > 0).length,
+        checkNumber: parsed.checkNumber,
+      });
+      setStep('done');
+      onSaved?.();
+    } catch (e: any) {
+      setDecision({ ...verdict, eligible: false, reasons: [`Automatic posting failed: ${e.message}`] });
+      setStep('review');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const goNext = async () => {
     if (step === 'check') { setStep('stub'); return; }
     if (step === 'stub') {
-      if ((checkImage || stubImage) && !Object.keys(extraction).length) await extract(checkImage, stubImage);
+      if ((checkImage || stubImage) && !Object.keys(extraction).length) { await runAutoFlow(); return; }
       setStep('review'); return;
     }
     if (step === 'review') { await checkDuplicates(); setStep('match'); return; }
