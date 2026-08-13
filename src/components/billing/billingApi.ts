@@ -108,6 +108,7 @@ export const recordPayment = async (payment: {
   deposit_date?: string | null;
   deposit_account_label?: string | null;
   notes?: string | null;
+  entry_source?: string;
 }, allocations: { invoice_id: string; amount: number }[]) => {
   const { data: userData } = await supabase.auth.getUser();
   const { data: row, error } = await db.from('billing_payments')

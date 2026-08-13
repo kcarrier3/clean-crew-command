@@ -141,6 +141,12 @@ export const PaymentsTab = () => {
                       <span className="font-medium">{money(p.amount)}</span>
                       <Badge variant="secondary" className="capitalize">{p.method}</Badge>
                       {p.reference_number && <span className="text-xs text-muted-foreground">#{p.reference_number}</span>}
+                      {p.entry_source === 'auto_scan' && (
+                        <Badge className="bg-green-100 text-green-800">Auto applied from scanned check</Badge>
+                      )}
+                      {p.entry_source === 'reviewed_scan' && (
+                        <Badge variant="outline">Reviewed scanned check</Badge>
+                      )}
                       {applied < Number(p.amount) && <Badge className="bg-amber-100 text-amber-900">Unapplied {money(Number(p.amount) - applied)}</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">

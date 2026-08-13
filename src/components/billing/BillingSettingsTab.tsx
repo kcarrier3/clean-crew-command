@@ -6,9 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Save, Settings2, Building2, RefreshCw } from 'lucide-react';
+import { Mail, Save, Settings2, Building2, RefreshCw, ScanLine } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
+import {
+  AUTO_CONFIDENCE_THRESHOLD, fetchAutoApplyEnabled, setAutoApplyEnabled,
+} from '@/lib/billing/checkIntake';
 import {
   EMAIL_TEMPLATE_VARIABLES, FUTURE_EMAIL_HOOKS, fetchEmailConfig, type EmailConfig,
 } from '@/lib/billing/emailService';
@@ -21,6 +24,7 @@ export const BillingSettingsTab = () => {
   const [companyId, setCompanyId] = useState('');
   const [saving, setSaving] = useState(false);
   const [emailConfig, setEmailConfig] = useState<EmailConfig | null>(null);
+  const [autoApply, setAutoApply] = useState(true);
 
   const load = async () => {
     const [{ data: t }, { data: c }] = await Promise.all([
@@ -32,6 +36,13 @@ export const BillingSettingsTab = () => {
   };
   useEffect(() => { load(); }, []);
   useEffect(() => { fetchEmailConfig(true).then(setEmailConfig); }, []);
+  useEffect(() => { fetchAutoApplyEnabled().then(setAutoApply).catch(() => setAutoApply(true)); }, []);
+
+  const toggleAutoApply = async (v: boolean) => {
+    setAutoApply(v);
+    try { await setAutoApplyEnabled(v); toast({ title: v ? 'Automatic check posting is on' : 'Automatic check posting is off' }); }
+    catch (e: any) { setAutoApply(!v); toast({ title: 'Could not save the setting', description: e.message, variant: 'destructive' }); }
+  };
 
   const loadPrefs = async (id: string) => {
     setCompanyId(id);
@@ -83,6 +94,25 @@ export const BillingSettingsTab = () => {
 
   return (
     <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2"><ScanLine className="h-4 w-4" /> Scanned check posting</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <label className="flex items-center justify-between rounded-md border p-2">
+            <span>Automatically apply high-confidence scanned checks</span>
+            <Switch checked={autoApply} onCheckedChange={toggleAutoApply} />
+          </label>
+          <p className="text-muted-foreground">
+            A check posts on its own only when the amount, check number and every stub invoice number are read with
+            at least {Math.round(AUTO_CONFIDENCE_THRESHOLD * 100)}% confidence, all invoices match open balances, the
+            payer agrees with the invoice customer and the applications reconcile to the check total to the exact cent.
+            Duplicates, overpayments, unapplied cash, ambiguous partials and any scan warning always go to
+            <strong> Checks needing review</strong> in Payments. The threshold is fixed to keep posting safe.
+          </p>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2"><Mail className="h-4 w-4" /> Email delivery</CardTitle>

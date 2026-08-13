@@ -7,14 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Camera, Upload, Loader2, AlertTriangle, Check, Trash2, Plus, Search, ShieldAlert,
+  Camera, Upload, Loader2, AlertTriangle, Check, Trash2, Plus, Search, ShieldAlert, Sparkles,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { money } from '@/lib/billing/types';
 import {
-  applyIntake, fetchOpenInvoices, findDuplicateChecks, imageToDataUrl, matchStubInvoices,
-  saveIntake, uploadCheckImage, type IntakeDraft, type MatchLine, type OpenInvoice,
+  applyIntake, evaluateAutoPost, fetchAutoApplyEnabled, fetchOpenInvoices, findDuplicateChecks,
+  imageToDataUrl, matchStubInvoices, saveIntake, uploadCheckImage,
+  type AutoPostDecision, type IntakeDraft, type MatchLine, type OpenInvoice,
 } from '@/lib/billing/checkIntake';
 
 interface Props {
@@ -25,7 +26,7 @@ interface Props {
   onSaved?: () => void;
 }
 
-type Step = 'check' | 'stub' | 'review' | 'match' | 'confirm';
+type Step = 'check' | 'stub' | 'processing' | 'review' | 'match' | 'confirm' | 'done';
 const STEPS: { key: Step; label: string }[] = [
   { key: 'check', label: 'Check photo' },
   { key: 'stub', label: 'Stub photo' },
@@ -104,6 +105,9 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
   const [dupAcknowledged, setDupAcknowledged] = useState(false);
   const [exceptionAcknowledged, setExceptionAcknowledged] = useState(false);
   const [intakeId, setIntakeId] = useState<string | null>(null);
+  const [autoEnabled, setAutoEnabled] = useState(true);
+  const [decision, setDecision] = useState<AutoPostDecision | null>(null);
+  const [result, setResult] = useState<{ amount: number; count: number; checkNumber: string } | null>(null);
 
   const reset = () => {
     setStep('check'); setCheckImage(null); setStubImage(null);
@@ -111,13 +115,14 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
     setDepositDate(today()); setDepositAccount(''); setAmount(''); setNotes('');
     setWarnings([]); setExtraction({}); setLines([]); setSearch('');
     setDuplicates([]); setDupAcknowledged(false); setExceptionAcknowledged(false);
-    setIntakeId(null);
+    setIntakeId(null); setDecision(null); setResult(null);
   };
 
   useEffect(() => {
     if (!open) return;
     reset();
     fetchOpenInvoices().then(setInvoices).catch(() => setInvoices([]));
+    fetchAutoApplyEnabled().then(setAutoEnabled).catch(() => setAutoEnabled(true));
     if (intake) {
       setIntakeId(intake.id);
       setPayer(intake.payer_name ?? '');
@@ -130,6 +135,9 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
       setNotes(intake.notes ?? '');
       setWarnings(Array.isArray(intake.warnings) ? intake.warnings : []);
       setExtraction(intake.extraction ?? {});
+      if (Array.isArray(intake.blocked_reasons) && intake.blocked_reasons.length) {
+        setDecision({ eligible: false, reasons: intake.blocked_reasons, confidence: (intake.confidence ?? {}) as any });
+      }
       setStep('review');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,8 +158,9 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
 
   const close = (o: boolean) => { if (!o) reset(); onOpenChange(o); };
 
+  /** Runs extraction and returns the parsed values so the auto-post gate can use them immediately. */
   const extract = async (nextCheck: string | null, nextStub: string | null) => {
-    if (!nextCheck && !nextStub) return;
+    if (!nextCheck && !nextStub) return null;
     setExtracting(true);
     try {
       const { data, error } = await supabase.functions.invoke('scan-check-intake', {
@@ -162,20 +171,31 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
       const res = data as any;
 
       setExtraction(res);
-      setWarnings(Array.isArray(res.warnings) ? res.warnings : []);
-      if (res.check?.payer_name) setPayer(res.check.payer_name);
-      else if (res.stub?.payer_name) setPayer(res.stub.payer_name);
+      const nextWarnings: string[] = Array.isArray(res.warnings) ? res.warnings : [];
+      setWarnings(nextWarnings);
+      const nextPayer = res.check?.payer_name || res.stub?.payer_name || '';
+      if (nextPayer) setPayer(nextPayer);
       if (res.check?.check_number) setCheckNumber(res.check.check_number);
       if (res.check?.check_date) setCheckDate(res.check.check_date);
       if (res.check?.amount) setAmount(res.check.amount);
 
       const open = invoices.length ? invoices : await fetchOpenInvoices();
       if (!invoices.length) setInvoices(open);
-      if (res.stub?.invoices?.length) setLines(matchStubInvoices(res.stub.invoices, open));
-      toast({ title: 'Images read', description: 'Check everything below before applying.' });
+      const nextLines = res.stub?.invoices?.length ? matchStubInvoices(res.stub.invoices, open) : [];
+      if (nextLines.length) setLines(nextLines);
+      return {
+        extraction: res,
+        warnings: nextWarnings,
+        payer: nextPayer,
+        checkNumber: String(res.check?.check_number ?? ''),
+        amount: round2(Number(res.check?.amount ?? 0)),
+        lines: nextLines,
+      };
     } catch (e: any) {
-      setWarnings(w => [...w, e.message || 'Automatic extraction failed — enter the details manually.']);
+      const msg = e.message || 'Automatic extraction failed — enter the details manually.';
+      setWarnings(w => [...w, msg]);
       toast({ title: 'Automatic extraction unavailable', description: e.message, variant: 'destructive' });
+      return null;
     } finally {
       setExtracting(false);
     }
@@ -229,7 +249,19 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
     return dupes;
   };
 
-  const buildDraft = async (): Promise<IntakeDraft> => {
+  const buildDraft = async (override?: Partial<{
+    payer: string; checkNumber: string; amount: number; lines: MatchLine[];
+    extraction: Record<string, unknown>; warnings: string[];
+    confidence: Record<string, unknown>; autoEligible: boolean; blockedReasons: string[];
+  }>): Promise<IntakeDraft> => {
+    const d = {
+      payer: override?.payer ?? payer,
+      checkNumber: override?.checkNumber ?? checkNumber,
+      amount: override?.amount ?? total,
+      lines: override?.lines ?? lines,
+      extraction: override?.extraction ?? extraction,
+      warnings: override?.warnings ?? warnings,
+    };
     const id = intakeId ?? crypto.randomUUID();
     if (!intakeId) setIntakeId(id);
     let checkPath = intake?.check_image_path ?? null;
@@ -238,24 +270,27 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
     if (stubImage) stubPath = await uploadCheckImage(id, 'stub', stubImage);
     return {
       id,
-      payer_name: payer.trim(),
-      crm_company_id: lines.find(l => l.invoice?.crm_company_id)?.invoice?.crm_company_id ?? null,
-      check_number: checkNumber.trim(),
+      payer_name: d.payer.trim(),
+      crm_company_id: d.lines.find(l => l.invoice?.crm_company_id)?.invoice?.crm_company_id ?? null,
+      check_number: d.checkNumber.trim(),
       check_date: checkDate || null,
       received_date: receivedDate || today(),
       deposit_date: depositDate || null,
       deposit_account_label: depositAccount.trim() || null,
-      amount: total,
+      amount: d.amount,
       check_image_path: checkPath,
       stub_image_path: stubPath,
-      extraction,
-      warnings,
-      proposed_allocations: lines.map(l => ({
+      extraction: d.extraction,
+      warnings: d.warnings,
+      proposed_allocations: d.lines.map(l => ({
         invoice_id: l.invoice?.id ?? null,
         invoice_number: l.invoice?.invoice_number ?? l.raw,
         amount: Number(l.amount || 0),
       })),
       notes: notes.trim() || null,
+      confidence: override?.confidence,
+      auto_eligible: override?.autoEligible,
+      blocked_reasons: override?.blockedReasons,
     };
   };
 
@@ -263,7 +298,11 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
   const saveForLater = async () => {
     setSaving(true);
     try {
-      const draft = await buildDraft();
+      const draft = await buildDraft({
+        confidence: decision?.confidence,
+        autoEligible: false,
+        blockedReasons: decision?.reasons ?? [],
+      });
       const row = await saveIntake(draft, 'review_needed');
       setIntakeId(row.id);
       toast({ title: 'Saved for review', description: 'Finish matching it later from Payments.' });
@@ -304,7 +343,12 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
     setSaving(true);
     try {
       const draft = await buildDraft();
-      await applyIntake(draft);
+      await applyIntake({
+        ...draft,
+        confidence: decision?.confidence ?? draft.confidence,
+        auto_eligible: false,
+        blocked_reasons: decision?.reasons ?? [],
+      }, 'manually_applied');
       toast({
         title: 'Check applied',
         description: `${money(total)} posted to ${draft.proposed_allocations.filter(a => a.invoice_id && a.amount > 0).length} invoice(s).`,
@@ -318,10 +362,72 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
     }
   };
 
+  /**
+   * Happy path: extract, evaluate the confidence gate and post automatically when every
+   * condition passes. Anything uncertain drops into the review UI instead.
+   */
+  const runAutoFlow = async () => {
+    setStep('processing');
+    const parsed = await extract(checkImage, stubImage);
+    if (!parsed) {
+      setDecision({
+        eligible: false,
+        reasons: ['Automatic extraction is unavailable — enter and match the check manually.'],
+        confidence: {} as any,
+      });
+      setStep('review');
+      return;
+    }
+
+    const dupes = await findDuplicateChecks(parsed.checkNumber, parsed.amount);
+    setDuplicates(dupes);
+    const verdict = evaluateAutoPost({
+      amount: parsed.amount,
+      checkNumber: parsed.checkNumber,
+      payer: parsed.payer,
+      lines: parsed.lines,
+      extraction: parsed.extraction,
+      warnings: parsed.warnings,
+      duplicates: dupes,
+    });
+    setDecision(verdict);
+
+    if (!autoEnabled || !verdict.eligible) {
+      if (!autoEnabled) {
+        setDecision({ ...verdict, eligible: false, reasons: ['Automatic posting is turned off in Billing settings.', ...verdict.reasons] });
+      }
+      setStep('review');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const draft = await buildDraft({
+        ...parsed,
+        confidence: verdict.confidence,
+        autoEligible: true,
+        blockedReasons: [],
+      });
+      await applyIntake(draft, 'auto_applied');
+      setResult({
+        amount: parsed.amount,
+        count: draft.proposed_allocations.filter(a => a.invoice_id && a.amount > 0).length,
+        checkNumber: parsed.checkNumber,
+      });
+      setStep('done');
+      onSaved?.();
+    } catch (e: any) {
+      setDecision({ ...verdict, eligible: false, reasons: [`Automatic posting failed: ${e.message}`] });
+      setStep('review');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const goNext = async () => {
     if (step === 'check') { setStep('stub'); return; }
     if (step === 'stub') {
-      if ((checkImage || stubImage) && !Object.keys(extraction).length) await extract(checkImage, stubImage);
+      if ((checkImage || stubImage) && !Object.keys(extraction).length) { await runAutoFlow(); return; }
       setStep('review'); return;
     }
     if (step === 'review') { await checkDuplicates(); setStep('match'); return; }
@@ -341,6 +447,7 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
           <DialogTitle>Receive a check</DialogTitle>
         </DialogHeader>
 
+        {step !== 'processing' && step !== 'done' && (
         <div className="flex flex-wrap gap-1.5">
           {STEPS.map((s, i) => (
             <Badge
@@ -352,11 +459,35 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
             </Badge>
           ))}
         </div>
+        )}
 
-        {extracting && (
+        {extracting && step !== 'processing' && (
           <p className="text-sm text-muted-foreground flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" /> Reading the images…
           </p>
+        )}
+
+        {step === 'processing' && (
+          <div className="py-10 text-center space-y-2">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+            <p className="font-medium">Reading the check and matching invoices…</p>
+            <p className="text-sm text-muted-foreground">
+              High-confidence checks post automatically. Anything uncertain opens for review.
+            </p>
+          </div>
+        )}
+
+        {step === 'done' && result && (
+          <div className="py-8 text-center space-y-2">
+            <div className="mx-auto h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+              <Check className="h-5 w-5 text-green-700" />
+            </div>
+            <p className="font-medium">
+              Check {result.checkNumber ? `#${result.checkNumber} ` : ''}automatically applied to {result.count} invoice(s).
+            </p>
+            <p className="text-sm text-muted-foreground">{money(result.amount)} posted · deposit dated {depositDate || receivedDate}</p>
+            <Badge variant="secondary" className="gap-1"><Sparkles className="h-3 w-3" /> Auto applied from scanned check</Badge>
+          </div>
         )}
 
         {step === 'check' && (
@@ -377,6 +508,17 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
 
         {step === 'review' && (
           <div className="space-y-4">
+            {decision && !decision.eligible && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="space-y-1">
+                  <p className="text-sm font-medium">Review needed — this check was not posted automatically.</p>
+                  <ul className="list-disc pl-4 space-y-0.5 text-sm">
+                    {decision.reasons.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             {!!warnings.length && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
@@ -572,6 +714,12 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
         )}
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
+          {step === 'done' ? (
+            <Button onClick={() => close(false)}>Done</Button>
+          ) : step === 'processing' ? (
+            <Button variant="ghost" disabled>Working…</Button>
+          ) : (
+          <>
           <Button variant="ghost" onClick={() => close(false)} disabled={saving}>Cancel</Button>
           <Button variant="outline" onClick={saveForLater} disabled={saving || extracting}>
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Save for review
@@ -583,6 +731,8 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
             <Button onClick={apply} disabled={saving || !total}>
               {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Apply check payment
             </Button>
+          )}
+          </>
           )}
         </DialogFooter>
       </DialogContent>
