@@ -271,6 +271,9 @@ export async function saveIntake(draft: IntakeDraft, status: IntakeStatus = 'rev
     warnings: draft.warnings,
     proposed_allocations: draft.proposed_allocations,
     notes: draft.notes,
+    confidence: draft.confidence ?? {},
+    auto_eligible: !!draft.auto_eligible,
+    blocked_reasons: draft.blocked_reasons ?? [],
   };
 
   if (draft.id) {
@@ -289,13 +292,17 @@ export async function saveIntake(draft: IntakeDraft, status: IntakeStatus = 'rev
   return data;
 }
 
-/** Posts the reviewed check: one payment plus allocations, then marks the intake applied. */
-export async function applyIntake(draft: IntakeDraft) {
+/**
+ * Posts a check: one payment plus allocations, then marks the intake applied.
+ * `mode` records whether a person reviewed it or the confidence gate posted it.
+ */
+export async function applyIntake(draft: IntakeDraft, mode: ApplyMode = 'manually_applied') {
   const intake = await saveIntake(draft, 'review_needed');
   const allocations = draft.proposed_allocations
     .filter(a => a.invoice_id && a.amount > 0)
     .map(a => ({ invoice_id: a.invoice_id as string, amount: a.amount }));
 
+  const auto = mode === 'auto_applied';
   const payment = await recordPayment({
     crm_company_id: draft.crm_company_id,
     payer_name: draft.payer_name || null,
@@ -305,20 +312,31 @@ export async function applyIntake(draft: IntakeDraft) {
     reference_number: draft.check_number || null,
     deposit_date: draft.deposit_date,
     deposit_account_label: draft.deposit_account_label,
-    notes: draft.notes ?? 'Received through check intake',
+    entry_source: auto ? 'auto_scan' : 'reviewed_scan',
+    notes: draft.notes ?? (auto
+      ? 'Auto applied from scanned check'
+      : 'Applied from scanned check after review'),
   }, allocations);
 
   const { data: userData } = await supabase.auth.getUser();
   const { error } = await db.from('billing_check_intakes').update({
     status: 'applied',
+    apply_mode: mode,
     payment_id: payment.id,
     processed_by: userData?.user?.id ?? null,
     processed_at: new Date().toISOString(),
   }).eq('id', intake.id);
   if (error) throw error;
 
-  await logIntakeEvent(intake.id, 'applied', {
-    payment_id: payment.id, amount: draft.amount, allocations: allocations.length,
+  await logIntakeEvent(intake.id, auto ? 'auto_applied' : 'manually_applied', {
+    payment_id: payment.id,
+    amount: draft.amount,
+    allocations: allocations.length,
+    confidence: draft.confidence ?? {},
+    warnings: draft.warnings,
+    source: auto ? 'automated_confidence_gate' : 'user_review',
+    check_image_path: draft.check_image_path,
+    stub_image_path: draft.stub_image_path,
   });
   return { intake, payment };
 }
