@@ -2,22 +2,18 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Loader2, Mail, Send, Ban, History, CreditCard } from 'lucide-react';
+import { Download, Mail, Send, Ban, History, CreditCard, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
+import { SendInvoiceDialog } from './SendInvoiceDialog';
 import { saveInvoicePdf } from '@/lib/billing/invoicePdf';
 import {
+  EMAIL_STATUS_CLASS, EMAIL_STATUS_LABEL,
   INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL, money, type Invoice, type InvoiceItem,
 } from '@/lib/billing/types';
-import {
-  isEmailConfigured, renderTemplate, sendInvoiceEmail, EMAIL_TEMPLATE_VARIABLES,
-} from '@/lib/billing/emailService';
 import { businessDays, calendarDays } from '@/lib/billing/kpi';
 
 interface Props {
@@ -36,13 +32,7 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
   const [projectName, setProjectName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
-  const [to, setTo] = useState('');
-  const [cc, setCc] = useState('');
-  const [sending, setSending] = useState(false);
-
-  const emailReady = isEmailConfigured();
+  const [sendOpen, setSendOpen] = useState(false);
 
   const load = async () => {
     if (!invoiceId) return;
@@ -66,24 +56,6 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
       siteName = site?.name ?? null;
     }
     setProjectName(siteName);
-
-    if (inv) {
-      const { data: tpl } = await db.from('billing_email_templates')
-        .select('*').eq('key', 'invoice_default').maybeSingle();
-      const vars = {
-        customer_name: inv.billing_contact_name || inv.customer_name || 'there',
-        invoice_number: inv.invoice_number,
-        project_name: siteName || inv.customer_name || '',
-        amount: money(inv.total),
-        due_date: inv.due_date ?? '',
-        po_number: inv.po_number ?? '',
-        company_name: 'Summit Facilities Group',
-        company_contact: 'Summit Facilities Group — Billing',
-      };
-      setSubject(renderTemplate(tpl?.subject ?? 'Invoice {{invoice_number}}', vars));
-      setBody(renderTemplate(tpl?.body ?? '', vars));
-      setTo(inv.billing_email ?? '');
-    }
     setLoading(false);
   };
 
@@ -138,24 +110,6 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
       .update({ status: 'ready', invoice_id: null, generated_at: null })
       .eq('invoice_id', invoice.id);
     toast({ title: 'Invoice voided', description: 'Its billable items returned to the billing queue.' });
-    load(); onChanged?.();
-  };
-
-  const doSend = async () => {
-    if (!invoice) return;
-    setSending(true);
-    const res = await sendInvoiceEmail({
-      invoice_id: invoice.id,
-      crm_lead_id: invoice.crm_lead_id,
-      template_key: 'invoice_default',
-      to: to.split(',').map(s => s.trim()).filter(Boolean),
-      cc: cc.split(',').map(s => s.trim()).filter(Boolean),
-      subject, body,
-    });
-    setSending(false);
-    toast(res.ok
-      ? { title: 'Invoice emailed' }
-      : { title: 'Email not sent', description: res.error, variant: 'destructive' });
     load(); onChanged?.();
   };
 
