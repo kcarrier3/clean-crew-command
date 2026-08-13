@@ -6,6 +6,18 @@ export const CHECK_BUCKET = 'check-images';
 
 export type IntakeStatus = 'review_needed' | 'applied' | 'voided';
 
+/** How an intake was posted. */
+export type ApplyMode = 'auto_applied' | 'manually_applied';
+
+/**
+ * Strict, non-adjustable confidence floor for automatic posting.
+ * Anything below this routes to review — accounting safety is not a tunable.
+ */
+export const AUTO_CONFIDENCE_THRESHOLD = 0.9;
+
+/** Global billing setting key: automatically apply high-confidence scanned checks. */
+export const AUTO_APPLY_SETTING_KEY = 'billing_auto_apply_checks';
+
 export const INTAKE_STATUS_LABEL: Record<string, string> = {
   review_needed: 'Review needed',
   applied: 'Applied',
@@ -17,6 +29,26 @@ export const INTAKE_STATUS_CLASS: Record<string, string> = {
   applied: 'bg-green-100 text-green-800',
   voided: 'bg-muted text-muted-foreground line-through',
 };
+
+/** Reads the "auto apply high-confidence checks" setting (defaults to ON). */
+export async function fetchAutoApplyEnabled(): Promise<boolean> {
+  const { data } = await db.from('app_settings')
+    .select('value').eq('key', AUTO_APPLY_SETTING_KEY).maybeSingle();
+  if (!data) return true;
+  return String((data as any).value) !== 'false';
+}
+
+export async function setAutoApplyEnabled(enabled: boolean) {
+  const { data: userData } = await supabase.auth.getUser();
+  const { error } = await db.from('app_settings').upsert({
+    key: AUTO_APPLY_SETTING_KEY,
+    value: enabled ? 'true' : 'false',
+    description: 'Automatically apply high-confidence scanned checks without manual review',
+    updated_by: userData?.user?.id ?? null,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'key' });
+  if (error) throw error;
+}
 
 export interface OpenInvoice {
   id: string;
