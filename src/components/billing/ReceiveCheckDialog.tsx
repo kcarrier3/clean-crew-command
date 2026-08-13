@@ -504,6 +504,17 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
 
         {step === 'review' && (
           <div className="space-y-4">
+            {decision && !decision.eligible && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="space-y-1">
+                  <p className="text-sm font-medium">Review needed — this check was not posted automatically.</p>
+                  <ul className="list-disc pl-4 space-y-0.5 text-sm">
+                    {decision.reasons.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
             {!!warnings.length && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
