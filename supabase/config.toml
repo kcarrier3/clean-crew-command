@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.scan-business-card]
 verify_jwt = true
+
+[functions.send-invoice-email]
+verify_jwt = true
+
+[functions.resend-webhook]
+verify_jwt = false
