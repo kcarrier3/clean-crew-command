@@ -176,6 +176,12 @@ export const PaymentsTab = () => {
 
       <RecordPaymentDialog open={open} onOpenChange={setOpen} invoice={null} onSaved={load} />
       <ScanCheckDialog open={scanOpen} onOpenChange={setScanOpen} onSaved={load} />
+      <ReceiveCheckDialog
+        open={intakeOpen}
+        onOpenChange={o => { setIntakeOpen(o); if (!o) setActiveIntake(null); }}
+        intake={activeIntake}
+        onSaved={load}
+      />
     </div>
   );
 };
