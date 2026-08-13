@@ -529,25 +529,33 @@ const Index = () => {
           {isManager() ? (
               <>
                 <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
-                <MobileTab active={activeTab === 'scheduling'} onClick={() => setActiveTab('scheduling')} icon={<Calendar className="h-5 w-5" />} label="Schedule" />
-                <MobileTab active={activeTab === 'managerlog'} onClick={() => setActiveTab('managerlog')} icon={<BookOpen className="h-5 w-5" />} label="Log" />
-                {isSupplyStaff ? (
-                  <MobileTab active={activeTab === 'supplies'} onClick={() => setActiveTab('supplies')} icon={<Package className="h-5 w-5" />} label="Supplies" />
-                ) : (
-                  <MobileTab active={activeTab === 'quality'} onClick={() => setActiveTab('quality')} icon={<ClipboardCheck className="h-5 w-5" />} label="QC" />
+                {isModuleEnabled('scheduling') && (
+                  <MobileTab active={activeTab === 'scheduling'} onClick={() => setActiveTab('scheduling')} icon={<Calendar className="h-5 w-5" />} label="Schedule" />
                 )}
+                {isModuleEnabled('managerlog') && (
+                  <MobileTab active={activeTab === 'managerlog'} onClick={() => setActiveTab('managerlog')} icon={<BookOpen className="h-5 w-5" />} label="Log" />
+                )}
+                {isSupplyStaff && isModuleEnabled('supplies') ? (
+                  <MobileTab active={activeTab === 'supplies'} onClick={() => setActiveTab('supplies')} icon={<Package className="h-5 w-5" />} label="Supplies" />
+                ) : !isSupplyStaff && isModuleEnabled('quality') ? (
+                  <MobileTab active={activeTab === 'quality'} onClick={() => setActiveTab('quality')} icon={<ClipboardCheck className="h-5 w-5" />} label="QC" />
+                ) : null}
                 <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
               </>
           ) : (
             <>
               <MobileTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="h-5 w-5" />} label="Dashboard" />
-              <MobileTab active={activeTab === 'myschedule'} onClick={() => setActiveTab('myschedule')} icon={<CalendarDays className="h-5 w-5" />} label="Schedule" />
-              {isSupplyStaff ? (
-                <MobileTab active={activeTab === 'supplies'} onClick={() => setActiveTab('supplies')} icon={<Package className="h-5 w-5" />} label="Supplies" />
-              ) : (
-                <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
+              {isModuleEnabled('myschedule') && (
+                <MobileTab active={activeTab === 'myschedule'} onClick={() => setActiveTab('myschedule')} icon={<CalendarDays className="h-5 w-5" />} label="Schedule" />
               )}
-              <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
+              {isSupplyStaff && isModuleEnabled('supplies') ? (
+                <MobileTab active={activeTab === 'supplies'} onClick={() => setActiveTab('supplies')} icon={<Package className="h-5 w-5" />} label="Supplies" />
+              ) : !isSupplyStaff && isModuleEnabled('timeoff') ? (
+                <MobileTab active={activeTab === 'timeoff'} onClick={() => setActiveTab('timeoff')} icon={<PlaneTakeoff className="h-5 w-5" />} label="Time Off" />
+              ) : null}
+              {isModuleEnabled('messages') && (
+                <MobileTab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<MessageSquare className="h-5 w-5" />} label="Messages" />
+              )}
               <MobileTab active={moreMenuOpen} onClick={() => setMoreMenuOpen(true)} icon={<Menu className="h-5 w-5" />} label="More" />
             </>
           )}
