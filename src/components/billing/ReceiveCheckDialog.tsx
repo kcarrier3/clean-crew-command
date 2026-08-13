@@ -231,12 +231,13 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
 
   const buildDraft = async (): Promise<IntakeDraft> => {
     const id = intakeId ?? crypto.randomUUID();
+    if (!intakeId) setIntakeId(id);
     let checkPath = intake?.check_image_path ?? null;
     let stubPath = intake?.stub_image_path ?? null;
     if (checkImage) checkPath = await uploadCheckImage(id, 'check', checkImage);
     if (stubImage) stubPath = await uploadCheckImage(id, 'stub', stubImage);
     return {
-      id: intakeId ?? undefined,
+      id,
       payer_name: payer.trim(),
       crm_company_id: lines.find(l => l.invoice?.crm_company_id)?.invoice?.crm_company_id ?? null,
       check_number: checkNumber.trim(),
