@@ -26,6 +26,26 @@ export const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
 
 export type EmailStatus = 'draft' | 'queued' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'opened';
 
+export const EMAIL_STATUS_LABEL: Record<string, string> = {
+  draft: 'Draft / not sent',
+  queued: 'Sending',
+  sent: 'Sent',
+  delivered: 'Delivered',
+  opened: 'Opened',
+  failed: 'Failed',
+  bounced: 'Bounced',
+};
+
+export const EMAIL_STATUS_CLASS: Record<string, string> = {
+  draft: 'bg-muted text-muted-foreground',
+  queued: 'bg-blue-100 text-blue-800',
+  sent: 'bg-indigo-100 text-indigo-800',
+  delivered: 'bg-green-100 text-green-800',
+  opened: 'bg-green-100 text-green-800',
+  failed: 'bg-red-100 text-red-800',
+  bounced: 'bg-red-100 text-red-800',
+};
+
 export interface BillingEvent {
   id: string;
   job_site_id: string | null;
