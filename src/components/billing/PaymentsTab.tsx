@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Banknote, Plus, Camera } from 'lucide-react';
+import { Banknote, Plus, Camera, ScanLine, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { ScanCheckDialog } from './ScanCheckDialog';
+import { ReceiveCheckDialog } from './ReceiveCheckDialog';
+import { INTAKE_STATUS_CLASS, INTAKE_STATUS_LABEL } from '@/lib/billing/checkIntake';
 import { money } from '@/lib/billing/types';
 
 export const PaymentsTab = () => {
@@ -17,6 +19,9 @@ export const PaymentsTab = () => {
   const [open, setOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [savingDeposit, setSavingDeposit] = useState<string | null>(null);
+  const [intakes, setIntakes] = useState<any[]>([]);
+  const [intakeOpen, setIntakeOpen] = useState(false);
+  const [activeIntake, setActiveIntake] = useState<any | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -27,6 +32,13 @@ export const PaymentsTab = () => {
     if (error) toast({ title: 'Could not load payments', description: error.message, variant: 'destructive' });
     setPayments(data ?? []);
     setLoading(false);
+
+    const { data: intakeRows } = await db
+      .from('billing_check_intakes')
+      .select('*')
+      .eq('status', 'review_needed')
+      .order('received_date', { ascending: false });
+    setIntakes(intakeRows ?? []);
   };
 
   useEffect(() => { load(); }, []);
@@ -68,10 +80,13 @@ export const PaymentsTab = () => {
         <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2"><Banknote className="h-4 w-4" /> Payments received</CardTitle>
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => { setActiveIntake(null); setIntakeOpen(true); }}>
+              <ScanLine className="h-4 w-4 mr-1" /> Receive check
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setScanOpen(true)}>
               <Camera className="h-4 w-4 mr-1" /> Scan check
             </Button>
-            <Button size="sm" onClick={() => setOpen(true)}>
+            <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
               <Plus className="h-4 w-4 mr-1" /> Record check / payment
             </Button>
           </div>
