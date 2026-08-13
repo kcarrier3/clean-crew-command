@@ -45,11 +45,8 @@ export default function OpportunityDetail() {
 
   useEffect(() => { load(); }, [id]);
 
-  // Browser back stays natural; a deep-linked/refreshed page falls back to the CRM.
-  const goBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate('/');
-  };
+  // Always return to the Waypoint Opportunities list.
+  const goBack = () => navigate('/?tab=crm&crmTab=leads');
 
   return (
     <div className="min-h-screen bg-background">
