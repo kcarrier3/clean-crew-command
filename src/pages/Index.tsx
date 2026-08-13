@@ -171,7 +171,7 @@ const Index = () => {
   // Single source of truth for navigation. The desktop sidebar and the mobile
   // "More" menu are both built from this list so phone users get every area
   // they have on the computer browser.
-  const navItems: SidebarItem[] = isManager()
+  const allNavItems: SidebarItem[] = isManager()
     ? [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
         { v: 'scheduling', label: 'Schedule',        icon: CalendarDays },
@@ -199,18 +199,23 @@ const Index = () => {
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
       ];
 
+  const navItems: SidebarItem[] = allNavItems.filter(
+    (i) => i.v === 'dashboard' || isModuleEnabled(i.v),
+  );
+
   // Extra destinations that only make sense outside the sidebar.
   const extraNavItems: SidebarItem[] = [
     ...(!isManager() ? [{ v: 'onboarding', label: 'Onboarding & Docs', icon: FileText }] : []),
     { v: 'contacts', label: 'Contacts', icon: Contact },
-  ];
+  ].filter((i) => isModuleEnabled(i.v));
 
   const sidebarItems = navItems;
 
   // Keys shown in the mobile bottom bar — everything else lands in the menu.
-  const bottomBarKeys = isManager()
+  const bottomBarKeys = (isManager()
     ? ['dashboard', 'scheduling', 'managerlog', isSupplyStaff ? 'supplies' : 'quality']
-    : ['dashboard', 'myschedule', isSupplyStaff ? 'supplies' : 'timeoff', 'messages'];
+    : ['dashboard', 'myschedule', isSupplyStaff ? 'supplies' : 'timeoff', 'messages']
+  ).filter((k) => k === 'dashboard' || isModuleEnabled(k));
 
   const mobileMenuItems = [...navItems, ...extraNavItems].filter(
     (item) => !bottomBarKeys.includes(item.v),
