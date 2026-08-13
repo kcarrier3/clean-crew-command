@@ -93,6 +93,13 @@ const Index = () => {
     }
   }, [searchParams, setSearchParams]);
 
+  // If a module gets turned off company-wide, fall back to the dashboard.
+  useEffect(() => {
+    if (activeTab !== 'dashboard' && !isModuleEnabled(activeTab)) {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, isModuleEnabled]);
+
   // Require new hires to complete their profile before using the app
   useEffect(() => {
     if (loading || !user) return;
