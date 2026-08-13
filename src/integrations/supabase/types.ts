@@ -303,6 +303,131 @@ export type Database = {
           },
         ]
       }
+      billing_check_intake_events: {
+        Row: {
+          actor: string | null
+          created_at: string
+          detail: Json
+          event: string
+          id: string
+          intake_id: string
+        }
+        Insert: {
+          actor?: string | null
+          created_at?: string
+          detail?: Json
+          event: string
+          id?: string
+          intake_id: string
+        }
+        Update: {
+          actor?: string | null
+          created_at?: string
+          detail?: Json
+          event?: string
+          id?: string
+          intake_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_check_intake_events_intake_id_fkey"
+            columns: ["intake_id"]
+            isOneToOne: false
+            referencedRelation: "billing_check_intakes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_check_intakes: {
+        Row: {
+          amount: number
+          check_date: string | null
+          check_image_path: string | null
+          check_number: string | null
+          created_at: string
+          created_by: string | null
+          crm_company_id: string | null
+          deposit_account_label: string | null
+          deposit_date: string | null
+          extraction: Json
+          id: string
+          notes: string | null
+          payer_name: string | null
+          payment_id: string | null
+          processed_at: string | null
+          processed_by: string | null
+          proposed_allocations: Json
+          received_date: string
+          status: string
+          stub_image_path: string | null
+          updated_at: string
+          warnings: Json
+        }
+        Insert: {
+          amount?: number
+          check_date?: string | null
+          check_image_path?: string | null
+          check_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_company_id?: string | null
+          deposit_account_label?: string | null
+          deposit_date?: string | null
+          extraction?: Json
+          id?: string
+          notes?: string | null
+          payer_name?: string | null
+          payment_id?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          proposed_allocations?: Json
+          received_date?: string
+          status?: string
+          stub_image_path?: string | null
+          updated_at?: string
+          warnings?: Json
+        }
+        Update: {
+          amount?: number
+          check_date?: string | null
+          check_image_path?: string | null
+          check_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_company_id?: string | null
+          deposit_account_label?: string | null
+          deposit_date?: string | null
+          extraction?: Json
+          id?: string
+          notes?: string | null
+          payer_name?: string | null
+          payment_id?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          proposed_allocations?: Json
+          received_date?: string
+          status?: string
+          stub_image_path?: string | null
+          updated_at?: string
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_check_intakes_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_check_intakes_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "billing_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_deposit_batches: {
         Row: {
           bank_account_label: string | null
