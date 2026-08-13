@@ -158,8 +158,9 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
 
   const close = (o: boolean) => { if (!o) reset(); onOpenChange(o); };
 
+  /** Runs extraction and returns the parsed values so the auto-post gate can use them immediately. */
   const extract = async (nextCheck: string | null, nextStub: string | null) => {
-    if (!nextCheck && !nextStub) return;
+    if (!nextCheck && !nextStub) return null;
     setExtracting(true);
     try {
       const { data, error } = await supabase.functions.invoke('scan-check-intake', {
@@ -170,20 +171,31 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
       const res = data as any;
 
       setExtraction(res);
-      setWarnings(Array.isArray(res.warnings) ? res.warnings : []);
-      if (res.check?.payer_name) setPayer(res.check.payer_name);
-      else if (res.stub?.payer_name) setPayer(res.stub.payer_name);
+      const nextWarnings: string[] = Array.isArray(res.warnings) ? res.warnings : [];
+      setWarnings(nextWarnings);
+      const nextPayer = res.check?.payer_name || res.stub?.payer_name || '';
+      if (nextPayer) setPayer(nextPayer);
       if (res.check?.check_number) setCheckNumber(res.check.check_number);
       if (res.check?.check_date) setCheckDate(res.check.check_date);
       if (res.check?.amount) setAmount(res.check.amount);
 
       const open = invoices.length ? invoices : await fetchOpenInvoices();
       if (!invoices.length) setInvoices(open);
-      if (res.stub?.invoices?.length) setLines(matchStubInvoices(res.stub.invoices, open));
-      toast({ title: 'Images read', description: 'Check everything below before applying.' });
+      const nextLines = res.stub?.invoices?.length ? matchStubInvoices(res.stub.invoices, open) : [];
+      if (nextLines.length) setLines(nextLines);
+      return {
+        extraction: res,
+        warnings: nextWarnings,
+        payer: nextPayer,
+        checkNumber: String(res.check?.check_number ?? ''),
+        amount: round2(Number(res.check?.amount ?? 0)),
+        lines: nextLines,
+      };
     } catch (e: any) {
-      setWarnings(w => [...w, e.message || 'Automatic extraction failed — enter the details manually.']);
+      const msg = e.message || 'Automatic extraction failed — enter the details manually.';
+      setWarnings(w => [...w, msg]);
       toast({ title: 'Automatic extraction unavailable', description: e.message, variant: 'destructive' });
+      return null;
     } finally {
       setExtracting(false);
     }
