@@ -105,6 +105,9 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
   const [dupAcknowledged, setDupAcknowledged] = useState(false);
   const [exceptionAcknowledged, setExceptionAcknowledged] = useState(false);
   const [intakeId, setIntakeId] = useState<string | null>(null);
+  const [autoEnabled, setAutoEnabled] = useState(true);
+  const [decision, setDecision] = useState<AutoPostDecision | null>(null);
+  const [result, setResult] = useState<{ amount: number; count: number; checkNumber: string } | null>(null);
 
   const reset = () => {
     setStep('check'); setCheckImage(null); setStubImage(null);
@@ -112,13 +115,14 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
     setDepositDate(today()); setDepositAccount(''); setAmount(''); setNotes('');
     setWarnings([]); setExtraction({}); setLines([]); setSearch('');
     setDuplicates([]); setDupAcknowledged(false); setExceptionAcknowledged(false);
-    setIntakeId(null);
+    setIntakeId(null); setDecision(null); setResult(null);
   };
 
   useEffect(() => {
     if (!open) return;
     reset();
     fetchOpenInvoices().then(setInvoices).catch(() => setInvoices([]));
+    fetchAutoApplyEnabled().then(setAutoEnabled).catch(() => setAutoEnabled(true));
     if (intake) {
       setIntakeId(intake.id);
       setPayer(intake.payer_name ?? '');
@@ -131,6 +135,9 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
       setNotes(intake.notes ?? '');
       setWarnings(Array.isArray(intake.warnings) ? intake.warnings : []);
       setExtraction(intake.extraction ?? {});
+      if (Array.isArray(intake.blocked_reasons) && intake.blocked_reasons.length) {
+        setDecision({ eligible: false, reasons: intake.blocked_reasons, confidence: (intake.confidence ?? {}) as any });
+      }
       setStep('review');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
