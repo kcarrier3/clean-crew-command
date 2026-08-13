@@ -443,6 +443,7 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
           <DialogTitle>Receive a check</DialogTitle>
         </DialogHeader>
 
+        {step !== 'processing' && step !== 'done' && (
         <div className="flex flex-wrap gap-1.5">
           {STEPS.map((s, i) => (
             <Badge
@@ -454,11 +455,35 @@ export const ReceiveCheckDialog = ({ open, onOpenChange, intake, onSaved }: Prop
             </Badge>
           ))}
         </div>
+        )}
 
-        {extracting && (
+        {extracting && step !== 'processing' && (
           <p className="text-sm text-muted-foreground flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" /> Reading the images…
           </p>
+        )}
+
+        {step === 'processing' && (
+          <div className="py-10 text-center space-y-2">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+            <p className="font-medium">Reading the check and matching invoices…</p>
+            <p className="text-sm text-muted-foreground">
+              High-confidence checks post automatically. Anything uncertain opens for review.
+            </p>
+          </div>
+        )}
+
+        {step === 'done' && result && (
+          <div className="py-8 text-center space-y-2">
+            <div className="mx-auto h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+              <Check className="h-5 w-5 text-green-700" />
+            </div>
+            <p className="font-medium">
+              Check {result.checkNumber ? `#${result.checkNumber} ` : ''}automatically applied to {result.count} invoice(s).
+            </p>
+            <p className="text-sm text-muted-foreground">{money(result.amount)} posted · deposit dated {depositDate || receivedDate}</p>
+            <Badge variant="secondary" className="gap-1"><Sparkles className="h-3 w-3" /> Auto applied from scanned check</Badge>
+          </div>
         )}
 
         {step === 'check' && (
