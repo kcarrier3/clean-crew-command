@@ -170,10 +170,6 @@ export function CreateProposalDialog({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">Introduction (optional)</Label>
-          </div>
-
           <BillToShipTo
             billTo={billTo} shipTo={shipTo} onBillTo={setBillTo} onShipTo={setShipTo}
             resolved={resolved}
@@ -182,6 +178,7 @@ export function CreateProposalDialog({
           />
 
           <div className="space-y-1.5">
+            <Label className="text-xs">Introduction (optional)</Label>
             <Textarea rows={2} value={intro} onChange={e => setIntro(e.target.value)}
               placeholder="Thank you for the opportunity to provide facility services…" />
           </div>
