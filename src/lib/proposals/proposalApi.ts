@@ -32,6 +32,17 @@ export interface Proposal {
   tax_rate: number;
   tax: number;
   total: number;
+  bill_to_name?: string | null;
+  bill_to_address?: string | null;
+  bill_to_city?: string | null;
+  bill_to_state?: string | null;
+  bill_to_zip?: string | null;
+  ship_to_name?: string | null;
+  ship_to_address?: string | null;
+  ship_to_city?: string | null;
+  ship_to_state?: string | null;
+  ship_to_zip?: string | null;
+  tax_jurisdiction?: string | null;
   sent_at: string | null;
   accepted_at: string | null;
   declined_at: string | null;
@@ -94,7 +105,23 @@ export interface CreateProposalInput {
   tax_rate: number;
 }
 
-export const createProposal = async (input: CreateProposalInput): Promise<Proposal> => {
+export interface ProposalAddresses {
+  bill_to_name?: string | null;
+  bill_to_address?: string | null;
+  bill_to_city?: string | null;
+  bill_to_state?: string | null;
+  bill_to_zip?: string | null;
+  ship_to_name?: string | null;
+  ship_to_address?: string | null;
+  ship_to_city?: string | null;
+  ship_to_state?: string | null;
+  ship_to_zip?: string | null;
+  tax_jurisdiction?: string | null;
+}
+
+export type CreateProposalPayload = CreateProposalInput & ProposalAddresses;
+
+export const createProposal = async (input: CreateProposalPayload): Promise<Proposal> => {
   const { data: userData } = await supabase.auth.getUser();
   const totals = proposalTotals(input.lines, input.tax_rate);
   const { data, error } = await db.from('estimate_proposals').insert({
@@ -144,6 +171,17 @@ export const convertProposalToInvoice = async (
     tax_rate: p.tax_rate,
     tax: p.tax,
     total: p.total,
+    bill_to_name: p.bill_to_name ?? null,
+    bill_to_address: p.bill_to_address ?? null,
+    bill_to_city: p.bill_to_city ?? null,
+    bill_to_state: p.bill_to_state ?? null,
+    bill_to_zip: p.bill_to_zip ?? null,
+    ship_to_name: p.ship_to_name ?? null,
+    ship_to_address: p.ship_to_address ?? null,
+    ship_to_city: p.ship_to_city ?? null,
+    ship_to_state: p.ship_to_state ?? null,
+    ship_to_zip: p.ship_to_zip ?? null,
+    tax_jurisdiction: p.tax_jurisdiction ?? null,
     balance_due: p.total,
     notes: `Generated from proposal ${p.proposal_number}.`,
     created_by: userData?.user?.id ?? null,

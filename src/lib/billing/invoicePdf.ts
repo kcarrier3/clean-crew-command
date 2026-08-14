@@ -17,6 +17,16 @@ export interface InvoicePdfData {
   total: number;
   amount_paid?: number;
   balance_due?: number;
+  bill_to_address?: string | null;
+  bill_to_city?: string | null;
+  bill_to_state?: string | null;
+  bill_to_zip?: string | null;
+  ship_to_name?: string | null;
+  ship_to_address?: string | null;
+  ship_to_city?: string | null;
+  ship_to_state?: string | null;
+  ship_to_zip?: string | null;
+  tax_jurisdiction?: string | null;
 }
 
 export interface InvoicePdfLine {
@@ -62,11 +72,32 @@ export function buildInvoicePdf({
 
   let y = Math.max(50, hy + 8);
   doc.setFontSize(11); doc.setTextColor(0);
+  const startY = y;
   doc.text('Bill to:', 14, y); y += 6;
   doc.setFontSize(10);
   if (clientCompany) { doc.text(clientCompany, 14, y); y += 5; }
   if (clientName) { doc.text(clientName, 14, y); y += 5; }
+  if (invoice.bill_to_address) { doc.text(invoice.bill_to_address, 14, y); y += 5; }
+  {
+    const l = [[invoice.bill_to_city, invoice.bill_to_state].filter(Boolean).join(', '), invoice.bill_to_zip]
+      .filter(Boolean).join(' ');
+    if (l) { doc.text(l, 14, y); y += 5; }
+  }
   if (clientEmail) { doc.text(clientEmail, 14, y); y += 5; }
+
+  const shipLines = [
+    invoice.ship_to_name,
+    invoice.ship_to_address,
+    [[invoice.ship_to_city, invoice.ship_to_state].filter(Boolean).join(', '), invoice.ship_to_zip]
+      .filter(Boolean).join(' ') || null,
+  ].filter(Boolean) as string[];
+  if (shipLines.length) {
+    let sy = startY;
+    doc.setFontSize(11); doc.text('Ship to / service address:', 100, sy); sy += 6;
+    doc.setFontSize(10);
+    shipLines.forEach(t => { doc.text(t, 100, sy); sy += 5; });
+    y = Math.max(y, sy);
+  }
   if (projectName) { y += 2; doc.setTextColor(90); doc.text(`Project: ${projectName}`, 14, y); doc.setTextColor(0); y += 5; }
 
   autoTable(doc, {
@@ -85,7 +116,10 @@ export function buildInvoicePdf({
   doc.setFontSize(10);
   doc.text('Subtotal:', w - 60, fy);
   doc.text(`$${Number(invoice.subtotal).toFixed(2)}`, w - 14, fy, { align: 'right' });
-  doc.text(`Tax (${Number(invoice.tax_rate).toFixed(2)}%):`, w - 60, fy + 6);
+  doc.text(
+    `Tax${invoice.tax_jurisdiction ? ` ${invoice.tax_jurisdiction}` : ''} (${Number(invoice.tax_rate).toFixed(2)}%):`,
+    w - 90, fy + 6,
+  );
   doc.text(`$${Number(invoice.tax).toFixed(2)}`, w - 14, fy + 6, { align: 'right' });
   doc.setFontSize(12); doc.setFont(undefined as any, 'bold');
   doc.text('Total:', w - 60, fy + 14);

@@ -25,11 +25,30 @@ export function buildProposalPdf(p: Proposal): jsPDF {
 
   let y = Math.max(48, hy + 8);
   doc.setFontSize(11); doc.setTextColor(0);
-  doc.text('Prepared for:', 14, y); y += 6;
+  const startY = y;
+  doc.text('Bill to:', 14, y); y += 6;
   doc.setFontSize(10);
-  if (p.customer_name) { doc.text(p.customer_name, 14, y); y += 5; }
-  if (p.customer_contact_name) { doc.text(p.customer_contact_name, 14, y); y += 5; }
-  if (p.customer_email) { doc.text(p.customer_email, 14, y); y += 5; }
+  const billLines = [
+    p.bill_to_name || p.customer_name,
+    p.customer_contact_name,
+    p.bill_to_address,
+    [[p.bill_to_city, p.bill_to_state].filter(Boolean).join(', '), p.bill_to_zip].filter(Boolean).join(' ') || null,
+    p.customer_email,
+  ].filter(Boolean) as string[];
+  billLines.forEach(t => { doc.text(t, 14, y); y += 5; });
+
+  const shipLines = [
+    p.ship_to_name,
+    p.ship_to_address,
+    [[p.ship_to_city, p.ship_to_state].filter(Boolean).join(', '), p.ship_to_zip].filter(Boolean).join(' ') || null,
+  ].filter(Boolean) as string[];
+  if (shipLines.length) {
+    let sy = startY;
+    doc.setFontSize(11); doc.text('Ship to / service address:', 90, sy); sy += 6;
+    doc.setFontSize(10);
+    shipLines.forEach(t => { doc.text(t, 90, sy); sy += 5; });
+    y = Math.max(y, sy);
+  }
 
   y += 3;
   doc.setFontSize(13); doc.setTextColor(0);
@@ -62,7 +81,8 @@ export function buildProposalPdf(p: Proposal): jsPDF {
   let ty = fy;
   if (Number(p.tax) > 0) {
     ty += 6;
-    doc.text(`Tax (${Number(p.tax_rate).toFixed(2)}%):`, w - 70, ty);
+    const juris = p.tax_jurisdiction ? ` ${p.tax_jurisdiction}` : '';
+    doc.text(`Tax${juris} (${Number(p.tax_rate).toFixed(2)}%):`, w - 90, ty);
     doc.text(`$${Number(p.tax).toFixed(2)}`, w - 14, ty, { align: 'right' });
   }
   ty += 8;

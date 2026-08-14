@@ -9,6 +9,10 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createProposal, proposalTotals, type ProposalLine, type Proposal } from '@/lib/proposals/proposalApi';
 import { money } from './calc';
+import { BillToShipTo, toEditable, type EditableAddress } from '@/components/billing/BillToShipTo';
+import {
+  fetchCompanyAddress, fetchTaxRates, resolveTaxRate, type ResolvedTax, type TaxRateRow,
+} from '@/lib/billing/taxRates';
 
 export interface ProposalDefaults {
   title: string;
@@ -45,6 +49,13 @@ export function CreateProposalDialog({
   const [terms, setTerms] = useState('');
   const [taxRate, setTaxRate] = useState(0);
   const [lines, setLines] = useState<ProposalLine[]>(defaults.lines);
+  const [billTo, setBillTo] = useState<EditableAddress>(toEditable());
+  const [shipTo, setShipTo] = useState<EditableAddress>(toEditable());
+  const [rates, setRates] = useState<TaxRateRow[]>([]);
+  const [resolved, setResolved] = useState<ResolvedTax | null>(null);
+  const [taxTouched, setTaxTouched] = useState(false);
+
+  useEffect(() => { fetchTaxRates().then(setRates).catch(() => setRates([])); }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -57,8 +68,23 @@ export function CreateProposalDialog({
     setIntro('');
     setTerms('');
     setTaxRate(0);
+    setTaxTouched(false);
+    (async () => {
+      const co = await fetchCompanyAddress(companyId);
+      const addr = toEditable(co ?? { name: defaults.customerName ?? '' });
+      setBillTo(addr);
+      setShipTo(addr);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Tax follows the ship-to (service) city unless it was typed over.
+  useEffect(() => {
+    if (!open || !rates.length) return;
+    const r = resolveTaxRate(shipTo, rates);
+    setResolved(r);
+    if (!taxTouched) setTaxRate(r.rate);
+  }, [open, rates, shipTo, taxTouched]);
 
   const totals = proposalTotals(lines, taxRate);
 
@@ -88,6 +114,17 @@ export function CreateProposalDialog({
         terms: terms.trim() || null,
         lines: valid.map(l => ({ label: l.label.trim(), detail: l.detail?.trim() || null, amount: Number(l.amount) || 0 })),
         tax_rate: Number(taxRate) || 0,
+        bill_to_name: billTo.name || null,
+        bill_to_address: billTo.address || null,
+        bill_to_city: billTo.city || null,
+        bill_to_state: billTo.state || null,
+        bill_to_zip: billTo.zip || null,
+        ship_to_name: shipTo.name || null,
+        ship_to_address: shipTo.address || null,
+        ship_to_city: shipTo.city || null,
+        ship_to_state: shipTo.state || null,
+        ship_to_zip: shipTo.zip || null,
+        tax_jurisdiction: resolved?.jurisdiction ?? null,
       });
       toast({ title: `Proposal ${p.proposal_number} created`, description: 'Linked to this estimate and the opportunity in Waypoint.' });
       onCreated?.(p);
@@ -133,6 +170,13 @@ export function CreateProposalDialog({
             </div>
           </div>
 
+          <BillToShipTo
+            billTo={billTo} shipTo={shipTo} onBillTo={setBillTo} onShipTo={setShipTo}
+            resolved={resolved}
+            taxOverridden={taxTouched && !!resolved && taxRate !== resolved.rate}
+            onResetTax={() => { setTaxTouched(false); if (resolved) setTaxRate(resolved.rate); }}
+          />
+
           <div className="space-y-1.5">
             <Label className="text-xs">Introduction (optional)</Label>
             <Textarea rows={2} value={intro} onChange={e => setIntro(e.target.value)}
@@ -169,7 +213,12 @@ export function CreateProposalDialog({
             <div className="space-y-1.5">
               <Label className="text-xs">Tax %</Label>
               <Input type="number" step="0.01" value={taxRate}
-                onChange={e => setTaxRate(parseFloat(e.target.value) || 0)} />
+                onChange={e => { setTaxTouched(true); setTaxRate(parseFloat(e.target.value) || 0); }} />
+              {resolved && (
+                <p className="text-xs text-muted-foreground">
+                  {resolved.jurisdiction ? `${resolved.jurisdiction} — ${resolved.rate.toFixed(2)}%` : 'No jurisdiction match'}
+                </p>
+              )}
             </div>
             <div className="text-sm space-y-1">
               <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{money(totals.subtotal)}</span></div>
