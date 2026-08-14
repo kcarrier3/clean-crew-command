@@ -21,9 +21,13 @@ export interface SalesGoals {
   annual: number;
   monthlyProject: number;
   monthlyJanitorial: number;
+  annualProject: number;
+  annualJanitorial: number;
 }
 
-const DEFAULT_GOALS: SalesGoals = { monthly: 0, annual: 0, monthlyProject: 0, monthlyJanitorial: 0 };
+const DEFAULT_GOALS: SalesGoals = {
+  monthly: 0, annual: 0, monthlyProject: 0, monthlyJanitorial: 0, annualProject: 0, annualJanitorial: 0,
+};
 
 const parseGoals = (value: string | null | undefined): SalesGoals => {
   if (!value) return DEFAULT_GOALS;
@@ -34,6 +38,8 @@ const parseGoals = (value: string | null | undefined): SalesGoals => {
       annual: Number(p.annual) || 0,
       monthlyProject: Number(p.monthlyProject) || 0,
       monthlyJanitorial: Number(p.monthlyJanitorial) || 0,
+      annualProject: Number(p.annualProject) || 0,
+      annualJanitorial: Number(p.annualJanitorial) || 0,
     };
   } catch { return DEFAULT_GOALS; }
 };
@@ -94,10 +100,13 @@ export const SalesGoalCard = ({ leads, deals, stages }: Props) => {
 
   const sum = (rows: WonRow[]) => rows.reduce((s, r) => s + r.amount, 0);
   const monthRows = wonRows.filter(r => r.at >= monthStart);
+  const ytdRows = wonRows.filter(r => r.at >= yearStart);
   const monthActual = sum(monthRows);
-  const ytdActual = sum(wonRows.filter(r => r.at >= yearStart));
+  const ytdActual = sum(ytdRows);
   const projectActual = sum(monthRows.filter(r => r.pipeline === 'project'));
   const janitorialActual = sum(monthRows.filter(r => r.pipeline === 'janitorial'));
+  const projectYtd = sum(ytdRows.filter(r => r.pipeline === 'project'));
+  const janitorialYtd = sum(ytdRows.filter(r => r.pipeline === 'janitorial'));
 
   // Where we should be by today if the month closed evenly.
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -158,14 +167,16 @@ export const SalesGoalCard = ({ leads, deals, stages }: Props) => {
               <DialogTrigger asChild>
                 <Button variant="ghost" size="sm"><Settings2 className="h-4 w-4 mr-1" /> Goals</Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
                 <DialogHeader><DialogTitle>Sales goals</DialogTitle></DialogHeader>
                 <div className="space-y-3">
                   {([
                     ['monthly', 'Monthly goal (all won revenue)'],
                     ['annual', 'Annual goal'],
-                    ['monthlyProject', `Monthly ${PIPELINE_SHORT_LABELS.project.toLowerCase()} goal (optional)`],
-                    ['monthlyJanitorial', `Monthly ${PIPELINE_SHORT_LABELS.janitorial.toLowerCase()} goal (optional)`],
+                    ['monthlyJanitorial', `Monthly ${PIPELINE_SHORT_LABELS.janitorial.toLowerCase()} goal`],
+                    ['annualJanitorial', `Annual ${PIPELINE_SHORT_LABELS.janitorial.toLowerCase()} goal`],
+                    ['monthlyProject', `Monthly ${PIPELINE_SHORT_LABELS.project.toLowerCase()} goal`],
+                    ['annualProject', `Annual ${PIPELINE_SHORT_LABELS.project.toLowerCase()} goal`],
                   ] as Array<[keyof SalesGoals, string]>).map(([key, label]) => (
                     <div key={key} className="space-y-1">
                       <Label htmlFor={`goal-${key}`}>{label}</Label>
@@ -195,12 +206,19 @@ export const SalesGoalCard = ({ leads, deals, stages }: Props) => {
             goal={goals.monthly}
           />
           <Bar label={`Year to date (${now.getFullYear()})`} actual={ytdActual} goal={goals.annual} />
-          {(goals.monthlyProject > 0 || goals.monthlyJanitorial > 0) && (
-            <>
-              <Bar label={`${PIPELINE_SHORT_LABELS.project} — this month`} actual={projectActual} goal={goals.monthlyProject} />
-              <Bar label={`${PIPELINE_SHORT_LABELS.janitorial} — this month`} actual={janitorialActual} goal={goals.monthlyJanitorial} />
-            </>
-          )}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 border-t pt-4">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold">{PIPELINE_SHORT_LABELS.janitorial}</p>
+            <Bar label="This month" actual={janitorialActual} goal={goals.monthlyJanitorial} />
+            <Bar label="Year to date" actual={janitorialYtd} goal={goals.annualJanitorial} />
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-semibold">{PIPELINE_SHORT_LABELS.project}</p>
+            <Bar label="This month" actual={projectActual} goal={goals.monthlyProject} />
+            <Bar label="Year to date" actual={projectYtd} goal={goals.annualProject} />
+          </div>
         </div>
 
         {goals.monthly === 0 && goals.annual === 0 && (
