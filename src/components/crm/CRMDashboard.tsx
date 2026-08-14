@@ -17,6 +17,7 @@ import { ContactsList } from './ContactsList';
 import { TasksList } from './TasksList';
 import { CRMReports } from './CRMReports';
 import { LostReport } from './LostReport';
+import { SalesGoalCard } from './SalesGoalCard';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LEAD_STATUS_LABELS, PIPELINE_SHORT_LABELS, type CrmDeal, type CrmLead, type CrmStage, type CrmPipeline } from './types';
 
@@ -189,6 +190,9 @@ export default function CRMDashboard() {
           <p className="text-2xl font-bold mt-1">{openActsCount}</p>
         </CardContent></Card>
       </div>
+
+      {/* Goal tracking sits above the tabs so it's visible on every Waypoint view. */}
+      <SalesGoalCard leads={leads} deals={deals} stages={stages} />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
