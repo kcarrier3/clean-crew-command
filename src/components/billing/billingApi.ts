@@ -35,6 +35,9 @@ export interface CreateInvoiceOptions {
   billingContactName?: string | null;
   customerName?: string | null;
   notes?: string | null;
+  billTo?: { name?: string; address?: string; city?: string; state?: string; zip?: string } | null;
+  shipTo?: { name?: string; address?: string; city?: string; state?: string; zip?: string } | null;
+  taxJurisdiction?: string | null;
 }
 
 /** Turns one or more Ready to Bill events into a single invoice. */
@@ -68,6 +71,17 @@ export const createInvoiceFromEvents = async (o: CreateInvoiceOptions): Promise<
     payment_terms: o.terms,
     subtotal, tax_rate: o.taxRate, tax, total,
     balance_due: total,
+    bill_to_name: o.billTo?.name || null,
+    bill_to_address: o.billTo?.address || null,
+    bill_to_city: o.billTo?.city || null,
+    bill_to_state: o.billTo?.state || null,
+    bill_to_zip: o.billTo?.zip || null,
+    ship_to_name: o.shipTo?.name || null,
+    ship_to_address: o.shipTo?.address || null,
+    ship_to_city: o.shipTo?.city || null,
+    ship_to_state: o.shipTo?.state || null,
+    ship_to_zip: o.shipTo?.zip || null,
+    tax_jurisdiction: o.taxJurisdiction || null,
     notes: o.notes ?? null,
     earliest_completed_at: earliest,
     created_by: userData?.user?.id ?? null,
