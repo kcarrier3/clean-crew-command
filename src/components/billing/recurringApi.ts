@@ -17,7 +17,7 @@ export interface RecurringRow {
 export const fetchRecurringRows = async (periodStart: string): Promise<RecurringRow[]> => {
   const { data: sites, error } = await db
     .from('job_sites')
-    .select('id, name, client_name, crm_company_id, crm_deal_id')
+    .select('id, name, client_name, crm_company_id, crm_deal_id, address, city, state')
     .eq('is_recurring_monthly', true)
     .eq('active', true)
     .order('name');
