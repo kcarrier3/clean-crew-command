@@ -704,6 +704,28 @@ export default function EstimatingDetail() {
           onConverted={() => load()}
         />
       )}
+
+      <CreateProposalDialog
+        open={proposalOpen}
+        onOpenChange={setProposalOpen}
+        estimateId={estimate?.id ?? null}
+        revisionId={revision?.id ?? null}
+        leadId={estimate?.lead_id ?? null}
+        companyId={estimate?.company_id ?? null}
+        defaults={{
+          title: name || 'Service Proposal',
+          periodLabel: breakdown.periodLabel,
+          customerName: lead?.company_name || null,
+          customerContactName: lead?.contact_name || null,
+          customerEmail: null,
+          lines: breakdown.customerLines.map(l => ({
+            label: l.label,
+            detail: l.detail || null,
+            amount: l.amount,
+          })),
+        }}
+        onCreated={() => setProposalKey(k => k + 1)}
+      />
     </>
   );
 }
