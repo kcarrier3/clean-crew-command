@@ -5223,6 +5223,55 @@ export type Database = {
         }
         Relationships: []
       }
+      radio_transmissions: {
+        Row: {
+          audio_path: string
+          created_at: string
+          duration_seconds: number
+          id: string
+          job_site_id: string
+          sender_id: string
+        }
+        Insert: {
+          audio_path: string
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          job_site_id: string
+          sender_id: string
+        }
+        Update: {
+          audio_path?: string
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          job_site_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radio_transmissions_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_transmissions_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "radio_transmissions_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_billing_periods: {
         Row: {
           amount: number | null
@@ -6691,6 +6740,10 @@ export type Database = {
       }
       is_crm_user: { Args: { _user_id: string }; Returns: boolean }
       is_pto_manager_title: { Args: { _job_title: string }; Returns: boolean }
+      is_punched_in_at: {
+        Args: { _job_site_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_supply_manager: { Args: { _user_id: string }; Returns: boolean }
       manager_can_view_profile: {
         Args: { _employee_id: string; _manager_id: string }
