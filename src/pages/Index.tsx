@@ -468,6 +468,12 @@ const Index = () => {
               </TabsContent>
             )}
 
+            {isModuleEnabled('radio') && (
+              <TabsContent value="radio" className="mt-6">
+                <RadioChannel />
+              </TabsContent>
+            )}
+
             {!isManager() && isModuleEnabled('timeoff') && (
               <TabsContent value="timeoff" className="mt-6">
                 <div className="space-y-6">
