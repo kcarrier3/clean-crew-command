@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact, Calculator, Receipt, Settings as SettingsIcon } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact, Calculator, Receipt, Radio as RadioIcon, Settings as SettingsIcon } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -42,6 +42,7 @@ import CalendarPlanner from '@/components/CalendarPlanner';
 import SupplyManagement from '@/components/SupplyManagement';
 import TeamRoster from '@/components/TeamRoster';
 import CompanyContacts from '@/components/CompanyContacts';
+import RadioChannel from '@/components/RadioChannel';
 import { SEO } from '@/components/SEO';
 import { useModuleSettings } from '@/hooks/useModuleSettings';
 
@@ -193,6 +194,7 @@ const Index = () => {
         ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
+        { v: 'radio',      label: 'Radio',           icon: RadioIcon },
       ]
     : [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
@@ -204,6 +206,7 @@ const Index = () => {
         ...(isCrmUser() ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
+        { v: 'radio',      label: 'Radio',           icon: RadioIcon },
       ];
 
   const navItems: SidebarItem[] = allNavItems.filter(
@@ -462,6 +465,12 @@ const Index = () => {
             {isModuleEnabled('messages') && (
               <TabsContent value="messages" className="mt-6">
                 <MessagingCenter />
+              </TabsContent>
+            )}
+
+            {isModuleEnabled('radio') && (
+              <TabsContent value="radio" className="mt-6">
+                <RadioChannel />
               </TabsContent>
             )}
 
