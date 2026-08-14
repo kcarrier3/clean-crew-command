@@ -5,9 +5,14 @@ import {
   invoiceDateForPeriod, periodEnd, periodLabel, renderInvoiceDescription,
   type RecurringPeriod, type RecurringSchedule,
 } from '@/lib/billing/recurring';
+import { fetchCompanyAddress, lookupTaxRate } from '@/lib/billing/taxRates';
 
 export interface RecurringRow {
-  site: { id: string; name: string; client_name: string | null; crm_company_id: string | null; crm_deal_id: string | null };
+  site: {
+    id: string; name: string; client_name: string | null;
+    crm_company_id: string | null; crm_deal_id: string | null;
+    address?: string | null; city?: string | null; state?: string | null;
+  };
   schedule: RecurringSchedule | null;
   period: RecurringPeriod | null;
   lastInvoice: { id: string; invoice_number: string; invoice_date: string } | null;
