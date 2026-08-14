@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { LeadDialog } from '@/components/crm/LeadDialog';
 import { LinkedEstimates } from '@/components/estimator/LinkedEstimates';
+import { ProposalsList } from '@/components/estimator/ProposalsList';
 import type { CrmLead } from '@/components/crm/types';
 import { SEO } from '@/components/SEO';
 
@@ -87,6 +88,7 @@ export default function OpportunityDetail() {
                 companyId={lead.company_id}
                 contactId={lead.primary_contact_id}
             />
+            <ProposalsList leadId={lead.id} />
             <LeadDialog asPage lead={lead} onSaved={load} />
           </>
         )}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Copy, Save, CheckCircle2, Files, AlertTriangle, Building2, Pencil } from 'lucide-react';
+import { Copy, Save, CheckCircle2, Files, AlertTriangle, Building2, Pencil, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,8 @@ import { ConvertToAccountDialog } from '@/components/estimator/ConvertToAccountD
 import {
   CostBreakdown, breakdownText, buildJanitorialBreakdown, buildSpecialtyBreakdown,
 } from '@/components/estimator/CostBreakdown';
+import { CreateProposalDialog } from '@/components/estimator/CreateProposalDialog';
+import { ProposalsList } from '@/components/estimator/ProposalsList';
 
 const SPECIALTY_COLUMNS = (i: SpecialtyInputs, o: SpecialtyOutputs) => ({
   specialty_inputs: i,
@@ -107,6 +109,8 @@ export default function EstimatingDetail() {
   const [confirmComplete, setConfirmComplete] = useState(false);
   const [confirmReopen, setConfirmReopen] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
+  const [proposalOpen, setProposalOpen] = useState(false);
+  const [proposalKey, setProposalKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const dirtyRef = useRef(false);
 
@@ -363,6 +367,9 @@ export default function EstimatingDetail() {
               <Button size="sm" variant="outline" onClick={() => setConfirmReopen(true)} disabled={busy}>
                 <Pencil className="h-4 w-4 mr-1" /> Edit estimate
               </Button>
+              <Button size="sm" variant="outline" onClick={() => setProposalOpen(true)} disabled={busy}>
+                <FileText className="h-4 w-4 mr-1" /> Customer proposal
+              </Button>
               {isManager() && !estimate?.converted_job_site_id && (
                 <Button size="sm" variant="outline" onClick={() => setConvertOpen(true)} disabled={busy}>
                   <Building2 className="h-4 w-4 mr-1" /> Convert to account
@@ -415,6 +422,11 @@ export default function EstimatingDetail() {
               <span className="text-xs text-muted-foreground">Read-only. Choose “Edit estimate” to reopen and revise it.</span>
             </div>
             <CostBreakdown model={breakdown} />
+            <ProposalsList
+              estimateId={estimate?.id ?? null}
+              refreshKey={proposalKey}
+              onNew={() => setProposalOpen(true)}
+            />
             {isJanitorial ? (
               <PricingSummary
                 inputs={inputs}
