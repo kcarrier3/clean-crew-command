@@ -24,6 +24,7 @@ export const APP_MODULES: ModuleDef[] = [
   { key: 'estimating', label: 'Estimating', description: 'Janitorial and construction estimator.', routes: ['/estimating'] },
   { key: 'supplies', label: 'Supplies', description: 'Inventory, stock, and fixed assets.' },
   { key: 'messages', label: 'Messaging', description: 'Internal messaging center.' },
+  { key: 'radio', label: 'Radio', description: 'Push-to-talk walkie talkie for crews punched in to the same account or project.' },
   { key: 'timeoff', label: 'Time Off', description: 'Time off requests and PTO balances.' },
   { key: 'contacts', label: 'Contacts', description: 'Company contact directory.' },
   { key: 'onboarding', label: 'Onboarding & Docs', description: 'New hire onboarding center.' },
