@@ -1,6 +1,6 @@
 import {
   BookOpen, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardCheck,
-  FileSpreadsheet, Home, MapPin, MessageSquare, Package, PlaneTakeoff, Receipt, Users as UsersIcon,
+  FileSpreadsheet, Home, MapPin, MessageSquare, Package, PlaneTakeoff, Radio, Receipt, Users as UsersIcon,
 } from 'lucide-react';
 import type { SidebarItem } from './AppSidebar';
 
@@ -28,6 +28,7 @@ export const buildNavItems = ({ isManager, isCrmUser, canEstimate, isModuleEnabl
         ...(canEstimate ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',       icon: MessageSquare },
+        { v: 'radio',      label: 'Radio',           icon: Radio },
       ]
     : [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
@@ -39,6 +40,7 @@ export const buildNavItems = ({ isManager, isCrmUser, canEstimate, isModuleEnabl
         ...(isCrmUser ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'messages',   label: 'Messaging',       icon: MessageSquare },
+        { v: 'radio',      label: 'Radio',           icon: Radio },
       ];
 
   return isModuleEnabled ? items.filter((i) => i.v === 'dashboard' || isModuleEnabled(i.v)) : items;
