@@ -720,7 +720,11 @@ export default function EstimatingDetail() {
           customerEmail: null,
           lines: breakdown.customerLines.map(l => ({
             label: l.label,
-            detail: l.detail || null,
+            // Drop internal cost-allocation notes; keep customer-safe scope detail.
+            detail: (l.detail || '')
+              .split(' · ')
+              .filter(s => !s.startsWith('includes'))
+              .join(' · ') || null,
             amount: l.amount,
           })),
         }}
