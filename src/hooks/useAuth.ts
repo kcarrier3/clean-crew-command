@@ -196,10 +196,14 @@ export const useAuth = () => {
   const isManager = () => hasRole('admin') || hasRole('manager');
   const isEmployee = () => hasRole('employee');
 
+  // Waypoint is intentionally narrow: owners, office managers, sales reps, or an
+  // explicit view_crm grant. Mirrors public.is_crm_user() in the database.
+  const CRM_JOB_TITLES = ['Owner', 'Office Manager', 'Sales Rep'];
+
   const isCrmUser = () =>
     hasRole('admin') ||
-    profile?.job_title === 'Owner' ||
-    profile?.job_title === 'Administrator';
+    hasPermission('view_crm') ||
+    (!!profile?.job_title && CRM_JOB_TITLES.includes(profile.job_title));
 
   // Sales Estimator access — mirrors public.can_estimate() / can_approve_estimate()
   const ESTIMATOR_JOB_TITLES = [
