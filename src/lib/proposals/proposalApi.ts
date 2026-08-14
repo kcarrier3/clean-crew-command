@@ -119,6 +119,8 @@ export interface ProposalAddresses {
   tax_jurisdiction?: string | null;
 }
 
+export type CreateProposalPayload = CreateProposalInput & ProposalAddresses;
+
 export const createProposal = async (input: CreateProposalInput): Promise<Proposal> => {
   const { data: userData } = await supabase.auth.getUser();
   const totals = proposalTotals(input.lines, input.tax_rate);
