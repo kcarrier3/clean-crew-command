@@ -294,6 +294,7 @@ export const BillingSettingsTab = () => {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2"><RefreshCw className="h-4 w-4" /> QuickBooks</CardTitle>
         </CardHeader>
+        </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           QuickBooks stays the accounting ledger. Invoices and payments already carry external ID, sync status,
           synced timestamp and error fields, so a monthly export or live sync can be switched on later without
