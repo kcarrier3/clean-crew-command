@@ -191,11 +191,10 @@ export default function CRMDashboard() {
         </CardContent></Card>
       </div>
 
+      {/* Goal tracking sits above the tabs so it's visible on every Waypoint view. */}
+      <SalesGoalCard leads={leads} deals={deals} stages={stages} />
+
       <Tabs value={tab} onValueChange={setTab}>
-      </Tabs>
-    </div>
-  );
-}
         <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="recent">Recent</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
