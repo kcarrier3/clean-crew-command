@@ -852,6 +852,11 @@ export type Database = {
         Row: {
           amount_paid: number
           balance_due: number
+          bill_to_address: string | null
+          bill_to_city: string | null
+          bill_to_name: string | null
+          bill_to_state: string | null
+          bill_to_zip: string | null
           billing_contact_name: string | null
           billing_email: string | null
           created_at: string
@@ -883,9 +888,15 @@ export type Database = {
           recurring_period_end: string | null
           recurring_period_start: string | null
           sent_at: string | null
+          ship_to_address: string | null
+          ship_to_city: string | null
+          ship_to_name: string | null
+          ship_to_state: string | null
+          ship_to_zip: string | null
           status: string
           subtotal: number
           tax: number
+          tax_jurisdiction: string | null
           tax_rate: number
           total: number
           updated_at: string
@@ -894,6 +905,11 @@ export type Database = {
         Insert: {
           amount_paid?: number
           balance_due?: number
+          bill_to_address?: string | null
+          bill_to_city?: string | null
+          bill_to_name?: string | null
+          bill_to_state?: string | null
+          bill_to_zip?: string | null
           billing_contact_name?: string | null
           billing_email?: string | null
           created_at?: string
@@ -925,9 +941,15 @@ export type Database = {
           recurring_period_end?: string | null
           recurring_period_start?: string | null
           sent_at?: string | null
+          ship_to_address?: string | null
+          ship_to_city?: string | null
+          ship_to_name?: string | null
+          ship_to_state?: string | null
+          ship_to_zip?: string | null
           status?: string
           subtotal?: number
           tax?: number
+          tax_jurisdiction?: string | null
           tax_rate?: number
           total?: number
           updated_at?: string
@@ -936,6 +958,11 @@ export type Database = {
         Update: {
           amount_paid?: number
           balance_due?: number
+          bill_to_address?: string | null
+          bill_to_city?: string | null
+          bill_to_name?: string | null
+          bill_to_state?: string | null
+          bill_to_zip?: string | null
           billing_contact_name?: string | null
           billing_email?: string | null
           created_at?: string
@@ -967,9 +994,15 @@ export type Database = {
           recurring_period_end?: string | null
           recurring_period_start?: string | null
           sent_at?: string | null
+          ship_to_address?: string | null
+          ship_to_city?: string | null
+          ship_to_name?: string | null
+          ship_to_state?: string | null
+          ship_to_zip?: string | null
           status?: string
           subtotal?: number
           tax?: number
+          tax_jurisdiction?: string | null
           tax_rate?: number
           total?: number
           updated_at?: string
@@ -3389,6 +3422,11 @@ export type Database = {
       estimate_proposals: {
         Row: {
           accepted_at: string | null
+          bill_to_address: string | null
+          bill_to_city: string | null
+          bill_to_name: string | null
+          bill_to_state: string | null
+          bill_to_zip: string | null
           company_id: string | null
           converted_at: string | null
           created_at: string
@@ -3407,9 +3445,15 @@ export type Database = {
           proposal_number: string
           revision_id: string | null
           sent_at: string | null
+          ship_to_address: string | null
+          ship_to_city: string | null
+          ship_to_name: string | null
+          ship_to_state: string | null
+          ship_to_zip: string | null
           status: string
           subtotal: number
           tax: number
+          tax_jurisdiction: string | null
           tax_rate: number
           terms: string | null
           title: string
@@ -3419,6 +3463,11 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          bill_to_address?: string | null
+          bill_to_city?: string | null
+          bill_to_name?: string | null
+          bill_to_state?: string | null
+          bill_to_zip?: string | null
           company_id?: string | null
           converted_at?: string | null
           created_at?: string
@@ -3437,9 +3486,15 @@ export type Database = {
           proposal_number?: string
           revision_id?: string | null
           sent_at?: string | null
+          ship_to_address?: string | null
+          ship_to_city?: string | null
+          ship_to_name?: string | null
+          ship_to_state?: string | null
+          ship_to_zip?: string | null
           status?: string
           subtotal?: number
           tax?: number
+          tax_jurisdiction?: string | null
           tax_rate?: number
           terms?: string | null
           title?: string
@@ -3449,6 +3504,11 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          bill_to_address?: string | null
+          bill_to_city?: string | null
+          bill_to_name?: string | null
+          bill_to_state?: string | null
+          bill_to_zip?: string | null
           company_id?: string | null
           converted_at?: string | null
           created_at?: string
@@ -3467,9 +3527,15 @@ export type Database = {
           proposal_number?: string
           revision_id?: string | null
           sent_at?: string | null
+          ship_to_address?: string | null
+          ship_to_city?: string | null
+          ship_to_name?: string | null
+          ship_to_state?: string | null
+          ship_to_zip?: string | null
           status?: string
           subtotal?: number
           tax?: number
+          tax_jurisdiction?: string | null
           tax_rate?: number
           terms?: string | null
           title?: string
@@ -6127,6 +6193,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tax_rates: {
+        Row: {
+          active: boolean
+          city: string | null
+          country: string
+          county: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          label: string | null
+          rate: number
+          state: string
+          updated_at: string
+          zip: string | null
+        }
+        Insert: {
+          active?: boolean
+          city?: string | null
+          country?: string
+          county?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          rate?: number
+          state: string
+          updated_at?: string
+          zip?: string | null
+        }
+        Update: {
+          active?: boolean
+          city?: string | null
+          country?: string
+          county?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          rate?: number
+          state?: string
+          updated_at?: string
+          zip?: string | null
+        }
+        Relationships: []
       }
       time_entries: {
         Row: {
