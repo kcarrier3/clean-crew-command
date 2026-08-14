@@ -61,8 +61,7 @@ export const resolveTaxRate = (addr: AddressLike | null | undefined, rates: TaxR
     : undefined;
   if (byCity) return { rate: byCity.rate, jurisdiction: describeRate(byCity), match: 'city' };
 
-  // A city row also tells us the county — reuse it if the caller stored a county in the state field is not the case,
-  // so fall back to a county-only row when the address names a county-like city match elsewhere.
+  // No city match — fall back to a state-wide row, then the default.
   const byState = state
     ? active.find(r => norm(r.state) === state && !r.city && !r.county && !r.zip)
     : undefined;
