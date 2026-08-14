@@ -9,6 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 import { createInvoiceFromEvents, db } from './billingApi';
 import { money, type BillingEvent } from '@/lib/billing/types';
 import { dueDateFromTerms } from '@/lib/billing/kpi';
+import { BillToShipTo, toEditable, type EditableAddress } from './BillToShipTo';
+import {
+  fetchTaxRates, resolveTaxRate, type ResolvedTax, type TaxRateRow,
+} from '@/lib/billing/taxRates';
 
 interface Props {
   events: BillingEvent[];
@@ -30,6 +34,13 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
   const [contact, setContact] = useState('');
   const [customer, setCustomer] = useState('');
   const [notes, setNotes] = useState('');
+  const [billTo, setBillTo] = useState<EditableAddress>(toEditable());
+  const [shipTo, setShipTo] = useState<EditableAddress>(toEditable());
+  const [rates, setRates] = useState<TaxRateRow[]>([]);
+  const [resolved, setResolved] = useState<ResolvedTax | null>(null);
+  const [taxTouched, setTaxTouched] = useState(false);
+
+  useEffect(() => { fetchTaxRates().then(setRates).catch(() => setRates([])); }, []);
 
   useEffect(() => {
     if (!open || !events.length) return;
@@ -38,10 +49,11 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
     setEmail(first.billing_email ?? '');
     setInvoiceDate(today());
     setNotes('');
+    setTaxTouched(false);
     (async () => {
       if (first.job_site_id) {
         const { data } = await db.from('job_sites')
-          .select('name, client_name, billing_terms, billing_contact_name, billing_email, billing_po_number')
+          .select('name, client_name, billing_terms, billing_contact_name, billing_email, billing_po_number, address, city, state')
           .eq('id', first.job_site_id).maybeSingle();
         if (data) {
           setTerms(data.billing_terms || 'Net 30');
@@ -49,11 +61,20 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
           setCustomer(data.client_name || data.name || '');
           if (!first.billing_email && data.billing_email) setEmail(data.billing_email);
           if (!first.po_number && data.billing_po_number) setPo(data.billing_po_number);
+          setShipTo(toEditable({
+            name: data.client_name || data.name, address: data.address,
+            city: data.city, state: data.state, zip: null,
+          }));
         }
       }
       if (first.crm_company_id) {
-        const { data: co } = await db.from('crm_companies').select('name').eq('id', first.crm_company_id).maybeSingle();
+        const { data: co } = await db.from('crm_companies')
+          .select('name, address, city, state, zip').eq('id', first.crm_company_id).maybeSingle();
         if (co?.name) setCustomer(co.name);
+        if (co) {
+          setBillTo(toEditable(co));
+          if (!first.job_site_id) setShipTo(toEditable(co));
+        }
         const { data: prefs } = await db.from('billing_account_preferences')
           .select('primary_billing_email, default_terms')
           .eq('crm_company_id', first.crm_company_id).maybeSingle();
@@ -62,6 +83,14 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
       }
     })();
   }, [open, events]);
+
+  // Auto-calculate tax from the ship-to city unless the user typed their own rate.
+  useEffect(() => {
+    if (!open || !rates.length) return;
+    const r = resolveTaxRate(shipTo, rates);
+    setResolved(r);
+    if (!taxTouched) setTaxRate(String(r.rate));
+  }, [open, rates, shipTo, taxTouched]);
 
   const subtotal = events.reduce((s, e) => s + Number(e.amount || 0), 0);
   const tax = Math.round(subtotal * (parseFloat(taxRate) || 0) / 100 * 100) / 100;
@@ -78,6 +107,8 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
         billingContactName: contact.trim() || null,
         customerName: customer.trim() || null,
         notes: notes.trim() || null,
+        billTo, shipTo,
+        taxJurisdiction: resolved?.jurisdiction ?? null,
       });
       toast({ title: 'Invoice generated', description: `${inv.invoice_number} — ${money(inv.total)}` });
       onOpenChange(false);
@@ -107,6 +138,13 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
           ))}
         </div>
 
+        <BillToShipTo
+          billTo={billTo} shipTo={shipTo} onBillTo={setBillTo} onShipTo={setShipTo}
+          resolved={resolved}
+          taxOverridden={taxTouched && !!resolved && (parseFloat(taxRate) || 0) !== resolved.rate}
+          onResetTax={() => { setTaxTouched(false); if (resolved) setTaxRate(String(resolved.rate)); }}
+        />
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="inv_customer">Customer / account</Label>
@@ -135,7 +173,13 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="inv_tax">Tax rate (%)</Label>
-            <Input id="inv_tax" type="number" step="0.01" value={taxRate} onChange={e => setTaxRate(e.target.value)} />
+            <Input id="inv_tax" type="number" step="0.001" value={taxRate}
+                   onChange={e => { setTaxTouched(true); setTaxRate(e.target.value); }} />
+            {resolved && (
+              <p className="text-xs text-muted-foreground">
+                {resolved.jurisdiction ? `${resolved.jurisdiction} — ${resolved.rate.toFixed(2)}%` : 'No jurisdiction match'}
+              </p>
+            )}
           </div>
         </div>
 
