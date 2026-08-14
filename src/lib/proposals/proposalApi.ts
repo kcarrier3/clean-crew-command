@@ -121,7 +121,7 @@ export interface ProposalAddresses {
 
 export type CreateProposalPayload = CreateProposalInput & ProposalAddresses;
 
-export const createProposal = async (input: CreateProposalInput): Promise<Proposal> => {
+export const createProposal = async (input: CreateProposalPayload): Promise<Proposal> => {
   const { data: userData } = await supabase.auth.getUser();
   const totals = proposalTotals(input.lines, input.tax_rate);
   const { data, error } = await db.from('estimate_proposals').insert({
