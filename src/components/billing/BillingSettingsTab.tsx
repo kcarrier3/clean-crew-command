@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Mail, Save, Settings2, Building2, RefreshCw, ScanLine } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
+import { TaxRatesCard } from './TaxRatesCard';
 import {
   AUTO_CONFIDENCE_THRESHOLD, fetchAutoApplyEnabled, setAutoApplyEnabled,
 } from '@/lib/billing/checkIntake';
