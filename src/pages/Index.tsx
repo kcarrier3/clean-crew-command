@@ -193,6 +193,7 @@ const Index = () => {
         ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
+        { v: 'radio',      label: 'Radio',           icon: RadioIcon },
       ]
     : [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
@@ -204,6 +205,7 @@ const Index = () => {
         ...(isCrmUser() ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
+        { v: 'radio',      label: 'Radio',           icon: RadioIcon },
       ];
 
   const navItems: SidebarItem[] = allNavItems.filter(
