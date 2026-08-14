@@ -172,6 +172,16 @@ export function CreateProposalDialog({
 
           <div className="space-y-1.5">
             <Label className="text-xs">Introduction (optional)</Label>
+          </div>
+
+          <BillToShipTo
+            billTo={billTo} shipTo={shipTo} onBillTo={setBillTo} onShipTo={setShipTo}
+            resolved={resolved}
+            taxOverridden={taxTouched && !!resolved && taxRate !== resolved.rate}
+            onResetTax={() => { setTaxTouched(false); if (resolved) setTaxRate(resolved.rate); }}
+          />
+
+          <div className="space-y-1.5">
             <Textarea rows={2} value={intro} onChange={e => setIntro(e.target.value)}
               placeholder="Thank you for the opportunity to provide facility services…" />
           </div>
@@ -206,7 +216,12 @@ export function CreateProposalDialog({
             <div className="space-y-1.5">
               <Label className="text-xs">Tax %</Label>
               <Input type="number" step="0.01" value={taxRate}
-                onChange={e => setTaxRate(parseFloat(e.target.value) || 0)} />
+                onChange={e => { setTaxTouched(true); setTaxRate(parseFloat(e.target.value) || 0); }} />
+              {resolved && (
+                <p className="text-xs text-muted-foreground">
+                  {resolved.jurisdiction ? `${resolved.jurisdiction} — ${resolved.rate.toFixed(2)}%` : 'No jurisdiction match'}
+                </p>
+              )}
             </div>
             <div className="text-sm space-y-1">
               <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{money(totals.subtotal)}</span></div>
