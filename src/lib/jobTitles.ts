@@ -4,6 +4,7 @@ export const JOB_TITLES = [
   'Owner',
   'Office Manager',
   'Operations Manager',
+  'Sales Rep',
   'Janitorial Manager',
   'Night Manager',
   'Project Crew Lead',
@@ -49,7 +50,19 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
   // Full access
   'Owner': [...ALL_PERMISSIONS],
   'Office Manager': [...ALL_PERMISSIONS],
-  'Operations Manager': [...ALL_PERMISSIONS],
+  'Operations Manager': without('view_crm'),
+
+  // Sales: Waypoint + estimating + calendar, no payroll or employee administration
+  'Sales Rep': [
+    'view_schedules',
+    'view_time_tracking',
+    'view_notifications',
+    'view_crm',
+    'use_estimating',
+    'view_team_directory',
+    'view_calendar',
+    'use_messaging',
+  ],
 
   // Everything except CRM, supplies, estimating, calendar, admin settings
   'Janitorial Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
@@ -103,6 +116,7 @@ export const getJobTitleColor = (jobTitle: string) => {
   const colorMap: Record<string, { bg: string; border: string; text: string }> = {
     'Owner': { bg: 'bg-violet-100', border: 'border-violet-300', text: 'text-violet-800' },
     'Office Manager': { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800' },
+    'Sales Rep': { bg: 'bg-rose-100', border: 'border-rose-300', text: 'text-rose-800' },
     'Janitorial Manager': { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-800' },
     'Project Crew Lead': { bg: 'bg-sky-100', border: 'border-sky-300', text: 'text-sky-800' },
     'Project Worker': { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' },
@@ -126,6 +140,7 @@ export const getJobTitleDepartment = (jobTitle: string): 'janitorial' | 'constru
     'Owner': 'management',
     'Office Manager': 'management',
     'Operations Manager': 'management',
+    'Sales Rep': 'management',
     'Floaters': 'other',
     'Supply Management': 'other',
   };
