@@ -3386,6 +3386,135 @@ export type Database = {
         }
         Relationships: []
       }
+      estimate_proposals: {
+        Row: {
+          accepted_at: string | null
+          company_id: string | null
+          converted_at: string | null
+          created_at: string
+          created_by: string | null
+          customer_contact_name: string | null
+          customer_email: string | null
+          customer_name: string | null
+          declined_at: string | null
+          estimate_id: string | null
+          id: string
+          intro: string | null
+          invoice_id: string | null
+          lead_id: string | null
+          lines: Json
+          period_label: string
+          proposal_number: string
+          revision_id: string | null
+          sent_at: string | null
+          status: string
+          subtotal: number
+          tax: number
+          tax_rate: number
+          terms: string | null
+          title: string
+          total: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_id?: string | null
+          converted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_contact_name?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          declined_at?: string | null
+          estimate_id?: string | null
+          id?: string
+          intro?: string | null
+          invoice_id?: string | null
+          lead_id?: string | null
+          lines?: Json
+          period_label?: string
+          proposal_number?: string
+          revision_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax?: number
+          tax_rate?: number
+          terms?: string | null
+          title?: string
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          company_id?: string | null
+          converted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_contact_name?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          declined_at?: string | null
+          estimate_id?: string | null
+          id?: string
+          intro?: string | null
+          invoice_id?: string | null
+          lead_id?: string | null
+          lines?: Json
+          period_label?: string
+          proposal_number?: string
+          revision_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax?: number
+          tax_rate?: number
+          terms?: string | null
+          title?: string
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_proposals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimate_proposals_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimate_proposals_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "billing_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimate_proposals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimate_proposals_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimate_revisions: {
         Row: {
           annual_price: number
@@ -6758,6 +6887,7 @@ export type Database = {
         Returns: number
       }
       next_invoice_number: { Args: never; Returns: string }
+      next_proposal_number: { Args: never; Returns: string }
       recalc_invoice_balance: {
         Args: { _invoice_id: string }
         Returns: undefined
