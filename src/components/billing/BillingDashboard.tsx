@@ -24,7 +24,7 @@ export const BillingDashboard = () => {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-flex md:w-auto md:h-10">
           <TabsTrigger value="ready">Ready to Bill</TabsTrigger>
           <TabsTrigger value="recurring">Recurring Invoicing</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
