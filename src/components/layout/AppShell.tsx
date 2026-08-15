@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { buildNavItems } from './navItems';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsNativeApp } from '@/hooks/useIsNativeApp';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -23,6 +25,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('cc.sidebar.collapsed') === '1';
   });
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const toggle = () => {
     setCollapsed((c) => {
@@ -85,10 +88,73 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   );
 
   if (isNative) {
+    const primary = items.filter((i) => i.v !== 'dashboard').slice(0, 3);
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen pb-24">
         <div className="px-3 pt-3">{logo}</div>
         {children}
+
+        {/* Mobile bottom navigation, mirroring the main dashboard shell */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border p-3 pb-safe safe-x">
+          <div className="flex justify-around items-center max-w-md mx-auto">
+            {items.filter((i) => i.v === 'dashboard').concat(primary).map((item) => {
+              const Icon = item.icon;
+              const isActive = active === item.v;
+              return (
+                <button
+                  key={item.v}
+                  onClick={() => handleChange(item.v)}
+                  className={`flex flex-col items-center gap-1 px-2 py-1 text-[11px] ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="truncate max-w-[4.5rem]">{item.label}</span>
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setMoreOpen(true)}
+              className="flex flex-col items-center gap-1 px-2 py-1 text-[11px] text-muted-foreground"
+            >
+              <Menu className="h-5 w-5" />
+              <span>More</span>
+            </button>
+          </div>
+        </div>
+
+        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+          <SheetContent side="right" className="w-72 flex flex-col overflow-y-auto max-h-screen pb-safe">
+            <SheetHeader className="shrink-0">
+              <SheetTitle>Menu</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6 space-y-1 overflow-y-auto flex-1">
+              {items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.v}
+                    onClick={() => { setMoreOpen(false); handleChange(item.v); }}
+                    className={`w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm ${active === item.v ? 'bg-secondary' : 'hover:bg-muted'}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => { setMoreOpen(false); navigate('/settings'); }}
+                className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+              >
+                Settings
+              </button>
+              <button
+                onClick={() => { setMoreOpen(false); handleSignOut(); }}
+                className="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+              >
+                Sign Out
+              </button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     );
   }
