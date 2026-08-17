@@ -141,7 +141,10 @@ const PtoBalanceCard = ({ employeeId }: { employeeId?: string }) => {
         </div>
         <Progress value={pct} />
         <p className="text-xs text-muted-foreground">
-          Based on an average of {summary.avg_weekly_hours.toFixed(1)} hours worked per week over the last 52 weeks.
+          Based on an average of {summary.avg_weekly_hours.toFixed(1)} hours worked per week
+          {summary.avg_weekly_hours >= 35
+            ? " (full time — accrued at a standard 40-hour week)."
+            : " (part time — accrued at your weekly average)."}
         </p>
 
         {isManager && holidays.length > 0 && (

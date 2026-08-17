@@ -148,8 +148,9 @@ const TimeOffPolicySettings = () => {
             <Palmtree className="h-4 w-4" /> PTO accrual
           </CardTitle>
           <CardDescription>
-            Vacation resets on each employee's hire anniversary. A week of vacation pays their average weekly hours
-            worked over the previous 52 weeks. Time off cannot be used before the first anniversary.
+            Vacation resets on each employee's hire anniversary. Full-time employees (averaging 35+ hours/week) accrue
+            a week as 40 hours. Part-time employees accrue a week as their average weekly hours worked over the
+            previous 52 weeks. Time off cannot be used before the first anniversary.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
