@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { RelatedNotesFiles } from '@/components/crm/RelatedNotesFiles';
 import { LeadDialog } from '@/components/crm/LeadDialog';
+import { ContactFormDialog } from '@/components/crm/ContactFormDialog';
 import { LEAD_STATUS_LABELS, type CrmCompany, type CrmContact, type CrmLead } from '@/components/crm/types';
 import { SEO } from '@/components/SEO';
 
@@ -77,6 +78,8 @@ export default function AccountDetailPage() {
   const [leads, setLeads] = useState<CrmLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [leadDialogOpen, setLeadDialogOpen] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<CrmContact | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', industry: '', website: '', phone: '', address: '', city: '', state: '', zip: '', notes: '' });
@@ -237,6 +240,11 @@ export default function AccountDetailPage() {
                 </TabsContent>
 
                 <TabsContent value="contacts" className="pt-4">
+                  <div className="flex justify-end mb-2">
+                    <Button size="sm" onClick={() => { setEditingContact(null); setContactDialogOpen(true); }}>
+                      <Plus className="h-4 w-4 mr-1.5" /> New Contact
+                    </Button>
+                  </div>
                   {contacts.length === 0 ? (
                     <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">No contacts linked to this account yet.</CardContent></Card>
                   ) : (
@@ -250,6 +258,14 @@ export default function AccountDetailPage() {
                           <CardContent className="p-3">
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-sm">{c.first_name} {c.last_name}</p>
+                              <button
+                                type="button"
+                                aria-label="Edit contact"
+                                className="ml-auto text-muted-foreground hover:text-foreground"
+                                onClick={e => { e.stopPropagation(); setEditingContact(c); setContactDialogOpen(true); }}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
                               {c.is_primary && <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-500" />}
                               {c.title && <span className="text-xs text-muted-foreground">— {c.title}</span>}
                             </div>
@@ -302,7 +318,14 @@ export default function AccountDetailPage() {
               </Tabs>
             </div>
 
-            <LeadDialog open={leadDialogOpen} onOpenChange={setLeadDialogOpen} lead={null} onSaved={load} />
+            <ContactFormDialog
+        open={contactDialogOpen}
+        onOpenChange={v => { setContactDialogOpen(v); if (!v) setEditingContact(null); }}
+        editing={editingContact}
+        defaultCompanyId={company?.id ?? null}
+        onSaved={load}
+      />
+      <LeadDialog open={leadDialogOpen} onOpenChange={setLeadDialogOpen} lead={null} onSaved={load} />
 
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
               <DialogContent className="max-w-lg">
