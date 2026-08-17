@@ -18,8 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { CrmCompany, CrmContact } from './types';
 import { RelatedNotesFiles } from './RelatedNotesFiles';
 import { BusinessCardScanDialog } from './BusinessCardScanDialog';
-
-const blank = { first_name: '', last_name: '', email: '', phone: '', title: '', company_id: '', notes: '', is_primary: false };
+import { ContactFormDialog } from './ContactFormDialog';
 
 export function ContactsList({ onChanged }: { onChanged?: () => void }) {
   const { user } = useAuth();
@@ -30,8 +29,6 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
   const [filter, setFilter] = useState('');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CrmContact | null>(null);
-  const [form, setForm] = useState(blank);
-  const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [moveTo, setMoveTo] = useState('');
   const [moving, setMoving] = useState(false);
@@ -45,37 +42,6 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
     setItems(c || []); setCompanies(co || []);
   };
   useEffect(() => { load(); }, []);
-
-  useEffect(() => {
-    if (editing) setForm({
-      first_name: editing.first_name, last_name: editing.last_name || '',
-      email: editing.email || '', phone: editing.phone || '', title: editing.title || '',
-      company_id: editing.company_id || '', notes: editing.notes || '', is_primary: editing.is_primary,
-    });
-    else setForm(blank);
-  }, [editing, open]);
-
-  const save = async () => {
-    if (!form.first_name.trim()) { toast({ title: 'First name required', variant: 'destructive' }); return; }
-    setSaving(true);
-    const payload: any = {
-      first_name: form.first_name.trim(),
-      last_name: form.last_name || null,
-      email: form.email || null,
-      phone: form.phone || null,
-      title: form.title || null,
-      company_id: form.company_id || null,
-      notes: form.notes || null,
-      is_primary: form.is_primary,
-    };
-    let error;
-    if (editing) ({ error } = await (supabase as any).from('crm_contacts').update(payload).eq('id', editing.id));
-    else { payload.created_by = user?.id; payload.owner_id = user?.id; ({ error } = await (supabase as any).from('crm_contacts').insert(payload)); }
-    setSaving(false);
-    if (error) { toast({ title: 'Save failed', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: editing ? 'Contact updated' : 'Contact created' });
-    setOpen(false); setEditing(null); load(); onChanged?.();
-  };
 
   const remove = async (c: CrmContact) => {
     if (!confirm(`Delete ${c.first_name}?`)) return;
@@ -171,46 +137,13 @@ export function ContactsList({ onChanged }: { onChanged?: () => void }) {
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editing ? 'Edit Contact' : 'New Contact'}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>First Name *</Label><Input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} /></div>
-              <div><Label>Last Name</Label><Input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} /></div>
-            </div>
-            <div><Label>Title</Label><Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></div>
-            <div>
-              <Label>Account</Label>
-              <Select value={form.company_id || 'none'} onValueChange={v => setForm({ ...form, company_id: v === 'none' ? '' : v })}>
-                <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
-              <div><Label>Phone</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={form.is_primary} onCheckedChange={v => setForm({ ...form, is_primary: !!v })} />
-              Primary contact
-            </label>
-            <div><Label>Notes</Label><Textarea rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
-          </div>
-          {editing && (
-            <div className="border-t pt-3 mt-1 max-h-[45vh] overflow-y-auto">
-              <RelatedNotesFiles parentType="contact" parentId={editing.id} />
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ContactFormDialog
+        open={open}
+        onOpenChange={v => { setOpen(v); if (!v) setEditing(null); }}
+        editing={editing}
+        companies={companies}
+        onSaved={() => { load(); onChanged?.(); }}
+      />
     </div>
   );
 }
