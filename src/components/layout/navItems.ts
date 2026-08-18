@@ -1,6 +1,6 @@
 import {
   BookOpen, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardCheck,
-  FileSpreadsheet, Home, MapPin, MessageSquare, Package, PlaneTakeoff, Radio, Receipt, Users as UsersIcon,
+  FileSpreadsheet, HelpCircle, Home, MapPin, MessageSquare, Package, PlaneTakeoff, Radio, Receipt, Users as UsersIcon,
 } from 'lucide-react';
 import type { SidebarItem } from './AppSidebar';
 
@@ -43,5 +43,10 @@ export const buildNavItems = ({ isManager, isCrmUser, canEstimate, isModuleEnabl
         { v: 'radio',      label: 'Radio',           icon: Radio },
       ];
 
-  return isModuleEnabled ? items.filter((i) => i.v === 'dashboard' || isModuleEnabled(i.v)) : items;
+  const visible = isModuleEnabled
+    ? items.filter((i) => i.v === 'dashboard' || isModuleEnabled(i.v))
+    : items;
+
+  // Help is never module-gated.
+  return [...visible, { v: 'help', label: 'Help & How-To', icon: HelpCircle }];
 };

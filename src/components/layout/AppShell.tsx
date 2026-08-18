@@ -9,6 +9,8 @@ import { useIsNativeApp } from '@/hooks/useIsNativeApp';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { useModuleSettings } from '@/hooks/useModuleSettings';
+import { moduleForPath } from '@/lib/modules';
+import ModuleHelp from '@/components/help/ModuleHelp';
 
 /**
  * Wraps routed (non-tab) pages so the Crew Compass sidebar stays available
@@ -47,6 +49,8 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
     : location.pathname.startsWith('/crm')
       ? 'crm'
       : '';
+
+  const helpModuleKey = moduleForPath(location.pathname)?.key;
 
   const handleChange = (v: string) => {
     if (v === 'estimating') {
@@ -92,6 +96,11 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
     return (
       <div className="min-h-screen pb-24">
         <div className="px-3 pt-3">{logo}</div>
+        {helpModuleKey && (
+          <div className="px-3">
+            <ModuleHelp moduleKey={helpModuleKey} />
+          </div>
+        )}
         {children}
 
         {/* Mobile bottom navigation, mirroring the main dashboard shell */}
@@ -177,6 +186,11 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       />
       <div className={`transition-[padding] duration-200 ${collapsed ? 'md:pl-[64px]' : 'md:pl-56'}`}>
         <div className="px-4 md:px-6 pt-4">{logo}</div>
+        {helpModuleKey && (
+          <div className="px-4 md:px-6">
+            <ModuleHelp moduleKey={helpModuleKey} />
+          </div>
+        )}
         {children}
       </div>
     </div>
