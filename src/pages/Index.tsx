@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact, Calculator, Receipt, Radio as RadioIcon, Settings as SettingsIcon } from 'lucide-react';
+import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact, Calculator, Receipt, Radio as RadioIcon, Settings as SettingsIcon, HelpCircle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -45,6 +45,8 @@ import CompanyContacts from '@/components/CompanyContacts';
 import RadioChannel from '@/components/RadioChannel';
 import { SEO } from '@/components/SEO';
 import { useModuleSettings } from '@/hooks/useModuleSettings';
+import HelpCenter from '@/components/help/HelpCenter';
+import ModuleHelp from '@/components/help/ModuleHelp';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -96,7 +98,7 @@ const Index = () => {
 
   // If a module gets turned off company-wide, fall back to the dashboard.
   useEffect(() => {
-    if (activeTab !== 'dashboard' && !isModuleEnabled(activeTab)) {
+    if (activeTab !== 'dashboard' && activeTab !== 'help' && !isModuleEnabled(activeTab)) {
       setActiveTab('dashboard');
     }
   }, [activeTab, isModuleEnabled]);
@@ -219,7 +221,10 @@ const Index = () => {
     { v: 'contacts', label: 'Contacts', icon: Contact },
   ].filter((i) => isModuleEnabled(i.v));
 
-  const sidebarItems = navItems;
+  const helpNavItem: SidebarItem = { v: 'help', label: 'Help & How-To', icon: HelpCircle };
+
+  // Help is never module-gated — it always stays reachable.
+  const sidebarItems = [...navItems, helpNavItem];
 
   // Keys shown in the mobile bottom bar — everything else lands in the menu.
   const bottomBarKeys = (isManager()
@@ -227,7 +232,7 @@ const Index = () => {
     : ['dashboard', 'myschedule', isSupplyStaff ? 'supplies' : 'timeoff', 'messages']
   ).filter((k) => k === 'dashboard' || isModuleEnabled(k));
 
-  const mobileMenuItems = [...navItems, ...extraNavItems].filter(
+  const mobileMenuItems = [...navItems, ...extraNavItems, helpNavItem].filter(
     (item) => !bottomBarKeys.includes(item.v),
   );
 
@@ -384,6 +389,8 @@ const Index = () => {
             </div>
           </div>
           
+          {activeTab !== 'help' && <ModuleHelp moduleKey={activeTab} />}
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Desktop: tabs replaced by left sidebar on web; native still uses TabsList. */}
             {isNative && isManager() ? (
@@ -409,6 +416,10 @@ const Index = () => {
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
             ) : null}
+
+            <TabsContent value="help" className="mt-6">
+              <HelpCenter />
+            </TabsContent>
 
             <TabsContent value="dashboard" className="mt-6">
               {isManager() ? <ManagerDashboard /> : <EmployeeDashboard />}
