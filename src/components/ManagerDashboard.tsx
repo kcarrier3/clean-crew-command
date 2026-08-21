@@ -11,6 +11,7 @@ import BudgetReports from './BudgetReports';
 import AccountCostReport from './AccountCostReport';
 import ShiftRoster from './ShiftRoster';
 import PayPeriodHoursReport from './PayPeriodHoursReport';
+import RevenuePerHourReport from './RevenuePerHourReport';
 
 
 interface TimeEntry {
@@ -149,12 +150,13 @@ const ManagerDashboard = () => {
     <div className="space-y-6">
       {/* Main Content Tabs */}
       <Tabs defaultValue="timeclock" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto gap-1">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 h-auto gap-1">
           <TabsTrigger value="timeclock" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Time Clock</TabsTrigger>
           <TabsTrigger value="active" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Shift Roster</TabsTrigger>
           <TabsTrigger value="reports" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Weekly Report</TabsTrigger>
           <TabsTrigger value="budget" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Budget Reports</TabsTrigger>
           <TabsTrigger value="pay-period" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Pay Period Hours</TabsTrigger>
+          {canViewAccountCost && <TabsTrigger value="revenue-per-hour" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Revenue / Hour</TabsTrigger>}
           {canViewAccountCost && <TabsTrigger value="account-cost" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Account Cost</TabsTrigger>}
         </TabsList>
 
@@ -288,6 +290,12 @@ const ManagerDashboard = () => {
         <TabsContent value="pay-period">
           <PayPeriodHoursReport />
         </TabsContent>
+
+        {canViewAccountCost && (
+          <TabsContent value="revenue-per-hour">
+            <RevenuePerHourReport />
+          </TabsContent>
+        )}
 
         {canViewAccountCost && (
           <TabsContent value="account-cost">
