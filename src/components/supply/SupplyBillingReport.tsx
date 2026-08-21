@@ -19,7 +19,7 @@ type Movement = {
   created_at: string;
   created_by: string | null;
   movement_type: string;
-  item: { id: string; name: string; unit: string; sale_price: number | null; is_resale: boolean | null; kind: string | null } | null;
+  item: { id: string; name: string; unit: string; sale_price: number | null; kind: string | null } | null;
 };
 
 type DetailRow = {
@@ -69,7 +69,7 @@ export default function SupplyBillingReport() {
     const [{ data: js }, { data: mv }, { data: pr }] = await Promise.all([
       supabase.from('job_sites').select('id, name').eq('active', true).order('name'),
       supabase.from('supply_movements')
-        .select('id, job_site_id, quantity, unit_price, total_value, created_at, created_by, movement_type, item:supply_items(id, name, unit, sale_price, is_resale, kind)')
+        .select('id, job_site_id, quantity, unit_price, total_value, created_at, created_by, movement_type, item:supply_items(id, name, unit, sale_price, kind)')
         .not('job_site_id', 'is', null)
         .gte('created_at', startIso).lte('created_at', endIso)
         .order('created_at', { ascending: true }),
@@ -96,7 +96,7 @@ export default function SupplyBillingReport() {
     for (const m of movements) {
       if (!m.job_site_id || !m.item) continue;
       // Only include resale/billable drop-offs to the customer
-      const isBillable = (m.item.is_resale === true || m.item.kind === 'resale') && m.movement_type === 'sell';
+      const isBillable = m.item.kind === 'resale' && m.movement_type === 'sell';
       if (!isBillable) continue;
       const js = jobSites.find(j => j.id === m.job_site_id);
       if (!js) continue;
