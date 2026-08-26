@@ -386,7 +386,60 @@ export interface SpecialtyOutputs {
   labor_budget?: ConstructionLaborBudget;
   /** Construction only — crew-day / day-rate decision model. */
   day_model?: ConstructionDayModel;
+  /** Construction only — facility crew-day model (primary). */
+  facility_model?: ConstructionFacilityModel;
 }
+
+export interface FacilityRowResult {
+  id: string;
+  label: string;
+  facility_type: FacilityType;
+  facility_type_label: string;
+  complexity: FacilityComplexity;
+  square_feet: number;
+  units: number;
+  crew_size: number;
+  hours_per_day: number;
+  crew_days_per_unit: number;
+  crew_days: number;
+  labor_hours: number;
+  billing_rate_per_hour: number;
+  price: number;
+  labor_cost: number;
+  recommended_min: number;
+  recommended_typical: number;
+  recommended_max: number;
+  position: 'aggressive' | 'typical' | 'conservative';
+  /** Historical feedback (blank until actuals are recorded). */
+  actual_crew_days: number;
+  actual_labor_hours: number;
+  crew_days_variance: number;
+  labor_hours_variance: number;
+  sqft_band: string;
+}
+
+export interface ConstructionFacilityModel {
+  rows: FacilityRowResult[];
+  default_crew_size: number;
+  default_hours_per_day: number;
+  default_billing_rate_per_hour: number;
+  total_units: number;
+  total_crew_days: number;
+  total_labor_hours: number;
+  total_square_feet: number;
+  total_price: number;
+  prevailing: boolean;
+  prevailing_rate_mode: PrevailingRateMode;
+  labor_cost_rate: number;
+  direct_labor_cost: number;
+  supply_cost: number;
+  equipment_cost: number;
+  total_direct_cost: number;
+  gross_spread: number;
+  gross_spread_percent: number;
+  effective_billing_rate: number;
+}
+
 
 export interface ConstructionLaborBudget {
   labor_type: ConstructionLaborType;
