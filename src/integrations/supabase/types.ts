@@ -157,6 +157,113 @@ export type Database = {
           },
         ]
       }
+      assistant_api_clients: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          id: string
+          key_hash: string
+          key_prefix: string
+          label: string
+          last_used_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          key_hash: string
+          key_prefix: string
+          label: string
+          last_used_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          label?: string
+          last_used_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_api_clients_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_api_clients_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assistant_request_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          client_id: string | null
+          created_at: string
+          created_record_ids: Json | null
+          error_message: string | null
+          id: string
+          idempotency_key: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          source: string
+          status: string
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_record_ids?: Json | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          source?: string
+          status?: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_record_ids?: Json | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_request_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_api_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_points: {
         Row: {
           created_at: string
@@ -3825,6 +3932,8 @@ export type Database = {
           name: string
           owner_id: string | null
           service_type: string
+          source: string | null
+          source_metadata: Json | null
           status: string
           updated_at: string
         }
@@ -3844,6 +3953,8 @@ export type Database = {
           name: string
           owner_id?: string | null
           service_type?: string
+          source?: string | null
+          source_metadata?: Json | null
           status?: string
           updated_at?: string
         }
@@ -3863,6 +3974,8 @@ export type Database = {
           name?: string
           owner_id?: string | null
           service_type?: string
+          source?: string | null
+          source_metadata?: Json | null
           status?: string
           updated_at?: string
         }
