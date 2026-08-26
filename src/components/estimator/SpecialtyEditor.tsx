@@ -21,6 +21,7 @@ import {
   type CarpetInputs, type ConstructionInputs, type FinancialBase,
   type ScrubInputs, type SpecialtyInputs, type SpecialtyOutputs, type VctInputs,
 } from './specialtyCalc';
+import { ConstructionFacilityForm } from './ConstructionFacilityForm';
 import type { SummaryMeta } from './PricingSummary';
 
 /* ------------------------------------------------------------------ atoms */
@@ -360,6 +361,15 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
 
       {advanced && (
         <>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            disabled={readOnly}
+            onClick={() => patch({ estimating_mode: 'facilities' })}
+          >
+            Switch to the facility crew-day estimator (recommended)
+          </Button>
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-sm">Crew &amp; wages</CardTitle></CardHeader>
             <CardContent className="space-y-3">
@@ -667,10 +677,15 @@ export function SpecialtyForm({
 }: { service: ServiceType; inputs: SpecialtyInputs; patch: Patch; readOnly?: boolean }) {
   return (
     <>
-      {service === 'construction_cleaning' && <ConstructionForm i={inputs as ConstructionInputs} patch={patch} readOnly={readOnly} />}
+      {service === 'construction_cleaning' && (
+        (inputs as ConstructionInputs).estimating_mode === 'facilities'
+          ? <ConstructionFacilityForm i={inputs as ConstructionInputs} patch={patch} readOnly={readOnly} />
+          : <ConstructionForm i={inputs as ConstructionInputs} patch={patch} readOnly={readOnly} />
+      )}
       {service === 'carpet_cleaning' && <CarpetForm i={inputs as CarpetInputs} patch={patch} readOnly={readOnly} />}
       {service === 'floor_scrubbing' && <ScrubForm i={inputs as ScrubInputs} patch={patch} readOnly={readOnly} />}
       {service === 'vct_strip_wax' && <VctForm i={inputs as VctInputs} patch={patch} readOnly={readOnly} />}
+      {!(service === 'construction_cleaning' && (inputs as ConstructionInputs).estimating_mode === 'facilities') && (
       <FinancialsCard
         i={inputs as FinancialBase}
         patch={patch}
@@ -679,6 +694,7 @@ export function SpecialtyForm({
         hideConsumables={service === 'construction_cleaning'}
         hideEquipment={service === 'construction_cleaning'}
       />
+      )}
     </>
   );
 }

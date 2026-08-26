@@ -325,7 +325,7 @@ export function ConstructionFacilityForm({
             readOnly={readOnly}
             patch={p => setRow(r.id, p)}
             remove={() => patch({ facilities: rows.filter(x => x.id !== r.id) })}
-            duplicate={() => patch({ facilities: [...rows, { ...r, ...DEFAULT_FACILITY_ROW(), ...r, id: DEFAULT_FACILITY_ROW().id }] })}
+            duplicate={() => patch({ facilities: [...rows, { ...r, id: DEFAULT_FACILITY_ROW().id }] })}
           />
         ))}
       </div>
