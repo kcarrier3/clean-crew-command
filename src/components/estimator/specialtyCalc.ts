@@ -594,6 +594,16 @@ export const DEFAULT_CONSTRUCTION_DAY_MODEL = {
   prevailing_min_margin_percent: 41.25,
 };
 
+export const DEFAULT_CONSTRUCTION_FACILITY_MODEL = {
+  estimating_mode: 'facilities' as ConstructionEstimatingMode,
+  facilities: [] as FacilityRow[],
+  default_crew_size: 4,
+  default_hours_per_day: 8,
+  default_billing_rate_per_hour: 0,
+  prevailing_rate_mode: 'split' as PrevailingRateMode,
+  prevailing_combined_rate: 0,
+};
+
 export const DEFAULT_SPECIALTY_INPUTS = (service: ServiceType): SpecialtyInputs => {
   switch (service) {
     case 'construction_cleaning':
@@ -601,9 +611,11 @@ export const DEFAULT_SPECIALTY_INPUTS = (service: ServiceType): SpecialtyInputs 
         ...DEFAULT_FINANCIALS,
         ...DEFAULT_CONSTRUCTION_LABOR,
         ...DEFAULT_CONSTRUCTION_DAY_MODEL,
+        ...DEFAULT_CONSTRUCTION_FACILITY_MODEL,
         total_square_feet: 0,
         phases: DEFAULT_CONSTRUCTION_PHASES(),
       };
+
     case 'carpet_cleaning':
       return {
         ...DEFAULT_FINANCIALS,
