@@ -21,6 +21,7 @@ import {
   type CarpetInputs, type ConstructionInputs, type FinancialBase,
   type ScrubInputs, type SpecialtyInputs, type SpecialtyOutputs, type VctInputs,
 } from './specialtyCalc';
+import { ConstructionFacilityForm } from './ConstructionFacilityForm';
 import type { SummaryMeta } from './PricingSummary';
 
 /* ------------------------------------------------------------------ atoms */
@@ -360,6 +361,15 @@ function ConstructionForm({ i, patch, readOnly }: { i: ConstructionInputs; patch
 
       {advanced && (
         <>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            disabled={readOnly}
+            onClick={() => patch({ estimating_mode: 'facilities' })}
+          >
+            Switch to the facility crew-day estimator (recommended)
+          </Button>
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-sm">Crew &amp; wages</CardTitle></CardHeader>
             <CardContent className="space-y-3">
@@ -667,10 +677,15 @@ export function SpecialtyForm({
 }: { service: ServiceType; inputs: SpecialtyInputs; patch: Patch; readOnly?: boolean }) {
   return (
     <>
-      {service === 'construction_cleaning' && <ConstructionForm i={inputs as ConstructionInputs} patch={patch} readOnly={readOnly} />}
+      {service === 'construction_cleaning' && (
+        (inputs as ConstructionInputs).estimating_mode === 'facilities'
+          ? <ConstructionFacilityForm i={inputs as ConstructionInputs} patch={patch} readOnly={readOnly} />
+          : <ConstructionForm i={inputs as ConstructionInputs} patch={patch} readOnly={readOnly} />
+      )}
       {service === 'carpet_cleaning' && <CarpetForm i={inputs as CarpetInputs} patch={patch} readOnly={readOnly} />}
       {service === 'floor_scrubbing' && <ScrubForm i={inputs as ScrubInputs} patch={patch} readOnly={readOnly} />}
       {service === 'vct_strip_wax' && <VctForm i={inputs as VctInputs} patch={patch} readOnly={readOnly} />}
+      {!(service === 'construction_cleaning' && (inputs as ConstructionInputs).estimating_mode === 'facilities') && (
       <FinancialsCard
         i={inputs as FinancialBase}
         patch={patch}
@@ -679,6 +694,7 @@ export function SpecialtyForm({
         hideConsumables={service === 'construction_cleaning'}
         hideEquipment={service === 'construction_cleaning'}
       />
+      )}
     </>
   );
 }
@@ -687,6 +703,7 @@ export function SpecialtyForm({
 
 export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }) {
   const dm = outputs.day_model;
+  const fm = outputs.facility_model;
   const statusClass = !dm ? ''
     : dm.status === 'target' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
     : dm.status === 'below_target' ? 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400'
@@ -703,6 +720,11 @@ export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }
           {dm && (
             <p className="text-xs text-muted-foreground mt-1">
               {dm.crew_days.toFixed(2)} crew-days · {money(dm.effective_day_rate)}/day effective
+            </p>
+          )}
+          {fm && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {fm.total_crew_days.toFixed(2)} crew-days · {money(fm.effective_billing_rate)}/labor hr effective
             </p>
           )}
           {outputs.minimum_applied && (
@@ -731,6 +753,26 @@ export function SpecialtySummaryPanel({ outputs }: { outputs: SpecialtyOutputs }
             <Line label="Expected profit" value={money(outputs.profit_amount)} />
             <Line label="Expected gross margin" value={pct(outputs.gross_margin_percent)} />
             <Line label="Price / sq ft" value={`$${outputs.price_per_sqft.toFixed(4)}`} />
+          </CardContent>
+        </Card>
+      )}
+      {fm && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Facility crew-days</CardTitle></CardHeader>
+          <CardContent className="pt-0 space-y-1">
+            {fm.rows.map(r => (
+              <div key={r.id}>
+                <Line label={r.label} value={`${r.crew_days.toFixed(2)} days · ${hoursFmt(r.labor_hours)} · ${money(r.price)}`} />
+                <p className="text-[10px] text-muted-foreground/80 -mt-0.5 capitalize">
+                  {r.facility_type_label} · {r.position} vs {r.recommended_min}-{r.recommended_max} days
+                </p>
+              </div>
+            ))}
+            <Separator className="my-2" />
+            <Line label="Total crew-days" value={fm.total_crew_days.toFixed(2)} />
+            <Line label="Total labor hours" value={hoursFmt(fm.total_labor_hours)} />
+            <Line label="Direct labor cost" value={`${money(fm.direct_labor_cost)} @ ${money(fm.labor_cost_rate)}/hr${fm.prevailing ? ' (prevailing)' : ''}`} />
+            <Line label="Gross spread" value={`${money(fm.gross_spread)} · ${pct(fm.gross_spread_percent)}`} />
           </CardContent>
         </Card>
       )}

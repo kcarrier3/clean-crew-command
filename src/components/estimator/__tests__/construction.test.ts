@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   calculateConstruction, DEFAULT_SPECIALTY_INPUTS, hydrateSpecialtyInputs,
-  suggestedDayRate, type ConstructionInputs,
+  suggestedDayRate, DEFAULT_FACILITY_ROW, type ConstructionInputs,
 } from '@/components/estimator/specialtyCalc';
 
 const base = () => ({
@@ -258,5 +258,69 @@ describe('crew composition', () => {
     expect(h.crew_size).toBe(0);
     const dm = calculateConstruction(h).day_model!;
     expect(dm.labor_hours).toBeCloseTo(16);
+  });
+});
+
+describe('facility crew-day model', () => {
+  const facBase = () => ({
+    ...(DEFAULT_SPECIALTY_INPUTS('construction_cleaning') as ConstructionInputs),
+    total_square_feet: 119002,
+    default_crew_size: 4, default_hours_per_day: 8, default_billing_rate_per_hour: 74,
+    supply_rate_per_hour: 0, equipment_cost: 0, base_wage: 0, labor_burden_percent: 0,
+    crew_size: 0, crew_lead_count: 0, crew_member_wage: 0, crew_lead_wage: 0,
+    price_basis: 'day_rate' as const, apply_minimum_day_rate: false,
+    prevailing_wage_project: true, union_project: false,
+    prevailing_rate_mode: 'combined' as const, prevailing_combined_rate: 56.3,
+    facilities: [
+      { ...DEFAULT_FACILITY_ROW('a'), label: 'Youth Cottages', facility_type: 'youth_residential' as const, units: 6, crew_days: 2, square_feet: 7176 },
+      { ...DEFAULT_FACILITY_ROW('b'), label: 'Administration Building', facility_type: 'office_admin' as const, units: 1, crew_days: 4.5, square_feet: 18315 },
+    ],
+  });
+
+  it('prices hours x rate and costs from the combined prevailing package', () => {
+    const o = calculateConstruction(facBase());
+    const fm = o.facility_model!;
+    expect(fm.total_crew_days).toBeCloseTo(16.5);
+    expect(fm.total_labor_hours).toBeCloseTo(528);
+    expect(o.project_price).toBeCloseTo(528 * 74);
+    expect(o.loaded_labor_rate).toBeCloseTo(56.3);
+    expect(o.total_direct_cost).toBeCloseTo(528 * 56.3);
+    expect(fm.gross_spread).toBeCloseTo(528 * (74 - 56.3));
+    expect(fm.effective_billing_rate).toBeCloseTo(74);
+  });
+
+  it('prevailing wage never changes crew-days or hours', () => {
+    const std = calculateConstruction({ ...facBase(), prevailing_wage_project: false });
+    const pw = calculateConstruction(facBase());
+    expect(std.facility_model!.total_labor_hours).toBeCloseTo(pw.facility_model!.total_labor_hours);
+    expect(std.project_price).toBeCloseTo(pw.project_price);
+  });
+
+  it('migrates the Youth Services style draft into facility rows', () => {
+    const h = hydrateSpecialtyInputs('construction_cleaning', {
+      total_square_feet: 119002, price_basis: 'manual', manual_project_price: 59200,
+      crew_day_mode: false, base_wage: 0,
+      phases: [
+        { id: 'p1', label: 'Youth Cottages - 6 buildings', enabled: true, sqft: 43056, production_rate_sqft_hour: 0, extra_hours: 384, notes: '' },
+        { id: 'p2', label: 'Education Building', enabled: true, sqft: 43367, production_rate_sqft_hour: 0, extra_hours: 416, notes: '' },
+      ],
+    }) as ConstructionInputs;
+    expect(h.estimating_mode).toBe('facilities');
+    expect(h.default_billing_rate_per_hour).toBeCloseTo(74);
+    expect(h.facilities[0].crew_days).toBeCloseTo(12);
+    expect(h.facilities[0].facility_type).toBe('youth_residential');
+    expect(h.facilities[1].facility_type).toBe('education');
+    const o = calculateConstruction(h);
+    expect(o.labor_hours).toBeCloseTo(800);
+    expect(o.project_price).toBeCloseTo(59200);
+  });
+
+  it('legacy sq-ft estimates stay on the legacy engine', () => {
+    const h = hydrateSpecialtyInputs('construction_cleaning', {
+      total_square_feet: 20000, base_wage: 18,
+      phases: [{ id: 'final', label: 'Final Clean', enabled: true, sqft: 20000, production_rate_sqft_hour: 800, extra_hours: 0, notes: '' }],
+    }) as ConstructionInputs;
+    expect(h.estimating_mode).toBe('legacy');
+    expect(calculateConstruction(h).facility_model).toBeUndefined();
   });
 });

@@ -124,7 +124,9 @@ export function buildSpecialtyBreakdown(
       const allocatedCost = l.cost + nonLabor * share;
       customerLines.push({
         label: `${serviceLabel} — ${l.label}`,
-        amount: safe(allocatedCost * factor),
+        // Facility crew-day rows carry their own quoted price; everything else
+        // shares the project price in proportion to its labor.
+        amount: safe(typeof l.price === 'number' && l.price > 0 ? l.price : allocatedCost * factor),
         detail: [
           l.hours ? `${l.hours.toFixed(2)} labor hr` : null,
           nonLabor > 0 ? `includes ${money(nonLabor * share)} supplies, materials & equipment` : null,
