@@ -142,9 +142,131 @@ export function suggestedDayRate(position: unknown, min: number, max: number): n
   return safe(lo + (span * idx) / (PRICING_POSITIONS.length - 1));
 }
 
+/* ------------------------------------------------- facility crew-day model */
+
+/**
+ * Primary construction-cleaning model: each building / area is estimated in
+ * crew-days. Square footage is optional reference data only and never drives
+ * the price.
+ */
+export type FacilityType =
+  | 'youth_residential' | 'education' | 'office_admin' | 'facilities_support'
+  | 'health_dining' | 'apartment' | 'restaurant' | 'medical' | 'warehouse' | 'other';
+
+export type FacilityComplexity = 'light' | 'normal' | 'heavy';
+
+export type PrevailingRateMode = 'split' | 'combined';
+
+export interface FacilityRow {
+  id: string;
+  label: string;
+  facility_type: FacilityType;
+  /** Optional — reference / analytics only. */
+  square_feet: number;
+  /** Number of identical buildings or units priced on this row. */
+  units: number;
+  /** 0 = use the project default. */
+  crew_size: number;
+  /** 0 = use the project default. */
+  hours_per_day: number;
+  /** Crew-days for ONE unit. Supports quarter-days. */
+  crew_days: number;
+  /** True once the estimator moved the slider / typed a value themselves. */
+  crew_days_touched: boolean;
+  complexity: FacilityComplexity;
+  /** 0 = use the project default billing rate. */
+  billing_rate_per_hour: number;
+  notes: string;
+  /** Historical feedback (filled in after the job is completed). */
+  actual_crew_days?: number;
+  actual_labor_hours?: number;
+  actual_recorded_at?: string | null;
+}
+
+/**
+ * Editable starting points, seeded from the Youth Services estimate. These are
+ * placeholders for judgement, not hard production claims.
+ */
+export const FACILITY_TYPES: {
+  value: FacilityType; label: string; typical: number; min: number; max: number; hint: string;
+}[] = [
+  { value: 'youth_residential', label: 'Youth Cottage / Residential Institutional', typical: 2, min: 1, max: 3.5, hint: '~7k sf cottage, 4-person crew' },
+  { value: 'education', label: 'School / Education', typical: 6, min: 3, max: 10, hint: 'large school building' },
+  { value: 'office_admin', label: 'Office / Admin', typical: 4.5, min: 2, max: 8, hint: 'mid-size admin building' },
+  { value: 'facilities_support', label: 'Facilities / Industrial Support', typical: 0.5, min: 0.25, max: 2, hint: 'small shop / support building' },
+  { value: 'health_dining', label: 'Health / Dining', typical: 2, min: 1, max: 4, hint: '~9k sf building' },
+  { value: 'apartment', label: 'Apartment / Multifamily', typical: 1, min: 0.25, max: 3, hint: 'per building or unit group' },
+  { value: 'restaurant', label: 'Restaurant', typical: 2, min: 1, max: 4, hint: 'dense kitchen / dining' },
+  { value: 'medical', label: 'Medical / Healthcare', typical: 3, min: 1.5, max: 6, hint: 'detailed finishes' },
+  { value: 'warehouse', label: 'Warehouse / Industrial', typical: 1.5, min: 0.5, max: 5, hint: 'open square footage' },
+  { value: 'other', label: 'Other / Custom', typical: 1, min: 0.25, max: 5, hint: 'set your own' },
+];
+
+export const FACILITY_COMPLEXITY_LEVELS: {
+  value: FacilityComplexity; label: string; multiplier: number;
+}[] = [
+  { value: 'light', label: 'Light', multiplier: 0.8 },
+  { value: 'normal', label: 'Normal', multiplier: 1 },
+  { value: 'heavy', label: 'Heavy', multiplier: 1.3 },
+];
+
+export const facilityComplexityMultiplier = (v: unknown): number =>
+  FACILITY_COMPLEXITY_LEVELS.find(c => c.value === v)?.multiplier ?? 1;
+
+const roundQuarter = (v: number) => Math.round(v * 4) / 4;
+
+/** Recommended crew-day range for a facility type at a given complexity. */
+export function facilityRecommendation(type: unknown, complexity: unknown) {
+  const t = FACILITY_TYPES.find(x => x.value === type) || FACILITY_TYPES[FACILITY_TYPES.length - 1];
+  const m = facilityComplexityMultiplier(complexity);
+  return {
+    typical: roundQuarter(t.typical * m),
+    min: roundQuarter(t.min * m),
+    max: roundQuarter(t.max * m),
+    label: t.label,
+    hint: t.hint,
+  };
+}
+
+/** Where the chosen crew-days sit inside the recommended range. */
+export function facilityPositionLabel(days: number, min: number, max: number): 'aggressive' | 'typical' | 'conservative' {
+  const span = max - min;
+  if (span <= 0) return 'typical';
+  const p = (days - min) / span;
+  if (p < 0.34) return 'aggressive';
+  if (p > 0.66) return 'conservative';
+  return 'typical';
+}
+
+export const DEFAULT_FACILITY_ROW = (id?: string): FacilityRow => ({
+  id: id || `fac-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  label: '',
+  facility_type: 'other',
+  square_feet: 0,
+  units: 1,
+  crew_size: 0,
+  hours_per_day: 0,
+  crew_days: 1,
+  crew_days_touched: false,
+  complexity: 'normal',
+  billing_rate_per_hour: 0,
+  notes: '',
+});
+
+export type ConstructionEstimatingMode = 'facilities' | 'legacy';
+
 export interface ConstructionInputs extends FinancialBase {
   total_square_feet: number;
   phases: ConstructionPhase[];
+  /** Facility crew-day model (primary) vs. the legacy sq-ft / phase model. */
+  estimating_mode: ConstructionEstimatingMode;
+  facilities: FacilityRow[];
+  default_crew_size: number;
+  default_hours_per_day: number;
+  default_billing_rate_per_hour: number;
+  /** Prevailing wage cost inputs — cost/margin only, never production. */
+  prevailing_rate_mode: PrevailingRateMode;
+  prevailing_combined_rate: number;
   /** Construction projects never carry janitorial consumables — supplies only. */
   union_project: boolean;
   prevailing_wage_project: boolean;
@@ -156,7 +278,7 @@ export interface ConstructionInputs extends FinancialBase {
   supply_rate_per_hour: number;
   supply_cost_fixed: number;
   supply_cost_per_sqft: number;
-  /** Crew-day estimating (primary model). Legacy estimates stay phase-based. */
+  /** Crew-day estimating (legacy sq-ft model). */
   crew_day_mode: boolean;
   project_type: ConstructionProjectType;
   baseline_sqft_per_crew_day: number;
@@ -188,6 +310,7 @@ export interface ConstructionInputs extends FinancialBase {
   apply_prevailing_margin_floor: boolean;
   prevailing_min_margin_percent: number;
 }
+
 
 export interface CarpetInputs extends FinancialBase {
   square_feet: number;
