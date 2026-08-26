@@ -1280,7 +1280,9 @@ export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): S
     }
     c.materials_cost = 0;
     c.materials_cost_per_sqft = 0;
+    migrateConstructionFacilities(c, raw);
   }
+
   return merged;
 }
 
