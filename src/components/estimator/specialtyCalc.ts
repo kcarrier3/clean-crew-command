@@ -1291,7 +1291,6 @@ function migrateConstructionFacilities(c: ConstructionInputs, raw: Record<string
   c.default_crew_size = crew;
   c.default_hours_per_day = hpd;
   c.default_billing_rate_per_hour = rate;
-  c.price_basis = 'manual' === c.price_basis ? 'manual' : c.price_basis;
   c.facilities = rows.map(p => ({
     ...DEFAULT_FACILITY_ROW(p.id),
     label: p.label,
@@ -1354,10 +1353,27 @@ export function validateSpecialty(service: ServiceType, i: SpecialtyInputs): str
   if (!isPricingSolvable((i as FinancialBase).overhead_percent, (i as FinancialBase).target_margin_percent)) {
     return 'Overhead % + target profit % must be under 100%.';
   }
-  if (nn((i as FinancialBase).base_wage) <= 0) return 'Base wage must be greater than zero.';
+  const facilityMode = service === 'construction_cleaning' && facilityRowsActive(i as ConstructionInputs);
+  if (!facilityMode && nn((i as FinancialBase).base_wage) <= 0) return 'Base wage must be greater than zero.';
   switch (service) {
     case 'construction_cleaning': {
       const c = i as ConstructionInputs;
+      if (facilityMode) {
+        const rows = c.facilities;
+        if (rows.every(r => !(nn(r.crew_days) > 0) || !(nn(r.units) > 0)))
+          return 'Each facility needs at least one unit and more than zero crew-days.';
+        const rate = nn(c.default_billing_rate_per_hour);
+        if (rows.some(r => !(nn(r.billing_rate_per_hour) > 0) && !(rate > 0)))
+          return 'Enter a billing rate per labor hour.';
+        if ((c.union_project || c.prevailing_wage_project)) {
+          const combined = c.prevailing_rate_mode === 'combined';
+          if (combined && !(nn(c.prevailing_combined_rate) > 0))
+            return 'Enter the combined prevailing wage package rate.';
+          if (!combined && !(nn(c.prevailing_base_wage) > 0))
+            return 'Enter the prevailing base hourly wage.';
+        }
+        return null;
+      }
       if (!(nn(c.total_square_feet) > 0)) return 'Total project square feet must be greater than zero.';
       if ((c.union_project || c.prevailing_wage_project) && !(nn(c.prevailing_base_wage) > 0))
         return 'Enter the union / prevailing base hourly wage.';
