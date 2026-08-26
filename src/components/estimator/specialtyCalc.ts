@@ -1244,7 +1244,71 @@ export function calculateSpecialty(service: ServiceType, inputs: SpecialtyInputs
 }
 
 /** Merges stored JSONB back over the service defaults so new fields appear. */
+const FACILITY_TYPE_KEYWORDS: [RegExp, FacilityType][] = [
+  [/cottage|residential|dorm|group home/i, 'youth_residential'],
+  [/school|education|classroom|academic/i, 'education'],
+  [/admin|office/i, 'office_admin'],
+  [/facilit|maintenance|shop|support|garage/i, 'facilities_support'],
+  [/health|dining|cafeteria|kitchen/i, 'health_dining'],
+  [/apartment|multifamily|unit/i, 'apartment'],
+  [/restaurant/i, 'restaurant'],
+  [/medical|clinic|hospital|dental/i, 'medical'],
+  [/warehouse|industrial|distribution/i, 'warehouse'],
+];
+
+export const guessFacilityType = (label: string): FacilityType =>
+  FACILITY_TYPE_KEYWORDS.find(([re]) => re.test(label || ''))?.[1] ?? 'other';
+
+/**
+ * Bring saved construction estimates into the facility crew-day model without
+ * changing any of their numbers. Phase rows that were priced on fixed labor
+ * hours (the workflow we now standardise on) convert cleanly; anything that
+ * still relies on sq-ft production rates stays on the legacy engine.
+ */
+function migrateConstructionFacilities(c: ConstructionInputs, raw: Record<string, unknown>) {
+  if (Array.isArray(c.facilities) && c.facilities.length > 0) {
+    c.estimating_mode = 'facilities';
+    c.facilities = c.facilities.map(f => ({ ...DEFAULT_FACILITY_ROW(f.id), ...f }));
+    return;
+  }
+  if ('estimating_mode' in raw) return;
+
+  const rows = (c.phases || []).filter(p => p.enabled);
+  const hourly = rows.length > 0 && rows.every(p => nn(p.extra_hours) > 0 && !(nn(p.production_rate_sqft_hour) > 0));
+  if (!hourly) {
+    c.estimating_mode = 'legacy';
+    c.facilities = [];
+    return;
+  }
+
+  const crew = nn(c.default_crew_size) || nn(c.crew_size) || 4;
+  const hpd = nn(c.default_hours_per_day) || nn(c.hours_per_crew_day) || 8;
+  const totalHours = rows.reduce((s, p) => s + nn(p.extra_hours), 0);
+  const savedPrice = nn(c.manual_project_price);
+  const rate = nn(c.default_billing_rate_per_hour) || (savedPrice > 0 && totalHours > 0 ? savedPrice / totalHours : 0);
+
+  c.estimating_mode = 'facilities';
+  c.default_crew_size = crew;
+  c.default_hours_per_day = hpd;
+  c.default_billing_rate_per_hour = rate;
+  c.price_basis = 'manual' === c.price_basis ? 'manual' : c.price_basis;
+  c.facilities = rows.map(p => ({
+    ...DEFAULT_FACILITY_ROW(p.id),
+    label: p.label,
+    facility_type: guessFacilityType(p.label),
+    square_feet: nn(p.sqft),
+    units: 1,
+    crew_size: crew,
+    hours_per_day: hpd,
+    crew_days: crew * hpd > 0 ? nn(p.extra_hours) / (crew * hpd) : 0,
+    crew_days_touched: true,
+    billing_rate_per_hour: rate,
+    notes: p.notes || '',
+  }));
+}
+
 export function hydrateSpecialtyInputs(service: ServiceType, stored: unknown): SpecialtyInputs {
+
   const defaults = DEFAULT_SPECIALTY_INPUTS(service) as unknown as Record<string, unknown>;
   const raw = (stored && typeof stored === 'object' ? stored : {}) as Record<string, unknown>;
   const merged = { ...defaults, ...raw } as unknown as SpecialtyInputs;
