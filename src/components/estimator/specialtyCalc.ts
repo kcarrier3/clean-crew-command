@@ -751,16 +751,20 @@ export function crewBlendedWage(i: ConstructionInputs): number {
 
 export function constructionLaborRate(i: ConstructionInputs) {
   const prevailing = !!i.union_project || !!i.prevailing_wage_project;
+  const combinedMode = prevailing && i.prevailing_rate_mode === 'combined' && nn(i.prevailing_combined_rate) > 0;
   const blended = crewBlendedWage(i);
-  const wage = prevailing
-    ? nn(i.prevailing_base_wage) || blended || nn(i.base_wage)
-    : blended || nn(i.base_wage);
-  const burdenPct = nn(i.labor_burden_percent);
+  const wage = combinedMode
+    ? nn(i.prevailing_combined_rate)
+    : prevailing
+      ? nn(i.prevailing_base_wage) || blended || nn(i.base_wage)
+      : blended || nn(i.base_wage);
+  const burdenPct = combinedMode ? 0 : nn(i.labor_burden_percent);
   const burdenAmount = wage * (burdenPct / 100);
-  const fringe = prevailing ? nn(i.prevailing_fringe_per_hour) : 0;
-  const extra = prevailing ? nn(i.prevailing_additional_burden_per_hour) : 0;
+  const fringe = prevailing && !combinedMode ? nn(i.prevailing_fringe_per_hour) : 0;
+  const extra = prevailing && !combinedMode ? nn(i.prevailing_additional_burden_per_hour) : 0;
   return {
     prevailing,
+    combined: combinedMode,
     wage,
     burdenPct,
     burdenAmount,
@@ -770,9 +774,145 @@ export function constructionLaborRate(i: ConstructionInputs) {
   };
 }
 
+/* --------------------------------------------- facility crew-day estimating */
+
+const sqftBand = (sqft: number): string => {
+  const s = nn(sqft);
+  if (s <= 0) return 'unspecified';
+  if (s < 5000) return '<5k';
+  if (s < 10000) return '5k-10k';
+  if (s < 25000) return '10k-25k';
+  if (s < 50000) return '25k-50k';
+  if (s < 100000) return '50k-100k';
+  return '100k+';
+};
+
+export function facilityRowsActive(i: ConstructionInputs): boolean {
+  return i.estimating_mode === 'facilities' && Array.isArray(i.facilities) && i.facilities.length > 0;
+}
+
+/** Facility-based crew-day estimate: hours × billing rate, cost from wages. */
+export function calculateConstructionFacilities(i: ConstructionInputs): SpecialtyOutputs {
+  const wageInfo = constructionLaborRate(i);
+  const costRate = wageInfo.effective;
+  const defCrew = nn(i.default_crew_size) || 4;
+  const defHours = nn(i.default_hours_per_day) || 8;
+  const defRate = nn(i.default_billing_rate_per_hour);
+
+  const rows: FacilityRowResult[] = (i.facilities || []).map(f => {
+    const rec = facilityRecommendation(f.facility_type, f.complexity);
+    const units = Math.max(0, nn(f.units, 1) || 0);
+    const crew = nn(f.crew_size) || defCrew;
+    const hpd = nn(f.hours_per_day) || defHours;
+    const cdPerUnit = nn(f.crew_days);
+    const crewDays = units * cdPerUnit;
+    const hours = crewDays * crew * hpd;
+    const rate = nn(f.billing_rate_per_hour) || defRate;
+    const actualDays = nn(f.actual_crew_days);
+    const actualHours = nn(f.actual_labor_hours);
+    return {
+      id: f.id,
+      label: f.label || rec.label,
+      facility_type: f.facility_type || 'other',
+      facility_type_label: rec.label,
+      complexity: f.complexity || 'normal',
+      square_feet: nn(f.square_feet),
+      units,
+      crew_size: crew,
+      hours_per_day: hpd,
+      crew_days_per_unit: safe(cdPerUnit),
+      crew_days: safe(crewDays),
+      labor_hours: safe(hours),
+      billing_rate_per_hour: safe(rate),
+      price: safe(hours * rate),
+      labor_cost: safe(hours * costRate),
+      recommended_min: rec.min,
+      recommended_typical: rec.typical,
+      recommended_max: rec.max,
+      position: facilityPositionLabel(cdPerUnit, rec.min, rec.max),
+      actual_crew_days: safe(actualDays),
+      actual_labor_hours: safe(actualHours),
+      crew_days_variance: safe(actualDays > 0 ? actualDays - crewDays : 0),
+      labor_hours_variance: safe(actualHours > 0 ? actualHours - hours : 0),
+      sqft_band: sqftBand(f.square_feet),
+    };
+  });
+
+  const totalHours = rows.reduce((s, r) => s + r.labor_hours, 0);
+  const totalCrewDays = rows.reduce((s, r) => s + r.crew_days, 0);
+  const totalUnits = rows.reduce((s, r) => s + r.units, 0);
+  const rowSqft = rows.reduce((s, r) => s + r.square_feet, 0);
+  const totalSqft = nn(i.total_square_feet) || rowSqft;
+  const laborCost = rows.reduce((s, r) => s + r.labor_cost, 0);
+  const supplyCost =
+    totalHours * nn(i.supply_rate_per_hour) + nn(i.supply_cost_fixed) + nn(i.supply_cost_per_sqft) * totalSqft;
+  const equipment = nn(i.equipment_cost);
+  const direct = laborCost + supplyCost + equipment;
+
+  let price = rows.reduce((s, r) => s + r.price, 0);
+  if (i.price_basis === 'manual' && nn(i.manual_project_price) > 0) price = nn(i.manual_project_price);
+  const minimum = nn(i.minimum_charge);
+  const minimumApplied = minimum > price;
+  if (minimumApplied) price = minimum;
+
+  const overheadPct = nn(i.overhead_percent);
+  const lines: LaborLine[] = rows.map(r => ({
+    label: r.label,
+    hours: r.labor_hours,
+    cost: r.labor_cost,
+    price: r.price,
+    detail: `${r.units > 1 ? `${r.units} × ` : ''}${r.crew_days_per_unit} crew-day${r.crew_days_per_unit === 1 ? '' : 's'} × ${r.crew_size} crew × ${r.hours_per_day} hr @ ${r.billing_rate_per_hour ? `$${r.billing_rate_per_hour}/hr` : 'no rate set'}`,
+  }));
+
+  const spread = price - direct;
+  return {
+    lines,
+    labor_hours: safe(totalHours),
+    loaded_labor_rate: safe(costRate),
+    labor_cost: safe(laborCost),
+    materials_cost: 0,
+    equipment_cost: safe(equipment),
+    supply_cost: safe(supplyCost),
+    total_direct_cost: safe(direct),
+    calculated_price: safe(price),
+    project_price: safe(price),
+    minimum_applied: minimumApplied,
+    overhead_amount: safe(price * (overheadPct / 100)),
+    profit_amount: safe(price - direct - price * (overheadPct / 100)),
+    gross_margin_percent: safe(price > 0 ? (spread / price) * 100 : 0),
+    markup_on_direct_percent: safe(direct > 0 ? (spread / direct) * 100 : 0),
+    price_per_sqft: safe(totalSqft > 0 ? price / totalSqft : 0),
+    invalid: false,
+    extras: [],
+    facility_model: {
+      rows,
+      default_crew_size: defCrew,
+      default_hours_per_day: defHours,
+      default_billing_rate_per_hour: safe(defRate),
+      total_units: totalUnits,
+      total_crew_days: safe(totalCrewDays),
+      total_labor_hours: safe(totalHours),
+      total_square_feet: safe(totalSqft),
+      total_price: safe(price),
+      prevailing: wageInfo.prevailing,
+      prevailing_rate_mode: wageInfo.combined ? 'combined' : 'split',
+      labor_cost_rate: safe(costRate),
+      direct_labor_cost: safe(laborCost),
+      supply_cost: safe(supplyCost),
+      equipment_cost: safe(equipment),
+      total_direct_cost: safe(direct),
+      gross_spread: safe(spread),
+      gross_spread_percent: safe(price > 0 ? (spread / price) * 100 : 0),
+      effective_billing_rate: safe(totalHours > 0 ? price / totalHours : 0),
+    },
+  };
+}
+
 export function calculateConstruction(i: ConstructionInputs): SpecialtyOutputs {
+  if (facilityRowsActive(i)) return calculateConstructionFacilities(i);
   const wageInfo = constructionLaborRate(i);
   const rate = wageInfo.effective;
+
   const totalSqft = nn(i.total_square_feet);
   const crewDayMode = i.crew_day_mode !== false;
 
