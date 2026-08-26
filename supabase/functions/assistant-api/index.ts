@@ -81,7 +81,7 @@ async function searchOpportunities(body: Json) {
 
   let query = admin
     .from('crm_leads')
-    .select('id,name,company_name,city:company_id,status,stage_id,company_id,amount,created_at')
+    .select('id,name,company_name,status,stage_id,company_id,amount,created_at')
     .limit(limit);
 
   if (id) query = query.eq('id', id);
