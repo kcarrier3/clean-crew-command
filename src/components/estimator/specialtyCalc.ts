@@ -356,7 +356,10 @@ export interface LaborLine {
   hours: number;
   cost: number;
   detail?: string;
+  /** Explicit customer price for this line (facility crew-day model). */
+  price?: number;
 }
+
 
 export interface SpecialtyOutputs {
   lines: LaborLine[];
