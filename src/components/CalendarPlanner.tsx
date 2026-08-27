@@ -105,7 +105,56 @@ const COLOR_SWATCHES: { label: string; value: string }[] = [
   { label: 'Slate', value: '#64748b' },
 ];
 
+/** Repeating frequency options for planning-calendar entries. */
+type RepeatFreq =
+  | 'none' | 'daily' | 'weekly' | 'biweekly' | 'every_3_weeks'
+  | 'monthly' | 'every_2_months' | 'quarterly' | 'every_6_months' | 'yearly';
+
+const REPEAT_OPTIONS: { value: RepeatFreq; label: string }[] = [
+  { value: 'none', label: 'Does not repeat' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Every 2 weeks' },
+  { value: 'every_3_weeks', label: 'Every 3 weeks' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'every_2_months', label: 'Every 2 months' },
+  { value: 'quarterly', label: 'Every 3 months' },
+  { value: 'every_6_months', label: 'Every 6 months' },
+  { value: 'yearly', label: 'Yearly' },
+];
+
+const MAX_OCCURRENCES = 260;
+
+/** Nth occurrence start date for a repeating entry. */
+const advance = (base: Date, freq: RepeatFreq, n: number): Date => {
+  switch (freq) {
+    case 'daily': return addDays(base, n);
+    case 'weekly': return addWeeks(base, n);
+    case 'biweekly': return addWeeks(base, n * 2);
+    case 'every_3_weeks': return addWeeks(base, n * 3);
+    case 'monthly': return addMonths(base, n);
+    case 'every_2_months': return addMonths(base, n * 2);
+    case 'quarterly': return addMonths(base, n * 3);
+    case 'every_6_months': return addMonths(base, n * 6);
+    case 'yearly': return addMonths(base, n * 12);
+    default: return base;
+  }
+};
+
+/** All occurrence start dates from `start` through `until` (inclusive). */
+const occurrenceStarts = (start: Date, freq: RepeatFreq, until: Date): Date[] => {
+  if (freq === 'none') return [start];
+  const out: Date[] = [];
+  for (let n = 0; n < MAX_OCCURRENCES; n++) {
+    const d = advance(start, freq, n);
+    if (d > until) break;
+    out.push(d);
+  }
+  return out.length ? out : [start];
+};
+
 const hexToRgba = (hex: string, alpha: number) => {
+
   const h = hex.replace('#', '');
   const bigint = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
   const r = (bigint >> 16) & 255;
