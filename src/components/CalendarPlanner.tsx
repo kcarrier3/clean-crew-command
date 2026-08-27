@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   addMonths,
   addDays,
+  addWeeks,
+  differenceInCalendarDays,
   endOfMonth,
   endOfWeek,
   format,
@@ -103,7 +105,56 @@ const COLOR_SWATCHES: { label: string; value: string }[] = [
   { label: 'Slate', value: '#64748b' },
 ];
 
+/** Repeating frequency options for planning-calendar entries. */
+type RepeatFreq =
+  | 'none' | 'daily' | 'weekly' | 'biweekly' | 'every_3_weeks'
+  | 'monthly' | 'every_2_months' | 'quarterly' | 'every_6_months' | 'yearly';
+
+const REPEAT_OPTIONS: { value: RepeatFreq; label: string }[] = [
+  { value: 'none', label: 'Does not repeat' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Every 2 weeks' },
+  { value: 'every_3_weeks', label: 'Every 3 weeks' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'every_2_months', label: 'Every 2 months' },
+  { value: 'quarterly', label: 'Every 3 months' },
+  { value: 'every_6_months', label: 'Every 6 months' },
+  { value: 'yearly', label: 'Yearly' },
+];
+
+const MAX_OCCURRENCES = 260;
+
+/** Nth occurrence start date for a repeating entry. */
+const advance = (base: Date, freq: RepeatFreq, n: number): Date => {
+  switch (freq) {
+    case 'daily': return addDays(base, n);
+    case 'weekly': return addWeeks(base, n);
+    case 'biweekly': return addWeeks(base, n * 2);
+    case 'every_3_weeks': return addWeeks(base, n * 3);
+    case 'monthly': return addMonths(base, n);
+    case 'every_2_months': return addMonths(base, n * 2);
+    case 'quarterly': return addMonths(base, n * 3);
+    case 'every_6_months': return addMonths(base, n * 6);
+    case 'yearly': return addMonths(base, n * 12);
+    default: return base;
+  }
+};
+
+/** All occurrence start dates from `start` through `until` (inclusive). */
+const occurrenceStarts = (start: Date, freq: RepeatFreq, until: Date): Date[] => {
+  if (freq === 'none') return [start];
+  const out: Date[] = [];
+  for (let n = 0; n < MAX_OCCURRENCES; n++) {
+    const d = advance(start, freq, n);
+    if (d > until) break;
+    out.push(d);
+  }
+  return out.length ? out : [start];
+};
+
 const hexToRgba = (hex: string, alpha: number) => {
+
   const h = hex.replace('#', '');
   const bigint = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
   const r = (bigint >> 16) & 255;
@@ -229,6 +280,8 @@ const CalendarPlanner = () => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [jobSites, setJobSites] = useState<JobSiteOpt[]>([]);
   const [filterKind, setFilterKind] = useState<DraftKind | 'all'>('all');
+  const [repeatFreq, setRepeatFreq] = useState<RepeatFreq>('none');
+  const [repeatUntil, setRepeatUntil] = useState<string>(toDateInput(addMonths(new Date(), 3)));
   const [editing, setEditing] = useState<Partial<Draft> | null>(null);
   const [editingDayKey, setEditingDayKey] = useState<string | null>(null);
 
@@ -306,6 +359,8 @@ const CalendarPlanner = () => {
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setHours(23, 59, 59, 999);
+    setRepeatFreq('none');
+    setRepeatUntil(toDateInput(addMonths(start, 3)));
     setEditing({
       title: '',
       notes: '',
@@ -325,14 +380,14 @@ const CalendarPlanner = () => {
       toast({ title: 'Title required', variant: 'destructive' });
       return;
     }
+    const baseStart = startOfDayFromInput(toDateInput(new Date(editing.start_at!)));
+    const baseEnd = endOfDayFromInput(toDateInput(new Date(editing.end_at ?? editing.start_at!)));
     const payload = {
       title: editing.title!,
       notes: editing.notes ?? null,
       kind: (editing.kind ?? 'shift_draft') as DraftKind,
-      start_at: startOfDayFromInput(toDateInput(new Date(editing.start_at!))).toISOString(),
-      end_at: endOfDayFromInput(
-        toDateInput(new Date(editing.end_at ?? editing.start_at!)),
-      ).toISOString(),
+      start_at: baseStart.toISOString(),
+      end_at: baseEnd.toISOString(),
       all_day: true,
       employee_id: editing.employee_id ?? null,
       job_site_id: editing.job_site_id ?? null,
@@ -348,17 +403,31 @@ const CalendarPlanner = () => {
         return;
       }
     } else {
-      const { error } = await supabase
-        .from('calendar_drafts')
-        .insert({ ...payload, created_by: user.id });
+      const spanDays = Math.max(0, differenceInCalendarDays(baseEnd, baseStart));
+      const until = repeatFreq === 'none' ? baseStart : startOfDayFromInput(repeatUntil);
+      if (repeatFreq !== 'none' && until < baseStart) {
+        toast({ title: 'Repeat until must be on or after the start date', variant: 'destructive' });
+        return;
+      }
+      const rows = occurrenceStarts(baseStart, repeatFreq, until).map((s) => ({
+        ...payload,
+        start_at: s.toISOString(),
+        end_at: endOfDayFromInput(toDateInput(addDays(s, spanDays))).toISOString(),
+        created_by: user.id,
+      }));
+      const { error } = await supabase.from('calendar_drafts').insert(rows);
       if (error) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
         return;
+      }
+      if (rows.length > 1) {
+        toast({ title: `Created ${rows.length} repeating entries` });
       }
     }
     setEditing(null);
     await loadDrafts();
   };
+
 
   const deleteDraft = async () => {
     if (!editing?.id) return;
@@ -710,6 +779,42 @@ const CalendarPlanner = () => {
                   />
                 </div>
               </div>
+              {!editing.id && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Repeats</Label>
+                    <Select value={repeatFreq} onValueChange={(v) => setRepeatFreq(v as RepeatFreq)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {REPEAT_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Repeat until</Label>
+                    <Input
+                      type="date"
+                      disabled={repeatFreq === 'none'}
+                      min={editing.start_at ? toDateInput(new Date(editing.start_at)) : undefined}
+                      value={repeatUntil}
+                      onChange={(e) => setRepeatUntil(e.target.value)}
+                    />
+                  </div>
+                  {repeatFreq !== 'none' && editing.start_at && (
+                    <p className="col-span-2 text-xs text-muted-foreground">
+                      Creates{' '}
+                      {occurrenceStarts(
+                        startOfDayFromInput(toDateInput(new Date(editing.start_at))),
+                        repeatFreq,
+                        startOfDayFromInput(repeatUntil || toDateInput(new Date(editing.start_at))),
+                      ).length}{' '}
+                      entries. Each occurrence can be moved or deleted on its own afterward.
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Account</Label>
