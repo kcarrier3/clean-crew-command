@@ -779,6 +779,42 @@ const CalendarPlanner = () => {
                   />
                 </div>
               </div>
+              {!editing.id && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Repeats</Label>
+                    <Select value={repeatFreq} onValueChange={(v) => setRepeatFreq(v as RepeatFreq)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {REPEAT_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Repeat until</Label>
+                    <Input
+                      type="date"
+                      disabled={repeatFreq === 'none'}
+                      min={editing.start_at ? toDateInput(new Date(editing.start_at)) : undefined}
+                      value={repeatUntil}
+                      onChange={(e) => setRepeatUntil(e.target.value)}
+                    />
+                  </div>
+                  {repeatFreq !== 'none' && editing.start_at && (
+                    <p className="col-span-2 text-xs text-muted-foreground">
+                      Creates{' '}
+                      {occurrenceStarts(
+                        startOfDayFromInput(toDateInput(new Date(editing.start_at))),
+                        repeatFreq,
+                        startOfDayFromInput(repeatUntil || toDateInput(new Date(editing.start_at))),
+                      ).length}{' '}
+                      entries. Each occurrence can be moved or deleted on its own afterward.
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Account</Label>
