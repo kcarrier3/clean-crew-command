@@ -357,6 +357,8 @@ const CalendarPlanner = () => {
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setHours(23, 59, 59, 999);
+    setRepeatFreq('none');
+    setRepeatUntil(toDateInput(addMonths(start, 3)));
     setEditing({
       title: '',
       notes: '',
@@ -376,14 +378,14 @@ const CalendarPlanner = () => {
       toast({ title: 'Title required', variant: 'destructive' });
       return;
     }
+    const baseStart = startOfDayFromInput(toDateInput(new Date(editing.start_at!)));
+    const baseEnd = endOfDayFromInput(toDateInput(new Date(editing.end_at ?? editing.start_at!)));
     const payload = {
       title: editing.title!,
       notes: editing.notes ?? null,
       kind: (editing.kind ?? 'shift_draft') as DraftKind,
-      start_at: startOfDayFromInput(toDateInput(new Date(editing.start_at!))).toISOString(),
-      end_at: endOfDayFromInput(
-        toDateInput(new Date(editing.end_at ?? editing.start_at!)),
-      ).toISOString(),
+      start_at: baseStart.toISOString(),
+      end_at: baseEnd.toISOString(),
       all_day: true,
       employee_id: editing.employee_id ?? null,
       job_site_id: editing.job_site_id ?? null,
@@ -399,17 +401,31 @@ const CalendarPlanner = () => {
         return;
       }
     } else {
-      const { error } = await supabase
-        .from('calendar_drafts')
-        .insert({ ...payload, created_by: user.id });
+      const spanDays = Math.max(0, differenceInCalendarDays(baseEnd, baseStart));
+      const until = repeatFreq === 'none' ? baseStart : startOfDayFromInput(repeatUntil);
+      if (repeatFreq !== 'none' && until < baseStart) {
+        toast({ title: 'Repeat until must be on or after the start date', variant: 'destructive' });
+        return;
+      }
+      const rows = occurrenceStarts(baseStart, repeatFreq, until).map((s) => ({
+        ...payload,
+        start_at: s.toISOString(),
+        end_at: endOfDayFromInput(toDateInput(addDays(s, spanDays))).toISOString(),
+        created_by: user.id,
+      }));
+      const { error } = await supabase.from('calendar_drafts').insert(rows);
       if (error) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
         return;
+      }
+      if (rows.length > 1) {
+        toast({ title: `Created ${rows.length} repeating entries` });
       }
     }
     setEditing(null);
     await loadDrafts();
   };
+
 
   const deleteDraft = async () => {
     if (!editing?.id) return;
