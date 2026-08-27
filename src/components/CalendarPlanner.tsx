@@ -280,6 +280,8 @@ const CalendarPlanner = () => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [jobSites, setJobSites] = useState<JobSiteOpt[]>([]);
   const [filterKind, setFilterKind] = useState<DraftKind | 'all'>('all');
+  const [repeatFreq, setRepeatFreq] = useState<RepeatFreq>('none');
+  const [repeatUntil, setRepeatUntil] = useState<string>(toDateInput(addMonths(new Date(), 3)));
   const [editing, setEditing] = useState<Partial<Draft> | null>(null);
   const [editingDayKey, setEditingDayKey] = useState<string | null>(null);
 
