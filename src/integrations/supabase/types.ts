@@ -984,10 +984,16 @@ export type Database = {
           job_site_id: string | null
           last_emailed_at: string | null
           notes: string | null
+          online_paid_at: string | null
+          online_payment_enabled: boolean
           paid_at: string | null
+          payment_link_url: string | null
+          payment_processor: string | null
           payment_terms: string | null
           pdf_path: string | null
           po_number: string | null
+          processor_invoice_id: string | null
+          processor_status: string | null
           qb_external_id: string | null
           qb_sync_error: string | null
           qb_sync_status: string
@@ -1037,10 +1043,16 @@ export type Database = {
           job_site_id?: string | null
           last_emailed_at?: string | null
           notes?: string | null
+          online_paid_at?: string | null
+          online_payment_enabled?: boolean
           paid_at?: string | null
+          payment_link_url?: string | null
+          payment_processor?: string | null
           payment_terms?: string | null
           pdf_path?: string | null
           po_number?: string | null
+          processor_invoice_id?: string | null
+          processor_status?: string | null
           qb_external_id?: string | null
           qb_sync_error?: string | null
           qb_sync_status?: string
@@ -1090,10 +1102,16 @@ export type Database = {
           job_site_id?: string | null
           last_emailed_at?: string | null
           notes?: string | null
+          online_paid_at?: string | null
+          online_payment_enabled?: boolean
           paid_at?: string | null
+          payment_link_url?: string | null
+          payment_processor?: string | null
           payment_terms?: string | null
           pdf_path?: string | null
           po_number?: string | null
+          processor_invoice_id?: string | null
+          processor_status?: string | null
           qb_external_id?: string | null
           qb_sync_error?: string | null
           qb_sync_status?: string
@@ -6088,6 +6106,7 @@ export type Database = {
       }
       supply_movements: {
         Row: {
+          billing_event_id: string | null
           created_at: string
           created_by: string | null
           from_location_id: string | null
@@ -6103,6 +6122,7 @@ export type Database = {
           unit_price: number | null
         }
         Insert: {
+          billing_event_id?: string | null
           created_at?: string
           created_by?: string | null
           from_location_id?: string | null
@@ -6118,6 +6138,7 @@ export type Database = {
           unit_price?: number | null
         }
         Update: {
+          billing_event_id?: string | null
           created_at?: string
           created_by?: string | null
           from_location_id?: string | null
@@ -6133,6 +6154,13 @@ export type Database = {
           unit_price?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "supply_movements_billing_event_id_fkey"
+            columns: ["billing_event_id"]
+            isOneToOne: false
+            referencedRelation: "billing_events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "supply_movements_created_by_fkey"
             columns: ["created_by"]
