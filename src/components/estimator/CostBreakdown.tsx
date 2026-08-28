@@ -116,7 +116,14 @@ export function buildSpecialtyBreakdown(
   const customerLines: BreakdownLine[] = [];
   const nonLabor = supplyCost + safe(o.materials_cost) + safe(o.equipment_cost);
   const laborTotal = laborLines.reduce((s, l) => s + l.cost, 0);
-  if (factor > 0 && laborLines.length > 0) {
+  // Facility crew-day rows carry their own quoted price. Those prices only foot
+  // to the quoted project price when there is no manual override or minimum
+  // charge, so scale them to the actual price instead of dumping the whole
+  // difference onto the final line.
+  const usePriced = laborLines.length > 0 && laborLines.every(l => typeof l.price === 'number' && l.price > 0);
+  const pricedTotal = usePriced ? laborLines.reduce((s, l) => s + safe(l.price), 0) : 0;
+  const priceScale = usePriced && pricedTotal > 0 ? price / pricedTotal : 0;
+  if ((priceScale > 0 || factor > 0) && laborLines.length > 0) {
     for (const l of laborLines) {
       // Bake supplies, materials and equipment into each scope item,
       // allocated in proportion to that item's share of labor.
@@ -124,9 +131,7 @@ export function buildSpecialtyBreakdown(
       const allocatedCost = l.cost + nonLabor * share;
       customerLines.push({
         label: `${serviceLabel} — ${l.label}`,
-        // Facility crew-day rows carry their own quoted price; everything else
-        // shares the project price in proportion to its labor.
-        amount: safe(typeof l.price === 'number' && l.price > 0 ? l.price : allocatedCost * factor),
+        amount: safe(priceScale > 0 ? safe(l.price) * priceScale : allocatedCost * factor),
         detail: [
           l.hours ? `${l.hours.toFixed(2)} labor hr` : null,
           nonLabor > 0 ? `includes ${money(nonLabor * share)} supplies, materials & equipment` : null,
@@ -138,6 +143,7 @@ export function buildSpecialtyBreakdown(
   } else {
     customerLines.push({ label: serviceLabel, amount: price });
   }
+
 
   // Rounding guard so the customer lines always foot to the quoted price.
   const sum = customerLines.reduce((s, l) => s + l.amount, 0);
