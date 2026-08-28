@@ -138,6 +138,8 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
         </CardContent></Card>
       </div>
 
+      <SupplyUsageToBillCard onQueued={load} />
+
       <Card>
         <CardHeader className="pb-3 gap-3 sm:flex-row sm:items-center sm:justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2">
