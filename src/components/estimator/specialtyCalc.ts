@@ -755,7 +755,7 @@ export function constructionLaborRate(i: ConstructionInputs) {
   const blended = crewBlendedWage(i);
   // In the facility crew-day form the only wage input shown is "Crew wage"
   // (base_wage), so it must win over the legacy hidden crew composition wages.
-  const facilityMode = i.estimating_mode === 'facilities';
+  const facilityMode = facilityRowsActive(i);
   const straight = facilityMode ? nn(i.base_wage) || blended : blended || nn(i.base_wage);
   const wage = combinedMode
     ? nn(i.prevailing_combined_rate)
