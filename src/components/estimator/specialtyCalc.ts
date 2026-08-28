@@ -753,11 +753,16 @@ export function constructionLaborRate(i: ConstructionInputs) {
   const prevailing = !!i.union_project || !!i.prevailing_wage_project;
   const combinedMode = prevailing && i.prevailing_rate_mode === 'combined' && nn(i.prevailing_combined_rate) > 0;
   const blended = crewBlendedWage(i);
+  // In the facility crew-day form the only wage input shown is "Crew wage"
+  // (base_wage), so it must win over the legacy hidden crew composition wages.
+  const facilityMode = facilityRowsActive(i);
+  const straight = facilityMode ? nn(i.base_wage) || blended : blended || nn(i.base_wage);
   const wage = combinedMode
     ? nn(i.prevailing_combined_rate)
     : prevailing
-      ? nn(i.prevailing_base_wage) || blended || nn(i.base_wage)
-      : blended || nn(i.base_wage);
+      ? nn(i.prevailing_base_wage) || straight
+      : straight;
+
   const burdenPct = combinedMode ? 0 : nn(i.labor_burden_percent);
   const burdenAmount = wage * (burdenPct / 100);
   const fringe = prevailing && !combinedMode ? nn(i.prevailing_fringe_per_hour) : 0;
