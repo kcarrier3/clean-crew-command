@@ -33,7 +33,14 @@ export function NumField({
   suffix?: string; disabled?: boolean;
 }) {
   const [text, setText] = useState(value === 0 ? '' : String(value ?? ''));
-  useEffect(() => { setText(value === 0 ? '' : String(value)); }, [value]);
+  useEffect(() => {
+    // Only re-sync from the parent when the incoming value differs from what the
+    // user has typed — otherwise partial entries like "16." or "0.5" get clobbered.
+    const parsed = text.trim() === '' ? 0 : parseFloat(text);
+    if (!Number.isNaN(parsed) && parsed === (value ?? 0)) return;
+    setText(value === 0 ? '' : String(value ?? ''));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id} className="text-xs">{label}</Label>
@@ -45,9 +52,15 @@ export function NumField({
           step="any"
           value={text}
           disabled={disabled}
-          onChange={e => { setText(e.target.value); onChange(parseFloat(e.target.value) || 0); }}
+          onChange={e => {
+            const raw = e.target.value;
+            setText(raw);
+            const n = parseFloat(raw);
+            onChange(Number.isFinite(n) ? n : 0);
+          }}
           className={suffix ? 'pr-12 h-11 text-base' : 'h-11 text-base'}
         />
+
         {suffix && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{suffix}</span>
         )}
