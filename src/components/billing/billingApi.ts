@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { dueDateFromTerms } from '@/lib/billing/kpi';
 import type { BillingEvent, Invoice } from '@/lib/billing/types';
+import { buildPaymentLink, fetchOnlinePaymentConfig, isCollectionReady } from '@/lib/billing/onlinePayments';
 
 /** Untyped handle — the billing tables are new and joined ad hoc. */
 export const db = supabase as any;
@@ -107,6 +108,23 @@ export const createInvoiceFromEvents = async (o: CreateInvoiceOptions): Promise<
     invoiced_at: new Date().toISOString(),
   }).in('id', o.events.map(e => e.id));
   if (evtErr) throw evtErr;
+
+  // Attach a customer pay link when online collection is on by default.
+  try {
+    const payCfg = await fetchOnlinePaymentConfig();
+    if (payCfg.default_on_new_invoices && isCollectionReady(payCfg)) {
+      const link = buildPaymentLink(payCfg, invoice);
+      if (link) {
+        await db.from('billing_invoices').update({
+          online_payment_enabled: true,
+          payment_link_url: link,
+          payment_processor: payCfg.processor,
+        }).eq('id', invoice.id);
+        invoice.online_payment_enabled = true;
+        invoice.payment_link_url = link;
+      }
+    }
+  } catch { /* pay link is optional — never block invoicing */ }
 
   return invoice as Invoice;
 };
