@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { db, fetchBillingEvents } from './billingApi';
 import { GenerateInvoiceDialog } from './GenerateInvoiceDialog';
+import { SupplyUsageToBillCard } from './SupplyUsageToBillCard';
 import { money, type BillingEvent } from '@/lib/billing/types';
 import { ageInDays } from '@/lib/billing/kpi';
 
