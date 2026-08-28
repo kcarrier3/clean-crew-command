@@ -10,6 +10,7 @@ import { Mail, Save, Settings2, Building2, RefreshCw, ScanLine } from 'lucide-re
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
 import { TaxRatesCard } from './TaxRatesCard';
+import { OnlinePaymentsCard } from './OnlinePaymentsCard';
 import {
   AUTO_CONFIDENCE_THRESHOLD, fetchAutoApplyEnabled, setAutoApplyEnabled,
 } from '@/lib/billing/checkIntake';
@@ -95,6 +96,8 @@ export const BillingSettingsTab = () => {
 
   return (
     <div className="space-y-4">
+      <OnlinePaymentsCard />
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2"><ScanLine className="h-4 w-4" /> Scanned check posting</CardTitle>

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Mail, Send, Ban, History, CreditCard, AlertTriangle } from 'lucide-react';
+import { Download, Mail, Send, Ban, History, CreditCard, AlertTriangle, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
@@ -15,6 +15,11 @@ import {
   INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL, money, type Invoice, type InvoiceItem,
 } from '@/lib/billing/types';
 import { businessDays, calendarDays } from '@/lib/billing/kpi';
+import {
+  DEFAULT_ONLINE_PAYMENT_CONFIG, buildPaymentLink, isCollectionReady,
+  setInvoiceOnlinePayment, PROCESSOR_LABEL, fetchOnlinePaymentConfig,
+  type OnlinePaymentConfig,
+} from '@/lib/billing/onlinePayments';
 
 interface Props {
   invoiceId: string | null;
@@ -33,6 +38,7 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
   const [loading, setLoading] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [payCfg, setPayCfg] = useState<OnlinePaymentConfig>(DEFAULT_ONLINE_PAYMENT_CONFIG);
 
   const load = async () => {
     if (!invoiceId) return;
@@ -60,6 +66,25 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
   };
 
   useEffect(() => { if (invoiceId) load(); }, [invoiceId]);
+  useEffect(() => { fetchOnlinePaymentConfig().then(setPayCfg).catch(() => {}); }, []);
+
+  /** Turns the customer pay link on or off for this invoice. */
+  const toggleOnlinePayment = async (on: boolean) => {
+    if (!invoice) return;
+    const link = on ? buildPaymentLink(payCfg, invoice) : null;
+    try {
+      await setInvoiceOnlinePayment(invoice.id, { enabled: on, link, processor: payCfg.processor });
+      toast({ title: on ? 'Online payment enabled for this invoice' : 'Online payment turned off' });
+      load(); onChanged?.();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  const copyPayLink = async (link: string) => {
+    await navigator.clipboard.writeText(link);
+    toast({ title: 'Pay link copied' });
+  };
 
   const downloadPdf = () => {
     if (!invoice) return;
@@ -206,6 +231,44 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
                   {daysToInvoice != null ? ` ${daysToInvoice} calendar days` : ' —'}
                   {bizToInvoice != null ? ` (${bizToInvoice} business days)` : ''}
                   {invoice.sent_at ? ` · Sent ${format(new Date(invoice.sent_at), 'MMM d, yyyy')}` : ' · Not sent yet'}
+                </div>
+
+                <div className="rounded-md border p-3 space-y-2 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" /> Online payment
+                    </p>
+                    <Badge variant="outline">{PROCESSOR_LABEL[payCfg.processor]}</Badge>
+                  </div>
+                  {!isCollectionReady(payCfg) ? (
+                    <p className="text-xs text-muted-foreground">
+                      Online collection is not switched on yet. Set the processor and pay page in
+                      Billing → Settings → Online payment collection, then invoices can carry a pay link.
+                    </p>
+                  ) : (invoice as any).online_payment_enabled && (invoice as any).payment_link_url ? (
+                    <div className="space-y-2">
+                      <p className="text-xs break-all text-muted-foreground">{(invoice as any).payment_link_url}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline"
+                                onClick={() => copyPayLink((invoice as any).payment_link_url)}>
+                          <Link2 className="h-4 w-4 mr-1" /> Copy pay link
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => toggleOnlinePayment(false)}>
+                          Turn off
+                        </Button>
+                      </div>
+                      {(invoice as any).online_paid_at && (
+                        <p className="text-xs text-green-700">
+                          Paid online {format(new Date((invoice as any).online_paid_at), 'MMM d, yyyy')}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => toggleOnlinePayment(true)}
+                            disabled={invoice.status === 'void'}>
+                      <Link2 className="h-4 w-4 mr-1" /> Create pay link for this invoice
+                    </Button>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
