@@ -958,9 +958,14 @@ const CalendarPlanner = () => {
               {editing?.id && (
                 <Button variant="destructive" onClick={deleteDraft}>
                   <Trash2 className="h-4 w-4 mr-1" />
-                  Delete entire event
+                  {editing.series_id && seriesScope === 'all'
+                    ? 'Delete whole series'
+                    : editing.series_id && seriesScope === 'following'
+                      ? 'Delete this & following'
+                      : 'Delete entire event'}
                 </Button>
               )}
+
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
