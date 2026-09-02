@@ -297,6 +297,8 @@ const CalendarPlanner = () => {
   const [repeatUntil, setRepeatUntil] = useState<string>(toDateInput(addMonths(new Date(), 3)));
   const [editing, setEditing] = useState<Partial<Draft> | null>(null);
   const [editingDayKey, setEditingDayKey] = useState<string | null>(null);
+  const [seriesScope, setSeriesScope] = useState<'this' | 'following' | 'all'>('this');
+
 
   const monthStart = startOfMonth(cursor);
   const monthEnd = endOfMonth(cursor);
