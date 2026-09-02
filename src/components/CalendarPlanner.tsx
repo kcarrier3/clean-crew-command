@@ -222,6 +222,7 @@ function DraftChip({
   onOpen,
   onRemoveDay,
   isMultiDay,
+  striped,
 }: {
   draft: Draft;
   dayKey: string;
@@ -231,6 +232,7 @@ function DraftChip({
   onOpen: () => void;
   onRemoveDay: () => void;
   isMultiDay: boolean;
+  striped?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `${draft.id}|${dayKey}`,
@@ -244,17 +246,22 @@ function DraftChip({
       role="button"
       tabIndex={0}
       onClick={onOpen}
-      style={colorStyle(draft.color)}
+      style={{
+        ...colorStyle(draft.color),
+        ...(striped ? { backgroundImage: STRIPE_IMAGE } : {}),
+      }}
       className={cn(
         'group relative w-full text-left text-[11px] leading-tight border px-1.5 py-1 truncate cursor-grab active:cursor-grabbing touch-none',
         isStart ? 'rounded-l' : 'rounded-l-none border-l-0',
         isEnd ? 'rounded-r' : 'rounded-r-none border-r-0',
         !draft.color && KIND_STYLE[draft.kind],
+        striped && 'border-dashed',
         draft.promoted_schedule_id && 'opacity-60 line-through',
         isDragging && 'opacity-30',
       )}
-      title={draft.title}
+      title={`${draft.title}${striped ? ' (recurring account)' : ''}`}
     >
+
       <div className="font-medium truncate">{isStart ? draft.title : `↳ ${draft.title}`}</div>
       {subtitle && isStart && <div className="truncate opacity-80">{subtitle}</div>}
       {isMultiDay && (
