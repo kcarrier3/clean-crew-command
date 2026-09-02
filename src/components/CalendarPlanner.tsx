@@ -338,11 +338,18 @@ const CalendarPlanner = () => {
   const loadLookups = async () => {
     const sites = await supabase
       .from('job_sites')
-      .select('id, name')
+      .select('id, name, is_recurring_monthly')
       .eq('active', true)
       .order('name');
     if (sites.data) setJobSites(sites.data as JobSiteOpt[]);
   };
+
+  /** True when the entry belongs to a recurring janitorial account (infrequent service). */
+  const isInfrequentAccount = (jobSiteId: string | null) => {
+    if (!jobSiteId) return false;
+    return !!jobSites.find((s) => s.id === jobSiteId)?.is_recurring_monthly;
+  };
+
 
   const filteredDrafts = drafts.filter(
     (d) => filterKind === 'all' || d.kind === filterKind,
