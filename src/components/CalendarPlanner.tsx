@@ -416,6 +416,8 @@ const CalendarPlanner = () => {
       color: editing.color ?? null,
     };
     if (editing.id) {
+      // Date fields only apply to the entry being edited; series updates change details.
+      const { start_at, end_at, ...details } = payload;
       const { error } = await supabase
         .from('calendar_drafts')
         .update(payload)
@@ -424,6 +426,22 @@ const CalendarPlanner = () => {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
         return;
       }
+      if (editing.series_id && seriesScope !== 'this') {
+        let q = supabase
+          .from('calendar_drafts')
+          .update(details)
+          .eq('series_id', editing.series_id)
+          .neq('id', editing.id);
+        if (seriesScope === 'following') {
+          q = q.gte('start_at', new Date(editing.start_at!).toISOString());
+        }
+        const { error: sErr } = await q;
+        if (sErr) {
+          toast({ title: 'Error', description: sErr.message, variant: 'destructive' });
+          return;
+        }
+        toast({ title: seriesScope === 'all' ? 'Series updated' : 'This and following updated' });
+      }
     } else {
       const spanDays = Math.max(0, differenceInCalendarDays(baseEnd, baseStart));
       const until = repeatFreq === 'none' ? baseStart : startOfDayFromInput(repeatUntil);
@@ -431,11 +449,13 @@ const CalendarPlanner = () => {
         toast({ title: 'Repeat until must be on or after the start date', variant: 'destructive' });
         return;
       }
+      const seriesId = repeatFreq === 'none' ? null : crypto.randomUUID();
       const rows = occurrenceStarts(baseStart, repeatFreq, until).map((s) => ({
         ...payload,
         start_at: s.toISOString(),
         end_at: endOfDayFromInput(toDateInput(addDays(s, spanDays))).toISOString(),
         created_by: user.id,
+        series_id: seriesId,
       }));
       const { error } = await supabase.from('calendar_drafts').insert(rows);
       if (error) {
@@ -453,17 +473,30 @@ const CalendarPlanner = () => {
 
   const deleteDraft = async () => {
     if (!editing?.id) return;
-    const { error } = await supabase
-      .from('calendar_drafts')
-      .delete()
-      .eq('id', editing.id);
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-      return;
+    if (editing.series_id && seriesScope !== 'this') {
+      let q = supabase.from('calendar_drafts').delete().eq('series_id', editing.series_id);
+      if (seriesScope === 'following') {
+        q = q.gte('start_at', new Date(editing.start_at!).toISOString());
+      }
+      const { error } = await q;
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        return;
+      }
+    } else {
+      const { error } = await supabase
+        .from('calendar_drafts')
+        .delete()
+        .eq('id', editing.id);
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        return;
+      }
     }
     setEditing(null);
     await loadDrafts();
   };
+
 
   const siteName = (id: string | null) => {
     if (!id) return '';
