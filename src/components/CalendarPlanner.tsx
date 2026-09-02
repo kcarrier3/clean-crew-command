@@ -76,9 +76,15 @@ interface Draft {
   job_site_id: string | null;
   color: string | null;
   promoted_schedule_id: string | null;
+  series_id: string | null;
 }
 
-interface JobSiteOpt { id: string; name: string }
+interface JobSiteOpt { id: string; name: string; is_recurring_monthly: boolean | null }
+
+/** Recurring janitorial accounts (infrequent service) render striped; projects render solid. */
+const STRIPE_IMAGE =
+  'repeating-linear-gradient(45deg, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 4px, transparent 4px, transparent 9px)';
+
 
 const KIND_LABEL: Record<DraftKind, string> = {
   shift_draft: 'Shift draft',
@@ -216,6 +222,7 @@ function DraftChip({
   onOpen,
   onRemoveDay,
   isMultiDay,
+  striped,
 }: {
   draft: Draft;
   dayKey: string;
@@ -225,6 +232,7 @@ function DraftChip({
   onOpen: () => void;
   onRemoveDay: () => void;
   isMultiDay: boolean;
+  striped?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `${draft.id}|${dayKey}`,
@@ -238,17 +246,22 @@ function DraftChip({
       role="button"
       tabIndex={0}
       onClick={onOpen}
-      style={colorStyle(draft.color)}
+      style={{
+        ...colorStyle(draft.color),
+        ...(striped ? { backgroundImage: STRIPE_IMAGE } : {}),
+      }}
       className={cn(
         'group relative w-full text-left text-[11px] leading-tight border px-1.5 py-1 truncate cursor-grab active:cursor-grabbing touch-none',
         isStart ? 'rounded-l' : 'rounded-l-none border-l-0',
         isEnd ? 'rounded-r' : 'rounded-r-none border-r-0',
         !draft.color && KIND_STYLE[draft.kind],
+        striped && 'border-dashed',
         draft.promoted_schedule_id && 'opacity-60 line-through',
         isDragging && 'opacity-30',
       )}
-      title={draft.title}
+      title={`${draft.title}${striped ? ' (recurring account)' : ''}`}
     >
+
       <div className="font-medium truncate">{isStart ? draft.title : `↳ ${draft.title}`}</div>
       {subtitle && isStart && <div className="truncate opacity-80">{subtitle}</div>}
       {isMultiDay && (
@@ -284,6 +297,8 @@ const CalendarPlanner = () => {
   const [repeatUntil, setRepeatUntil] = useState<string>(toDateInput(addMonths(new Date(), 3)));
   const [editing, setEditing] = useState<Partial<Draft> | null>(null);
   const [editingDayKey, setEditingDayKey] = useState<string | null>(null);
+  const [seriesScope, setSeriesScope] = useState<'this' | 'following' | 'all'>('this');
+
 
   const monthStart = startOfMonth(cursor);
   const monthEnd = endOfMonth(cursor);
@@ -323,11 +338,18 @@ const CalendarPlanner = () => {
   const loadLookups = async () => {
     const sites = await supabase
       .from('job_sites')
-      .select('id, name')
+      .select('id, name, is_recurring_monthly')
       .eq('active', true)
       .order('name');
     if (sites.data) setJobSites(sites.data as JobSiteOpt[]);
   };
+
+  /** True when the entry belongs to a recurring janitorial account (infrequent service). */
+  const isInfrequentAccount = (jobSiteId: string | null) => {
+    if (!jobSiteId) return false;
+    return !!jobSites.find((s) => s.id === jobSiteId)?.is_recurring_monthly;
+  };
+
 
   const filteredDrafts = drafts.filter(
     (d) => filterKind === 'all' || d.kind === filterKind,
@@ -394,6 +416,8 @@ const CalendarPlanner = () => {
       color: editing.color ?? null,
     };
     if (editing.id) {
+      // Date fields only apply to the entry being edited; series updates change details.
+      const { start_at, end_at, ...details } = payload;
       const { error } = await supabase
         .from('calendar_drafts')
         .update(payload)
@@ -402,6 +426,22 @@ const CalendarPlanner = () => {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
         return;
       }
+      if (editing.series_id && seriesScope !== 'this') {
+        let q = supabase
+          .from('calendar_drafts')
+          .update(details)
+          .eq('series_id', editing.series_id)
+          .neq('id', editing.id);
+        if (seriesScope === 'following') {
+          q = q.gte('start_at', new Date(editing.start_at!).toISOString());
+        }
+        const { error: sErr } = await q;
+        if (sErr) {
+          toast({ title: 'Error', description: sErr.message, variant: 'destructive' });
+          return;
+        }
+        toast({ title: seriesScope === 'all' ? 'Series updated' : 'This and following updated' });
+      }
     } else {
       const spanDays = Math.max(0, differenceInCalendarDays(baseEnd, baseStart));
       const until = repeatFreq === 'none' ? baseStart : startOfDayFromInput(repeatUntil);
@@ -409,11 +449,13 @@ const CalendarPlanner = () => {
         toast({ title: 'Repeat until must be on or after the start date', variant: 'destructive' });
         return;
       }
+      const seriesId = repeatFreq === 'none' ? null : crypto.randomUUID();
       const rows = occurrenceStarts(baseStart, repeatFreq, until).map((s) => ({
         ...payload,
         start_at: s.toISOString(),
         end_at: endOfDayFromInput(toDateInput(addDays(s, spanDays))).toISOString(),
         created_by: user.id,
+        series_id: seriesId,
       }));
       const { error } = await supabase.from('calendar_drafts').insert(rows);
       if (error) {
@@ -431,17 +473,30 @@ const CalendarPlanner = () => {
 
   const deleteDraft = async () => {
     if (!editing?.id) return;
-    const { error } = await supabase
-      .from('calendar_drafts')
-      .delete()
-      .eq('id', editing.id);
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-      return;
+    if (editing.series_id && seriesScope !== 'this') {
+      let q = supabase.from('calendar_drafts').delete().eq('series_id', editing.series_id);
+      if (seriesScope === 'following') {
+        q = q.gte('start_at', new Date(editing.start_at!).toISOString());
+      }
+      const { error } = await q;
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        return;
+      }
+    } else {
+      const { error } = await supabase
+        .from('calendar_drafts')
+        .delete()
+        .eq('id', editing.id);
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        return;
+      }
     }
     setEditing(null);
     await loadDrafts();
   };
+
 
   const siteName = (id: string | null) => {
     if (!id) return '';
@@ -669,7 +724,12 @@ const CalendarPlanner = () => {
                           isStart={isStart}
                           isEnd={isEnd}
                           subtitle={d.job_site_id ? siteName(d.job_site_id) : undefined}
-                          onOpen={() => { setEditingDayKey(key); setEditing(d); }}
+                          striped={isInfrequentAccount(d.job_site_id)}
+                          onOpen={() => {
+                            setEditingDayKey(key);
+                            setSeriesScope('this');
+                            setEditing(d);
+                          }}
                           isMultiDay={!(isStart && isEnd)}
                           onRemoveDay={() => removeDayFromDraft(d, key)}
                         />
@@ -683,7 +743,12 @@ const CalendarPlanner = () => {
           <DragOverlay dropAnimation={null}>
             {activeDrag && (
               <div
-                style={colorStyle(activeDrag.draft.color)}
+                style={{
+                  ...colorStyle(activeDrag.draft.color),
+                  ...(isInfrequentAccount(activeDrag.draft.job_site_id)
+                    ? { backgroundImage: STRIPE_IMAGE }
+                    : {}),
+                }}
                 className={cn(
                   'text-[11px] leading-tight border rounded px-1.5 py-1 shadow-lg bg-background',
                   !activeDrag.draft.color && KIND_STYLE[activeDrag.draft.kind],
@@ -701,7 +766,19 @@ const CalendarPlanner = () => {
                 {KIND_LABEL[k]}
               </span>
             ))}
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block w-3 h-3 rounded border border-dashed border-foreground/40"
+                style={{ backgroundImage: STRIPE_IMAGE }}
+              />
+              Recurring / infrequent account
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded border border-foreground/40 bg-muted" />
+              Project account
+            </span>
           </div>
+
         </CardContent>
       </Card>
 
@@ -815,6 +892,24 @@ const CalendarPlanner = () => {
                   )}
                 </div>
               )}
+              {editing.id && editing.series_id && (
+                <div className="rounded-md border p-3 space-y-2">
+                  <Label>This entry is part of a repeating series</Label>
+                  <Select value={seriesScope} onValueChange={(v) => setSeriesScope(v as typeof seriesScope)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="this">This event only</SelectItem>
+                      <SelectItem value="following">This and following events</SelectItem>
+                      <SelectItem value="all">All events in the series</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Saving applies title, kind, account, color and notes to the selected scope. Dates
+                    only change on this occurrence.
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Account</Label>
@@ -903,9 +998,14 @@ const CalendarPlanner = () => {
               {editing?.id && (
                 <Button variant="destructive" onClick={deleteDraft}>
                   <Trash2 className="h-4 w-4 mr-1" />
-                  Delete entire event
+                  {editing.series_id && seriesScope === 'all'
+                    ? 'Delete whole series'
+                    : editing.series_id && seriesScope === 'following'
+                      ? 'Delete this & following'
+                      : 'Delete entire event'}
                 </Button>
               )}
+
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>

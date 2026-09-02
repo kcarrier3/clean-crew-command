@@ -1350,6 +1350,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["calendar_draft_kind"]
           notes: string | null
           promoted_schedule_id: string | null
+          series_id: string | null
           start_at: string
           title: string
           updated_at: string
@@ -1366,6 +1367,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["calendar_draft_kind"]
           notes?: string | null
           promoted_schedule_id?: string | null
+          series_id?: string | null
           start_at: string
           title: string
           updated_at?: string
@@ -1382,6 +1384,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["calendar_draft_kind"]
           notes?: string | null
           promoted_schedule_id?: string | null
+          series_id?: string | null
           start_at?: string
           title?: string
           updated_at?: string
