@@ -892,6 +892,24 @@ const CalendarPlanner = () => {
                   )}
                 </div>
               )}
+              {editing.id && editing.series_id && (
+                <div className="rounded-md border p-3 space-y-2">
+                  <Label>This entry is part of a repeating series</Label>
+                  <Select value={seriesScope} onValueChange={(v) => setSeriesScope(v as typeof seriesScope)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="this">This event only</SelectItem>
+                      <SelectItem value="following">This and following events</SelectItem>
+                      <SelectItem value="all">All events in the series</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Saving applies title, kind, account, color and notes to the selected scope. Dates
+                    only change on this occurrence.
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Account</Label>
