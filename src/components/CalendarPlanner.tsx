@@ -724,7 +724,12 @@ const CalendarPlanner = () => {
                           isStart={isStart}
                           isEnd={isEnd}
                           subtitle={d.job_site_id ? siteName(d.job_site_id) : undefined}
-                          onOpen={() => { setEditingDayKey(key); setEditing(d); }}
+                          striped={isInfrequentAccount(d.job_site_id)}
+                          onOpen={() => {
+                            setEditingDayKey(key);
+                            setSeriesScope('this');
+                            setEditing(d);
+                          }}
                           isMultiDay={!(isStart && isEnd)}
                           onRemoveDay={() => removeDayFromDraft(d, key)}
                         />
@@ -738,7 +743,12 @@ const CalendarPlanner = () => {
           <DragOverlay dropAnimation={null}>
             {activeDrag && (
               <div
-                style={colorStyle(activeDrag.draft.color)}
+                style={{
+                  ...colorStyle(activeDrag.draft.color),
+                  ...(isInfrequentAccount(activeDrag.draft.job_site_id)
+                    ? { backgroundImage: STRIPE_IMAGE }
+                    : {}),
+                }}
                 className={cn(
                   'text-[11px] leading-tight border rounded px-1.5 py-1 shadow-lg bg-background',
                   !activeDrag.draft.color && KIND_STYLE[activeDrag.draft.kind],
@@ -756,7 +766,19 @@ const CalendarPlanner = () => {
                 {KIND_LABEL[k]}
               </span>
             ))}
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block w-3 h-3 rounded border border-dashed border-foreground/40"
+                style={{ backgroundImage: STRIPE_IMAGE }}
+              />
+              Recurring / infrequent account
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded border border-foreground/40 bg-muted" />
+              Project account
+            </span>
           </div>
+
         </CardContent>
       </Card>
 
