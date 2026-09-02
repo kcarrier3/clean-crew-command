@@ -76,9 +76,15 @@ interface Draft {
   job_site_id: string | null;
   color: string | null;
   promoted_schedule_id: string | null;
+  series_id: string | null;
 }
 
-interface JobSiteOpt { id: string; name: string }
+interface JobSiteOpt { id: string; name: string; is_recurring_monthly: boolean | null }
+
+/** Recurring janitorial accounts (infrequent service) render striped; projects render solid. */
+const STRIPE_IMAGE =
+  'repeating-linear-gradient(45deg, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 4px, transparent 4px, transparent 9px)';
+
 
 const KIND_LABEL: Record<DraftKind, string> = {
   shift_draft: 'Shift draft',
