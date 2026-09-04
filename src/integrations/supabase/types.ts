@@ -1346,6 +1346,7 @@ export type Database = {
           employee_id: string | null
           end_at: string | null
           id: string
+          is_infrequent: boolean | null
           job_site_id: string | null
           kind: Database["public"]["Enums"]["calendar_draft_kind"]
           notes: string | null
@@ -1363,6 +1364,7 @@ export type Database = {
           employee_id?: string | null
           end_at?: string | null
           id?: string
+          is_infrequent?: boolean | null
           job_site_id?: string | null
           kind?: Database["public"]["Enums"]["calendar_draft_kind"]
           notes?: string | null
@@ -1380,6 +1382,7 @@ export type Database = {
           employee_id?: string | null
           end_at?: string | null
           id?: string
+          is_infrequent?: boolean | null
           job_site_id?: string | null
           kind?: Database["public"]["Enums"]["calendar_draft_kind"]
           notes?: string | null

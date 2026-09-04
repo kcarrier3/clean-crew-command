@@ -77,6 +77,7 @@ interface Draft {
   color: string | null;
   promoted_schedule_id: string | null;
   series_id: string | null;
+  is_infrequent: boolean | null;
 }
 
 interface JobSiteOpt { id: string; name: string; is_recurring_monthly: boolean | null }
@@ -344,10 +345,11 @@ const CalendarPlanner = () => {
     if (sites.data) setJobSites(sites.data as JobSiteOpt[]);
   };
 
-  /** True when the entry belongs to a recurring janitorial account (infrequent service). */
-  const isInfrequentAccount = (jobSiteId: string | null) => {
-    if (!jobSiteId) return false;
-    return !!jobSites.find((s) => s.id === jobSiteId)?.is_recurring_monthly;
+  /** True when the entry is marked infrequent, or (when unset) its account is a recurring janitorial account. */
+  const isInfrequentAccount = (draft: Pick<Draft, 'job_site_id' | 'is_infrequent'>) => {
+    if (draft.is_infrequent !== null && draft.is_infrequent !== undefined) return draft.is_infrequent;
+    if (!draft.job_site_id) return false;
+    return !!jobSites.find((s) => s.id === draft.job_site_id)?.is_recurring_monthly;
   };
 
 
@@ -393,6 +395,7 @@ const CalendarPlanner = () => {
       employee_id: null,
       job_site_id: null,
       color: '',
+      is_infrequent: null,
     });
   };
 
@@ -414,6 +417,7 @@ const CalendarPlanner = () => {
       employee_id: editing.employee_id ?? null,
       job_site_id: editing.job_site_id ?? null,
       color: editing.color ?? null,
+      is_infrequent: editing.is_infrequent ?? null,
     };
     if (editing.id) {
       // Date fields only apply to the entry being edited; series updates change details.
@@ -564,6 +568,7 @@ const CalendarPlanner = () => {
         employee_id: draft.employee_id ?? null,
         job_site_id: draft.job_site_id ?? null,
         color: draft.color ?? null,
+        is_infrequent: draft.is_infrequent ?? null,
         created_by: user.id,
       });
       if (insErr) {
@@ -610,6 +615,7 @@ const CalendarPlanner = () => {
         employee_id: draft.employee_id ?? null,
         job_site_id: draft.job_site_id ?? null,
         color: draft.color ?? null,
+        is_infrequent: draft.is_infrequent ?? null,
         created_by: user.id,
       });
       if (insErr) {
@@ -724,7 +730,7 @@ const CalendarPlanner = () => {
                           isStart={isStart}
                           isEnd={isEnd}
                           subtitle={d.job_site_id ? siteName(d.job_site_id) : undefined}
-                          striped={isInfrequentAccount(d.job_site_id)}
+                          striped={isInfrequentAccount(d)}
                           onOpen={() => {
                             setEditingDayKey(key);
                             setSeriesScope('this');
@@ -745,7 +751,7 @@ const CalendarPlanner = () => {
               <div
                 style={{
                   ...colorStyle(activeDrag.draft.color),
-                  ...(isInfrequentAccount(activeDrag.draft.job_site_id)
+                  ...(isInfrequentAccount(activeDrag.draft)
                     ? { backgroundImage: STRIPE_IMAGE }
                     : {}),
                 }}
@@ -927,6 +933,37 @@ const CalendarPlanner = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <div className="mt-2">
+                    <Label>Service type</Label>
+                    <Select
+                      value={
+                        editing.is_infrequent === true
+                          ? 'infrequent'
+                          : editing.is_infrequent === false
+                            ? 'project'
+                            : 'auto'
+                      }
+                      onValueChange={(v) =>
+                        setEditing({
+                          ...editing,
+                          is_infrequent: v === 'auto' ? null : v === 'infrequent',
+                        })
+                      }
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">
+                          Auto{editing.job_site_id
+                            ? isInfrequentAccount({ job_site_id: editing.job_site_id, is_infrequent: null })
+                              ? ' (infrequent)'
+                              : ' (project)'
+                            : ''}
+                        </SelectItem>
+                        <SelectItem value="infrequent">Infrequent account (striped)</SelectItem>
+                        <SelectItem value="project">Project (solid)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label>Color</Label>

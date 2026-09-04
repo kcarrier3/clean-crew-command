@@ -1,0 +1,1 @@
+ALTER TABLE public.calendar_drafts ADD COLUMN IF NOT EXISTS is_infrequent boolean;
