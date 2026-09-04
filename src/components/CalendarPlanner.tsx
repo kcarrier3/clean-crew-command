@@ -730,7 +730,7 @@ const CalendarPlanner = () => {
                           isStart={isStart}
                           isEnd={isEnd}
                           subtitle={d.job_site_id ? siteName(d.job_site_id) : undefined}
-                          striped={isInfrequentAccount(d.job_site_id)}
+                          striped={isInfrequentAccount(d)}
                           onOpen={() => {
                             setEditingDayKey(key);
                             setSeriesScope('this');
@@ -751,7 +751,7 @@ const CalendarPlanner = () => {
               <div
                 style={{
                   ...colorStyle(activeDrag.draft.color),
-                  ...(isInfrequentAccount(activeDrag.draft.job_site_id)
+                  ...(isInfrequentAccount(activeDrag.draft)
                     ? { backgroundImage: STRIPE_IMAGE }
                     : {}),
                 }}
