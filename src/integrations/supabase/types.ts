@@ -6826,6 +6826,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_tour_progress: {
+        Row: {
+          id: string
+          module_key: string
+          seen_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          module_key: string
+          seen_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          module_key?: string
+          seen_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       work_order_notes: {
         Row: {
           created_at: string

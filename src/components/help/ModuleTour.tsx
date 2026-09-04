@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { guideForModule } from '@/lib/guides';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 const seenKey = (moduleKey: string) => `cc.tour.${moduleKey}.v1`;
 
-const hasSeen = (moduleKey: string) => {
+const hasSeenLocal = (moduleKey: string) => {
   try {
     return window.localStorage.getItem(seenKey(moduleKey)) === '1';
   } catch {
@@ -16,7 +17,7 @@ const hasSeen = (moduleKey: string) => {
   }
 };
 
-const markSeen = (moduleKey: string) => {
+const markSeenLocal = (moduleKey: string) => {
   try {
     window.localStorage.setItem(seenKey(moduleKey), '1');
   } catch {
@@ -25,24 +26,71 @@ const markSeen = (moduleKey: string) => {
 };
 
 /**
- * First-time walkthrough for a module. Shows once per user per module (stored
- * locally), and can be re-opened any time from the "How to use this" panel.
+ * First-time walkthrough for a module. Shown once per user per module. The
+ * "seen" flag is stored on the user's account (so it survives sign-outs, new
+ * browsers and new devices) with a local fallback for offline use. It can be
+ * re-opened any time from the "How to use this" panel.
  */
 export const ModuleTour = ({ moduleKey }: { moduleKey: string }) => {
-  const { isManager } = useAuth();
+  const { isManager, user } = useAuth();
   const guide = guideForModule(moduleKey);
   const managerOnly = guide?.audience === 'manager' && !isManager?.();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const checkedRef = useRef<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     setStep(0);
-    if (!guide || managerOnly || hasSeen(moduleKey)) {
-      setOpen(false);
-      return;
-    }
-    setOpen(true);
-  }, [moduleKey, guide, managerOnly]);
+    setOpen(false);
+
+    if (!guide || managerOnly || !user?.id) return;
+
+    // Only evaluate once per module per mount-session to avoid re-prompting.
+    const checkToken = `${user.id}:${moduleKey}`;
+    if (checkedRef.current === checkToken) return;
+    checkedRef.current = checkToken;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('user_tour_progress')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('module_key', moduleKey)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        if (error) {
+          // Fall back to the local flag if the lookup fails.
+          if (!hasSeenLocal(moduleKey)) setOpen(true);
+          return;
+        }
+
+        if (data) {
+          markSeenLocal(moduleKey);
+          return;
+        }
+
+        if (!hasSeenLocal(moduleKey)) {
+          setOpen(true);
+        } else {
+          // Seen previously on this device: record it on the account so other
+          // devices don't show it again either.
+          void supabase
+            .from('user_tour_progress')
+            .upsert({ user_id: user.id, module_key: moduleKey }, { onConflict: 'user_id,module_key' });
+        }
+      } catch {
+        if (!cancelled && !hasSeenLocal(moduleKey)) setOpen(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [moduleKey, guide, managerOnly, user?.id]);
 
   if (!guide || managerOnly) return null;
 
@@ -51,8 +99,13 @@ export const ModuleTour = ({ moduleKey }: { moduleKey: string }) => {
   const isLast = step >= steps.length - 1;
 
   const close = () => {
-    markSeen(moduleKey);
+    markSeenLocal(moduleKey);
     setOpen(false);
+    if (user?.id) {
+      void supabase
+        .from('user_tour_progress')
+        .upsert({ user_id: user.id, module_key: moduleKey }, { onConflict: 'user_id,module_key' });
+    }
   };
 
   return (
