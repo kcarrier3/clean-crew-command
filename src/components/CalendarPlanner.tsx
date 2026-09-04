@@ -933,6 +933,37 @@ const CalendarPlanner = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <div className="mt-2">
+                    <Label>Service type</Label>
+                    <Select
+                      value={
+                        editing.is_infrequent === true
+                          ? 'infrequent'
+                          : editing.is_infrequent === false
+                            ? 'project'
+                            : 'auto'
+                      }
+                      onValueChange={(v) =>
+                        setEditing({
+                          ...editing,
+                          is_infrequent: v === 'auto' ? null : v === 'infrequent',
+                        })
+                      }
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">
+                          Auto{editing.job_site_id
+                            ? isInfrequentAccount({ job_site_id: editing.job_site_id, is_infrequent: null })
+                              ? ' (infrequent)'
+                              : ' (project)'
+                            : ''}
+                        </SelectItem>
+                        <SelectItem value="infrequent">Infrequent account (striped)</SelectItem>
+                        <SelectItem value="project">Project (solid)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label>Color</Label>
