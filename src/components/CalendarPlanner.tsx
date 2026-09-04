@@ -834,6 +834,10 @@ const CalendarPlanner = () => {
                       if (!e.target.value) return;
                       const nextStart = startOfDayFromInput(e.target.value);
                       const currentEnd = editing.end_at ? new Date(editing.end_at) : null;
+                      // Keep the repeat window in sync with the chosen start date.
+                      if (startOfDayFromInput(repeatUntil) < nextStart) {
+                        setRepeatUntil(toDateInput(addMonths(nextStart, 3)));
+                      }
                       setEditing({
                         ...editing,
                         start_at: nextStart.toISOString(),
