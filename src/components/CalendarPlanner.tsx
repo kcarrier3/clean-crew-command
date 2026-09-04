@@ -77,6 +77,7 @@ interface Draft {
   color: string | null;
   promoted_schedule_id: string | null;
   series_id: string | null;
+  is_infrequent: boolean | null;
 }
 
 interface JobSiteOpt { id: string; name: string; is_recurring_monthly: boolean | null }
