@@ -345,10 +345,11 @@ const CalendarPlanner = () => {
     if (sites.data) setJobSites(sites.data as JobSiteOpt[]);
   };
 
-  /** True when the entry belongs to a recurring janitorial account (infrequent service). */
-  const isInfrequentAccount = (jobSiteId: string | null) => {
-    if (!jobSiteId) return false;
-    return !!jobSites.find((s) => s.id === jobSiteId)?.is_recurring_monthly;
+  /** True when the entry is marked infrequent, or (when unset) its account is a recurring janitorial account. */
+  const isInfrequentAccount = (draft: Pick<Draft, 'job_site_id' | 'is_infrequent'>) => {
+    if (draft.is_infrequent !== null && draft.is_infrequent !== undefined) return draft.is_infrequent;
+    if (!draft.job_site_id) return false;
+    return !!jobSites.find((s) => s.id === draft.job_site_id)?.is_recurring_monthly;
   };
 
 
