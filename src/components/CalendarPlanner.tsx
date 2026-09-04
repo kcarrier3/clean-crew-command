@@ -395,6 +395,7 @@ const CalendarPlanner = () => {
       employee_id: null,
       job_site_id: null,
       color: '',
+      is_infrequent: null,
     });
   };
 
@@ -416,6 +417,7 @@ const CalendarPlanner = () => {
       employee_id: editing.employee_id ?? null,
       job_site_id: editing.job_site_id ?? null,
       color: editing.color ?? null,
+      is_infrequent: editing.is_infrequent ?? null,
     };
     if (editing.id) {
       // Date fields only apply to the entry being edited; series updates change details.
