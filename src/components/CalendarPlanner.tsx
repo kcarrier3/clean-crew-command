@@ -889,17 +889,24 @@ const CalendarPlanner = () => {
                       onChange={(e) => setRepeatUntil(e.target.value)}
                     />
                   </div>
-                  {repeatFreq !== 'none' && editing.start_at && (
-                    <p className="col-span-2 text-xs text-muted-foreground">
-                      Creates{' '}
-                      {occurrenceStarts(
-                        startOfDayFromInput(toDateInput(new Date(editing.start_at))),
-                        repeatFreq,
-                        startOfDayFromInput(repeatUntil || toDateInput(new Date(editing.start_at))),
-                      ).length}{' '}
-                      entries. Each occurrence can be moved or deleted on its own afterward.
-                    </p>
-                  )}
+                  {repeatFreq !== 'none' && editing.start_at && (() => {
+                    const dates = occurrenceStarts(
+                      startOfDayFromInput(toDateInput(new Date(editing.start_at))),
+                      repeatFreq,
+                      startOfDayFromInput(repeatUntil || toDateInput(new Date(editing.start_at))),
+                    );
+                    return (
+                      <p className="col-span-2 text-xs text-muted-foreground">
+                        Creates {dates.length} {dates.length === 1 ? 'entry' : 'entries'}, one per
+                        occurrence on {format(dates[0], 'EEEE')}s
+                        {dates.length > 1 && (
+                          <> — {dates.slice(0, 3).map((d) => format(d, 'MMM d')).join(', ')}
+                            {dates.length > 3 ? '…' : ''}</>
+                        )}
+                        . Each occurrence can be moved or deleted on its own afterward.
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
               {editing.id && editing.series_id && (
