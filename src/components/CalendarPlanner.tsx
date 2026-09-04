@@ -568,6 +568,7 @@ const CalendarPlanner = () => {
         employee_id: draft.employee_id ?? null,
         job_site_id: draft.job_site_id ?? null,
         color: draft.color ?? null,
+        is_infrequent: draft.is_infrequent ?? null,
         created_by: user.id,
       });
       if (insErr) {
@@ -614,6 +615,7 @@ const CalendarPlanner = () => {
         employee_id: draft.employee_id ?? null,
         job_site_id: draft.job_site_id ?? null,
         color: draft.color ?? null,
+        is_infrequent: draft.is_infrequent ?? null,
         created_by: user.id,
       });
       if (insErr) {
