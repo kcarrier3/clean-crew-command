@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,8 +50,12 @@ export default function OpportunityDetail() {
 
   useEffect(() => { load(); }, [id]);
 
-  // Always return to the Waypoint Opportunities list.
-  const goBack = () => navigate('/?tab=crm&crmTab=leads');
+  // Return to the page the opportunity was opened from (e.g. its Account),
+  // falling back to the Waypoint Opportunities list.
+  const goBack = () => {
+    if (from) navigate(from.path);
+    else navigate('/?tab=crm&crmTab=leads');
+  };
 
   return (
     <div className="min-h-screen bg-background">
