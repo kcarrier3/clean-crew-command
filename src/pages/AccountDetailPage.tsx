@@ -291,7 +291,7 @@ export default function AccountDetailPage() {
                   ) : (
                     <div className="space-y-2">
                       {leads.map(lead => (
-                        <Card key={lead.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => navigate(`/crm/opportunities/${lead.id}`)}>
+                        <Card key={lead.id} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => navigate(`/crm/opportunities/${lead.id}`, { state: { from: { label: company?.name || 'Account', path: `/crm/accounts/${id}` } } })}>
                           <CardContent className="p-3 flex flex-wrap items-center gap-3 justify-between">
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">

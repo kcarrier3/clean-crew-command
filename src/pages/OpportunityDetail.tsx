@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +12,10 @@ import { SEO } from '@/components/SEO';
 export default function OpportunityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // When the opportunity was opened from a specific page (e.g. an Account),
+  // the sender passes where to return via navigation state.
+  const from = (location.state as { from?: { label: string; path: string } } | null)?.from;
   const [lead, setLead] = useState<CrmLead | null>(null);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
@@ -46,8 +50,12 @@ export default function OpportunityDetail() {
 
   useEffect(() => { load(); }, [id]);
 
-  // Always return to the Waypoint Opportunities list.
-  const goBack = () => navigate('/?tab=crm&crmTab=leads');
+  // Return to the page the opportunity was opened from (e.g. its Account),
+  // falling back to the Waypoint Opportunities list.
+  const goBack = () => {
+    if (from) navigate(from.path);
+    else navigate('/?tab=crm&crmTab=leads');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,7 +66,7 @@ export default function OpportunityDetail() {
       />
       <div className="max-w-7xl mx-auto p-4 space-y-4">
         <Button variant="ghost" size="sm" onClick={goBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Opportunities
+          <ArrowLeft className="h-4 w-4 mr-2" /> {from ? `Back to ${from.label}` : 'Back to Opportunities'}
         </Button>
         {accountName && (
           <div className="text-sm text-muted-foreground">
