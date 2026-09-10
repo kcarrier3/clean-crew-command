@@ -66,7 +66,7 @@ export default function OpportunityDetail() {
       />
       <div className="max-w-7xl mx-auto p-4 space-y-4">
         <Button variant="ghost" size="sm" onClick={goBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Opportunities
+          <ArrowLeft className="h-4 w-4 mr-2" /> {from ? `Back to ${from.label}` : 'Back to Opportunities'}
         </Button>
         {accountName && (
           <div className="text-sm text-muted-foreground">
