@@ -447,11 +447,23 @@ const CalendarPlanner = () => {
         toast({ title: seriesScope === 'all' ? 'Series updated' : 'This and following updated' });
       }
     } else {
-      const spanDays = Math.max(0, differenceInCalendarDays(baseEnd, baseStart));
-      const until = repeatFreq === 'none' ? baseStart : startOfDayFromInput(repeatUntil);
-      if (repeatFreq !== 'none' && until < baseStart) {
-        toast({ title: 'Repeat until must be on or after the start date', variant: 'destructive' });
-        return;
+      let spanDays = Math.max(0, differenceInCalendarDays(baseEnd, baseStart));
+      let until = baseStart;
+      if (repeatFreq !== 'none') {
+        // Days between one occurrence and the next; an occurrence can never be longer than that.
+        const gap = Math.max(1, differenceInCalendarDays(advance(baseStart, repeatFreq, 1), baseStart));
+        let repeatEnd = startOfDayFromInput(repeatUntil);
+        if (spanDays >= gap) {
+          // The end date was used as the repeat window, not as a multi-day occurrence.
+          if (repeatEnd < baseEnd) repeatEnd = baseEnd;
+          spanDays = 0;
+        }
+        spanDays = Math.min(spanDays, gap - 1);
+        until = repeatEnd;
+        if (until < baseStart) {
+          toast({ title: 'Repeat until must be on or after the start date', variant: 'destructive' });
+          return;
+        }
       }
       const seriesId = repeatFreq === 'none' ? null : crypto.randomUUID();
       const rows = occurrenceStarts(baseStart, repeatFreq, until).map((s) => ({
