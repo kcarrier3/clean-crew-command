@@ -12,6 +12,10 @@ import { SEO } from '@/components/SEO';
 export default function OpportunityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  // When the opportunity was opened from a specific page (e.g. an Account),
+  // the sender passes where to return via navigation state.
+  const from = (location.state as { from?: { label: string; path: string } } | null)?.from;
   const [lead, setLead] = useState<CrmLead | null>(null);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
