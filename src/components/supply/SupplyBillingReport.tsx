@@ -169,6 +169,21 @@ export default function SupplyBillingReport() {
               setStartDate(format(s, 'yyyy-MM-dd'));
               setEndDate(format(payPeriodEnd(s), 'yyyy-MM-dd'));
             }}>This week</Button>
+            <Button variant="outline" onClick={() => {
+              const t = new Date();
+              setStartDate(format(new Date(t.getFullYear(), t.getMonth(), 1), 'yyyy-MM-dd'));
+              setEndDate(format(t, 'yyyy-MM-dd'));
+            }}>This month</Button>
+            <Button variant="outline" onClick={() => {
+              const t = new Date();
+              setStartDate(format(new Date(t.getFullYear(), t.getMonth() - 1, 1), 'yyyy-MM-dd'));
+              setEndDate(format(new Date(t.getFullYear(), t.getMonth(), 0), 'yyyy-MM-dd'));
+            }}>Last month</Button>
+            <Button variant="outline" onClick={() => {
+              const t = new Date();
+              setStartDate(format(new Date(t.getFullYear() - 2, 0, 1), 'yyyy-MM-dd'));
+              setEndDate(format(t, 'yyyy-MM-dd'));
+            }}>All time</Button>
             <Button onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh'}</Button>
             <Button variant="outline" onClick={exportCsv} disabled={!groups.length}>
               <Download className="h-4 w-4 mr-2" /> Export CSV
