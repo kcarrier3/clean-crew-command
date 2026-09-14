@@ -67,7 +67,7 @@ export default function SupplyBillingReport() {
     const startIso = new Date(startDate + 'T00:00:00').toISOString();
     const endIso = new Date(endDate + 'T23:59:59').toISOString();
     const [{ data: js }, { data: mv }, { data: pr }] = await Promise.all([
-      supabase.from('job_sites').select('id, name').eq('active', true).order('name'),
+      supabase.from('job_sites').select('id, name').order('name'),
       supabase.from('supply_movements')
         .select('id, job_site_id, quantity, unit_price, total_value, created_at, created_by, movement_type, item:supply_items(id, name, unit, sale_price, kind)')
         .not('job_site_id', 'is', null)
@@ -169,6 +169,21 @@ export default function SupplyBillingReport() {
               setStartDate(format(s, 'yyyy-MM-dd'));
               setEndDate(format(payPeriodEnd(s), 'yyyy-MM-dd'));
             }}>This week</Button>
+            <Button variant="outline" onClick={() => {
+              const t = new Date();
+              setStartDate(format(new Date(t.getFullYear(), t.getMonth(), 1), 'yyyy-MM-dd'));
+              setEndDate(format(t, 'yyyy-MM-dd'));
+            }}>This month</Button>
+            <Button variant="outline" onClick={() => {
+              const t = new Date();
+              setStartDate(format(new Date(t.getFullYear(), t.getMonth() - 1, 1), 'yyyy-MM-dd'));
+              setEndDate(format(new Date(t.getFullYear(), t.getMonth(), 0), 'yyyy-MM-dd'));
+            }}>Last month</Button>
+            <Button variant="outline" onClick={() => {
+              const t = new Date();
+              setStartDate(format(new Date(t.getFullYear() - 2, 0, 1), 'yyyy-MM-dd'));
+              setEndDate(format(t, 'yyyy-MM-dd'));
+            }}>All time</Button>
             <Button onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh'}</Button>
             <Button variant="outline" onClick={exportCsv} disabled={!groups.length}>
               <Download className="h-4 w-4 mr-2" /> Export CSV
