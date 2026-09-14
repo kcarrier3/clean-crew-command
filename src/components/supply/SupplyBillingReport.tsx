@@ -67,7 +67,7 @@ export default function SupplyBillingReport() {
     const startIso = new Date(startDate + 'T00:00:00').toISOString();
     const endIso = new Date(endDate + 'T23:59:59').toISOString();
     const [{ data: js }, { data: mv }, { data: pr }] = await Promise.all([
-      supabase.from('job_sites').select('id, name').eq('active', true).order('name'),
+      supabase.from('job_sites').select('id, name').order('name'),
       supabase.from('supply_movements')
         .select('id, job_site_id, quantity, unit_price, total_value, created_at, created_by, movement_type, item:supply_items(id, name, unit, sale_price, kind)')
         .not('job_site_id', 'is', null)
