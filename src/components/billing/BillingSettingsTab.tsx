@@ -55,6 +55,7 @@ export const BillingSettingsTab = () => {
   };
   useEffect(() => { load(); }, []);
   useEffect(() => { fetchEmailConfig(true).then(setEmailConfig); }, []);
+  useEffect(() => { fetchSenderSettings().then(setSender).catch(() => {}); }, []);
   useEffect(() => { fetchAutoApplyEnabled().then(setAutoApply).catch(() => setAutoApply(true)); }, []);
 
   const toggleAutoApply = async (v: boolean) => {
