@@ -91,6 +91,8 @@ export const SendInvoiceDialog = ({ invoiceId, open, onOpenChange, onSent }: Pro
         po_number: inv?.po_number ?? '—',
         project_name: site ?? '',
         company_name: 'Summit Facilities Group',
+        // Resolved server-side into a signed, expiring link to the invoice PDF.
+        invoice_link: '{{invoice_link}}',
       };
       setSubject(renderTemplate(tpl?.subject || DEFAULT_INVOICE_SUBJECT, vars));
       setBody(renderTemplate(tpl?.body || DEFAULT_INVOICE_BODY, vars));
