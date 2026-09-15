@@ -127,11 +127,34 @@ export const BillingSettingsTab = () => {
             <Badge variant={emailConfig?.configured ? 'secondary' : 'destructive'}>
               {emailConfig?.configured ? emailConfig.provider : 'Not configured'}
             </Badge>
+            <span className="text-muted-foreground text-xs">Currently sending as {emailConfig?.from ?? '—'}</span>
           </div>
-          <div className="grid gap-1 sm:grid-cols-2">
-            <p><span className="text-muted-foreground">Sender:</span> {emailConfig?.from ?? 'billing@summitfacilitiesgroup.com'}</p>
-            <p><span className="text-muted-foreground">Reply-to:</span> {emailConfig?.reply_to ?? 'Uses the sender address'}</p>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="sender_name">Sender name</Label>
+              <Input id="sender_name" value={sender.from_name}
+                     onChange={e => setSender(s => ({ ...s, from_name: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sender_email">Sender address</Label>
+              <Input id="sender_email" value={sender.from_email}
+                     onChange={e => setSender(s => ({ ...s, from_email: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sender_reply">Reply-to (optional)</Label>
+              <Input id="sender_reply" value={sender.reply_to}
+                     onChange={e => setSender(s => ({ ...s, reply_to: e.target.value }))} />
+            </div>
           </div>
+          <Button size="sm" variant="outline" onClick={saveSender} disabled={savingSender}>
+            <Save className="h-4 w-4 mr-1" /> Save sender
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            The sender address must belong to a domain verified with Resend. An account-level reply-to set below
+            overrides this one for that customer.
+          </p>
+
           <p className="text-muted-foreground">
             Invoice emails are sent server-side through the <code>send-invoice-email</code> function, so no API key
             ever reaches the browser. Every attempt is logged in Email Activity, and an invoice is only marked sent
@@ -141,9 +164,8 @@ export const BillingSettingsTab = () => {
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900">
               <p className="font-medium">One-time setup still needed</p>
               <ul className="mt-1 list-disc pl-5 text-xs space-y-0.5">
-                <li>Verify the sending domain (summitfacilitiesgroup.com) with Resend.</li>
-                <li>Add the <code>RESEND_API_KEY</code> secret.</li>
-                <li>Optional: <code>BILLING_FROM_EMAIL</code> and <code>BILLING_REPLY_TO_EMAIL</code> to override the sender and reply-to.</li>
+                <li>Verify the sending subdomain (billing.crewcompass360.com) with Resend.</li>
+                <li>Add the <code>RESEND_API_KEY</code> secret in Project Settings → Secrets.</li>
                 <li>For delivery tracking, point a Resend webhook at the <code>resend-webhook</code> function and add <code>RESEND_WEBHOOK_SECRET</code>.</li>
               </ul>
               <p className="text-xs mt-1">
@@ -151,6 +173,7 @@ export const BillingSettingsTab = () => {
               </p>
             </div>
           )}
+
           <div className="flex flex-wrap gap-1">
             {FUTURE_EMAIL_HOOKS.map(h => (
               <Badge key={h} variant="outline" className="capitalize">{h.replace(/_/g, ' ')} — planned</Badge>
