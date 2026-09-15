@@ -129,7 +129,7 @@ export const fetchEmailConfig = async (force = false): Promise<EmailConfig> => {
   if (configCache && !force) return configCache;
   const fallback: EmailConfig = {
     configured: false, provider: 'resend',
-    from: 'billing@summitfacilitiesgroup.com', reply_to: null,
+    from: `${DEFAULT_SENDER.from_name} <${DEFAULT_SENDER.from_email}>`, reply_to: null,
   };
   const { data, error } = await supabase.functions.invoke('send-invoice-email', {
     body: { action: 'status' },
