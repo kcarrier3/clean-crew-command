@@ -6,9 +6,15 @@ const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const FROM = Deno.env.get('BILLING_FROM_EMAIL')
-  ?? 'Summit Facilities Group Billing <billing@summitfacilitiesgroup.com>';
-const REPLY_TO = Deno.env.get('BILLING_REPLY_TO_EMAIL') ?? null;
+
+/** Sender defaults. Overridable by env, then by the saved Billing setting. */
+const DEFAULT_FROM_EMAIL = Deno.env.get('BILLING_FROM_EMAIL') ?? 'invoices@billing.crewcompass360.com';
+const DEFAULT_FROM_NAME = Deno.env.get('BILLING_FROM_NAME') ?? 'Crew Compass Billing';
+const DEFAULT_REPLY_TO = Deno.env.get('BILLING_REPLY_TO_EMAIL') ?? null;
+
+const SENDER_SETTING_KEY = 'billing_email_sender';
+/** Secure invoice link lifetime (7 days). */
+const LINK_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -16,10 +22,36 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
+const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
 const emails = (v: unknown): string[] =>
-  Array.isArray(v)
-    ? v.map(x => String(x).trim()).filter(x => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x))
-    : [];
+  Array.isArray(v) ? v.map(x => String(x).trim()).filter(isEmail) : [];
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+interface SenderConfig { from_email: string; from_name: string; reply_to: string | null }
+
+const loadSender = async (admin: any): Promise<SenderConfig> => {
+  const base: SenderConfig = {
+    from_email: DEFAULT_FROM_EMAIL,
+    from_name: DEFAULT_FROM_NAME,
+    reply_to: DEFAULT_REPLY_TO,
+  };
+  const { data } = await admin.from('app_settings')
+    .select('value').eq('key', SENDER_SETTING_KEY).maybeSingle();
+  if (!data?.value) return base;
+  try {
+    const saved = JSON.parse(data.value);
+    return {
+      from_email: isEmail(String(saved.from_email ?? '')) ? String(saved.from_email) : base.from_email,
+      from_name: String(saved.from_name ?? '').trim() || base.from_name,
+      reply_to: isEmail(String(saved.reply_to ?? '')) ? String(saved.reply_to) : base.reply_to,
+    };
+  } catch {
+    return base;
+  }
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -41,9 +73,19 @@ Deno.serve(async (req) => {
   let payload: any = {};
   try { payload = await req.json(); } catch { payload = {}; }
 
+  const sender = await loadSender(admin);
+  const FROM = `${sender.from_name} <${sender.from_email}>`;
+
   // ---- Configuration probe --------------------------------------------------
   if (payload.action === 'status') {
-    return json({ configured: !!RESEND_API_KEY, provider: 'resend', from: FROM, reply_to: REPLY_TO });
+    return json({
+      configured: !!RESEND_API_KEY,
+      provider: 'resend',
+      from: FROM,
+      from_email: sender.from_email,
+      from_name: sender.from_name,
+      reply_to: sender.reply_to,
+    });
   }
 
   const invoiceId = typeof payload.invoiceId === 'string' ? payload.invoiceId : '';
@@ -78,6 +120,28 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ---- Per-account reply-to overrides the global one ------------------------
+  let replyTo = sender.reply_to;
+  if (invoice.crm_company_id) {
+    const { data: prefs } = await admin.from('billing_account_preferences')
+      .select('reply_to_email').eq('crm_company_id', invoice.crm_company_id).maybeSingle();
+    if (prefs?.reply_to_email && isEmail(prefs.reply_to_email)) replyTo = prefs.reply_to_email;
+  }
+
+  // ---- Secure, expiring link to the invoice PDF -----------------------------
+  let secureLink: string | null = null;
+  if (attachmentPath) {
+    const { data: signed } = await admin.storage.from('invoice-documents')
+      .createSignedUrl(attachmentPath, LINK_TTL_SECONDS);
+    secureLink = signed?.signedUrl ?? null;
+  }
+
+  const finalBody = secureLink
+    ? (body.includes('{{invoice_link}}')
+        ? body.replaceAll('{{invoice_link}}', secureLink)
+        : `${body}\n\nView or download your invoice (link expires in 7 days):\n${secureLink}`)
+    : body.replaceAll('{{invoice_link}}', '');
+
   const notConfigured = !RESEND_API_KEY;
 
   const { data: logRow, error: logErr } = await admin.from('billing_email_messages').insert({
@@ -89,7 +153,7 @@ Deno.serve(async (req) => {
     to_recipients: to,
     cc_recipients: cc,
     subject,
-    body,
+    body: finalBody,
     attachment_path: attachmentPath,
     attachment_paths: attachmentPath ? [attachmentPath] : [],
     idempotency_key: idempotencyKey,
@@ -141,6 +205,11 @@ Deno.serve(async (req) => {
     return json({ ok: false, messageId: logRow.id, error: reason }, status);
   };
 
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#1f2937">
+${escapeHtml(finalBody).replace(/\n/g, '<br/>')
+    .replace(/(https:\/\/[^\s<]+)/g, '<a href="$1" style="color:#c2410c">$1</a>')}
+</div>`;
+
   let response: Response;
   try {
     response = await fetch('https://api.resend.com/emails', {
@@ -153,9 +222,10 @@ Deno.serve(async (req) => {
         from: FROM,
         to,
         ...(cc.length ? { cc } : {}),
-        ...(REPLY_TO ? { reply_to: REPLY_TO } : {}),
+        ...(replyTo ? { reply_to: replyTo } : {}),
         subject,
-        text: body,
+        text: finalBody,
+        html,
         ...(attachment ? { attachments: [attachment] } : {}),
       }),
     });
