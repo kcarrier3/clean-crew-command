@@ -15,7 +15,8 @@ import {
   AUTO_CONFIDENCE_THRESHOLD, fetchAutoApplyEnabled, setAutoApplyEnabled,
 } from '@/lib/billing/checkIntake';
 import {
-  EMAIL_TEMPLATE_VARIABLES, FUTURE_EMAIL_HOOKS, fetchEmailConfig, type EmailConfig,
+  DEFAULT_SENDER, EMAIL_TEMPLATE_VARIABLES, FUTURE_EMAIL_HOOKS, fetchEmailConfig,
+  fetchSenderSettings, saveSenderSettings, type EmailConfig, type SenderSettings,
 } from '@/lib/billing/emailService';
 
 export const BillingSettingsTab = () => {
@@ -26,7 +27,23 @@ export const BillingSettingsTab = () => {
   const [companyId, setCompanyId] = useState('');
   const [saving, setSaving] = useState(false);
   const [emailConfig, setEmailConfig] = useState<EmailConfig | null>(null);
+  const [sender, setSender] = useState<SenderSettings>({ ...DEFAULT_SENDER });
+  const [savingSender, setSavingSender] = useState(false);
   const [autoApply, setAutoApply] = useState(true);
+
+  const saveSender = async () => {
+    setSavingSender(true);
+    try {
+      await saveSenderSettings(sender);
+      setEmailConfig(await fetchEmailConfig(true));
+      toast({ title: 'Sender saved' });
+    } catch (e: any) {
+      toast({ title: 'Could not save the sender', description: e.message, variant: 'destructive' });
+    } finally {
+      setSavingSender(false);
+    }
+  };
+
 
   const load = async () => {
     const [{ data: t }, { data: c }] = await Promise.all([
