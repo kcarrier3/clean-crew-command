@@ -32,8 +32,10 @@ export const EMAIL_STATUS_LABEL: Record<string, string> = {
   sent: 'Sent',
   delivered: 'Delivered',
   opened: 'Opened',
+  clicked: 'Link clicked',
   failed: 'Failed',
   bounced: 'Bounced',
+  complained: 'Marked as spam',
 };
 
 export const EMAIL_STATUS_CLASS: Record<string, string> = {
@@ -42,8 +44,10 @@ export const EMAIL_STATUS_CLASS: Record<string, string> = {
   sent: 'bg-indigo-100 text-indigo-800',
   delivered: 'bg-green-100 text-green-800',
   opened: 'bg-green-100 text-green-800',
+  clicked: 'bg-emerald-100 text-emerald-800',
   failed: 'bg-red-100 text-red-800',
   bounced: 'bg-red-100 text-red-800',
+  complained: 'bg-amber-100 text-amber-900',
 };
 
 export interface BillingEvent {

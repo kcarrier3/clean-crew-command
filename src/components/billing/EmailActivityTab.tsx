@@ -17,8 +17,11 @@ interface Row {
   sent_at: string | null;
   delivered_at: string | null;
   opened_at: string | null;
+  clicked_at: string | null;
+  complained_at: string | null;
   failed_at: string | null;
   failure_reason: string | null;
+  webhook_at: string | null;
   created_at: string;
   created_by: string | null;
   invoice: { invoice_number: string; customer_name: string | null } | null;
@@ -112,12 +115,14 @@ export const EmailActivityTab = () => {
             <p className="text-xs text-muted-foreground">
               Sent {stamp(r.sent_at)} · Delivered {stamp(r.delivered_at)}
               {r.opened_at ? ` · Opened ${stamp(r.opened_at)}` : ''}
+              {r.clicked_at ? ` · Link clicked ${stamp(r.clicked_at)}` : ''}
+              {r.complained_at ? ` · Marked as spam ${stamp(r.complained_at)}` : ''}
               {r.created_by ? ` · By ${senders[r.created_by] ?? '—'}` : ''}
             </p>
             {r.failure_reason && (
               <p className="text-xs text-destructive flex items-start gap-1">
                 <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                Failed {stamp(r.failed_at)} — {r.failure_reason}
+                {r.status === 'complained' ? 'Marked as spam' : 'Failed'} {stamp(r.failed_at ?? r.complained_at)} — {r.failure_reason}
               </p>
             )}
           </div>
