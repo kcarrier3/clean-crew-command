@@ -593,6 +593,8 @@ export type Database = {
           bcc_recipients: string[]
           body: string
           cc_recipients: string[]
+          clicked_at: string | null
+          complained_at: string | null
           created_at: string
           created_by: string | null
           crm_company_id: string | null
@@ -625,6 +627,8 @@ export type Database = {
           bcc_recipients?: string[]
           body?: string
           cc_recipients?: string[]
+          clicked_at?: string | null
+          complained_at?: string | null
           created_at?: string
           created_by?: string | null
           crm_company_id?: string | null
@@ -657,6 +661,8 @@ export type Database = {
           bcc_recipients?: string[]
           body?: string
           cc_recipients?: string[]
+          clicked_at?: string | null
+          complained_at?: string | null
           created_at?: string
           created_by?: string | null
           crm_company_id?: string | null
