@@ -86,7 +86,7 @@ export interface SendResult {
 export const EMAIL_TEMPLATE_VARIABLES = [
   '{{invoice_number}}', '{{customer_name}}', '{{billing_contact_first_name}}',
   '{{invoice_total}}', '{{invoice_date}}', '{{due_date}}', '{{po_number}}',
-  '{{project_name}}', '{{company_name}}',
+  '{{project_name}}', '{{company_name}}', '{{invoice_link}}',
 ] as const;
 
 export const DEFAULT_INVOICE_SUBJECT =
@@ -102,10 +102,14 @@ Amount due: {{invoice_total}}
 Due date: {{due_date}}
 PO number: {{po_number}}
 
+View or download your invoice here (secure link, expires in 7 days):
+{{invoice_link}}
+
 If you have any questions about this invoice, just reply to this email and our billing team will be glad to help.
 
 Thank you for your business,
 Summit Facilities Group — Billing`;
+
 
 export const renderTemplate = (tpl: string, vars: Record<string, string>) =>
   tpl.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => vars[k] ?? '');
