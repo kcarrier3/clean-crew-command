@@ -11,13 +11,56 @@ import { supabase } from '@/integrations/supabase/client';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 
 export const INVOICE_PDF_BUCKET = 'invoice-documents';
+export const SENDER_SETTING_KEY = 'billing_email_sender';
+
+export const DEFAULT_SENDER = {
+  from_email: 'invoices@billing.crewcompass360.com',
+  from_name: 'Crew Compass Billing',
+  reply_to: '' as string,
+};
+
+export interface SenderSettings {
+  from_email: string;
+  from_name: string;
+  reply_to: string;
+}
 
 export interface EmailConfig {
   configured: boolean;
   provider: string;
   from: string;
+  from_email?: string;
+  from_name?: string;
   reply_to: string | null;
 }
+
+/** Sender/reply-to live in app_settings so Billing owns them in one place. */
+export const fetchSenderSettings = async (): Promise<SenderSettings> => {
+  const { data } = await (supabase as any).from('app_settings')
+    .select('value').eq('key', SENDER_SETTING_KEY).maybeSingle();
+  if (!data?.value) return { ...DEFAULT_SENDER };
+  try {
+    const saved = JSON.parse(data.value);
+    return {
+      from_email: saved.from_email || DEFAULT_SENDER.from_email,
+      from_name: saved.from_name || DEFAULT_SENDER.from_name,
+      reply_to: saved.reply_to || '',
+    };
+  } catch {
+    return { ...DEFAULT_SENDER };
+  }
+};
+
+export const saveSenderSettings = async (s: SenderSettings): Promise<void> => {
+  const { error } = await (supabase as any).from('app_settings').upsert({
+    key: SENDER_SETTING_KEY,
+    value: JSON.stringify(s),
+    description: 'Invoice email sender and reply-to address',
+  }, { onConflict: 'key' });
+  if (error) throw error;
+  configCache = null;
+};
+
 
 export interface EmailMessageDraft {
   invoice_id: string;
