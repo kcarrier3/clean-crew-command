@@ -1,6 +1,6 @@
 import {
   BookOpen, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardCheck,
-  FileSpreadsheet, HelpCircle, Home, MapPin, MessageSquare, Package, PlaneTakeoff, Radio, Receipt, Users as UsersIcon,
+  FileSpreadsheet, GraduationCap, HelpCircle, Home, MapPin, MessageSquare, Package, PlaneTakeoff, Radio, Receipt, Users as UsersIcon,
 } from 'lucide-react';
 import type { SidebarItem } from './AppSidebar';
 
@@ -24,6 +24,7 @@ export const buildNavItems = ({ isManager, isCrmUser, canEstimate, isModuleEnabl
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
+        { v: 'training',   label: 'Training',        icon: GraduationCap },
         ...(isCrmUser ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
@@ -36,6 +37,7 @@ export const buildNavItems = ({ isManager, isCrmUser, canEstimate, isModuleEnabl
         { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
+        { v: 'training',   label: 'Training',        icon: GraduationCap },
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         ...(isCrmUser ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),

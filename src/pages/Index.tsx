@@ -47,6 +47,8 @@ import { SEO } from '@/components/SEO';
 import { useModuleSettings } from '@/hooks/useModuleSettings';
 import HelpCenter from '@/components/help/HelpCenter';
 import ModuleHelp from '@/components/help/ModuleHelp';
+import TrainingCenter from '@/components/training/TrainingCenter';
+import { GraduationCap } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -192,6 +194,7 @@ const Index = () => {
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
+        { v: 'training',   label: 'Training',        icon: GraduationCap },
         ...(isCrmUser() ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
@@ -204,6 +207,7 @@ const Index = () => {
         { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
+        { v: 'training',   label: 'Training',        icon: GraduationCap },
         { v: 'supplies',   label: 'Supplies',        icon: Package },
         ...(isCrmUser() ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
@@ -531,6 +535,12 @@ const Index = () => {
             {isModuleEnabled('onboarding') && (
               <TabsContent value="onboarding" className="mt-6">
                 {isManager() ? <OnboardingManager /> : <OnboardingCenter />}
+              </TabsContent>
+            )}
+
+            {isModuleEnabled('training') && (
+              <TabsContent value="training" className="mt-6">
+                <TrainingCenter />
               </TabsContent>
             )}
 
