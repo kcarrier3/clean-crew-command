@@ -1,6 +1,6 @@
 import {
   BookOpen, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardCheck,
-  FileSpreadsheet, HelpCircle, Home, MapPin, MessageSquare, Package, PlaneTakeoff, Radio, Receipt, Users as UsersIcon,
+  FileSpreadsheet, GraduationCap, HelpCircle, Home, MapPin, MessageSquare, Package, PlaneTakeoff, Radio, Receipt, Users as UsersIcon,
 } from 'lucide-react';
 import type { SidebarItem } from './AppSidebar';
 
