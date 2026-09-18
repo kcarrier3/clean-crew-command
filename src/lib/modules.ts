@@ -28,6 +28,7 @@ export const APP_MODULES: ModuleDef[] = [
   { key: 'timeoff', label: 'Time Off', description: 'Time off requests and PTO balances.' },
   { key: 'contacts', label: 'Contacts', description: 'Company contact directory.' },
   { key: 'onboarding', label: 'Onboarding & Docs', description: 'New hire onboarding center.' },
+  { key: 'training', label: 'Training', description: 'Staff training courses, lessons, quizzes, and completion tracking.' },
 ];
 
 export const MODULE_SETTINGS_KEY = 'disabled_modules';
