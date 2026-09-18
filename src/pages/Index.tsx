@@ -47,6 +47,8 @@ import { SEO } from '@/components/SEO';
 import { useModuleSettings } from '@/hooks/useModuleSettings';
 import HelpCenter from '@/components/help/HelpCenter';
 import ModuleHelp from '@/components/help/ModuleHelp';
+import TrainingCenter from '@/components/training/TrainingCenter';
+import { GraduationCap } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
