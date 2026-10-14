@@ -105,6 +105,17 @@ const TeamRoster = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<RosterMember | null>(null);
   const [resending, setResending] = useState(false);
+  const [lastInvite, setLastInvite] = useState<{ status: string; sent_at: string | null; error_message: string | null; link_expires_at: string | null } | null>(null);
+  const loadLastInvite = async (userId: string) => {
+    const { data } = await (supabase as any).from('employee_invitations')
+      .select('status, sent_at, error_message, link_expires_at')
+      .eq('user_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    setLastInvite(data ?? null);
+  };
+  useEffect(() => {
+    setLastInvite(null);
+    if ((editMember as any)?.id) loadLastInvite((editMember as any).id);
+  }, [(editMember as any)?.id]);
   const [newPassword, setNewPassword] = useState('');
   const [settingPassword, setSettingPassword] = useState(false);
   const [sendingLink, setSendingLink] = useState(false);
@@ -417,7 +428,8 @@ const TeamRoster = () => {
         throw new Error(detail);
       }
       if (data?.error) throw new Error(data.error);
-      toast({ title: 'Invitation resent', description: `A new invite email was sent to ${editForm.email}.` });
+      toast({ title: 'Invitation resent', description: `A new one-time setup link was emailed to ${editForm.email} (expires in ${data?.expiresInHours ?? 24} hours).` });
+      if ((editMember as any)?.id) loadLastInvite((editMember as any).id);
     } catch (err: any) {
       toast({ title: 'Error', description: err?.message ?? 'Failed to resend invite.', variant: 'destructive' });
     } finally {
@@ -964,6 +976,14 @@ const TeamRoster = () => {
             >
               <Trash2 className="h-4 w-4 mr-1" /> Delete
             </Button>
+            {lastInvite && (
+              <div className="text-xs text-muted-foreground self-center">
+                Last invite: <span className={['failed', 'bounced', 'complained'].includes(lastInvite.status) ? 'text-destructive font-medium' : 'font-medium'}>{lastInvite.status}</span>
+                {lastInvite.sent_at && ` · ${new Date(lastInvite.sent_at).toLocaleString()}`}
+                {lastInvite.link_expires_at && new Date(lastInvite.link_expires_at) < new Date() && ' · link expired'}
+                {lastInvite.error_message && ` · ${lastInvite.error_message}`}
+              </div>
+            )}
             <div className="flex gap-2">
               <Button
                 variant="outline"
