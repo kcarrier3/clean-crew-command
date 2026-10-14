@@ -26,3 +26,9 @@ verify_jwt = true
 
 [functions.assistant-api]
 verify_jwt = false
+
+[functions.invite-employee]
+verify_jwt = true
+
+[functions.check-missed-punches]
+verify_jwt = false
