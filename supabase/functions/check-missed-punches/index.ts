@@ -209,8 +209,7 @@ Deno.serve(async (req) => {
   const { data: sendable } = await admin.from('sms_alert_log').select('*')
     .eq('alert_type', 'missed_punch').in('schedule_id', scheduleIds).in('shift_date', dates)
     .in('status', ['pending', 'failed', 'not_configured']).lt('attempts', MAX_ATTEMPTS);
-  const stillKeys = new Set(planned.filter((p) => p.status !== 'not_configured' || smsConfigured())
-    .filter((p) => !['manager_inactive', 'not_opted_in', 'invalid_phone'].includes(p.status))
+  const stillKeys = new Set(planned.filter((p) => p.status === 'pending')
     .map((p) => `${p.schedule_id}|${p.shift_date}|${p.manager_id}`));
 
   let sent = 0, failed = 0;
