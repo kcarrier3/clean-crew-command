@@ -241,7 +241,8 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Employee invitation sent via', provider);
 
     // Assign permissions and roles based on job title (skip on resend if no jobTitle change)
-    if (inviteData.user?.id && jobTitle) {
+    // Resends never touch roles/permissions an admin may have customised.
+    if (inviteData.user?.id && jobTitle && !isResend) {
       const userId = inviteData.user.id;
 
       // Update the profile with job_title and attendance_tracking_type
@@ -319,6 +320,9 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ 
         success: true, 
         message: 'Employee invitation sent successfully',
+        provider,
+        invitationId: logId,
+        expiresInHours: LINK_TTL_HOURS,
         userId: inviteData.user?.id 
       }),
       {
