@@ -104,7 +104,22 @@ Deno.serve(async (req) => {
     return json({ error: 'Lookup failed' }, 500);
   }
   if (!row) {
-    console.warn(`No billing_email_messages row for provider message ${providerMessageId}`);
+    // Not a billing email — it may be an employee invitation.
+    const { data: invite } = await admin
+      .from('employee_invitations')
+      .select('id, status')
+      .eq('provider_message_id', providerMessageId)
+      .maybeSingle();
+    if (invite) {
+      const cur = STATUS_RANK[invite.status] ?? 0;
+      const p: Record<string, unknown> = { webhook_status: event.type };
+      if (event.type === 'email.delivered') p.delivered_at = new Date().toISOString();
+      if (mapped.terminal || mapped.rank > cur) p.status = mapped.status;
+      if (mapped.terminal) p.error_message = reasonFrom(data, event.type);
+      await admin.from('employee_invitations').update(p).eq('id', invite.id);
+      return json({ ok: true, invitation: true, type: event.type });
+    }
+    console.warn(`No email log row for provider message ${providerMessageId}`);
     return json({ ok: true, unmatched: true });
   }
 
