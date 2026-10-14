@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.12 (cd3cf9e)"
+    PostgrestVersion: "12.2.12"
   }
   public: {
     Tables: {
@@ -3343,6 +3343,63 @@ export type Database = {
           },
         ]
       }
+      employee_invitations: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          email: string
+          error_message: string | null
+          id: string
+          invited_by: string | null
+          job_title: string | null
+          kind: string
+          link_expires_at: string | null
+          provider: string | null
+          provider_message_id: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+          webhook_status: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          email: string
+          error_message?: string | null
+          id?: string
+          invited_by?: string | null
+          job_title?: string | null
+          kind?: string
+          link_expires_at?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          webhook_status?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          email?: string
+          error_message?: string | null
+          id?: string
+          invited_by?: string | null
+          job_title?: string | null
+          kind?: string
+          link_expires_at?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          webhook_status?: string | null
+        }
+        Relationships: []
+      }
       employee_schedules: {
         Row: {
           active: boolean
@@ -5352,6 +5409,8 @@ export type Database = {
           profile_completed_at: string | null
           require_geofencing: boolean
           salary_amount: number | null
+          sms_opt_in: boolean
+          sms_opt_in_at: string | null
           state: string | null
           time_bonus_amount: number | null
           updated_at: string
@@ -5388,6 +5447,8 @@ export type Database = {
           profile_completed_at?: string | null
           require_geofencing?: boolean
           salary_amount?: number | null
+          sms_opt_in?: boolean
+          sms_opt_in_at?: string | null
           state?: string | null
           time_bonus_amount?: number | null
           updated_at?: string
@@ -5424,6 +5485,8 @@ export type Database = {
           profile_completed_at?: string | null
           require_geofencing?: boolean
           salary_amount?: number | null
+          sms_opt_in?: boolean
+          sms_opt_in_at?: string | null
           state?: string | null
           time_bonus_amount?: number | null
           updated_at?: string
@@ -5944,6 +6007,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sms_alert_log: {
+        Row: {
+          alert_type: string
+          attempts: number
+          created_at: string
+          employee_id: string
+          error_message: string | null
+          id: string
+          manager_id: string
+          message: string | null
+          provider: string | null
+          provider_message_id: string | null
+          schedule_id: string
+          scheduled_start: string
+          sent_at: string | null
+          shift_date: string
+          status: string
+          to_phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          alert_type?: string
+          attempts?: number
+          created_at?: string
+          employee_id: string
+          error_message?: string | null
+          id?: string
+          manager_id: string
+          message?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          schedule_id: string
+          scheduled_start: string
+          sent_at?: string | null
+          shift_date: string
+          status?: string
+          to_phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: string
+          attempts?: number
+          created_at?: string
+          employee_id?: string
+          error_message?: string | null
+          id?: string
+          manager_id?: string
+          message?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          schedule_id?: string
+          scheduled_start?: string
+          sent_at?: string | null
+          shift_date?: string
+          status?: string
+          to_phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       supply_categories: {
         Row: {

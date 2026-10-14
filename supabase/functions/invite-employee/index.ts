@@ -65,8 +65,31 @@ const managerTitles = ['Owner', 'Office Manager', 'Operations Manager', 'Janitor
 // Titles that get the 'admin' system role
 const adminTitles = ['Owner', 'Office Manager', 'Operations Manager'];
 
+// Auth emails use their own sender — never the billing sender.
+const APP_URL = (Deno.env.get('APP_URL') || Deno.env.get('SITE_URL') || 'https://app.gosummitfacilities.com').replace(/\/$/, '');
+const INVITE_FROM_EMAIL = Deno.env.get('INVITE_FROM_EMAIL') || 'noreply@billing.crewcompass360.com';
+const INVITE_FROM_NAME = Deno.env.get('INVITE_FROM_NAME') || 'Crew Compass';
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const LINK_TTL_HOURS = 24;
+
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
+const inviteHtml = (name: string, title: string, link: string, isResend: boolean) => `
+<div style="font-family:Arial,sans-serif;background:#ffffff;padding:24px;color:#1f2937">
+  <div style="max-width:520px;margin:0 auto">
+    <h2 style="color:#ea580c;margin:0 0 16px">Welcome to Crew Compass</h2>
+    <p>Hi ${esc(name || 'there')},</p>
+    <p>${isResend ? 'Here is a fresh link to' : 'You have been invited to'} set up your Crew Compass account${title ? ` as <strong>${esc(title)}</strong>` : ''} with Summit Facilities Group.</p>
+    <p style="margin:28px 0"><a href="${link}" style="background:#ea580c;color:#ffffff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:bold">Set up my account</a></p>
+    <p style="font-size:13px;color:#6b7280">This link works once and expires in ${LINK_TTL_HOURS} hours. If it expires, ask your manager to resend your invite.</p>
+    <p style="font-size:13px;color:#6b7280">If you weren't expecting this, you can ignore this email.</p>
+  </div>
+</div>`;
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -74,42 +97,45 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Parse and validate input
+    // Caller must be signed in and allowed to manage employees.
+    const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+    const { data: caller } = token ? await supabase.auth.getUser(token) : ({ data: { user: null } } as any);
+    const callerId: string | undefined = caller?.user?.id;
+    if (!callerId) return json({ error: 'You must be signed in to invite employees.' }, 401);
+    const [{ data: isAdmin }, { data: canManage }] = await Promise.all([
+      supabase.rpc('has_role', { _user_id: callerId, _role: 'admin' }),
+      supabase.rpc('has_permission', { _user_id: callerId, _permission: 'manage_employees' }),
+    ]);
+    if (!isAdmin && !canManage) return json({ error: 'You do not have permission to invite employees.' }, 403);
+
     let requestBody;
     try {
       requestBody = await req.json();
     } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON body' }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return json({ error: 'Invalid JSON body' }, 400);
     }
 
     const validationResult = InviteEmployeeSchema.safeParse(requestBody);
     if (!validationResult.success) {
-      console.error('Validation error:', validationResult.error.errors);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid input', 
-          details: validationResult.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
-        }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return json({
+        error: 'Invalid input',
+        details: validationResult.error.errors.map(e => ({ field: e.path.join('.'), message: e.message })),
+      }, 400);
     }
 
     const { email, firstName, lastName, phone, jobTitle, hourlyRate, salaryAmount, payType, attendanceTrackingType, attendanceBonusAmount, timeBonusAmount, resend } = validationResult.data;
 
-    console.log('Inviting employee:', { email, jobTitle, payType, resend });
+    // Only admins may hand out admin-level titles.
+    if (jobTitle && adminTitles.includes(jobTitle) && !isAdmin) {
+      return json({ error: 'Only admins can invite someone with an admin-level job title.' }, 403);
+    }
 
-    // Look up existing user by email (paginated through all auth users)
+    console.log('Inviting employee:', { jobTitle, payType, resend });
+
     let existingUser: any = null;
     try {
       let page = 1;
@@ -124,16 +150,11 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Could not check existing users:', error);
     }
 
-    // Block re-invite of fully-activated accounts
-    if (existingUser?.email_confirmed_at && !resend) {
-      return new Response(
-        JSON.stringify({ error: 'A user with this email already exists and has activated their account.' }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    if (existingUser?.email_confirmed_at || existingUser?.last_sign_in_at) {
+      return json({ error: 'This person has already activated their account. Use password reset instead.' }, 400);
     }
 
-    const siteUrl = Deno.env.get('SITE_URL') || 'https://clean-crew-command.lovable.app';
-    const redirectUrl = `${siteUrl}/reset-password`;
+    const redirectUrl = `${APP_URL}/reset-password`;
 
     const metadata = {
       first_name: firstName,
@@ -148,40 +169,80 @@ const handler = async (req: Request): Promise<Response> => {
       time_bonus_amount: timeBonusAmount || null,
     };
 
-    let inviteData: any = null;
-    let inviteError: any = null;
+    const isResend = !!existingUser;
+    const { data: logRow } = await supabase.from('employee_invitations').insert({
+      user_id: existingUser?.id ?? null, email, job_title: jobTitle ?? null, invited_by: callerId,
+      kind: isResend ? 'resend' : 'invite', status: 'pending',
+    }).select('id').single();
+    const logId = logRow?.id;
+    const updateLog = async (patch: Record<string, unknown>) => {
+      if (logId) await supabase.from('employee_invitations').update(patch).eq('id', logId);
+    };
 
-    if (existingUser && !existingUser.email_confirmed_at) {
-      // Re-send invite to an unconfirmed user by generating a fresh invite link
-      console.log('Resending invite to existing unconfirmed user:', email);
-      const { data, error } = await supabase.auth.admin.generateLink({
-        type: 'invite',
-        email,
-        options: { redirectTo: redirectUrl, data: metadata },
+    let userId: string | undefined = existingUser?.id;
+    let provider = 'supabase_auth';
+    let providerMessageId: string | null = null;
+
+    if (RESEND_API_KEY) {
+      // Generate a one-time link (Supabase sends nothing) and deliver it via Resend.
+      let linkRes: any = await supabase.auth.admin.generateLink({
+        type: 'invite', email, options: { redirectTo: redirectUrl, data: metadata },
       });
-      inviteData = { user: data?.user ?? existingUser };
-      inviteError = error;
+      if (linkRes.error && existingUser) {
+        linkRes = await supabase.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo: redirectUrl } });
+        if (!linkRes.error) await supabase.auth.admin.updateUserById(existingUser.id, { user_metadata: metadata });
+      }
+      const link = linkRes.data?.properties?.action_link;
+      if (linkRes.error || !link) {
+        const msg = linkRes.error?.message || 'Could not create a setup link';
+        await updateLog({ status: 'failed', error_message: msg });
+        return json({ error: msg }, 400);
+      }
+      userId = linkRes.data.user?.id ?? userId;
+      provider = 'resend';
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `invite-${logId}` },
+        body: JSON.stringify({
+          from: `${INVITE_FROM_NAME} <${INVITE_FROM_EMAIL}>`,
+          to: [email],
+          subject: isResend ? 'Your new Crew Compass setup link' : "You're invited to Crew Compass",
+          html: inviteHtml(firstName ?? '', jobTitle ?? '', link, isResend),
+          text: `Set up your Crew Compass account: ${link}\n\nThis link works once and expires in ${LINK_TTL_HOURS} hours.`,
+          tags: [{ name: 'category', value: 'employee_invite' }],
+        }),
+      });
+      const body = await r.text();
+      if (!r.ok) {
+        console.error(`Resend invite failed [${r.status}]: ${body}`);
+        await updateLog({ user_id: userId, provider, status: 'failed', error_message: `Email provider error ${r.status}: ${body.slice(0, 400)}` });
+        return json({ error: `The invite email could not be sent (provider error ${r.status}).`, userId }, 502);
+      }
+      try { providerMessageId = JSON.parse(body).id ?? null; } catch { /* ignore */ }
     } else {
-      const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-        redirectTo: redirectUrl,
-        data: metadata,
-      });
-      inviteData = data;
-      inviteError = error;
+      // Fallback: Supabase Auth sends the email through its configured SMTP.
+      const res: any = existingUser
+        ? await supabase.auth.admin.generateLink({ type: 'invite', email, options: { redirectTo: redirectUrl, data: metadata } })
+        : await supabase.auth.admin.inviteUserByEmail(email, { redirectTo: redirectUrl, data: metadata });
+      if (res.error) {
+        await updateLog({ status: 'failed', provider, error_message: res.error.message });
+        return json({ error: res.error.message || 'Failed to send invitation' }, 400);
+      }
+      userId = res.data?.user?.id ?? userId;
     }
 
-    if (inviteError) {
-      console.error('Error sending invite:', inviteError);
-      return new Response(
-        JSON.stringify({ error: inviteError.message || 'Failed to send invitation' }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    await updateLog({
+      user_id: userId, provider, provider_message_id: providerMessageId, status: 'sent',
+      sent_at: new Date().toISOString(),
+      link_expires_at: new Date(Date.now() + LINK_TTL_HOURS * 3600_000).toISOString(),
+    });
 
-    console.log('Employee invitation sent successfully to:', email);
+    const inviteData = { user: { id: userId } };
+    console.log('Employee invitation sent via', provider);
 
     // Assign permissions and roles based on job title (skip on resend if no jobTitle change)
-    if (inviteData.user?.id && jobTitle) {
+    // Resends never touch roles/permissions an admin may have customised.
+    if (inviteData.user?.id && jobTitle && !isResend) {
       const userId = inviteData.user.id;
 
       // Update the profile with job_title and attendance_tracking_type
@@ -259,6 +320,9 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ 
         success: true, 
         message: 'Employee invitation sent successfully',
+        provider,
+        invitationId: logId,
+        expiresInHours: LINK_TTL_HOURS,
         userId: inviteData.user?.id 
       }),
       {
