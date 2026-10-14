@@ -25,6 +25,8 @@ import TimeOffPolicySettings from '@/components/TimeOffPolicySettings';
 import WaypointDataSettings from '@/components/crm/WaypointDataSettings';
 import AdpSettings from '@/components/AdpSettings';
 import ModuleSettings from '@/components/ModuleSettings';
+import SmsAlertSettings from '@/components/SmsAlertSettings';
+import SmsAlertOptIn from '@/components/SmsAlertOptIn';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -104,6 +106,8 @@ export default function Settings() {
               </CardContent>
             </Card>
 
+            {isManager() && <SmsAlertOptIn />}
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2"><Shield className="h-4 w-4" /> Security</CardTitle>
@@ -156,6 +160,7 @@ export default function Settings() {
           {isAdminLevel && (
             <TabsContent value="modules" className="mt-6">
               <ModuleSettings />
+              <div className="mt-6"><SmsAlertSettings /></div>
             </TabsContent>
           )}
 
