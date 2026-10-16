@@ -150,7 +150,10 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Could not check existing users:', error);
     }
 
-    if (existingUser?.email_confirmed_at || existingUser?.last_sign_in_at) {
+    // A used invite link confirms the account even if the person never set a password
+    // (e.g. the page errored). Resends then send a fresh one-time setup link instead of failing.
+    const alreadyConfirmed = !!(existingUser?.email_confirmed_at || existingUser?.last_sign_in_at);
+    if (alreadyConfirmed && !RESEND_API_KEY) {
       return json({ error: 'This person has already activated their account. Use password reset instead.' }, 400);
     }
 
@@ -185,9 +188,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (RESEND_API_KEY) {
       // Generate a one-time link (Supabase sends nothing) and deliver it via Resend.
-      let linkRes: any = await supabase.auth.admin.generateLink({
-        type: 'invite', email, options: { redirectTo: redirectUrl, data: metadata },
-      });
+      let linkRes: any = alreadyConfirmed
+        ? await supabase.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo: redirectUrl } })
+        : await supabase.auth.admin.generateLink({
+            type: 'invite', email, options: { redirectTo: redirectUrl, data: metadata },
+          });
       if (linkRes.error && existingUser) {
         linkRes = await supabase.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo: redirectUrl } });
         if (!linkRes.error) await supabase.auth.admin.updateUserById(existingUser.id, { user_metadata: metadata });
