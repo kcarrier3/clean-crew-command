@@ -242,7 +242,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Assign permissions and roles based on job title (skip on resend if no jobTitle change)
     // Resends never touch roles/permissions an admin may have customised.
-    if (inviteData.user?.id && jobTitle && !isResend) {
+    // Also finish setup for a resend whose first attempt failed before roles were assigned.
+    let needsSetup = !isResend;
+    if (isResend && inviteData.user?.id && jobTitle) {
+      const { data: prof } = await supabase.from('profiles').select('job_title').eq('id', inviteData.user.id).maybeSingle();
+      needsSetup = !prof?.job_title;
+    }
+    if (inviteData.user?.id && jobTitle && needsSetup) {
       const userId = inviteData.user.id;
 
       // Update the profile with job_title and attendance_tracking_type

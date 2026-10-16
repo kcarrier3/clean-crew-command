@@ -1,0 +1,3 @@
+CREATE POLICY "Billing managers can view billing sender" ON public.app_settings FOR SELECT TO authenticated USING (key = 'billing_email_sender' AND public.can_manage_billing(auth.uid()));
+CREATE POLICY "Billing managers can insert billing sender" ON public.app_settings FOR INSERT TO authenticated WITH CHECK (key = 'billing_email_sender' AND public.can_manage_billing(auth.uid()));
+CREATE POLICY "Billing managers can update billing sender" ON public.app_settings FOR UPDATE TO authenticated USING (key = 'billing_email_sender' AND public.can_manage_billing(auth.uid())) WITH CHECK (key = 'billing_email_sender' AND public.can_manage_billing(auth.uid()));
