@@ -71,3 +71,7 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Email senders
+- Employee invites / resend invites (`invite-employee` function): default `Crew Compass <noreply@invites.crewcompass360.com>`. Optional overrides: `INVITE_FROM_EMAIL`, `INVITE_FROM_NAME` secrets (an override wins over the default). The `invites.crewcompass360.com` domain must be verified in Resend.
+- Invoices (`send-invoice-email` function): `Crew Compass Billing <invoices@billing.crewcompass360.com>`, configurable in Billing → Settings. Never share the invite sender.
