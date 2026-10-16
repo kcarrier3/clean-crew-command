@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -7,6 +8,7 @@ import { guideForModule } from '@/lib/guides';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
+const ALL_KEY = '__all__';
 const seenKey = (moduleKey: string) => `cc.tour.${moduleKey}.v1`;
 
 const hasSeenLocal = (moduleKey: string) => {
@@ -37,6 +39,7 @@ export const ModuleTour = ({ moduleKey }: { moduleKey: string }) => {
   const managerOnly = guide?.audience === 'manager' && !isManager?.();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const [disableAll, setDisableAll] = useState(false);
   const checkedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -44,7 +47,7 @@ export const ModuleTour = ({ moduleKey }: { moduleKey: string }) => {
     setStep(0);
     setOpen(false);
 
-    if (!guide || managerOnly || !user?.id) return;
+    if (!guide || managerOnly || !user?.id || hasSeenLocal(ALL_KEY)) return;
 
     // Only evaluate once per module per mount-session to avoid re-prompting.
     const checkToken = `${user.id}:${moduleKey}`;
@@ -57,7 +60,8 @@ export const ModuleTour = ({ moduleKey }: { moduleKey: string }) => {
           .from('user_tour_progress')
           .select('id')
           .eq('user_id', user.id)
-          .eq('module_key', moduleKey)
+          .in('module_key', [moduleKey, ALL_KEY])
+          .limit(1)
           .maybeSingle();
 
         if (cancelled) return;
@@ -100,6 +104,14 @@ export const ModuleTour = ({ moduleKey }: { moduleKey: string }) => {
 
   const close = () => {
     markSeenLocal(moduleKey);
+    if (disableAll) {
+      markSeenLocal(ALL_KEY);
+      if (user?.id) {
+        void supabase
+          .from('user_tour_progress')
+          .upsert({ user_id: user.id, module_key: ALL_KEY }, { onConflict: 'user_id,module_key' });
+      }
+    }
     setOpen(false);
     if (user?.id) {
       void supabase
@@ -126,6 +138,10 @@ export const ModuleTour = ({ moduleKey }: { moduleKey: string }) => {
             />
           ))}
         </div>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+          <Checkbox checked={disableAll} onCheckedChange={(v) => setDisableAll(v === true)} />
+          Disable help &amp; how to pop ups in the future
+        </label>
         <DialogFooter className="gap-2 sm:justify-between">
           <Button variant="ghost" size="sm" onClick={close}>
             Skip
