@@ -82,33 +82,51 @@ export const CourseEditorDialog = ({ open, onOpenChange, course, userId, onSaved
         courseId = data.id;
       }
 
-      await db.from('training_lessons').delete().eq('course_id', courseId);
+      // Update lessons in place so staff progress (keyed by lesson id) survives edits.
       const validLessons = lessons.filter((l) => l.title.trim());
-      if (validLessons.length) {
-        const { error } = await db.from('training_lessons').insert(
-          validLessons.map((l, i) => ({
-            course_id: courseId,
-            title: l.title.trim(),
-            content: l.content.trim() || null,
-            media_url: l.media_url.trim() || null,
-            position: i,
-          })),
-        );
+      const keptLessonIds = validLessons.map((l) => l.id).filter(Boolean) as string[];
+      const { data: oldLessons } = await db.from('training_lessons').select('id').eq('course_id', courseId);
+      const removedLessons = (oldLessons ?? []).map((r: any) => r.id).filter((id: string) => !keptLessonIds.includes(id));
+      if (removedLessons.length) {
+        const { error } = await db.from('training_lessons').delete().in('id', removedLessons);
+        if (error) throw error;
+      }
+      for (const [i, l] of validLessons.entries()) {
+        const row = {
+          course_id: courseId,
+          title: l.title.trim(),
+          content: l.content.trim() || null,
+          media_url: l.media_url.trim() || null,
+          position: i,
+        };
+        const { error } = l.id
+          ? await db.from('training_lessons').update(row).eq('id', l.id)
+          : await db.from('training_lessons').insert(row);
         if (error) throw error;
       }
 
-      await db.from('training_quiz_questions').delete().eq('course_id', courseId);
+      const cleanQuestion = (q: QuestionDraft) => {
+        const kept = q.options.map((o, idx) => ({ o: o.trim(), idx })).filter((x) => x.o);
+        const correct = kept.findIndex((x) => x.idx === q.correct_index);
+        return { options: kept.map((x) => x.o), correct_index: correct < 0 ? 0 : correct };
+      };
       const validQuestions = questions.filter((q) => q.question.trim() && q.options.filter((o) => o.trim()).length >= 2);
-      if (validQuestions.length) {
-        const { error } = await db.from('training_quiz_questions').insert(
-          validQuestions.map((q, i) => ({
-            course_id: courseId,
-            question: q.question.trim(),
-            options: q.options.filter((o) => o.trim()),
-            correct_index: q.correct_index,
-            position: i,
-          })),
-        );
+      const badAnswer = validQuestions.find((q) => !q.options[q.correct_index]?.trim());
+      if (badAnswer) {
+        throw new Error(`Pick a filled-in correct answer for "${badAnswer.question.trim()}".`);
+      }
+      const keptQIds = validQuestions.map((q) => q.id).filter(Boolean) as string[];
+      const { data: oldQs } = await db.from('training_quiz_questions').select('id').eq('course_id', courseId);
+      const removedQs = (oldQs ?? []).map((r: any) => r.id).filter((id: string) => !keptQIds.includes(id));
+      if (removedQs.length) {
+        const { error } = await db.from('training_quiz_questions').delete().in('id', removedQs);
+        if (error) throw error;
+      }
+      for (const [i, q] of validQuestions.entries()) {
+        const row = { course_id: courseId, question: q.question.trim(), ...cleanQuestion(q), position: i };
+        const { error } = q.id
+          ? await db.from('training_quiz_questions').update(row).eq('id', q.id)
+          : await db.from('training_quiz_questions').insert(row);
         if (error) throw error;
       }
 
