@@ -67,7 +67,7 @@ const adminTitles = ['Owner', 'Office Manager', 'Operations Manager'];
 
 // Auth emails use their own sender — never the billing sender.
 const APP_URL = (Deno.env.get('APP_URL') || Deno.env.get('SITE_URL') || 'https://app.gosummitfacilities.com').replace(/\/$/, '');
-const INVITE_FROM_EMAIL = Deno.env.get('INVITE_FROM_EMAIL') || 'noreply@billing.crewcompass360.com';
+const INVITE_FROM_EMAIL = Deno.env.get('INVITE_FROM_EMAIL') || 'noreply@invites.crewcompass360.com';
 const INVITE_FROM_NAME = Deno.env.get('INVITE_FROM_NAME') || 'Crew Compass';
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const LINK_TTL_HOURS = 24;
