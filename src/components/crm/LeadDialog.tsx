@@ -15,6 +15,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from './fetchAllRows';
+import { ContactFormDialog } from './ContactFormDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { LEAD_SOURCES, LEAD_STATUS_LABELS, PIPELINE_LABELS, type CrmLead, type CrmStage, type CrmCompany, type CrmContact, type CrmPipeline } from './types';
@@ -64,6 +65,7 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
   const [allStages, setAllStages] = useState<CrmStage[]>([]);
   const [companies, setCompanies] = useState<CrmCompany[]>([]);
   const [contacts, setContacts] = useState<CrmContact[]>([]);
+  const [addContactOpen, setAddContactOpen] = useState(false);
   const [activities, setActivities] = useState<any[]>([]);
   const [newActivity, setNewActivity] = useState<{ type: string; subject: string }>({ type: 'note', subject: '' });
   const [owner, setOwner] = useState<{ full_name: string | null } | null>(null);
@@ -856,11 +858,34 @@ export function LeadDialog({ open: openProp, onOpenChange, lead, onSaved, asPage
     if (!form.company_id) {
       return <p className="text-sm text-muted-foreground text-center py-8">Set an account first to see its contacts.</p>;
     }
+    const header = (
+      <>
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setAddContactOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> New contact
+          </Button>
+        </div>
+        <ContactFormDialog
+          open={addContactOpen}
+          onOpenChange={setAddContactOpen}
+          defaultCompanyId={form.company_id}
+          lockCompany
+          companies={companies}
+          onSaved={loadContacts}
+        />
+      </>
+    );
     if (contactsForAccount.length === 0) {
-      return <p className="text-sm text-muted-foreground text-center py-8">No contacts yet for this account. Add one on the Contacts tab.</p>;
+      return (
+        <div className="space-y-2">
+          {header}
+          <p className="text-sm text-muted-foreground text-center py-8">No contacts yet for this account.</p>
+        </div>
+      );
     }
     return (
       <div className="space-y-2">
+        {header}
         {contactsForAccount.map(c => {
           const name = `${c.first_name} ${c.last_name || ''}`.trim();
           const isPrimary = c.id === form.primary_contact_id;
