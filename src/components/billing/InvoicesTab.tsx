@@ -4,11 +4,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Mail, Search } from 'lucide-react';
+import { FileText, Mail, Plus, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { fetchInvoices } from './billingApi';
 import { InvoiceDetailDialog } from './InvoiceDetailDialog';
 import { SendInvoiceDialog } from './SendInvoiceDialog';
+import { NewInvoiceDialog } from './NewInvoiceDialog';
 import {
   INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL, money, type Invoice,
 } from '@/lib/billing/types';
@@ -23,6 +24,7 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
   const [status, setStatus] = useState('all');
   const [openId, setOpenId] = useState<string | null>(null);
   const [sendId, setSendId] = useState<string | null>(null);
+  const [newOpen, setNewOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -73,6 +75,7 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
         <CardHeader className="pb-3 gap-3 sm:flex-row sm:items-center sm:justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Invoices</CardTitle>
           <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setNewOpen(true)}><Plus className="h-4 w-4 mr-1" /> New invoice</Button>
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search number, customer, PO"
@@ -141,6 +144,9 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
         onOpenChange={o => !o && setOpenId(null)}
         onChanged={load}
       />
+
+      <NewInvoiceDialog open={newOpen} onOpenChange={setNewOpen}
+                        onCreated={id => { load(); setOpenId(id); }} />
 
       <SendInvoiceDialog
         invoiceId={sendId}

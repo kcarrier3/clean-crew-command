@@ -155,3 +155,44 @@ export const recordPayment = async (payment: {
   }
   return row;
 };
+export interface ManualInvoiceLine { description: string; quantity: number; unit_price: number }
+
+/** Creates a stand-alone invoice with hand-entered lines (not tied to Ready to Bill events). */
+export const createManualInvoice = async (o: {
+  jobSiteId?: string | null; crmCompanyId?: string | null;
+  customerName?: string | null; billingEmail?: string | null; poNumber?: string | null;
+  invoiceDate: string; terms: string; taxRate: number; notes?: string | null;
+  lines: ManualInvoiceLine[];
+}): Promise<Invoice> => {
+  const lines = o.lines.filter(l => l.description.trim() && l.quantity > 0);
+  if (!lines.length) throw new Error('Add at least one line item.');
+  const { data: userData } = await supabase.auth.getUser();
+  const { data: numberData, error: numErr } = await db.rpc('next_invoice_number');
+  if (numErr) throw numErr;
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const subtotal = round(lines.reduce((s, l) => s + l.quantity * l.unit_price, 0));
+  const tax = round(subtotal * (o.taxRate / 100));
+  const total = round(subtotal + tax);
+  const { data: invoice, error } = await db.from('billing_invoices').insert({
+    invoice_number: numberData,
+    job_site_id: o.jobSiteId ?? null,
+    crm_company_id: o.crmCompanyId ?? null,
+    customer_name: o.customerName ?? null,
+    billing_email: o.billingEmail ?? null,
+    po_number: o.poNumber ?? null,
+    status: 'ready',
+    invoice_date: o.invoiceDate,
+    due_date: dueDateFromTerms(o.invoiceDate, o.terms),
+    payment_terms: o.terms,
+    subtotal, tax_rate: o.taxRate, tax, total, balance_due: total,
+    notes: o.notes ?? null,
+    created_by: userData?.user?.id ?? null,
+  }).select().single();
+  if (error) throw error;
+  const { error: itemErr } = await db.from('billing_invoice_items').insert(lines.map((l, idx) => ({
+    invoice_id: invoice.id, description: l.description.trim(), quantity: l.quantity,
+    unit_price: l.unit_price, line_total: round(l.quantity * l.unit_price), sort_order: idx,
+  })));
+  if (itemErr) throw itemErr;
+  return invoice as Invoice;
+};
