@@ -922,6 +922,7 @@ export type Database = {
       }
       billing_invoice_items: {
         Row: {
+          billing_item_id: string | null
           created_at: string
           description: string
           id: string
@@ -932,6 +933,7 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          billing_item_id?: string | null
           created_at?: string
           description: string
           id?: string
@@ -942,6 +944,7 @@ export type Database = {
           unit_price?: number
         }
         Update: {
+          billing_item_id?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -952,6 +955,13 @@ export type Database = {
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "billing_invoice_items_billing_item_id_fkey"
+            columns: ["billing_item_id"]
+            isOneToOne: false
+            referencedRelation: "billing_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "billing_invoice_items_invoice_id_fkey"
             columns: ["invoice_id"]
@@ -1169,6 +1179,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      billing_items: {
+        Row: {
+          active: boolean
+          category: string | null
+          created_at: string
+          created_by: string | null
+          default_unit_price: number
+          description: string | null
+          id: string
+          name: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_unit_price?: number
+          description?: string | null
+          id?: string
+          name: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_unit_price?: number
+          description?: string | null
+          id?: string
+          name?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       billing_milestones: {
         Row: {

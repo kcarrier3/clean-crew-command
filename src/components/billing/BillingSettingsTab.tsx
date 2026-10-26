@@ -10,6 +10,7 @@ import { Mail, Save, Settings2, Building2, RefreshCw, ScanLine } from 'lucide-re
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
 import { TaxRatesCard } from './TaxRatesCard';
+import { BillingItemsCard } from './BillingItemsCard';
 import { OnlinePaymentsCard } from './OnlinePaymentsCard';
 import {
   AUTO_CONFIDENCE_THRESHOLD, fetchAutoApplyEnabled, setAutoApplyEnabled,
@@ -333,6 +334,8 @@ export const BillingSettingsTab = () => {
           )}
         </CardContent>
       </Card>
+
+      <BillingItemsCard />
 
       <TaxRatesCard />
 
