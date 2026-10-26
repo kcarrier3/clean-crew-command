@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Plus, Trash2, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { createManualInvoice, db, type ManualInvoiceLine } from './billingApi';
+import { createManualInvoice, db, fetchBillingItems, saveBillingItem, type BillingItem, type ManualInvoiceLine } from './billingApi';
 import { money } from '@/lib/billing/types';
 import { dueDateFromTerms } from '@/lib/billing/kpi';
 
@@ -14,7 +14,8 @@ interface Props { open: boolean; onOpenChange: (o: boolean) => void; onCreated: 
 interface Site { id: string; name: string; client_name: string | null; billing_email: string | null; billing_terms: string | null; billing_po_number: string | null; crm_company_id: string | null }
 
 const today = () => new Date().toISOString().slice(0, 10);
-const blank = (): ManualInvoiceLine => ({ description: '', quantity: 1, unit_price: 0 });
+const blank = (): ManualInvoiceLine => ({ billing_item_id: null, description: '', quantity: 1, unit_price: 0 });
+const NEW_ITEM = '__new__';
 
 export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
   const { toast } = useToast();
@@ -29,6 +30,10 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<ManualInvoiceLine[]>([blank()]);
   const [saving, setSaving] = useState(false);
+  const [catalog, setCatalog] = useState<BillingItem[]>([]);
+  const [newItemFor, setNewItemFor] = useState<number | null>(null);
+  const [newName, setNewName] = useState('');
+  const [newPrice, setNewPrice] = useState('0');
 
   useEffect(() => {
     if (!open) return;
@@ -36,6 +41,8 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
     setTerms('Net 30'); setTaxRate('0'); setNotes(''); setLines([blank()]);
     db.from('job_sites').select('id, name, client_name, billing_email, billing_terms, billing_po_number, crm_company_id')
       .eq('active', true).order('name').then(({ data }: any) => setSites(data ?? []));
+    fetchBillingItems().then(setCatalog).catch(() => setCatalog([]));
+    setNewItemFor(null);
   }, [open]);
 
   const pickSite = (id: string) => {
@@ -50,6 +57,24 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
 
   const setLine = (i: number, patch: Partial<ManualInvoiceLine>) =>
     setLines(ls => ls.map((l, idx) => idx === i ? { ...l, ...patch } : l));
+
+  const pickItem = (i: number, id: string) => {
+    if (id === NEW_ITEM) { setNewItemFor(i); setNewName(''); setNewPrice('0'); return; }
+    const it = catalog.find(c => c.id === id);
+    if (it) setLine(i, { billing_item_id: it.id, description: it.name, unit_price: Number(it.default_unit_price) });
+  };
+
+  const addItem = async () => {
+    if (newItemFor === null || !newName.trim()) return;
+    try {
+      const it = await saveBillingItem({ name: newName, default_unit_price: parseFloat(newPrice) || 0 });
+      setCatalog(c => [...c, it].sort((a, b) => a.name.localeCompare(b.name)));
+      setLine(newItemFor, { billing_item_id: it.id, description: it.name, unit_price: Number(it.default_unit_price) });
+      setNewItemFor(null);
+    } catch (e: any) {
+      toast({ title: 'Could not add item', description: e.message, variant: 'destructive' });
+    }
+  };
 
   const subtotal = lines.reduce((s, l) => s + (l.quantity || 0) * (l.unit_price || 0), 0);
   const tax = Math.round(subtotal * (parseFloat(taxRate) || 0)) / 100;
@@ -106,8 +131,27 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
         <div className="space-y-2">
           <Label>Line items</Label>
           {lines.map((l, i) => (
-            <div key={i} className="grid grid-cols-[1fr_4.5rem_6rem_auto] gap-2 items-center">
-              <Input placeholder="Description" value={l.description} onChange={e => setLine(i, { description: e.target.value })} />
+            <div key={i} className="grid grid-cols-[1fr_4.5rem_6rem_auto] gap-2 items-start">
+              <div className="space-y-1 min-w-0">
+                <select aria-label="Billable item" value={l.billing_item_id ?? ''} onChange={e => pickItem(i, e.target.value)}
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="">Select an item…</option>
+                  {catalog.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value={NEW_ITEM}>+ New billable item…</option>
+                </select>
+                {l.billing_item_id && (
+                  <Input placeholder="Line description" aria-label="Line description" value={l.description}
+                         onChange={e => setLine(i, { description: e.target.value })} />
+                )}
+                {newItemFor === i && (
+                  <div className="flex gap-2">
+                    <Input placeholder="New item name" value={newName} onChange={e => setNewName(e.target.value)} />
+                    <Input type="number" step="0.01" className="w-24" aria-label="Default price" value={newPrice}
+                           onChange={e => setNewPrice(e.target.value)} />
+                    <Button size="sm" onClick={addItem}>Save</Button>
+                  </div>
+                )}
+              </div>
               <Input type="number" aria-label="Quantity" value={l.quantity} onChange={e => setLine(i, { quantity: parseFloat(e.target.value) || 0 })} />
               <Input type="number" step="0.01" aria-label="Unit price" value={l.unit_price} onChange={e => setLine(i, { unit_price: parseFloat(e.target.value) || 0 })} />
               <Button variant="ghost" size="icon" aria-label="Remove line" disabled={lines.length === 1}
