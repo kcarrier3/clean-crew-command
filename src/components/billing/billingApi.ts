@@ -155,7 +155,7 @@ export const recordPayment = async (payment: {
   }
   return row;
 };
-export interface ManualInvoiceLine { description: string; quantity: number; unit_price: number }
+export interface ManualInvoiceLine { billing_item_id?: string | null; description: string; quantity: number; unit_price: number }
 
 /** Creates a stand-alone invoice with hand-entered lines (not tied to Ready to Bill events). */
 export const createManualInvoice = async (o: {
@@ -166,6 +166,7 @@ export const createManualInvoice = async (o: {
 }): Promise<Invoice> => {
   const lines = o.lines.filter(l => l.description.trim() && l.quantity > 0);
   if (!lines.length) throw new Error('Add at least one line item.');
+  if (lines.some(l => !l.billing_item_id)) throw new Error('Pick a billable item for every line.');
   const { data: userData } = await supabase.auth.getUser();
   const { data: numberData, error: numErr } = await db.rpc('next_invoice_number');
   if (numErr) throw numErr;
@@ -190,9 +191,40 @@ export const createManualInvoice = async (o: {
   }).select().single();
   if (error) throw error;
   const { error: itemErr } = await db.from('billing_invoice_items').insert(lines.map((l, idx) => ({
-    invoice_id: invoice.id, description: l.description.trim(), quantity: l.quantity,
+    invoice_id: invoice.id, billing_item_id: l.billing_item_id ?? null,
+    description: l.description.trim(), quantity: l.quantity,
     unit_price: l.unit_price, line_total: round(l.quantity * l.unit_price), sort_order: idx,
   })));
   if (itemErr) throw itemErr;
   return invoice as Invoice;
+};
+
+export interface BillingItem {
+  id: string; name: string; description: string | null; category: string | null;
+  unit: string; default_unit_price: number; active: boolean;
+}
+
+export const fetchBillingItems = async (includeInactive = false): Promise<BillingItem[]> => {
+  let q = db.from('billing_items').select('*').order('name');
+  if (!includeInactive) q = q.eq('active', true);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as BillingItem[];
+};
+
+export const saveBillingItem = async (item: Partial<BillingItem> & { name: string }): Promise<BillingItem> => {
+  const { data: userData } = await supabase.auth.getUser();
+  const row = {
+    name: item.name.trim(), description: item.description?.trim() || null,
+    category: item.category?.trim() || null, unit: item.unit?.trim() || 'each',
+    default_unit_price: Number(item.default_unit_price || 0), active: item.active ?? true,
+  };
+  const res = item.id
+    ? await db.from('billing_items').update(row).eq('id', item.id).select().single()
+    : await db.from('billing_items').insert({ ...row, created_by: userData?.user?.id ?? null }).select().single();
+  if (res.error) {
+    if (res.error.code === '23505') throw new Error('An item with that name already exists.');
+    throw res.error;
+  }
+  return res.data as BillingItem;
 };
