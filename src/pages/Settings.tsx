@@ -4,16 +4,7 @@ import { ArrowLeft, KeyRound, LogOut, Trash2, Settings as SettingsIcon, Shield, 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import DeleteAccountDialog from '@/components/DeleteAccountDialog';
 import { SEO } from '@/components/SEO';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -31,9 +22,8 @@ import SmsAlertOptIn from '@/components/SmsAlertOptIn';
 export default function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, profile, isManager, canManageEmployees, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
+  const { user, profile, isManager, canManageEmployees, signOut, sendPasswordResetEmail } = useAuth();
   const [showDelete, setShowDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const isAdminLevel = isManager() || canManageEmployees();
 
@@ -50,18 +40,6 @@ export default function Settings() {
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    const { error } = await deleteAccount();
-    setDeleting(false);
-    setShowDelete(false);
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to delete account.', variant: 'destructive' });
-    } else {
-      navigate('/auth');
-    }
   };
 
   return (
@@ -198,22 +176,7 @@ export default function Settings() {
         </Tabs>
       </main>
 
-      <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action is <strong>permanent and cannot be undone</strong>. You will need to be re-invited to regain access.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleting ? 'Deleting...' : 'Yes, delete my account'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteAccountDialog open={showDelete} onOpenChange={setShowDelete} />
     </div>
   );
 }

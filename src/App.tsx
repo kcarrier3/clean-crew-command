@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import ResetPassword from './pages/ResetPassword';
+import ConfirmAccountDeletion from './pages/ConfirmAccountDeletion';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import LeadCapture from './pages/LeadCapture';
 import CompleteProfile from './pages/CompleteProfile';
@@ -44,6 +45,7 @@ const AppContent = () => {
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/confirm-account-deletion" element={<ConfirmAccountDeletion />} />
       <Route path="/complete-profile" element={<CompleteProfile />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="/get-a-quote" element={<LeadCapture />} />
