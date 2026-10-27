@@ -69,10 +69,10 @@ export default function SupplyBillingReport() {
     const [{ data: js }, { data: mv }, { data: pr }] = await Promise.all([
       supabase.from('job_sites').select('id, name').order('name'),
       supabase.from('supply_movements')
-        .select('id, job_site_id, quantity, unit_price, total_value, created_at, created_by, movement_type, item:supply_items(id, name, unit, sale_price, kind)')
+        .select('id, job_site_id, quantity, unit_price, total_value, created_at:occurred_at, created_by, movement_type, item:supply_items(id, name, unit, sale_price, kind)')
         .not('job_site_id', 'is', null)
-        .gte('created_at', startIso).lte('created_at', endIso)
-        .order('created_at', { ascending: true }),
+        .gte('occurred_at', startIso).lte('occurred_at', endIso)
+        .order('occurred_at', { ascending: true }),
       supabase.from('profiles').select('id, first_name, last_name'),
     ]);
     setJobSites((js as any) || []);
