@@ -64,6 +64,45 @@ export type Database = {
           },
         ]
       }
+      account_deletion_requests: {
+        Row: {
+          created_at: string
+          email: string
+          error_message: string | null
+          expires_at: string
+          id: string
+          provider_message_id: string | null
+          status: string
+          token_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          error_message?: string | null
+          expires_at: string
+          id?: string
+          provider_message_id?: string | null
+          status?: string
+          token_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          error_message?: string | null
+          expires_at?: string
+          id?: string
+          provider_message_id?: string | null
+          status?: string
+          token_hash?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       adp_export_settings: {
         Row: {
           columns: Json
@@ -7463,6 +7502,10 @@ export type Database = {
           _name: string
         }
         Returns: string
+      }
+      delete_account_for_user: {
+        Args: { _user_id: string }
+        Returns: undefined
       }
       delete_own_account: { Args: never; Returns: undefined }
       get_coworkers_at_shared_accounts: {
