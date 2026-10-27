@@ -112,7 +112,7 @@ export function buildBooksGptRows(
         description,
         amount: round2(i.subtotal),
         sales_tax: round2(i.tax),
-        tax_rate_percent: round2(Number(i.tax_rate) <= 1 ? Number(i.tax_rate) * 100 : Number(i.tax_rate)),
+        tax_rate_percent: round2(i.tax_rate), // stored as a percent, e.g. 8 = 8%
         total: round2(i.total),
         po_number: i.po_number ?? '',
         memo: (i.notes ?? '').replace(/\s+/g, ' ').trim(),

@@ -4,7 +4,7 @@ import { buildBooksGptRows, booksGptCsv, booksGptIssues, type ExportInvoice, typ
 const inv = (o: Partial<ExportInvoice>): ExportInvoice => ({
   id: 'i1', invoice_number: 'INV-1001', status: 'sent', invoice_date: '2027-01-05',
   due_date: '2027-02-04', payment_terms: 'Net 30', customer_name: 'Stelfast',
-  billing_email: 'ap@stelfast.com', po_number: null, subtotal: 1000, tax_rate: 0.08, tax: 80,
+  billing_email: 'ap@stelfast.com', po_number: null, subtotal: 1000, tax_rate: 8, tax: 80,
   total: 1080, notes: null, ...o,
 });
 const line = (o: Partial<ExportLine>): ExportLine => ({

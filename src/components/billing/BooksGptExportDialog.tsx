@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
-import { fetchAllRows } from '@/lib/fetchAllRows';
 import { downloadCsv } from '@/lib/adpExport';
 import {
   buildBooksGptRows, booksGptCsv, booksGptIssues, EXPORTABLE_STATUSES,
@@ -17,6 +16,18 @@ import { money } from '@/lib/billing/types';
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const monthStart = () => { const d = new Date(); return iso(new Date(d.getFullYear(), d.getMonth(), 1)); };
 const today = () => iso(new Date());
+
+/** Pages past the 1,000-row response cap. */
+async function pageAll<T>(build: () => any): Promise<T[]> {
+  const out: T[] = [];
+  for (let start = 0; ; start += 1000) {
+    const { data, error } = await build().range(start, start + 999);
+    if (error) throw error;
+    out.push(...((data ?? []) as T[]));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
 
 interface Props { open: boolean; onOpenChange: (o: boolean) => void }
 
@@ -33,17 +44,15 @@ export const BooksGptExportDialog = ({ open, onOpenChange }: Props) => {
     (async () => {
       setLoading(true);
       try {
-        const { data: invs, error } = await db.from('billing_invoices')
+        const invoices = await pageAll<ExportInvoice>(() => db.from('billing_invoices')
           .select('id, invoice_number, status, invoice_date, due_date, payment_terms, customer_name, billing_email, po_number, subtotal, tax_rate, tax, total, notes')
           .gte('invoice_date', from).lte('invoice_date', to)
-          .in('status', EXPORTABLE_STATUSES);
-        if (error) throw error;
-        const invoices = (invs ?? []) as ExportInvoice[];
+          .in('status', EXPORTABLE_STATUSES).order('id'));
         const ids = invoices.map(i => i.id);
         let lines: ExportLine[] = [];
         for (let i = 0; i < ids.length; i += 200) {
           const chunk = ids.slice(i, i + 200);
-          const part = await fetchAllRows<ExportLine>(() => db.from('billing_invoice_items')
+          const part = await pageAll<ExportLine>(() => db.from('billing_invoice_items')
             .select('invoice_id, description, quantity, unit_price, line_total, sort_order, billing_item_id')
             .in('invoice_id', chunk).order('id'));
           lines = lines.concat(part);
