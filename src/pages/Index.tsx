@@ -54,7 +54,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const { user, loading, profile, isManager, canManageEmployees, isCrmUser, canEstimate, signOut, deleteAccount, sendPasswordResetEmail } = useAuth();
+  const { user, loading, profile, isManager, canManageEmployees, isCrmUser, canEstimate, signOut, sendPasswordResetEmail } = useAuth();
   const isNativeShell = useIsNativeApp();
   const isPhone = useIsMobile();
   const { isModuleEnabled } = useModuleSettings();
@@ -66,7 +66,6 @@ const Index = () => {
     profile?.job_title === 'Supply Management' || profile?.job_title === 'Supply';
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deletingAccount, setDeletingAccount] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -143,25 +142,6 @@ const Index = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    setDeletingAccount(true);
-    const { error } = await deleteAccount();
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete account. Please contact your manager.",
-        variant: "destructive"
-      });
-      setDeletingAccount(false);
-    } else {
-      toast({
-        title: "Account Deleted",
-        description: "Your account has been successfully deleted."
-      });
-      navigate('/auth');
-    }
-    setShowDeleteDialog(false);
-  };
 
   if (loading) {
     return (
@@ -592,27 +572,8 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Delete Account Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Your Account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action is <strong>permanent and cannot be undone</strong>. Your account, profile, and all associated data will be permanently deleted. If you need access again, you will need to be re-invited by your manager.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletingAccount}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteAccount}
-              disabled={deletingAccount}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deletingAccount ? "Deleting..." : "Yes, Delete My Account"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete account: password check, then emailed confirmation link */}
+      <DeleteAccountDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} />
     </div>
   );
 };
