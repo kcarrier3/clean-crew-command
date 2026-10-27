@@ -1,2 +1,3 @@
 - Employee invite emails are sent by the `invite-employee` function via Resend with an auth-only sender (separate from the billing sender) and logged in `employee_invitations`; why: delivery state and resend need one audited path.
 - Missed punch-in SMS runs from the `check-missed-punches` function on a pg_cron schedule, deduped by the unique key on `sms_alert_log`; why: retries and overlapping runs must never double-text a manager.
+- Accounting handoff is a one-row-per-invoice spreadsheet export built by `src/lib/billing/booksgptExport.ts`; why: the accounting system's invoice import never combines rows and has no API to push to.
