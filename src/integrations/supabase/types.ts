@@ -6299,6 +6299,7 @@ export type Database = {
           job_site_id: string | null
           movement_type: string
           notes: string | null
+          occurred_at: string
           quantity: number
           reference: string | null
           to_location_id: string | null
@@ -6315,6 +6316,7 @@ export type Database = {
           job_site_id?: string | null
           movement_type: string
           notes?: string | null
+          occurred_at?: string
           quantity: number
           reference?: string | null
           to_location_id?: string | null
@@ -6331,6 +6333,7 @@ export type Database = {
           job_site_id?: string | null
           movement_type?: string
           notes?: string | null
+          occurred_at?: string
           quantity?: number
           reference?: string | null
           to_location_id?: string | null

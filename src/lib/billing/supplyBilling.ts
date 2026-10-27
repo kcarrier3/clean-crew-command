@@ -46,11 +46,11 @@ interface SiteRow {
 export const fetchUnbilledSupplyUsage = async (): Promise<SupplyUsageGroup[]> => {
   const { data: moves, error } = await db
     .from('supply_movements')
-    .select('id, job_site_id, quantity, unit_price, total_value, created_at, movement_type, item:supply_items(id, name, unit, sale_price, kind)')
+    .select('id, job_site_id, quantity, unit_price, total_value, created_at:occurred_at, movement_type, item:supply_items(id, name, unit, sale_price, kind)')
     .eq('movement_type', 'sell')
     .is('billing_event_id', null)
     .not('job_site_id', 'is', null)
-    .order('created_at', { ascending: true });
+    .order('occurred_at', { ascending: true });
   if (error) throw error;
 
   const rows = (moves ?? []).filter((m: any) => m.item?.kind === 'resale');

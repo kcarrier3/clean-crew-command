@@ -45,9 +45,9 @@ export default function SupplyCostReport() {
     const [{ data: js }, { data: mv }] = await Promise.all([
       supabase.from('job_sites').select('id, name').eq('active', true).order('name'),
       supabase.from('supply_movements')
-        .select('id, job_site_id, quantity, unit_price, total_value, created_at, movement_type, item:supply_items(id, name, unit, unit_cost, kind)')
+        .select('id, job_site_id, quantity, unit_price, total_value, created_at:occurred_at, movement_type, item:supply_items(id, name, unit, unit_cost, kind)')
         .not('job_site_id', 'is', null)
-        .gte('created_at', startIso).lte('created_at', endIso),
+        .gte('occurred_at', startIso).lte('occurred_at', endIso),
     ]);
     setJobSites((js as any) || []);
     setMovements((mv as any) || []);
