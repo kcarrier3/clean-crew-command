@@ -5,16 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact, Calculator, Receipt, Radio as RadioIcon, Settings as SettingsIcon, HelpCircle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import DeleteAccountDialog from '@/components/DeleteAccountDialog';
 import ManagerDashboard from '@/components/ManagerDashboard';
 import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
 import SchedulingDashboard from '@/components/SchedulingDashboard';

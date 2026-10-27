@@ -166,22 +166,6 @@ export const useAuth = () => {
     return { error };
   };
 
-  const deleteAccount = async () => {
-    if (!user) return { error: new Error('Not authenticated') };
-    try {
-      // Delete the user's profile and related data first
-      await supabase.from('profiles').update({ active: false }).eq('id', user.id);
-      // Sign out and delete the auth user via the admin API through an RPC call
-      const { error } = await supabase.rpc('delete_own_account' as any);
-      if (!error) {
-        await supabase.auth.signOut();
-      }
-      return { error };
-    } catch (error: any) {
-      return { error };
-    }
-  };
-
   const sendPasswordResetEmail = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
@@ -257,7 +241,6 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
-    deleteAccount,
     sendPasswordResetEmail,
     hasRole,
     hasPermission,
