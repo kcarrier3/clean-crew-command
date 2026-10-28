@@ -13,11 +13,13 @@ interface Props {
   onChange: (id: string | null, label: string | null) => void;
   /** Restrict deals to a company when known. */
   companyId?: string | null;
+  /** Hide this row (the customer receiving a referral credit). */
+  excludeId?: string | null;
   placeholder?: string;
 }
 
 /** Type-ahead picker over the real Waypoint accounts / opportunities. */
-export const CrmLinkPicker = ({ kind, value, onChange, companyId, placeholder }: Props) => {
+export const CrmLinkPicker = ({ kind, value, onChange, companyId, excludeId, placeholder }: Props) => {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<{ id: string; label: string }[]>([]);
@@ -31,12 +33,13 @@ export const CrmLinkPicker = ({ kind, value, onChange, companyId, placeholder }:
       let query = db.from(table).select('id, name').order('name').limit(25);
       if (q.trim()) query = query.ilike('name', `%${q.trim()}%`);
       if (kind === 'deal' && companyId) query = query.eq('company_id', companyId);
+      if (excludeId) query = query.neq('id', excludeId);
       const { data } = await query;
       if (!cancel) setRows((data ?? []).map((r: any) => ({ id: r.id, label: r.name })));
     };
     const t = setTimeout(run, 200);
     return () => { cancel = true; clearTimeout(t); };
-  }, [q, table, kind, companyId]);
+  }, [q, table, kind, companyId, excludeId]);
 
   useEffect(() => {
     if (!value) { setSelectedLabel(null); return; }

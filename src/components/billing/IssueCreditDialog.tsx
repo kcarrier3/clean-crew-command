@@ -31,7 +31,7 @@ export const IssueCreditDialog = ({
   const [siteId, setSiteId] = useState('');
   const [sites, setSites] = useState<Site[]>([]);
   const [amount, setAmount] = useState('');
-  const [reason, setReason] = useState<CreditReason>('goodwill');
+  const [reason, setReason] = useState<CreditReason | ''>('');
   const [notes, setNotes] = useState('');
   const [reduces, setReduces] = useState(true);
   const [autoApply, setAutoApply] = useState(true);
@@ -44,7 +44,7 @@ export const IssueCreditDialog = ({
     setCompanyId(defaultCompanyId ?? null);
     setSiteId(defaultJobSiteId ?? '');
     setAmount('');
-    setReason('goodwill');
+    setReason('');
     setNotes('');
     setReduces(true);
     setAutoApply(true);
@@ -55,17 +55,18 @@ export const IssueCreditDialog = ({
   }, [open, defaultCompanyId, defaultJobSiteId]);
 
   const visibleSites = companyId ? sites.filter(s => !s.crm_company_id || s.crm_company_id === companyId) : sites;
+  const amountOk = Number(amount) > 0;
+  const partyOk = !!(companyId || siteId);
+  const referralOk = reason !== 'referral' || (!!referredId && referredId !== companyId);
+  const canIssue = amountOk && partyOk && reason !== '' && referralOk;
+
+  useEffect(() => {
+    if (companyId && referredId === companyId) setReferredId(null);
+  }, [companyId, referredId]);
 
   const submit = async () => {
+    if (!canIssue) return;
     const value = Number(amount);
-    if (!value || value <= 0) {
-      toast({ title: 'Enter a credit amount', variant: 'destructive' });
-      return;
-    }
-    if (!companyId && !siteId) {
-      toast({ title: 'Choose a customer or a job site', variant: 'destructive' });
-      return;
-    }
     setSaving(true);
     try {
       const row = await issueCustomerCredit({
@@ -118,25 +119,36 @@ export const IssueCreditDialog = ({
               {visibleSites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="cr_amt">Amount</Label>
-              <Input id="cr_amt" type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="cr_reason">Reason</Label>
-              <select id="cr_reason" value={reason} onChange={e => setReason(e.target.value as CreditReason)}
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                {CREDIT_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cr_reason">Reason</Label>
+            <select id="cr_reason" required value={reason}
+                    onChange={e => {
+                      const next = e.target.value as CreditReason | '';
+                      setReason(next);
+                      if (next !== 'referral') setReferredId(null);
+                    }}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+              <option value="">Select a reason…</option>
+              {CREDIT_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
           </div>
           {reason === 'referral' && (
             <div className="space-y-1.5">
-              <Label>Referred account</Label>
-              <CrmLinkPicker kind="company" value={referredId} onChange={id => setReferredId(id)} placeholder="Who was referred" />
+              <Label>Who they referred</Label>
+              <CrmLinkPicker
+                kind="company"
+                value={referredId}
+                excludeId={companyId}
+                onChange={id => setReferredId(id)}
+                placeholder="Search customers"
+              />
+              <p className="text-xs text-muted-foreground">Required. Choose a different customer than the one receiving this credit.</p>
             </div>
           )}
+          <div className="space-y-1.5">
+            <Label htmlFor="cr_amt">Amount</Label>
+            <Input id="cr_amt" type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} />
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="cr_exp">Expires</Label>
             <Input id="cr_exp" type="date" value={expires} onChange={e => setExpires(e.target.value)} />
@@ -159,7 +171,7 @@ export const IssueCreditDialog = ({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-          <Button onClick={submit} disabled={saving}>
+          <Button onClick={submit} disabled={saving || !canIssue}>
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Issue credit
           </Button>
         </DialogFooter>

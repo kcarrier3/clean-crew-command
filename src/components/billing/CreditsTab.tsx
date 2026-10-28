@@ -11,7 +11,7 @@ import { money } from '@/lib/billing/types';
 import { IssueCreditDialog } from './IssueCreditDialog';
 import { db } from './billingApi';
 import {
-  CREDIT_REASONS, CREDIT_STATUS_LABEL,
+  CREDIT_REASONS, CREDIT_STATUS_LABEL, creditReasonLabel,
   applyCustomerCredit, approveCustomerCredit, canApproveCredits,
   fetchCreditApplications, fetchCredits, reverseCreditApplication, voidCustomerCredit,
   type CreditApplication, type CustomerCredit,
@@ -68,6 +68,7 @@ export const CreditsTab = () => {
     return rows.filter(r =>
       (r.company?.name ?? '').toLowerCase().includes(needle)
       || (r.site?.name ?? '').toLowerCase().includes(needle)
+      || (r.referred?.name ?? '').toLowerCase().includes(needle)
       || (r.notes ?? '').toLowerCase().includes(needle)
     );
   }, [rows, q]);
@@ -139,7 +140,10 @@ export const CreditsTab = () => {
             <p className="text-xs text-muted-foreground">Credits over $250 issued by someone other than the Owner or an admin stay here until approved.</p>
             {pending.map(c => (
               <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm">
-                <span>{c.company?.name || c.site?.name || 'Credit'} · {money(c.amount)} · {c.reason}</span>
+                <span>
+                  {c.company?.name || c.site?.name || 'Credit'} · {money(c.amount)} · {creditReasonLabel(c.reason)}
+                  {c.referred?.name ? ` · Referred ${c.referred.name}` : ''}
+                </span>
                 <Button size="sm" onClick={() => run('Credit approved', () => approveCustomerCredit(c.id))}>
                   <Check className="h-4 w-4 mr-1" /> Approve
                 </Button>
@@ -181,12 +185,13 @@ export const CreditsTab = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{c.company?.name || c.site?.name || 'Unassigned'}</span>
                       <Badge className={statusClass[c.status] ?? ''}>{CREDIT_STATUS_LABEL[c.status] ?? c.status}</Badge>
-                      <Badge variant="outline">{c.reason}</Badge>
+                      <Badge variant="outline">{creditReasonLabel(c.reason)}</Badge>
                       {c.reduces_taxable_amount && <Badge variant="outline">Reduces tax</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Issued {c.issued_at?.slice(0, 10)}
                       {c.site?.name ? ` · ${c.site.name}` : ''}
+                      {c.referred?.name ? ` · Referred ${c.referred.name}` : ''}
                       {c.expires_on ? ` · Expires ${c.expires_on}` : ''}
                       {c.notes ? ` · ${c.notes}` : ''}
                       {c.void_reason ? ` · Void: ${c.void_reason}` : ''}
