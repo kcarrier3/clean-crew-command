@@ -18,6 +18,7 @@ import { CreateWorkOrderDialog } from './CreateWorkOrderDialog';
 import { WorkOrderDetail } from './WorkOrderDetail';
 import { TMTickets } from './TMTickets';
 import { ProjectCompletion } from './ProjectCompletion';
+import { ScheduleOfValuesCard } from '@/components/billing/ScheduleOfValuesCard';
 import { format } from 'date-fns';
 
 interface JobSite {
@@ -102,7 +103,7 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
   const [loading, setLoading] = useState(true);
   const [tmHours, setTmHours] = useState<number>(Number(jobSite.tm_hours || 0));
   const { toast } = useToast();
-  const { isManager } = useAuth();
+  const { isManager, canViewSov } = useAuth();
 
   useEffect(() => {
     fetchAll();
@@ -280,6 +281,9 @@ export const AccountDetail = ({ jobSite, onBack }: AccountDetailProps) => {
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4 mt-4">
           {/* Completion / billing hand-off (projects only) */}
+          {isProject && canViewSov() && (
+            <ScheduleOfValuesCard jobSiteId={jobSite.id} showAmounts />
+          )}
           {isProject && (
             <ProjectCompletion jobSiteId={jobSite.id} jobSiteName={jobSite.name} />
           )}

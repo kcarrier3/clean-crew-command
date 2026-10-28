@@ -45,7 +45,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const { user, loading, profile, isManager, canManageEmployees, isCrmUser, canEstimate, signOut, sendPasswordResetEmail } = useAuth();
+  const { user, loading, profile, isManager, canViewSov, canManageEmployees, isCrmUser, canEstimate, signOut, sendPasswordResetEmail } = useAuth();
   const isNativeShell = useIsNativeApp();
   const isPhone = useIsMobile();
   const { isModuleEnabled } = useModuleSettings();
@@ -180,6 +180,10 @@ const Index = () => {
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'training',   label: 'Training',        icon: GraduationCap },
         { v: 'supplies',   label: 'Supplies',        icon: Package },
+        ...(canViewSov() ? [
+          { v: 'jobsites', label: 'Accounts', icon: MapPin },
+          { v: 'billing', label: 'Billing', icon: Receipt },
+        ] : []),
         ...(isCrmUser() ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'messages',   label: 'Messaging',     icon: MessageSquare },
@@ -418,13 +422,13 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {isManager() && isModuleEnabled('jobsites') && (
+            {(isManager() || canViewSov()) && isModuleEnabled('jobsites') && (
               <TabsContent value="jobsites" className="mt-6">
                 <JobSitesManagement />
               </TabsContent>
             )}
 
-            {isManager() && isModuleEnabled('billing') && (
+            {(isManager() || canViewSov()) && isModuleEnabled('billing') && (
               <TabsContent value="billing" className="mt-6">
                 <BillingDashboard />
               </TabsContent>

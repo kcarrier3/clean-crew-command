@@ -5880,6 +5880,51 @@ export type Database = {
         }
         Relationships: []
       }
+      project_sov_lines: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          job_site_id: string
+          project_phase_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_site_id: string
+          project_phase_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_site_id?: string
+          project_phase_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_sov_lines_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_sov_lines_project_phase_id_fkey"
+            columns: ["project_phase_id"]
+            isOneToOne: true
+            referencedRelation: "project_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_phases: {
         Row: {
           billing_acknowledged_at: string | null
@@ -7885,6 +7930,8 @@ export type Database = {
       can_approve_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_estimate: { Args: { _user_id: string }; Returns: boolean }
       can_manage_billing: { Args: { _user_id: string }; Returns: boolean }
+      can_mark_project_checkpoint: { Args: { _user_id: string }; Returns: boolean }
+      can_view_sov: { Args: { _user_id: string }; Returns: boolean }
       can_manage_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_manage_training: { Args: { _user_id: string }; Returns: boolean }
       can_message_user: {

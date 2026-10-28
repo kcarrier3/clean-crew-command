@@ -32,7 +32,8 @@ interface Props {
 
 /** Completion + billing hand-off for one-time (project) job sites. */
 export const ProjectCompletion = ({ jobSiteId, jobSiteName, onChanged }: Props) => {
-  const { user, isManager } = useAuth();
+  const { user, canMarkCheckpoints } = useAuth();
+  const canMark = canMarkCheckpoints();
   const { toast } = useToast();
   const [phases, setPhases] = useState<Phase[]>([]);
   const [site, setSite] = useState<any>(null);
@@ -49,7 +50,9 @@ export const ProjectCompletion = ({ jobSiteId, jobSiteName, onChanged }: Props) 
       supabase.from('job_sites')
         .select('is_phased, completion_status, completed_at, completion_notes, billing_acknowledged_at')
         .eq('id', jobSiteId).maybeSingle(),
-      supabase.from('project_phases').select('*').eq('job_site_id', jobSiteId).order('sequence'),
+      supabase.from('project_phases')
+        .select('id, name, sequence, status, completed_at, completion_notes, billing_acknowledged_at')
+        .eq('job_site_id', jobSiteId).order('sequence'),
     ]);
     setSite(siteRow);
     setPhases((phaseRows as Phase[]) || []);
@@ -145,7 +148,7 @@ export const ProjectCompletion = ({ jobSiteId, jobSiteName, onChanged }: Props) 
             <CheckCircle2 className="h-4 w-4" />
             Job Completion
           </CardTitle>
-          {isManager && (
+          {canMark && (
             <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Phase
             </Button>
@@ -168,20 +171,20 @@ export const ProjectCompletion = ({ jobSiteId, jobSiteName, onChanged }: Props) 
                       </p>
                     )}
                   </div>
-                  {isManager && p.status !== 'complete' && (
+                  {canMark && p.status !== 'complete' && (
                     <Button size="sm" onClick={() => { setCompleteTarget({ kind: 'phase', id: p.id, label: p.name }); setNotes(''); }}>
                       Phase complete
                     </Button>
                   )}
-                  {isManager && p.status === 'complete' && !p.billing_acknowledged_at && (
+                  {canMark && p.status === 'complete' && !p.billing_acknowledged_at && (
                     <Button size="sm" variant="outline" onClick={() => acknowledgeBilling(p.id)}>
                       <Receipt className="h-3.5 w-3.5 mr-1" /> Billed
                     </Button>
                   )}
-                  {isManager && p.status === 'complete' && (
+                  {canMark && p.status === 'complete' && (
                     <Button size="sm" variant="ghost" onClick={() => reopen(p.id)}>Reopen</Button>
                   )}
-                  {isManager && p.status !== 'complete' && (
+                  {canMark && p.status !== 'complete' && (
                     <Button size="sm" variant="ghost" onClick={() => removePhase(p.id)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -209,14 +212,14 @@ export const ProjectCompletion = ({ jobSiteId, jobSiteName, onChanged }: Props) 
               {projectComplete ? (
                 <>
                   <Badge className="bg-green-100 text-green-800">Complete</Badge>
-                  {isManager && !site.billing_acknowledged_at && (
+                  {canMark && !site.billing_acknowledged_at && (
                     <Button size="sm" variant="outline" onClick={() => acknowledgeBilling()}>
                       <Receipt className="h-3.5 w-3.5 mr-1" /> Billed
                     </Button>
                   )}
-                  {isManager && <Button size="sm" variant="ghost" onClick={() => reopen()}>Reopen</Button>}
+                  {canMark && <Button size="sm" variant="ghost" onClick={() => reopen()}>Reopen</Button>}
                 </>
-              ) : isManager ? (
+              ) : canMark ? (
                 <Button size="sm" onClick={() => { setCompleteTarget({ kind: 'project', label: jobSiteName }); setNotes(''); }}>
                   Project complete
                 </Button>
@@ -225,7 +228,7 @@ export const ProjectCompletion = ({ jobSiteId, jobSiteName, onChanged }: Props) 
               )}
             </div>
           </div>
-          {!isManager && (
+          {!canMark && (
             <p className="text-xs text-muted-foreground">Only managers can mark a phase or job complete.</p>
           )}
         </CardContent>

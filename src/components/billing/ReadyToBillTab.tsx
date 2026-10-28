@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { db, fetchBillingEvents } from './billingApi';
 import { GenerateInvoiceDialog } from './GenerateInvoiceDialog';
 import { SupplyUsageToBillCard } from './SupplyUsageToBillCard';
+import { SovReadyDialog } from './SovReadyDialog';
 import { money, type BillingEvent } from '@/lib/billing/types';
 import { ageInDays } from '@/lib/billing/kpi';
 
@@ -33,6 +34,7 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
   const [genOpen, setGenOpen] = useState(false);
   const [genEvents, setGenEvents] = useState<BillingEvent[]>([]);
   const [holdTarget, setHoldTarget] = useState<BillingEvent | null>(null);
+  const [sovSiteId, setSovSiteId] = useState<string | null>(null);
   const [holdReason, setHoldReason] = useState('');
 
   const load = async () => {
@@ -168,7 +170,7 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
               <Receipt className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium">Nothing waiting to be billed</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Items land here automatically when a crew marks a configured phase or a whole project complete.
+                Items land here when a manager marks a schedule-of-values checkpoint complete.
               </p>
             </div>
           ) : visible.map(e => {
@@ -221,6 +223,11 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
                   <div className="text-right shrink-0">
                     <p className="text-lg font-semibold tabular-nums">{money(e.amount)}</p>
                     <div className="mt-2 flex flex-wrap justify-end gap-1">
+                      {e.job_site_id && (
+                        <Button size="sm" variant="outline" onClick={() => setSovSiteId(e.job_site_id)}>
+                          Schedule
+                        </Button>
+                      )}
                       {!held && (
                         <Button size="sm" onClick={() => openGenerate([e])}>
                           <FileText className="h-3.5 w-3.5 mr-1" /> Invoice
@@ -247,6 +254,13 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
           })}
         </CardContent>
       </Card>
+
+      <SovReadyDialog
+        jobSiteId={sovSiteId}
+        open={!!sovSiteId}
+        onOpenChange={o => !o && setSovSiteId(null)}
+        onInvoice={list => openGenerate(list)}
+      />
 
       <GenerateInvoiceDialog
         events={genEvents}

@@ -180,6 +180,14 @@ export const useAuth = () => {
   const isManager = () => hasRole('admin') || hasRole('manager');
   const isEmployee = () => hasRole('employee');
 
+  // Mirrors public.can_view_sov: schedule-of-values dollars.
+  const canViewSov = () =>
+    hasRole('admin') || profile?.job_title === 'Owner' || profile?.job_title === 'Office Manager';
+
+  // Mirrors public.can_mark_project_checkpoint. Employees cannot, unless they hold the manager role.
+  const canMarkCheckpoints = () =>
+    isManager() || ['Owner', 'Office Manager', 'Operations Manager'].includes(profile?.job_title ?? '');
+
   // Waypoint is intentionally narrow: owners, office managers, sales reps, or an
   // explicit view_crm grant. Mirrors public.is_crm_user() in the database.
   const CRM_JOB_TITLES = ['Owner', 'Office Manager', 'Sales Rep'];
@@ -246,6 +254,8 @@ export const useAuth = () => {
     hasPermission,
     isManager,
     isEmployee,
+    canViewSov,
+    canMarkCheckpoints,
     isCrmUser,
     canEstimate,
     canApproveEstimate,

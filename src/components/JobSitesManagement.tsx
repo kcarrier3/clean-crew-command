@@ -19,6 +19,7 @@ import JobBudgetingWidget from './JobBudgetingWidget';
 import { AccountDetail } from './AccountDetail';
 import OfficeLocationCard from './OfficeLocationCard';
 import { DAY_LABELS, monthlyHoursFromNightly, serviceDaysInMonth, describeFrequency } from '@/lib/serviceFrequency';
+import { saveProjectSov, type SovDraftLine } from '@/components/billing/sovApi';
 import {
   JobSiteSalesTaxFields, emptyJobSiteTax, jobSiteTaxFromRow, jobSiteTaxPayload, type JobSiteTaxForm,
 } from '@/components/billing/JobSiteSalesTaxFields';
@@ -172,7 +173,7 @@ function NightlyAllowanceFields({
 
 export default function JobSitesManagement() {
   const { toast } = useToast();
-  const { isManager } = useAuth();
+  const { isManager, canViewSov } = useAuth();
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [loading, setLoading] = useState(false);
   const [showInactive, setShowInactive] = useState(true);
@@ -215,6 +216,8 @@ export default function JobSitesManagement() {
     crm_company_id: null,
   });
   const [taxBaseline, setTaxBaseline] = useState<JobSiteTaxForm>(emptyJobSiteTax());
+  const [sovFlat, setSovFlat] = useState(true);
+  const [sovLines, setSovLines] = useState<SovDraftLine[]>([{ name: '', amount: '' }]);
 
   const salesTaxColumns = () => jobSiteTaxPayload({
     county: formData.county,
@@ -299,7 +302,12 @@ export default function JobSitesManagement() {
     setLoading(true);
     try {
       const isProject = !createRecurring;
-      const phaseNames = isProject && formData.is_phased ? parsePhaseNames(formData.phase_names || '') : [];
+      const officeSov = canViewSov() && isProject
+        ? (sovFlat ? sovLines.slice(0, 1) : sovLines).filter(l => l.name.trim())
+        : [];
+      const phaseNames = isProject && formData.is_phased && officeSov.length === 0
+        ? parsePhaseNames(formData.phase_names || '')
+        : [];
 
       const { data: created, error } = await supabase
         .from('job_sites')
@@ -326,7 +334,7 @@ export default function JobSitesManagement() {
           nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
           service_days: formData.service_days,
           active: formData.active,
-          is_phased: isProject && !!formData.is_phased,
+          is_phased: (isProject && !!formData.is_phased) || officeSov.length > 0,
           ...salesTaxColumns(),
         })
         .select('id')
@@ -339,6 +347,9 @@ export default function JobSitesManagement() {
           phaseNames.map((name, i) => ({ job_site_id: created.id, name, sequence: i + 1 }))
         );
         if (phaseError) throw phaseError;
+      }
+      if (created && officeSov.length > 0) {
+        await saveProjectSov(created.id, officeSov);
       }
 
       toast({
@@ -629,7 +640,7 @@ export default function JobSitesManagement() {
     }
   };
 
-  if (!isManager()) {
+  if (!isManager() && !canViewSov()) {
     return (
       <Card>
         <CardContent className="p-8">
@@ -772,7 +783,37 @@ export default function JobSitesManagement() {
                           onCheckedChange={(checked) => setFormData({ ...formData, is_phased: checked })}
                         />
                       </div>
-                      {formData.is_phased && (
+                      {canViewSov() && (
+                        <div className="space-y-2 border-t pt-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <Label htmlFor="sov_flat">Schedule of values</Label>
+                              <p className="text-xs text-muted-foreground">
+                                Flat price for a small job, or a dollar amount for each phase. Only the office sees these amounts.
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <Switch id="sov_flat" checked={sovFlat} onCheckedChange={setSovFlat} />
+                              Flat price
+                            </div>
+                          </div>
+                          {(sovFlat ? sovLines.slice(0, 1) : sovLines).map((line, i) => (
+                            <div key={i} className="grid grid-cols-[1fr_8rem] gap-2">
+                              <Input placeholder={sovFlat ? 'Checkpoint name' : 'Phase name'} value={line.name}
+                                     onChange={e => setSovLines(rows => rows.map((r, idx) => idx === i ? { ...r, name: e.target.value } : r))} />
+                              <Input type="number" min="0" step="0.01" placeholder="Amount" value={line.amount}
+                                     onChange={e => setSovLines(rows => rows.map((r, idx) => idx === i ? { ...r, amount: e.target.value } : r))} />
+                            </div>
+                          ))}
+                          {!sovFlat && (
+                            <Button type="button" size="sm" variant="outline"
+                                    onClick={() => setSovLines(rows => [...rows, { name: '', amount: '' }])}>
+                              Add phase
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      {formData.is_phased && !canViewSov() && (
                         <div>
                           <Label htmlFor="phase_names">Phases (one per line)</Label>
                           <Textarea
