@@ -6,7 +6,7 @@ import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { money } from '@/lib/billing/types';
 import { IssueCreditDialog } from './IssueCreditDialog';
-import { CREDIT_STATUS_LABEL, fetchCredits, type CustomerCredit } from './creditsApi';
+import { CREDIT_STATUS_LABEL, creditReasonLabel, fetchCredits, type CustomerCredit } from './creditsApi';
 
 export const CompanyCreditsPanel = ({ companyId, companyName }: { companyId: string; companyName?: string }) => {
   const { toast } = useToast();
@@ -32,8 +32,9 @@ export const CompanyCreditsPanel = ({ companyId, companyName }: { companyId: str
         {rows.map(c => (
           <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2">
             <div>
-              <span className="font-medium">{c.reason}</span>
+              <span className="font-medium">{creditReasonLabel(c.reason)}</span>
               <Badge variant="outline" className="ml-2">{CREDIT_STATUS_LABEL[c.status] ?? c.status}</Badge>
+              {c.referred?.name && <p className="text-xs text-muted-foreground">Referred {c.referred.name}</p>}
               {c.notes && <p className="text-xs text-muted-foreground">{c.notes}</p>}
             </div>
             <div className="text-right tabular-nums">

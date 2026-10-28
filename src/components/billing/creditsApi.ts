@@ -4,12 +4,16 @@ import { db } from './billingApi';
 export type CreditReason = 'referral' | 'dissatisfaction' | 'goodwill' | 'other';
 export type CreditStatus = 'pending_approval' | 'available' | 'fully_applied' | 'voided';
 
+/** Owner-facing reasons first. goodwill and other stay available; the database still stores those codes. */
 export const CREDIT_REASONS: { value: CreditReason; label: string }[] = [
   { value: 'referral', label: 'Referral' },
-  { value: 'dissatisfaction', label: 'Dissatisfaction' },
+  { value: 'dissatisfaction', label: 'Dissatisfied with service' },
   { value: 'goodwill', label: 'Goodwill' },
   { value: 'other', label: 'Other' },
 ];
+
+export const creditReasonLabel = (reason: string) =>
+  CREDIT_REASONS.find(r => r.value === reason)?.label ?? reason;
 
 export const CREDIT_STATUS_LABEL: Record<string, string> = {
   pending_approval: 'Pending approval',
@@ -36,6 +40,7 @@ export interface CustomerCredit {
   void_reason: string | null;
   company?: { name: string } | null;
   site?: { name: string } | null;
+  referred?: { name: string } | null;
 }
 
 export interface CreditApplication {
@@ -113,7 +118,7 @@ export const fetchCredits = async (filters?: {
   companyId?: string | null;
 }): Promise<CustomerCredit[]> => {
   let q = db.from('customer_credits')
-    .select('*, company:crm_companies!customer_credits_crm_company_id_fkey(name), site:job_sites(name)')
+    .select('*, company:crm_companies!customer_credits_crm_company_id_fkey(name), referred:crm_companies!customer_credits_referred_crm_company_id_fkey(name), site:job_sites(name)')
     .order('issued_at', { ascending: false });
   if (filters?.status && filters.status !== 'all') q = q.eq('status', filters.status);
   if (filters?.reason && filters.reason !== 'all') q = q.eq('reason', filters.reason);
