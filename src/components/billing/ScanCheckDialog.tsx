@@ -67,7 +67,13 @@ export const ScanCheckDialog = ({ open, onOpenChange, onSaved }: Props) => {
     setScanning(true);
     try {
       const image = await toDataUrl(file);
-      const { data, error } = await supabase.functions.invoke('scan-check-stub', { body: { image } });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Sign in before scanning a check.');
+      const { data, error } = await supabase.functions.invoke('scan-check-stub', {
+        body: { image },
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       const res = data as {

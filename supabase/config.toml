@@ -24,6 +24,9 @@ verify_jwt = false
 [functions.scan-check-intake]
 verify_jwt = true
 
+[functions.scan-check-stub]
+verify_jwt = true
+
 [functions.assistant-api]
 verify_jwt = false
 

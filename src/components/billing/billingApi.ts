@@ -26,11 +26,26 @@ export const fetchInvoices = async (): Promise<Invoice[]> => {
   return (data ?? []) as Invoice[];
 };
 
+/** Re-read an invoice after a write. Triggers own line totals, tax, credits, and balance. */
+export const reloadInvoice = async (id: string): Promise<Invoice> => {
+  const { data, error } = await db.from('billing_invoices').select('*').eq('id', id).single();
+  if (error) throw error;
+  return data as Invoice;
+};
+
+/** No-op write that forces the draft/ready tax trigger to run again. */
+export const recomputeInvoice = async (invoice: { id: string; notes: string | null }): Promise<Invoice> => {
+  const { error } = await db.from('billing_invoices').update({ notes: invoice.notes }).eq('id', invoice.id);
+  if (error) throw error;
+  return reloadInvoice(invoice.id);
+};
+
 export interface CreateInvoiceOptions {
   events: BillingEvent[];
   invoiceDate: string;
   terms: string;
-  taxRate: number;
+  /** Ignored. Sales tax is calculated by the database when the invoice is saved. */
+  taxRate?: number;
   poNumber?: string | null;
   billingEmail?: string | null;
   billingContactName?: string | null;
@@ -49,9 +64,6 @@ export const createInvoiceFromEvents = async (o: CreateInvoiceOptions): Promise<
   const { data: numberData, error: numErr } = await db.rpc('next_invoice_number');
   if (numErr) throw numErr;
 
-  const subtotal = o.events.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const tax = Math.round(subtotal * (o.taxRate / 100) * 100) / 100;
-  const total = Math.round((subtotal + tax) * 100) / 100;
   const first = o.events[0];
   const earliest = o.events
     .map(e => e.completed_at)
@@ -70,8 +82,6 @@ export const createInvoiceFromEvents = async (o: CreateInvoiceOptions): Promise<
     invoice_date: o.invoiceDate,
     due_date: dueDateFromTerms(o.invoiceDate, o.terms),
     payment_terms: o.terms,
-    subtotal, tax_rate: o.taxRate, tax, total,
-    balance_due: total,
     bill_to_name: o.billTo?.name || null,
     bill_to_address: o.billTo?.address || null,
     bill_to_city: o.billTo?.city || null,
@@ -82,7 +92,6 @@ export const createInvoiceFromEvents = async (o: CreateInvoiceOptions): Promise<
     ship_to_city: o.shipTo?.city || null,
     ship_to_state: o.shipTo?.state || null,
     ship_to_zip: o.shipTo?.zip || null,
-    tax_jurisdiction: o.taxJurisdiction || null,
     notes: o.notes ?? null,
     earliest_completed_at: earliest,
     created_by: userData?.user?.id ?? null,
@@ -96,7 +105,6 @@ export const createInvoiceFromEvents = async (o: CreateInvoiceOptions): Promise<
       : e.label,
     quantity: 1,
     unit_price: Number(e.amount || 0),
-    line_total: Number(e.amount || 0),
     sort_order: idx,
   }));
   const { error: itemErr } = await db.from('billing_invoice_items').insert(items);
@@ -126,7 +134,7 @@ export const createInvoiceFromEvents = async (o: CreateInvoiceOptions): Promise<
     }
   } catch { /* pay link is optional — never block invoicing */ }
 
-  return invoice as Invoice;
+  return reloadInvoice(invoice.id);
 };
 
 /** Records a payment and allocates it across invoices; balances recalc in the DB. */
@@ -155,13 +163,20 @@ export const recordPayment = async (payment: {
   }
   return row;
 };
-export interface ManualInvoiceLine { billing_item_id?: string | null; description: string; quantity: number; unit_price: number }
+export interface ManualInvoiceLine {
+  billing_item_id?: string | null;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  /** Explicit per-line override. Omitted lets the item's taxable flag win. */
+  taxable?: boolean;
+}
 
 /** Creates a stand-alone invoice with hand-entered lines (not tied to Ready to Bill events). */
 export const createManualInvoice = async (o: {
   jobSiteId?: string | null; crmCompanyId?: string | null;
   customerName?: string | null; billingEmail?: string | null; poNumber?: string | null;
-  invoiceDate: string; terms: string; taxRate: number; notes?: string | null;
+  invoiceDate: string; terms: string; taxRate?: number; notes?: string | null;
   lines: ManualInvoiceLine[];
 }): Promise<Invoice> => {
   const lines = o.lines.filter(l => l.description.trim() && l.quantity > 0);
@@ -170,10 +185,6 @@ export const createManualInvoice = async (o: {
   const { data: userData } = await supabase.auth.getUser();
   const { data: numberData, error: numErr } = await db.rpc('next_invoice_number');
   if (numErr) throw numErr;
-  const round = (n: number) => Math.round(n * 100) / 100;
-  const subtotal = round(lines.reduce((s, l) => s + l.quantity * l.unit_price, 0));
-  const tax = round(subtotal * (o.taxRate / 100));
-  const total = round(subtotal + tax);
   const { data: invoice, error } = await db.from('billing_invoices').insert({
     invoice_number: numberData,
     job_site_id: o.jobSiteId ?? null,
@@ -185,7 +196,6 @@ export const createManualInvoice = async (o: {
     invoice_date: o.invoiceDate,
     due_date: dueDateFromTerms(o.invoiceDate, o.terms),
     payment_terms: o.terms,
-    subtotal, tax_rate: o.taxRate, tax, total, balance_due: total,
     notes: o.notes ?? null,
     created_by: userData?.user?.id ?? null,
   }).select().single();
@@ -193,20 +203,31 @@ export const createManualInvoice = async (o: {
   const { error: itemErr } = await db.from('billing_invoice_items').insert(lines.map((l, idx) => ({
     invoice_id: invoice.id, billing_item_id: l.billing_item_id ?? null,
     description: l.description.trim(), quantity: l.quantity,
-    unit_price: l.unit_price, line_total: round(l.quantity * l.unit_price), sort_order: idx,
+    unit_price: l.unit_price,
+    taxable: l.taxable,
+    sort_order: idx,
   })));
   if (itemErr) throw itemErr;
-  return invoice as Invoice;
+  return reloadInvoice(invoice.id);
 };
+
+export type BillingItemKind = 'service' | 'product' | 'credit' | 'adjustment';
 
 export interface BillingItem {
   id: string; name: string; description: string | null; category: string | null;
   unit: string; default_unit_price: number; active: boolean;
+  qb_item_id: string | null; sku: string | null; taxable: boolean;
+  qb_item_type: string | null; qb_income_account: string | null;
+  purchase_cost: number | null; item_kind: BillingItemKind;
 }
 
-export const fetchBillingItems = async (includeInactive = false): Promise<BillingItem[]> => {
-  let q = db.from('billing_items').select('*').order('name');
+export const fetchBillingItems = async (
+  includeInactive = false,
+  opts?: { linePicker?: boolean },
+): Promise<BillingItem[]> => {
+  let q = db.from('billing_items').select('*').order('category').order('name');
   if (!includeInactive) q = q.eq('active', true);
+  if (opts?.linePicker) q = q.not('item_kind', 'in', '("credit","adjustment")');
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as BillingItem[];
@@ -218,6 +239,9 @@ export const saveBillingItem = async (item: Partial<BillingItem> & { name: strin
     name: item.name.trim(), description: item.description?.trim() || null,
     category: item.category?.trim() || null, unit: item.unit?.trim() || 'each',
     default_unit_price: Number(item.default_unit_price || 0), active: item.active ?? true,
+    sku: item.sku?.trim() || null,
+    taxable: item.taxable ?? true,
+    item_kind: item.item_kind || 'service',
   };
   const res = item.id
     ? await db.from('billing_items').update(row).eq('id', item.id).select().single()

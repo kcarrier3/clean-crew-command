@@ -5,7 +5,7 @@ import {
   invoiceDateForPeriod, periodEnd, periodLabel, renderInvoiceDescription,
   type RecurringPeriod, type RecurringSchedule,
 } from '@/lib/billing/recurring';
-import { fetchCompanyAddress, lookupTaxRate } from '@/lib/billing/taxRates';
+import { fetchCompanyAddress } from '@/lib/billing/taxRates';
 
 export interface RecurringRow {
   site: {
@@ -117,7 +117,7 @@ export const generateRecurringInvoice = async (
   const { data: numberData, error: numErr } = await db.rpc('next_invoice_number');
   if (numErr) throw numErr;
 
-  // The schedule can pin a rate; otherwise tax follows the service (ship-to) city.
+  // Addresses are stored on the invoice. Sales tax is calculated by the database from the job site county.
   const shipTo = {
     name: row.site.client_name || row.site.name,
     address: row.site.address ?? null,
@@ -131,12 +131,6 @@ export const generateRecurringInvoice = async (
     const co = await fetchCompanyAddress(companyId);
     if (co) billTo = { ...co, zip: co.zip ?? null } as typeof shipTo;
   }
-  const resolved = await lookupTaxRate(shipTo).catch(() => null);
-  const taxRate = s.tax_rate != null && Number(s.tax_rate) > 0
-    ? Number(s.tax_rate)
-    : Number(resolved?.rate ?? 0);
-  const tax = Math.round(amount * (taxRate / 100) * 100) / 100;
-  const total = Math.round((amount + tax) * 100) / 100;
   const invoiceDate = invoiceDateForPeriod(periodStart, s);
 
   const { data: invoice, error } = await db.from('billing_invoices').insert({
@@ -152,8 +146,6 @@ export const generateRecurringInvoice = async (
     invoice_date: invoiceDate,
     due_date: dueDateFromTerms(invoiceDate, s.payment_terms),
     payment_terms: s.payment_terms ?? 'Net 30',
-    subtotal: amount, tax_rate: taxRate, tax, total,
-    balance_due: total,
     bill_to_name: billTo.name ?? null,
     bill_to_address: billTo.address ?? null,
     bill_to_city: billTo.city ?? null,
@@ -163,7 +155,7 @@ export const generateRecurringInvoice = async (
     ship_to_address: shipTo.address ?? null,
     ship_to_city: shipTo.city ?? null,
     ship_to_state: shipTo.state ?? null,
-    tax_jurisdiction: resolved?.jurisdiction ?? null,
+    ship_to_zip: shipTo.zip ?? null,
     notes: s.notes ?? null,
     is_recurring: true,
     recurring_period_start: periodStart,
@@ -179,7 +171,6 @@ export const generateRecurringInvoice = async (
     }),
     quantity: 1,
     unit_price: amount,
-    line_total: amount,
     sort_order: 0,
   });
   if (itemErr) throw itemErr;

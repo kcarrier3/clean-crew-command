@@ -963,34 +963,43 @@ export type Database = {
         Row: {
           billing_item_id: string | null
           created_at: string
+          credit_application_id: string | null
           description: string
           id: string
           invoice_id: string
           line_total: number
+          line_type: string
           quantity: number
           sort_order: number
+          taxable: boolean | null
           unit_price: number
         }
         Insert: {
           billing_item_id?: string | null
           created_at?: string
+          credit_application_id?: string | null
           description: string
           id?: string
           invoice_id: string
           line_total?: number
+          line_type?: string
           quantity?: number
           sort_order?: number
+          taxable?: boolean | null
           unit_price?: number
         }
         Update: {
           billing_item_id?: string | null
           created_at?: string
+          credit_application_id?: string | null
           description?: string
           id?: string
           invoice_id?: string
           line_total?: number
+          line_type?: string
           quantity?: number
           sort_order?: number
+          taxable?: boolean | null
           unit_price?: number
         }
         Relationships: [
@@ -999,6 +1008,13 @@ export type Database = {
             columns: ["billing_item_id"]
             isOneToOne: false
             referencedRelation: "billing_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_invoice_items_credit_application_id_fkey"
+            columns: ["credit_application_id"]
+            isOneToOne: false
+            referencedRelation: "customer_credit_applications"
             referencedColumns: ["id"]
           },
           {
@@ -1023,6 +1039,7 @@ export type Database = {
           billing_email: string | null
           created_at: string
           created_by: string | null
+          credits_applied: number
           crm_company_id: string | null
           crm_deal_id: string | null
           crm_lead_id: string | null
@@ -1064,8 +1081,14 @@ export type Database = {
           status: string
           subtotal: number
           tax: number
+          tax_exempt: boolean
+          tax_exemption_reason: string | null
           tax_jurisdiction: string | null
           tax_rate: number
+          tax_rate_id: string | null
+          tax_review_reason: string | null
+          tax_status: string
+          taxable_amount: number
           total: number
           updated_at: string
           voided_at: string | null
@@ -1082,6 +1105,7 @@ export type Database = {
           billing_email?: string | null
           created_at?: string
           created_by?: string | null
+          credits_applied?: number
           crm_company_id?: string | null
           crm_deal_id?: string | null
           crm_lead_id?: string | null
@@ -1123,8 +1147,14 @@ export type Database = {
           status?: string
           subtotal?: number
           tax?: number
+          tax_exempt?: boolean
+          tax_exemption_reason?: string | null
           tax_jurisdiction?: string | null
           tax_rate?: number
+          tax_rate_id?: string | null
+          tax_review_reason?: string | null
+          tax_status?: string
+          taxable_amount?: number
           total?: number
           updated_at?: string
           voided_at?: string | null
@@ -1141,6 +1171,7 @@ export type Database = {
           billing_email?: string | null
           created_at?: string
           created_by?: string | null
+          credits_applied?: number
           crm_company_id?: string | null
           crm_deal_id?: string | null
           crm_lead_id?: string | null
@@ -1182,8 +1213,14 @@ export type Database = {
           status?: string
           subtotal?: number
           tax?: number
+          tax_exempt?: boolean
+          tax_exemption_reason?: string | null
           tax_jurisdiction?: string | null
           tax_rate?: number
+          tax_rate_id?: string | null
+          tax_review_reason?: string | null
+          tax_status?: string
+          taxable_amount?: number
           total?: number
           updated_at?: string
           voided_at?: string | null
@@ -1217,6 +1254,13 @@ export type Database = {
             referencedRelation: "job_sites"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "billing_invoices_tax_rate_id_fkey"
+            columns: ["tax_rate_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rates"
+            referencedColumns: ["id"]
+          },
         ]
       }
       billing_items: {
@@ -1228,7 +1272,14 @@ export type Database = {
           default_unit_price: number
           description: string | null
           id: string
+          item_kind: string
           name: string
+          purchase_cost: number | null
+          qb_income_account: string | null
+          qb_item_id: string | null
+          qb_item_type: string | null
+          sku: string | null
+          taxable: boolean
           unit: string
           updated_at: string
         }
@@ -1240,7 +1291,14 @@ export type Database = {
           default_unit_price?: number
           description?: string | null
           id?: string
+          item_kind?: string
           name: string
+          purchase_cost?: number | null
+          qb_income_account?: string | null
+          qb_item_id?: string | null
+          qb_item_type?: string | null
+          sku?: string | null
+          taxable?: boolean
           unit?: string
           updated_at?: string
         }
@@ -1252,7 +1310,14 @@ export type Database = {
           default_unit_price?: number
           description?: string | null
           id?: string
+          item_kind?: string
           name?: string
+          purchase_cost?: number | null
+          qb_income_account?: string | null
+          qb_item_id?: string | null
+          qb_item_type?: string | null
+          sku?: string | null
+          taxable?: boolean
           unit?: string
           updated_at?: string
         }
@@ -1800,11 +1865,17 @@ export type Database = {
           notes: string | null
           owner_id: string | null
           phone: string | null
+          qb_customer_id: string | null
           salesforce_id: string | null
           sf_created_date: string | null
           sf_last_modified_date: string | null
           sf_owner_id: string | null
           state: string | null
+          tax_exempt: boolean
+          tax_exempt_certificate_expires: string | null
+          tax_exempt_certificate_on_file: boolean
+          tax_exempt_certificate_path: string | null
+          tax_exemption_reason: string | null
           updated_at: string
           website: string | null
           zip: string | null
@@ -1822,11 +1893,17 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          qb_customer_id?: string | null
           salesforce_id?: string | null
           sf_created_date?: string | null
           sf_last_modified_date?: string | null
           sf_owner_id?: string | null
           state?: string | null
+          tax_exempt?: boolean
+          tax_exempt_certificate_expires?: string | null
+          tax_exempt_certificate_on_file?: boolean
+          tax_exempt_certificate_path?: string | null
+          tax_exemption_reason?: string | null
           updated_at?: string
           website?: string | null
           zip?: string | null
@@ -1844,11 +1921,17 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          qb_customer_id?: string | null
           salesforce_id?: string | null
           sf_created_date?: string | null
           sf_last_modified_date?: string | null
           sf_owner_id?: string | null
           state?: string | null
+          tax_exempt?: boolean
+          tax_exempt_certificate_expires?: string | null
+          tax_exempt_certificate_on_file?: boolean
+          tax_exempt_certificate_path?: string | null
+          tax_exemption_reason?: string | null
           updated_at?: string
           website?: string | null
           zip?: string | null
@@ -3129,6 +3212,197 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_credit_applications: {
+        Row: {
+          amount: number
+          applied_at: string
+          applied_by: string | null
+          auto_applied: boolean
+          credit_id: string
+          id: string
+          invoice_id: string | null
+          invoice_item_id: string | null
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+        }
+        Insert: {
+          amount: number
+          applied_at?: string
+          applied_by?: string | null
+          auto_applied?: boolean
+          credit_id: string
+          id?: string
+          invoice_id?: string | null
+          invoice_item_id?: string | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+        }
+        Update: {
+          amount?: number
+          applied_at?: string
+          applied_by?: string | null
+          auto_applied?: boolean
+          credit_id?: string
+          id?: string
+          invoice_id?: string | null
+          invoice_item_id?: string | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_credit_applications_credit_id_fkey"
+            columns: ["credit_id"]
+            isOneToOne: false
+            referencedRelation: "customer_credits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_applications_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "billing_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_applications_invoice_item_id_fkey"
+            columns: ["invoice_item_id"]
+            isOneToOne: false
+            referencedRelation: "billing_invoice_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_credits: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          auto_apply: boolean
+          billing_item_id: string | null
+          created_at: string
+          crm_company_id: string | null
+          expires_on: string | null
+          id: string
+          issued_at: string
+          issued_by: string | null
+          job_site_id: string | null
+          notes: string | null
+          qb_credit_memo_id: string | null
+          reason: string
+          reduces_taxable_amount: boolean
+          referred_crm_company_id: string | null
+          referred_crm_lead_id: string | null
+          related_invoice_id: string | null
+          remaining_amount: number
+          status: string
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          auto_apply?: boolean
+          billing_item_id?: string | null
+          created_at?: string
+          crm_company_id?: string | null
+          expires_on?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          job_site_id?: string | null
+          notes?: string | null
+          qb_credit_memo_id?: string | null
+          reason: string
+          reduces_taxable_amount?: boolean
+          referred_crm_company_id?: string | null
+          referred_crm_lead_id?: string | null
+          related_invoice_id?: string | null
+          remaining_amount: number
+          status?: string
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          auto_apply?: boolean
+          billing_item_id?: string | null
+          created_at?: string
+          crm_company_id?: string | null
+          expires_on?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          job_site_id?: string | null
+          notes?: string | null
+          qb_credit_memo_id?: string | null
+          reason?: string
+          reduces_taxable_amount?: boolean
+          referred_crm_company_id?: string | null
+          referred_crm_lead_id?: string | null
+          related_invoice_id?: string | null
+          remaining_amount?: number
+          status?: string
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_credits_billing_item_id_fkey"
+            columns: ["billing_item_id"]
+            isOneToOne: false
+            referencedRelation: "billing_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credits_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credits_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credits_referred_crm_company_id_fkey"
+            columns: ["referred_crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credits_referred_crm_lead_id_fkey"
+            columns: ["referred_crm_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credits_related_invoice_id_fkey"
+            columns: ["related_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "billing_invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -4640,6 +4914,9 @@ export type Database = {
           contact_person: string | null
           contact_phone: string | null
           contract_amount: number | null
+          county: string | null
+          county_needs_review: boolean
+          county_source: string | null
           created_at: string
           crm_company_id: string | null
           crm_deal_id: string | null
@@ -4664,7 +4941,10 @@ export type Database = {
           service_days: number[]
           special_instructions: string | null
           state: string | null
+          tax_exempt: boolean
+          tax_exemption_reason: string | null
           tax_jurisdiction: string | null
+          tax_rate_id: string | null
           tm_hours: number
           updated_at: string
           used_hours: number | null
@@ -4693,6 +4973,9 @@ export type Database = {
           contact_person?: string | null
           contact_phone?: string | null
           contract_amount?: number | null
+          county?: string | null
+          county_needs_review?: boolean
+          county_source?: string | null
           created_at?: string
           crm_company_id?: string | null
           crm_deal_id?: string | null
@@ -4717,7 +5000,10 @@ export type Database = {
           service_days?: number[]
           special_instructions?: string | null
           state?: string | null
+          tax_exempt?: boolean
+          tax_exemption_reason?: string | null
           tax_jurisdiction?: string | null
+          tax_rate_id?: string | null
           tm_hours?: number
           updated_at?: string
           used_hours?: number | null
@@ -4746,6 +5032,9 @@ export type Database = {
           contact_person?: string | null
           contact_phone?: string | null
           contract_amount?: number | null
+          county?: string | null
+          county_needs_review?: boolean
+          county_source?: string | null
           created_at?: string
           crm_company_id?: string | null
           crm_deal_id?: string | null
@@ -4770,7 +5059,10 @@ export type Database = {
           service_days?: number[]
           special_instructions?: string | null
           state?: string | null
+          tax_exempt?: boolean
+          tax_exemption_reason?: string | null
           tax_jurisdiction?: string | null
+          tax_rate_id?: string | null
           tm_hours?: number
           updated_at?: string
           used_hours?: number | null
@@ -4795,6 +5087,13 @@ export type Database = {
             columns: ["crm_lead_id"]
             isOneToOne: false
             referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_sites_tax_rate_id_fkey"
+            columns: ["tax_rate_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rates"
             referencedColumns: ["id"]
           },
         ]
@@ -6569,12 +6868,17 @@ export type Database = {
           county: string | null
           created_at: string
           created_by: string | null
+          effective_from: string
+          effective_to: string | null
           id: string
           is_default: boolean
           label: string | null
           rate: number
+          source_url: string | null
           state: string
+          transit_area: string | null
           updated_at: string
+          ust_code: string | null
           zip: string | null
         }
         Insert: {
@@ -6584,12 +6888,17 @@ export type Database = {
           county?: string | null
           created_at?: string
           created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
           id?: string
           is_default?: boolean
           label?: string | null
           rate?: number
+          source_url?: string | null
           state: string
+          transit_area?: string | null
           updated_at?: string
+          ust_code?: string | null
           zip?: string | null
         }
         Update: {
@@ -6599,12 +6908,17 @@ export type Database = {
           county?: string | null
           created_at?: string
           created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
           id?: string
           is_default?: boolean
           label?: string | null
           rate?: number
+          source_url?: string | null
           state?: string
+          transit_area?: string | null
           updated_at?: string
+          ust_code?: string | null
           zip?: string | null
         }
         Relationships: []
@@ -7470,10 +7784,103 @@ export type Database = {
       }
     }
     Functions: {
+      _credit_apply_internal: {
+        Args: {
+          _amount: number
+          _auto: boolean
+          _credit_id: string
+          _invoice_id: string
+        }
+        Returns: string
+      }
+      _credit_auto_apply_next: {
+        Args: { _credit_id: string }
+        Returns: undefined
+      }
+      _credit_reverse_internal: {
+        Args: { _application_id: string; _partial?: number; _reason: string }
+        Returns: undefined
+      }
+      apply_customer_credit: {
+        Args: { _amount?: number; _credit_id: string; _invoice_id: string }
+        Returns: {
+          amount: number
+          applied_at: string
+          applied_by: string | null
+          auto_applied: boolean
+          credit_id: string
+          id: string
+          invoice_id: string | null
+          invoice_item_id: string | null
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "customer_credit_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      approve_customer_credit: {
+        Args: { _credit_id: string }
+        Returns: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          auto_apply: boolean
+          billing_item_id: string | null
+          created_at: string
+          crm_company_id: string | null
+          expires_on: string | null
+          id: string
+          issued_at: string
+          issued_by: string | null
+          job_site_id: string | null
+          notes: string | null
+          qb_credit_memo_id: string | null
+          reason: string
+          reduces_taxable_amount: boolean
+          referred_crm_company_id: string | null
+          referred_crm_lead_id: string | null
+          related_invoice_id: string | null
+          remaining_amount: number
+          status: string
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "customer_credits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      auto_apply_customer_credits: {
+        Args: { _invoice_id: string }
+        Returns: number
+      }
+      billing_mark_past_due: { Args: never; Returns: number }
+      billing_resolve_tax: {
+        Args: { _crm_company_id: string; _job_site_id: string; _on: string }
+        Returns: {
+          exempt: boolean
+          exempt_reason: string
+          jurisdiction: string
+          needs_review: boolean
+          rate: number
+          review_reason: string
+          tax_rate_id: string
+        }[]
+      }
       can_access_job_site_sensitive_info: {
         Args: { _job_site_id: string; _user_id: string }
         Returns: boolean
       }
+      can_approve_credits: { Args: { _user_id: string }; Returns: boolean }
       can_approve_estimate: { Args: { _user_id: string }; Returns: boolean }
       can_approve_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_estimate: { Args: { _user_id: string }; Returns: boolean }
@@ -7502,6 +7909,14 @@ export type Database = {
           _name: string
         }
         Returns: string
+      }
+      credit_default_item_id: { Args: { _reason: string }; Returns: string }
+      credit_matches_invoice: {
+        Args: {
+          _credit: Database["public"]["Tables"]["customer_credits"]["Row"]
+          _inv: Database["public"]["Tables"]["billing_invoices"]["Row"]
+        }
+        Returns: boolean
       }
       delete_account_for_user: {
         Args: { _user_id: string }
@@ -7620,6 +8035,55 @@ export type Database = {
         Returns: boolean
       }
       is_supply_manager: { Args: { _user_id: string }; Returns: boolean }
+      issue_customer_credit: {
+        Args: {
+          _amount: number
+          _auto_apply?: boolean
+          _billing_item_id?: string
+          _crm_company_id?: string
+          _expires_on?: string
+          _job_site_id?: string
+          _notes?: string
+          _reason: string
+          _reduces_taxable_amount?: boolean
+          _referred_crm_company_id?: string
+          _referred_crm_lead_id?: string
+          _related_invoice_id?: string
+        }
+        Returns: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          auto_apply: boolean
+          billing_item_id: string | null
+          created_at: string
+          crm_company_id: string | null
+          expires_on: string | null
+          id: string
+          issued_at: string
+          issued_by: string | null
+          job_site_id: string | null
+          notes: string | null
+          qb_credit_memo_id: string | null
+          reason: string
+          reduces_taxable_amount: boolean
+          referred_crm_company_id: string | null
+          referred_crm_lead_id: string | null
+          related_invoice_id: string | null
+          remaining_amount: number
+          status: string
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "customer_credits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       manager_can_view_profile: {
         Args: { _employee_id: string; _manager_id: string }
         Returns: boolean
@@ -7638,11 +8102,56 @@ export type Database = {
         Args: { _invoice_id: string }
         Returns: undefined
       }
+      recalc_invoice_totals: {
+        Args: { _invoice_id: string }
+        Returns: undefined
+      }
       regenerate_job_site_qr_token: {
         Args: { _job_site_id: string }
         Returns: string
       }
+      reverse_credit_application: {
+        Args: { _application_id: string; _reason?: string }
+        Returns: undefined
+      }
+      sync_invoice_credits: { Args: { _invoice_id: string }; Returns: number }
       time_off_department: { Args: { _job_title: string }; Returns: string }
+      void_customer_credit: {
+        Args: { _credit_id: string; _reason?: string }
+        Returns: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          auto_apply: boolean
+          billing_item_id: string | null
+          created_at: string
+          crm_company_id: string | null
+          expires_on: string | null
+          id: string
+          issued_at: string
+          issued_by: string | null
+          job_site_id: string | null
+          notes: string | null
+          qb_credit_memo_id: string | null
+          reason: string
+          reduces_taxable_amount: boolean
+          referred_crm_company_id: string | null
+          referred_crm_lead_id: string | null
+          related_invoice_id: string | null
+          remaining_amount: number
+          status: string
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "customer_credits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_permission:

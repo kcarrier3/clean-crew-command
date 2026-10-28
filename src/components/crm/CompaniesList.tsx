@@ -7,7 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Pencil, Globe, Phone, MapPin, Trash2, Merge, Camera } from 'lucide-react';
+import { Plus, Pencil, Globe, Phone, MapPin, Trash2, Merge, Camera, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { certificateWarning } from '@/components/billing/companyTax';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from './fetchAllRows';
 import { MergeDialog } from './MergeDialog';
@@ -130,7 +132,13 @@ export function CompaniesList({ onChanged }: Props) {
                   <Checkbox checked={selected.includes(c.id)} onCheckedChange={v => toggle(c.id, !!v)} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{c.name}</p>
+                  <p className="font-medium flex flex-wrap items-center gap-2">
+                    {c.name}
+                    {c.tax_exempt && <Badge variant="secondary">Exempt</Badge>}
+                    {certificateWarning(c) && (
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600" aria-label={certificateWarning(c) || 'Certificate warning'} />
+                    )}
+                  </p>
                   {c.industry && <p className="text-xs text-muted-foreground">{c.industry}</p>}
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mt-1">
                     {c.website && <span className="flex items-center gap-1"><Globe className="h-3 w-3" />{c.website}</span>}

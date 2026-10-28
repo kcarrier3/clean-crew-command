@@ -6,16 +6,22 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Plus, Trash2, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { createManualInvoice, db, fetchBillingItems, saveBillingItem, type BillingItem, type ManualInvoiceLine } from './billingApi';
+import { createManualInvoice, db, saveBillingItem, type BillingItem, type ManualInvoiceLine } from './billingApi';
+import { BillingItemPicker } from './BillingItemPicker';
+import { Checkbox } from '@/components/ui/checkbox';
 import { money } from '@/lib/billing/types';
 import { dueDateFromTerms } from '@/lib/billing/kpi';
+import { fetchTaxRates, rateForCounty, type TaxRateRow } from '@/lib/billing/taxRates';
 
 interface Props { open: boolean; onOpenChange: (o: boolean) => void; onCreated: (id: string) => void }
-interface Site { id: string; name: string; client_name: string | null; billing_email: string | null; billing_terms: string | null; billing_po_number: string | null; crm_company_id: string | null }
+interface Site {
+  id: string; name: string; client_name: string | null; billing_email: string | null;
+  billing_terms: string | null; billing_po_number: string | null; crm_company_id: string | null;
+  county: string | null; tax_exempt: boolean | null; tax_exemption_reason: string | null; tax_rate_id: string | null;
+}
 
 const today = () => new Date().toISOString().slice(0, 10);
-const blank = (): ManualInvoiceLine => ({ billing_item_id: null, description: '', quantity: 1, unit_price: 0 });
-const NEW_ITEM = '__new__';
+const blank = (): ManualInvoiceLine => ({ billing_item_id: null, description: '', quantity: 1, unit_price: 0, taxable: true });
 
 export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
   const { toast } = useToast();
@@ -26,22 +32,24 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
   const [po, setPo] = useState('');
   const [date, setDate] = useState(today());
   const [terms, setTerms] = useState('Net 30');
-  const [taxRate, setTaxRate] = useState('0');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<ManualInvoiceLine[]>([blank()]);
   const [saving, setSaving] = useState(false);
-  const [catalog, setCatalog] = useState<BillingItem[]>([]);
   const [newItemFor, setNewItemFor] = useState<number | null>(null);
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('0');
+  const [rates, setRates] = useState<TaxRateRow[]>([]);
+  const [companyExempt, setCompanyExempt] = useState(false);
+  const [companyReason, setCompanyReason] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setSiteId(''); setCustomer(''); setEmail(''); setPo(''); setDate(today());
-    setTerms('Net 30'); setTaxRate('0'); setNotes(''); setLines([blank()]);
-    db.from('job_sites').select('id, name, client_name, billing_email, billing_terms, billing_po_number, crm_company_id')
+    setTerms('Net 30'); setNotes(''); setLines([blank()]);
+    setCompanyExempt(false); setCompanyReason(null);
+    db.from('job_sites').select('id, name, client_name, billing_email, billing_terms, billing_po_number, crm_company_id, county, tax_exempt, tax_exemption_reason, tax_rate_id')
       .eq('active', true).order('name').then(({ data }: any) => setSites(data ?? []));
-    fetchBillingItems().then(setCatalog).catch(() => setCatalog([]));
+    fetchTaxRates().then(setRates).catch(() => setRates([]));
     setNewItemFor(null);
   }, [open]);
 
@@ -53,41 +61,60 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
     setEmail(s.billing_email || '');
     setPo(s.billing_po_number || '');
     setTerms(s.billing_terms || 'Net 30');
+    if (s.crm_company_id) {
+      db.from('crm_companies').select('tax_exempt, tax_exemption_reason').eq('id', s.crm_company_id).maybeSingle()
+        .then(({ data }: any) => {
+          setCompanyExempt(!!data?.tax_exempt);
+          setCompanyReason(data?.tax_exemption_reason ?? null);
+        });
+    } else {
+      setCompanyExempt(false);
+      setCompanyReason(null);
+    }
   };
 
   const setLine = (i: number, patch: Partial<ManualInvoiceLine>) =>
     setLines(ls => ls.map((l, idx) => idx === i ? { ...l, ...patch } : l));
 
-  const pickItem = (i: number, id: string) => {
-    if (id === NEW_ITEM) { setNewItemFor(i); setNewName(''); setNewPrice('0'); return; }
-    const it = catalog.find(c => c.id === id);
-    if (it) setLine(i, { billing_item_id: it.id, description: it.name, unit_price: Number(it.default_unit_price) });
+  const pickItem = (i: number, it: BillingItem | null) => {
+    if (!it) return;
+    setLine(i, {
+      billing_item_id: it.id,
+      description: it.name,
+      unit_price: Number(it.default_unit_price),
+      taxable: it.taxable !== false,
+    });
   };
 
   const addItem = async () => {
     if (newItemFor === null || !newName.trim()) return;
     try {
-      const it = await saveBillingItem({ name: newName, default_unit_price: parseFloat(newPrice) || 0 });
-      setCatalog(c => [...c, it].sort((a, b) => a.name.localeCompare(b.name)));
-      setLine(newItemFor, { billing_item_id: it.id, description: it.name, unit_price: Number(it.default_unit_price) });
+      const it = await saveBillingItem({ name: newName, default_unit_price: parseFloat(newPrice) || 0, taxable: true, item_kind: 'service' });
+      setLine(newItemFor, { billing_item_id: it.id, description: it.name, unit_price: Number(it.default_unit_price), taxable: it.taxable !== false });
       setNewItemFor(null);
     } catch (e: any) {
       toast({ title: 'Could not add item', description: e.message, variant: 'destructive' });
     }
   };
 
+  const site = sites.find(s => s.id === siteId);
   const subtotal = lines.reduce((s, l) => s + (l.quantity || 0) * (l.unit_price || 0), 0);
-  const tax = Math.round(subtotal * (parseFloat(taxRate) || 0)) / 100;
+  const taxableBase = lines.reduce((s, l) => s + (l.taxable === false ? 0 : (l.quantity || 0) * (l.unit_price || 0)), 0);
+  const exempt = !!(site?.tax_exempt || companyExempt);
+  const exemptReason = site?.tax_exempt ? site.tax_exemption_reason : companyReason;
+  const override = site?.tax_rate_id ? rates.find(r => r.id === site.tax_rate_id) : null;
+  const countyRate = override ?? rateForCounty(rates, site?.county, date);
+  const previewRate = exempt ? 0 : Number(countyRate?.rate || 0);
+  const previewTax = Math.round(Math.max(taxableBase, 0) * previewRate) / 100;
 
   const submit = async () => {
     setSaving(true);
     try {
-      const site = sites.find(s => s.id === siteId);
       const inv = await createManualInvoice({
         jobSiteId: site?.id ?? null, crmCompanyId: site?.crm_company_id ?? null,
         customerName: customer.trim() || null, billingEmail: email.trim() || null,
         poNumber: po.trim() || null, invoiceDate: date, terms,
-        taxRate: parseFloat(taxRate) || 0, notes: notes.trim() || null, lines,
+        notes: notes.trim() || null, lines,
       });
       toast({ title: 'Invoice created', description: `${inv.invoice_number} — ${money(inv.total)}` });
       onOpenChange(false);
@@ -124,8 +151,6 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
           <div className="space-y-1.5"><Label htmlFor="ni_terms">Payment terms</Label>
             <Input id="ni_terms" value={terms} onChange={e => setTerms(e.target.value)} />
             <p className="text-[11px] text-muted-foreground">Due {dueDateFromTerms(date, terms)}</p></div>
-          <div className="space-y-1.5"><Label htmlFor="ni_tax">Tax rate (%)</Label>
-            <Input id="ni_tax" type="number" step="0.001" value={taxRate} onChange={e => setTaxRate(e.target.value)} /></div>
         </div>
 
         <div className="space-y-2">
@@ -133,16 +158,14 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
           {lines.map((l, i) => (
             <div key={i} className="grid grid-cols-[1fr_4.5rem_6rem_auto] gap-2 items-start">
               <div className="space-y-1 min-w-0">
-                <select aria-label="Billable item" value={l.billing_item_id ?? ''} onChange={e => pickItem(i, e.target.value)}
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  <option value="">Select an item…</option>
-                  {catalog.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  <option value={NEW_ITEM}>+ New billable item…</option>
-                </select>
+                <BillingItemPicker value={l.billing_item_id ?? null} onChange={it => pickItem(i, it)} />
                 {l.billing_item_id && (
                   <Input placeholder="Line description" aria-label="Line description" value={l.description}
                          onChange={e => setLine(i, { description: e.target.value })} />
                 )}
+                <button type="button" className="text-xs text-primary" onClick={() => { setNewItemFor(i); setNewName(''); setNewPrice('0'); }}>
+                  + New billable item
+                </button>
                 {newItemFor === i && (
                   <div className="flex gap-2">
                     <Input placeholder="New item name" value={newName} onChange={e => setNewName(e.target.value)} />
@@ -151,6 +174,10 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
                     <Button size="sm" onClick={addItem}>Save</Button>
                   </div>
                 )}
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Checkbox checked={l.taxable !== false} onCheckedChange={v => setLine(i, { taxable: !!v })} />
+                  Taxable
+                </label>
               </div>
               <Input type="number" aria-label="Quantity" value={l.quantity} onChange={e => setLine(i, { quantity: parseFloat(e.target.value) || 0 })} />
               <Input type="number" step="0.01" aria-label="Unit price" value={l.unit_price} onChange={e => setLine(i, { unit_price: parseFloat(e.target.value) || 0 })} />
@@ -167,9 +194,13 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
           <Textarea id="ni_notes" value={notes} onChange={e => setNotes(e.target.value)} rows={2} /></div>
 
         <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+          <p className="text-xs text-muted-foreground">Preview only. Tax is calculated when saved.</p>
           <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{money(subtotal)}</span></div>
-          <div className="flex justify-between"><span>Tax</span><span className="tabular-nums">{money(tax)}</span></div>
-          <div className="flex justify-between font-semibold"><span>Total</span><span className="tabular-nums">{money(subtotal + tax)}</span></div>
+          <div className="flex justify-between">
+            <span>{exempt ? `Exempt${exemptReason ? ` — ${exemptReason}` : ''}` : `Tax preview${countyRate ? ` (${previewRate.toFixed(2)}%)` : ''}`}</span>
+            <span className="tabular-nums">{money(previewTax)}</span>
+          </div>
+          <div className="flex justify-between font-semibold"><span>Total preview</span><span className="tabular-nums">{money(subtotal + previewTax)}</span></div>
         </div>
 
         <DialogFooter>

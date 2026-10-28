@@ -7,6 +7,11 @@ import { Download, Mail, Send, Ban, History, CreditCard, AlertTriangle, Link2 } 
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
+import { InvoiceTotals, invoiceNeedsTaxReview } from './InvoiceTotals';
+import { InvoiceLinesEditor } from './InvoiceLinesEditor';
+import { InvoiceCreditsPanel } from './InvoiceCreditsPanel';
+import { TaxReviewBanner } from './TaxReviewBanner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { SendInvoiceDialog } from './SendInvoiceDialog';
 import { saveInvoicePdf } from '@/lib/billing/invoicePdf';
@@ -45,7 +50,7 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
     setLoading(true);
     const [{ data: inv }, { data: it }, { data: hist }, { data: allocs }, { data: em }] = await Promise.all([
       db.from('billing_invoices').select('*').eq('id', invoiceId).maybeSingle(),
-      db.from('billing_invoice_items').select('*').eq('invoice_id', invoiceId).order('sort_order'),
+      db.from('billing_invoice_items').select('*, item:billing_items(name, sku)').eq('invoice_id', invoiceId).order('sort_order'),
       db.from('billing_invoice_history').select('*').eq('invoice_id', invoiceId).order('created_at', { ascending: false }),
       db.from('billing_payment_allocations')
         .select('id, amount, payment:billing_payments(*)').eq('invoice_id', invoiceId),
@@ -100,6 +105,10 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
         subtotal: Number(invoice.subtotal),
         tax_rate: Number(invoice.tax_rate),
         tax: Number(invoice.tax),
+        taxable_amount: Number(invoice.taxable_amount || 0),
+        credits_applied: Number(invoice.credits_applied || 0),
+        tax_exempt: !!invoice.tax_exempt,
+        tax_exemption_reason: invoice.tax_exemption_reason,
         total: Number(invoice.total),
         amount_paid: Number(invoice.amount_paid),
         balance_due: Number(invoice.balance_due),
@@ -123,6 +132,18 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
       clientEmail: invoice.billing_email,
       projectName,
     });
+  };
+
+  const deleteDraft = async () => {
+    if (!invoice || invoice.status !== 'draft') return;
+    if (!window.confirm(`Delete draft ${invoice.invoice_number}? This cannot be undone.`)) return;
+    await db.from('billing_events').update({ status: 'ready', invoice_id: null, invoiced_at: null })
+      .eq('invoice_id', invoice.id);
+    const { error } = await db.from('billing_invoices').delete().eq('id', invoice.id);
+    if (error) return toast({ title: 'Could not delete', description: error.message, variant: 'destructive' });
+    toast({ title: 'Draft deleted' });
+    onOpenChange(false);
+    onChanged?.();
   };
 
   const voidInvoice = async () => {
@@ -202,28 +223,17 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
                   <div><span className="text-muted-foreground">QuickBooks:</span> {invoice.qb_sync_status.replace('_', ' ')}</div>
                 </div>
 
-                <div className="rounded-md border">
-                  <div className="grid grid-cols-12 gap-2 border-b bg-muted/50 px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <span className="col-span-7">Description</span>
-                    <span className="col-span-2 text-right">Qty</span>
-                    <span className="col-span-3 text-right">Amount</span>
-                  </div>
-                  {items.map(i => (
-                    <div key={i.id} className="grid grid-cols-12 gap-2 px-3 py-2 text-sm border-b last:border-0">
-                      <span className="col-span-7">{i.description}</span>
-                      <span className="col-span-2 text-right tabular-nums">{Number(i.quantity)}</span>
-                      <span className="col-span-3 text-right tabular-nums">{money(i.line_total)}</span>
-                    </div>
-                  ))}
-                </div>
+                <TaxReviewBanner invoice={invoice} onChanged={() => { load(); onChanged?.(); }} />
 
-                <div className="ml-auto w-full sm:w-72 space-y-1 text-sm">
-                  <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{money(invoice.subtotal)}</span></div>
-                  <div className="flex justify-between"><span>Tax</span><span className="tabular-nums">{money(invoice.tax)}</span></div>
-                  <div className="flex justify-between font-semibold"><span>Total</span><span className="tabular-nums">{money(invoice.total)}</span></div>
-                  <div className="flex justify-between text-green-700"><span>Paid</span><span className="tabular-nums">{money(invoice.amount_paid)}</span></div>
-                  <div className="flex justify-between font-semibold"><span>Balance due</span><span className="tabular-nums">{money(invoice.balance_due)}</span></div>
-                </div>
+                <InvoiceLinesEditor
+                  invoiceId={invoice.id}
+                  editable={invoice.status === 'draft' || invoice.status === 'ready'}
+                  items={items}
+                  onChanged={() => { load(); onChanged?.(); }}
+                />
+
+                <InvoiceTotals invoice={invoice} />
+                <InvoiceCreditsPanel invoice={invoice} items={items} onChanged={() => { load(); onChanged?.(); }} />
 
                 <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
                   Completed {invoice.earliest_completed_at ? format(new Date(invoice.earliest_completed_at), 'MMM d, yyyy') : '—'} ·
@@ -278,17 +288,39 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
                   <Button size="sm" onClick={() => setPayOpen(true)} disabled={invoice.status === 'void'}>
                     <CreditCard className="h-4 w-4 mr-1" /> Record payment
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setSendOpen(true)}
-                          disabled={invoice.status === 'void'}>
-                    <Mail className="h-4 w-4 mr-1" />
-                    {invoice.last_emailed_at ? 'Resend invoice' : 'Send invoice'}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        <Button size="sm" variant="outline" onClick={() => setSendOpen(true)}
+                                disabled={invoice.status === 'void' || invoiceNeedsTaxReview(invoice)}>
+                          <Mail className="h-4 w-4 mr-1" />
+                          {invoice.last_emailed_at ? 'Resend invoice' : 'Send invoice'}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {invoiceNeedsTaxReview(invoice) && (
+                      <TooltipContent className="max-w-xs">{invoice.tax_review_reason || 'Sales tax needs review before this invoice can be sent.'}</TooltipContent>
+                    )}
+                  </Tooltip>
                   {!invoice.sent_at && invoice.status !== 'void' && (
-                    <Button size="sm" variant="outline" onClick={markSentManually}>
-                      <Send className="h-4 w-4 mr-1" /> Mark as sent
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <Button size="sm" variant="outline" onClick={markSentManually}
+                                  disabled={invoiceNeedsTaxReview(invoice)}>
+                            <Send className="h-4 w-4 mr-1" /> Mark as sent
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {invoiceNeedsTaxReview(invoice) && (
+                        <TooltipContent className="max-w-xs">{invoice.tax_review_reason || 'Sales tax needs review before this invoice can be sent.'}</TooltipContent>
+                      )}
+                    </Tooltip>
                   )}
-                  {invoice.status !== 'void' && (
+                  {invoice.status === 'draft' && (
+                    <Button size="sm" variant="ghost" onClick={deleteDraft}>Delete</Button>
+                  )}
+                  {invoice.status !== 'void' && invoice.status !== 'draft' && (
                     <Button size="sm" variant="ghost" onClick={voidInvoice}>
                       <Ban className="h-4 w-4 mr-1" /> Void
                     </Button>
@@ -321,7 +353,9 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
 
               <TabsContent value="email" className="space-y-3 mt-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button size="sm" onClick={() => setSendOpen(true)} disabled={invoice.status === 'void'}>
+                  <Button size="sm" onClick={() => setSendOpen(true)}
+                          disabled={invoice.status === 'void' || invoiceNeedsTaxReview(invoice)}
+                          title={invoiceNeedsTaxReview(invoice) ? (invoice.tax_review_reason || 'Sales tax needs review') : undefined}>
                     <Mail className="h-4 w-4 mr-1" />
                     {emails.some(m => m.status === 'sent' || m.status === 'delivered')
                       ? 'Resend invoice' : 'Send invoice'}

@@ -10,9 +10,7 @@ import { createInvoiceFromEvents, db } from './billingApi';
 import { money, type BillingEvent } from '@/lib/billing/types';
 import { dueDateFromTerms } from '@/lib/billing/kpi';
 import { BillToShipTo, toEditable, type EditableAddress } from './BillToShipTo';
-import {
-  fetchTaxRates, resolveTaxRate, type ResolvedTax, type TaxRateRow,
-} from '@/lib/billing/taxRates';
+import { fetchTaxRates, rateForCounty, type TaxRateRow } from '@/lib/billing/taxRates';
 
 interface Props {
   events: BillingEvent[];
@@ -28,7 +26,6 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
   const [saving, setSaving] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState(today());
   const [terms, setTerms] = useState('Net 30');
-  const [taxRate, setTaxRate] = useState('0');
   const [po, setPo] = useState('');
   const [email, setEmail] = useState('');
   const [contact, setContact] = useState('');
@@ -37,8 +34,10 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
   const [billTo, setBillTo] = useState<EditableAddress>(toEditable());
   const [shipTo, setShipTo] = useState<EditableAddress>(toEditable());
   const [rates, setRates] = useState<TaxRateRow[]>([]);
-  const [resolved, setResolved] = useState<ResolvedTax | null>(null);
-  const [taxTouched, setTaxTouched] = useState(false);
+  const [siteTax, setSiteTax] = useState<{
+    county: string | null; exempt: boolean; reason: string | null; rateId: string | null;
+    companyExempt: boolean; companyReason: string | null;
+  } | null>(null);
 
   useEffect(() => { fetchTaxRates().then(setRates).catch(() => setRates([])); }, []);
 
@@ -49,13 +48,21 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
     setEmail(first.billing_email ?? '');
     setInvoiceDate(today());
     setNotes('');
-    setTaxTouched(false);
+    setSiteTax(null);
     (async () => {
       if (first.job_site_id) {
         const { data } = await db.from('job_sites')
-          .select('name, client_name, billing_terms, billing_contact_name, billing_email, billing_po_number, address, city, state')
+          .select('name, client_name, billing_terms, billing_contact_name, billing_email, billing_po_number, address, city, state, county, tax_exempt, tax_exemption_reason, tax_rate_id, crm_company_id')
           .eq('id', first.job_site_id).maybeSingle();
         if (data) {
+          setSiteTax(s => ({
+            county: data.county ?? null,
+            exempt: !!data.tax_exempt,
+            reason: data.tax_exemption_reason ?? null,
+            rateId: data.tax_rate_id ?? null,
+            companyExempt: s?.companyExempt ?? false,
+            companyReason: s?.companyReason ?? null,
+          }));
           setTerms(data.billing_terms || 'Net 30');
           setContact(data.billing_contact_name || '');
           setCustomer(data.client_name || data.name || '');
@@ -65,11 +72,26 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
             name: data.client_name || data.name, address: data.address,
             city: data.city, state: data.state, zip: null,
           }));
+          if (!first.crm_company_id && data.crm_company_id) {
+            const { data: co } = await db.from('crm_companies')
+              .select('tax_exempt, tax_exemption_reason').eq('id', data.crm_company_id).maybeSingle();
+            if (co) setSiteTax(s => s ? ({ ...s, companyExempt: !!co.tax_exempt, companyReason: co.tax_exemption_reason ?? null }) : s);
+          }
         }
       }
       if (first.crm_company_id) {
         const { data: co } = await db.from('crm_companies')
-          .select('name, address, city, state, zip').eq('id', first.crm_company_id).maybeSingle();
+          .select('name, address, city, state, zip, tax_exempt, tax_exemption_reason').eq('id', first.crm_company_id).maybeSingle();
+        if (co) {
+          setSiteTax(s => ({
+            county: s?.county ?? null,
+            exempt: s?.exempt ?? false,
+            reason: s?.reason ?? null,
+            rateId: s?.rateId ?? null,
+            companyExempt: !!co.tax_exempt,
+            companyReason: co.tax_exemption_reason ?? null,
+          }));
+        }
         if (co?.name) setCustomer(co.name);
         if (co) {
           setBillTo(toEditable(co));
@@ -84,31 +106,25 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
     })();
   }, [open, events]);
 
-  // Auto-calculate tax from the ship-to city unless the user typed their own rate.
-  useEffect(() => {
-    if (!open || !rates.length) return;
-    const r = resolveTaxRate(shipTo, rates);
-    setResolved(r);
-    if (!taxTouched) setTaxRate(String(r.rate));
-  }, [open, rates, shipTo, taxTouched]);
-
   const subtotal = events.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const tax = Math.round(subtotal * (parseFloat(taxRate) || 0) / 100 * 100) / 100;
-  const total = subtotal + tax;
+  const exempt = !!(siteTax?.exempt || siteTax?.companyExempt);
+  const exemptReason = siteTax?.exempt ? siteTax.reason : siteTax?.companyReason;
+  const override = siteTax?.rateId ? rates.find(r => r.id === siteTax.rateId) : null;
+  const countyRate = override ?? rateForCounty(rates, siteTax?.county, invoiceDate);
+  const previewRate = exempt ? 0 : Number(countyRate?.rate || 0);
+  const previewTax = Math.round(subtotal * previewRate) / 100;
 
   const submit = async () => {
     setSaving(true);
     try {
       const inv = await createInvoiceFromEvents({
         events, invoiceDate, terms,
-        taxRate: parseFloat(taxRate) || 0,
         poNumber: po.trim() || null,
         billingEmail: email.trim() || null,
         billingContactName: contact.trim() || null,
         customerName: customer.trim() || null,
         notes: notes.trim() || null,
         billTo, shipTo,
-        taxJurisdiction: resolved?.jurisdiction ?? null,
       });
       toast({ title: 'Invoice generated', description: `${inv.invoice_number} — ${money(inv.total)}` });
       onOpenChange(false);
@@ -138,12 +154,7 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
           ))}
         </div>
 
-        <BillToShipTo
-          billTo={billTo} shipTo={shipTo} onBillTo={setBillTo} onShipTo={setShipTo}
-          resolved={resolved}
-          taxOverridden={taxTouched && !!resolved && (parseFloat(taxRate) || 0) !== resolved.rate}
-          onResetTax={() => { setTaxTouched(false); if (resolved) setTaxRate(String(resolved.rate)); }}
-        />
+        <BillToShipTo billTo={billTo} shipTo={shipTo} onBillTo={setBillTo} onShipTo={setShipTo} />
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
@@ -171,16 +182,6 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
             <Input id="inv_terms" value={terms} onChange={e => setTerms(e.target.value)} placeholder="Net 30" />
             <p className="text-xs text-muted-foreground">Due {dueDateFromTerms(invoiceDate, terms)}</p>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="inv_tax">Tax rate (%)</Label>
-            <Input id="inv_tax" type="number" step="0.001" value={taxRate}
-                   onChange={e => { setTaxTouched(true); setTaxRate(e.target.value); }} />
-            {resolved && (
-              <p className="text-xs text-muted-foreground">
-                {resolved.jurisdiction ? `${resolved.jurisdiction} — ${resolved.rate.toFixed(2)}%` : 'No jurisdiction match'}
-              </p>
-            )}
-          </div>
         </div>
 
         <div className="space-y-1.5">
@@ -189,9 +190,13 @@ export const GenerateInvoiceDialog = ({ events, open, onOpenChange, onCreated }:
         </div>
 
         <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+          <p className="text-xs text-muted-foreground">Preview only. Tax is calculated when saved.</p>
           <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{money(subtotal)}</span></div>
-          <div className="flex justify-between"><span>Tax</span><span className="tabular-nums">{money(tax)}</span></div>
-          <div className="flex justify-between font-semibold"><span>Total</span><span className="tabular-nums">{money(total)}</span></div>
+          <div className="flex justify-between">
+            <span>{exempt ? `Exempt${exemptReason ? ` — ${exemptReason}` : ''}` : `Tax preview${siteTax?.county ? ` · ${siteTax.county} County ${previewRate.toFixed(2)}%` : ''}`}</span>
+            <span className="tabular-nums">{money(previewTax)}</span>
+          </div>
+          <div className="flex justify-between font-semibold"><span>Total preview</span><span className="tabular-nums">{money(subtotal + previewTax)}</span></div>
         </div>
 
         <DialogFooter>
