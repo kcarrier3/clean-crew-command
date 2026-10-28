@@ -165,6 +165,12 @@ export interface CrmCompany {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  tax_exempt?: boolean | null;
+  tax_exemption_reason?: string | null;
+  tax_exempt_certificate_on_file?: boolean | null;
+  tax_exempt_certificate_expires?: string | null;
+  tax_exempt_certificate_path?: string | null;
+  qb_customer_id?: string | null;
 }
 
 export interface CrmContact {

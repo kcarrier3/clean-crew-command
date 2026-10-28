@@ -167,10 +167,6 @@ export const convertProposalToInvoice = async (
     invoice_date: opts.invoiceDate,
     due_date: dueDateFromTerms(opts.invoiceDate, opts.terms),
     payment_terms: opts.terms,
-    subtotal: p.subtotal,
-    tax_rate: p.tax_rate,
-    tax: p.tax,
-    total: p.total,
     bill_to_name: p.bill_to_name ?? null,
     bill_to_address: p.bill_to_address ?? null,
     bill_to_city: p.bill_to_city ?? null,
@@ -181,8 +177,6 @@ export const convertProposalToInvoice = async (
     ship_to_city: p.ship_to_city ?? null,
     ship_to_state: p.ship_to_state ?? null,
     ship_to_zip: p.ship_to_zip ?? null,
-    tax_jurisdiction: p.tax_jurisdiction ?? null,
-    balance_due: p.total,
     notes: `Generated from proposal ${p.proposal_number}.`,
     created_by: userData?.user?.id ?? null,
   }).select().single();
@@ -193,7 +187,6 @@ export const convertProposalToInvoice = async (
     description: l.detail ? `${l.label} — ${l.detail}` : l.label,
     quantity: 1,
     unit_price: Number(l.amount || 0),
-    line_total: Number(l.amount || 0),
     sort_order: idx,
   }));
   if (items.length) {
@@ -208,5 +201,7 @@ export const convertProposalToInvoice = async (
   }).eq('id', p.id);
   if (upErr) throw upErr;
 
-  return invoice;
+  const { data: saved, error: reloadErr } = await db.from('billing_invoices').select('*').eq('id', invoice.id).single();
+  if (reloadErr) throw reloadErr;
+  return saved;
 };

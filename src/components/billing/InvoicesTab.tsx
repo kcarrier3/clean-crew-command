@@ -14,6 +14,8 @@ import { BooksGptExportDialog } from './BooksGptExportDialog';
 import {
   INVOICE_STATUS_CLASS, INVOICE_STATUS_LABEL, money, type Invoice,
 } from '@/lib/billing/types';
+import { invoiceNeedsTaxReview } from './InvoiceTotals';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Props { focusInvoiceId?: string | null; onFocusHandled?: () => void }
 
@@ -43,7 +45,7 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
   const visible = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return invoices
-      .filter(i => status === 'all' || i.status === status)
+      .filter(i => status === 'all' || (status === 'needs_tax_review' ? i.tax_status === 'needs_review' : i.status === status))
       .filter(i => !needle
         || i.invoice_number.toLowerCase().includes(needle)
         || (i.customer_name ?? '').toLowerCase().includes(needle)
@@ -90,6 +92,7 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
               <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="needs_tax_review">Needs tax review</SelectItem>
                 {Object.entries(INVOICE_STATUS_LABEL).map(([v, l]) =>
                   <SelectItem key={v} value={v}>{l}</SelectItem>)}
               </SelectContent>
@@ -116,6 +119,11 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
                       <Badge className={INVOICE_STATUS_CLASS[i.status] ?? ''}>
                         {INVOICE_STATUS_LABEL[i.status] ?? i.status}
                       </Badge>
+                      {i.tax_status === 'needs_review' && (
+                        <Badge className="bg-red-100 text-red-800" title={i.tax_review_reason || undefined}>
+                          Needs tax review
+                        </Badge>
+                      )}
                       {i.email_status && (
                         <Badge variant="outline" className="text-xs">
                           Email: {i.email_status}
@@ -131,11 +139,21 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
                     <p className="font-semibold tabular-nums">{money(i.total)}</p>
                     <p className="text-xs text-muted-foreground tabular-nums">Balance {money(i.balance_due)}</p>
                     {i.status !== 'void' && (
-                      <Button size="sm" variant="ghost" className="mt-1 h-7 px-2"
-                              onClick={e => { e.stopPropagation(); setSendId(i.id); }}>
-                        <Mail className="h-3.5 w-3.5 mr-1" />
-                        {i.last_emailed_at ? 'Resend' : 'Send'}
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex" onClick={e => e.stopPropagation()}>
+                            <Button size="sm" variant="ghost" className="mt-1 h-7 px-2"
+                                    disabled={invoiceNeedsTaxReview(i)}
+                                    onClick={e => { e.stopPropagation(); setSendId(i.id); }}>
+                              <Mail className="h-3.5 w-3.5 mr-1" />
+                              {i.last_emailed_at ? 'Resend' : 'Send'}
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {invoiceNeedsTaxReview(i) && (
+                          <TooltipContent className="max-w-xs">{i.tax_review_reason || 'Sales tax needs review before this invoice can be sent.'}</TooltipContent>
+                        )}
+                      </Tooltip>
                     )}
                   </div>
                 </div>

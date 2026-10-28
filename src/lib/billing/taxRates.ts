@@ -13,6 +13,11 @@ export interface TaxRateRow {
   label: string | null;
   is_default: boolean;
   active: boolean;
+  effective_from?: string | null;
+  effective_to?: string | null;
+  ust_code?: string | null;
+  transit_area?: string | null;
+  source_url?: string | null;
 }
 
 export interface AddressLike {
@@ -33,9 +38,35 @@ export interface ResolvedTax {
 const norm = (v?: string | null) => (v ?? '').trim().toLowerCase();
 
 export const fetchTaxRates = async (): Promise<TaxRateRow[]> => {
-  const { data, error } = await db.from('tax_rates').select('*').order('state').order('county').order('city');
+  const { data, error } = await db.from('tax_rates').select('*')
+    .order('state')
+    .order('county')
+    .order('effective_from', { ascending: false });
   if (error) throw error;
   return (data ?? []).map((r: any) => ({ ...r, rate: Number(r.rate || 0) }));
+};
+
+/** County-wide Ohio rows the sales-tax resolver actually uses (city, ZIP, and transit blank). */
+export const isCountyWideRate = (r: TaxRateRow) =>
+  r.state === 'OH' && !r.city && !r.zip && !r.transit_area && !!r.county;
+
+export const fetchOhioCounties = async (): Promise<string[]> => {
+  const rates = await fetchTaxRates();
+  return [...new Set(rates.filter(r => r.active && isCountyWideRate(r)).map(r => r.county as string))]
+    .sort((a, b) => a.localeCompare(b));
+};
+
+/** Rate effective on a date for one Ohio county. Null when the county has no open row. */
+export const rateForCounty = (rates: TaxRateRow[], county: string | null | undefined, onDate: string): TaxRateRow | null => {
+  if (!county) return null;
+  const key = county.trim().toLowerCase();
+  const matches = rates.filter(r =>
+    r.active && isCountyWideRate(r) && (r.county ?? '').trim().toLowerCase() === key
+    && (r.effective_from ?? '0001-01-01') <= onDate
+    && (!r.effective_to || r.effective_to >= onDate)
+  );
+  matches.sort((a, b) => (b.effective_from ?? '').localeCompare(a.effective_from ?? ''));
+  return matches[0] ?? null;
 };
 
 export const describeRate = (r: TaxRateRow) =>

@@ -102,6 +102,14 @@ export const SendInvoiceDialog = ({ invoiceId, open, onOpenChange, onSent }: Pro
 
   const send = async () => {
     if (!invoice || sending) return;
+    if (invoice.tax_status === 'needs_review') {
+      toast({
+        title: 'Sales tax needs review',
+        description: invoice.tax_review_reason || 'Fix the job site county or customer certificate before sending.',
+        variant: 'destructive',
+      });
+      return;
+    }
     const recipients = textToList(to);
     if (!recipients.length) {
       toast({
@@ -125,6 +133,10 @@ export const SendInvoiceDialog = ({ invoiceId, open, onOpenChange, onSent }: Pro
           subtotal: Number(invoice.subtotal),
           tax_rate: Number(invoice.tax_rate),
           tax: Number(invoice.tax),
+          taxable_amount: Number(invoice.taxable_amount || 0),
+          credits_applied: Number(invoice.credits_applied || 0),
+          tax_exempt: !!invoice.tax_exempt,
+          tax_exemption_reason: invoice.tax_exemption_reason,
           total: Number(invoice.total),
           amount_paid: Number(invoice.amount_paid),
           balance_due: Number(invoice.balance_due),
@@ -220,6 +232,15 @@ export const SendInvoiceDialog = ({ invoiceId, open, onOpenChange, onSent }: Pro
               </div>
             )}
 
+            {invoice.tax_status === 'needs_review' && (
+              <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-950">
+                <p className="font-medium flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" /> Sales tax needs review
+                </p>
+                <p className="text-xs mt-1">{invoice.tax_review_reason || 'This invoice cannot be sent until tax is confirmed.'}</p>
+              </div>
+            )}
+
             {instructions && (
               <div className="rounded-md bg-muted/50 p-3 text-xs">
                 <span className="font-medium">Billing instructions: </span>{instructions}
@@ -259,7 +280,8 @@ export const SendInvoiceDialog = ({ invoiceId, open, onOpenChange, onSent }: Pro
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>Cancel</Button>
-          <Button onClick={send} disabled={sending || loading || !invoice}>
+          <Button onClick={send} disabled={sending || loading || !invoice || invoice.tax_status === 'needs_review'}
+                  title={invoice?.tax_status === 'needs_review' ? (invoice.tax_review_reason || 'Sales tax needs review') : undefined}>
             {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
             {sending ? 'Sending…' : 'Send invoice'}
           </Button>

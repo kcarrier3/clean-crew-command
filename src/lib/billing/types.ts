@@ -93,10 +93,19 @@ export interface Invoice {
   subtotal: number;
   tax_rate: number;
   tax: number;
+  tax_jurisdiction?: string | null;
+  taxable_amount?: number;
+  credits_applied?: number;
+  tax_exempt?: boolean;
+  tax_exemption_reason?: string | null;
+  tax_status?: 'ok' | 'needs_review' | string;
+  tax_review_reason?: string | null;
+  tax_rate_id?: string | null;
   total: number;
   amount_paid: number;
   balance_due: number;
   notes: string | null;
+  voided_at?: string | null;
   generated_at: string;
   sent_at: string | null;
   paid_at: string | null;
@@ -111,11 +120,16 @@ export interface Invoice {
 export interface InvoiceItem {
   id: string;
   invoice_id: string;
+  billing_item_id?: string | null;
   description: string;
   quantity: number;
   unit_price: number;
   line_total: number;
+  taxable?: boolean | null;
+  line_type?: 'charge' | 'credit' | string;
+  credit_application_id?: string | null;
   sort_order: number;
+  item?: { name: string; sku: string | null } | null;
 }
 
 export interface Payment {

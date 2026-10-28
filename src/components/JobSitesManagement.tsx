@@ -19,6 +19,9 @@ import JobBudgetingWidget from './JobBudgetingWidget';
 import { AccountDetail } from './AccountDetail';
 import OfficeLocationCard from './OfficeLocationCard';
 import { DAY_LABELS, monthlyHoursFromNightly, serviceDaysInMonth, describeFrequency } from '@/lib/serviceFrequency';
+import {
+  JobSiteSalesTaxFields, emptyJobSiteTax, jobSiteTaxFromRow, jobSiteTaxPayload, type JobSiteTaxForm,
+} from '@/components/billing/JobSiteSalesTaxFields';
 
 interface JobSite {
   id: string;
@@ -50,6 +53,13 @@ interface JobSite {
   active: boolean;
   created_at: string;
   updated_at: string;
+  county?: string | null;
+  county_needs_review?: boolean | null;
+  county_source?: string | null;
+  tax_exempt?: boolean | null;
+  tax_exemption_reason?: string | null;
+  tax_rate_id?: string | null;
+  crm_company_id?: string | null;
 }
 
 interface FormData {
@@ -78,6 +88,13 @@ interface FormData {
   /** Project-only: phased job with named phases (one per line). */
   is_phased?: boolean;
   phase_names?: string;
+  county: string;
+  county_needs_review: boolean;
+  county_source: string;
+  tax_exempt: boolean;
+  tax_exemption_reason: string;
+  tax_rate_id: string;
+  crm_company_id: string | null;
 }
 
 /** Split the phase textarea into trimmed phase names. */
@@ -188,8 +205,46 @@ export default function JobSitesManagement() {
     budgeted_hours: '',
     nightly_hours: '',
     service_days: [],
-    active: true
+    active: true,
+    county: '',
+    county_needs_review: false,
+    county_source: '',
+    tax_exempt: false,
+    tax_exemption_reason: '',
+    tax_rate_id: '',
+    crm_company_id: null,
   });
+  const [taxBaseline, setTaxBaseline] = useState<JobSiteTaxForm>(emptyJobSiteTax());
+
+  const salesTaxColumns = () => jobSiteTaxPayload({
+    county: formData.county,
+    county_needs_review: formData.county_needs_review,
+    county_source: formData.county_source || null,
+    tax_exempt: formData.tax_exempt,
+    tax_exemption_reason: formData.tax_exemption_reason,
+    tax_rate_id: formData.tax_rate_id,
+    crm_company_id: formData.crm_company_id,
+  }, taxBaseline);
+
+  const salesTaxFields = (idPrefix: string) => (
+    <JobSiteSalesTaxFields
+      idPrefix={idPrefix}
+      value={{
+        county: formData.county,
+        county_needs_review: formData.county_needs_review,
+        county_source: formData.county_source || null,
+        tax_exempt: formData.tax_exempt,
+        tax_exemption_reason: formData.tax_exemption_reason,
+        tax_rate_id: formData.tax_rate_id,
+        crm_company_id: formData.crm_company_id,
+      }}
+      onChange={patch => setFormData(f => ({
+        ...f,
+        ...patch,
+        county_source: patch.county_source ?? f.county_source,
+      }))}
+    />
+  );
 
   useEffect(() => {
     fetchJobSites();
@@ -271,7 +326,8 @@ export default function JobSitesManagement() {
           nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
           service_days: formData.service_days,
           active: formData.active,
-          is_phased: isProject && !!formData.is_phased
+          is_phased: isProject && !!formData.is_phased,
+          ...salesTaxColumns(),
         })
         .select('id')
         .single();
@@ -353,7 +409,8 @@ export default function JobSitesManagement() {
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
           nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
           service_days: formData.service_days,
-          active: formData.active
+          active: formData.active,
+          ...salesTaxColumns(),
         })
         .eq('id', editingJobSite.id);
 
@@ -407,7 +464,12 @@ export default function JobSitesManagement() {
       budgeted_hours: jobSite.budgeted_hours ? jobSite.budgeted_hours.toString() : '',
       nightly_hours: jobSite.nightly_hours ? jobSite.nightly_hours.toString() : '',
       service_days: jobSite.service_days || [],
-      active: jobSite.active
+      active: jobSite.active,
+      ...(() => {
+        const tax = jobSiteTaxFromRow(jobSite);
+        setTaxBaseline(tax);
+        return { ...tax, county_source: tax.county_source || '' };
+      })(),
     });
     setIsEditDialogOpen(true);
   };
@@ -435,8 +497,16 @@ export default function JobSitesManagement() {
       budgeted_hours: '',
       nightly_hours: '',
       service_days: [],
-      active: true 
+      active: true,
+      county: '',
+      county_needs_review: false,
+      county_source: '',
+      tax_exempt: false,
+      tax_exemption_reason: '',
+      tax_rate_id: '',
+      crm_company_id: null,
     });
+    setTaxBaseline(emptyJobSiteTax());
     setEditingJobSite(null);
   };
 
@@ -770,6 +840,8 @@ export default function JobSitesManagement() {
                     </div>
                   </div>
 
+                  {salesTaxFields('create')}
+
                   {/* Contact Information Section */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
@@ -999,6 +1071,8 @@ export default function JobSitesManagement() {
                     </div>
                   </div>
 
+                  {salesTaxFields('edit')}
+
                   {/* Contact Information Section */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
@@ -1142,6 +1216,9 @@ export default function JobSitesManagement() {
                                   <h3 className="text-base md:text-lg font-semibold leading-snug break-words">{jobSite.name}</h3>
                                   <div className="flex gap-2 flex-wrap">
                                     <Badge variant="default">Active</Badge>
+                                    {jobSite.county_needs_review && (
+                                      <Badge className="bg-amber-100 text-amber-900">County unconfirmed</Badge>
+                                    )}
                                     <Badge variant="secondary">
                                       {jobSite.is_recurring_monthly ? 'Recurring' : 'Project'}
                                     </Badge>

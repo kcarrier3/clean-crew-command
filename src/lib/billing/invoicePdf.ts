@@ -14,6 +14,10 @@ export interface InvoicePdfData {
   subtotal: number;
   tax_rate: number;
   tax: number;
+  taxable_amount?: number;
+  credits_applied?: number;
+  tax_exempt?: boolean;
+  tax_exemption_reason?: string | null;
   total: number;
   amount_paid?: number;
   balance_due?: number;
@@ -113,20 +117,33 @@ export function buildInvoicePdf({
   });
 
   const fy = (doc as any).lastAutoTable.finalY + 8;
-  doc.setFontSize(10);
-  doc.text('Subtotal:', w - 60, fy);
-  doc.text(`$${Number(invoice.subtotal).toFixed(2)}`, w - 14, fy, { align: 'right' });
-  doc.text(
-    `Tax${invoice.tax_jurisdiction ? ` ${invoice.tax_jurisdiction}` : ''} (${Number(invoice.tax_rate).toFixed(2)}%):`,
-    w - 90, fy + 6,
-  );
-  doc.text(`$${Number(invoice.tax).toFixed(2)}`, w - 14, fy + 6, { align: 'right' });
-  doc.setFontSize(12); doc.setFont(undefined as any, 'bold');
-  doc.text('Total:', w - 60, fy + 14);
-  doc.text(`$${Number(invoice.total).toFixed(2)}`, w - 14, fy + 14, { align: 'right' });
+  const moneyText = (n: number) => `$${Number(n || 0).toFixed(2)}`;
+  const rows: { label: string; value: string; bold?: boolean }[] = [
+    { label: 'Subtotal:', value: moneyText(invoice.subtotal) },
+  ];
+  if (Number(invoice.credits_applied || 0) > 0) {
+    rows.push({ label: 'Credits applied:', value: `-${moneyText(invoice.credits_applied || 0)}` });
+  }
+  if (invoice.taxable_amount != null) {
+    rows.push({ label: 'Taxable amount:', value: moneyText(invoice.taxable_amount) });
+  }
+  const taxLabel = invoice.tax_exempt
+    ? `Exempt${invoice.tax_exemption_reason ? ` — ${invoice.tax_exemption_reason}` : ''}:`
+    : `Tax${invoice.tax_jurisdiction ? ` ${invoice.tax_jurisdiction}` : ''} (${Number(invoice.tax_rate).toFixed(2)}%):`;
+  rows.push({ label: taxLabel, value: moneyText(invoice.tax) });
+  rows.push({ label: 'Total:', value: moneyText(invoice.total), bold: true });
+
+  let rowY = fy;
+  rows.forEach(r => {
+    doc.setFontSize(r.bold ? 12 : 10);
+    doc.setFont(undefined as any, r.bold ? 'bold' : 'normal');
+    doc.text(r.label, w - 90, rowY);
+    doc.text(r.value, w - 14, rowY, { align: 'right' });
+    rowY += r.bold ? 8 : 6;
+  });
   doc.setFont(undefined as any, 'normal');
 
-  let ty = fy + 22;
+  let ty = rowY + 4;
   if (invoice.amount_paid != null && invoice.amount_paid > 0) {
     doc.setFontSize(10);
     doc.text('Paid to date:', w - 60, ty);
