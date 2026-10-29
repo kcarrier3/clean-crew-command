@@ -16,7 +16,7 @@ const InviteEmployeeSchema = z.object({
   jobTitle: z.string().min(1, { message: "Job title required" }).max(100, { message: "Job title too long" }).optional(),
   hourlyRate: z.number().min(0, { message: "Hourly rate cannot be negative" }).max(10000, { message: "Hourly rate too high" }).optional().nullable(),
   salaryAmount: z.number().min(0, { message: "Salary cannot be negative" }).max(10000000, { message: "Salary too high" }).optional().nullable(),
-  payType: z.enum(['hourly', 'salary'], { message: "Pay type must be 'hourly' or 'salary'" }).optional(),
+  payType: z.enum(['hourly', 'salary'], { errorMap: () => ({ message: "Pay type must be 'hourly' or 'salary'" }) }).optional(),
   attendanceTrackingType: z.enum(['attendance_only', 'attendance_and_punctuality']).optional(),
   attendanceBonusAmount: z.number().min(0).max(100000).optional().nullable(),
   timeBonusAmount: z.number().min(0).max(100000).optional().nullable(),
