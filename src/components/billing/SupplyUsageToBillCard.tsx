@@ -68,7 +68,7 @@ export const SupplyUsageToBillCard = ({ onQueued }: Props) => {
             <PackageCheck className="h-4 w-4" /> Supply usage waiting to be billed
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Resale supplies dropped off at customer accounts. Add them here instead of running a separate report.
+            Resale drop-offs recorded before they were sent to Ready to Bill automatically. New drop-offs show up in the list above.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

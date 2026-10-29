@@ -14,7 +14,7 @@ import SupplyBillingReport from './supply/SupplyBillingReport';
 
 const SupplyManagement = () => {
   const { isManager, profile } = useAuth();
-  const { canManage, canViewReports } = getSupplyAccess(isManager(), profile?.job_title);
+  const { canManage, canViewReports, canPrice } = getSupplyAccess(isManager(), profile?.job_title);
 
   return (
     <div className="space-y-6">
@@ -46,7 +46,7 @@ const SupplyManagement = () => {
           <SupplyStockTab />
           <SupplyMovementsTab canManage={canManage} />
         </TabsContent>
-        <TabsContent value="items"><SupplyItemsTab canManage={canManage} /></TabsContent>
+        <TabsContent value="items"><SupplyItemsTab canManage={canManage} canPrice={canPrice} /></TabsContent>
         <TabsContent value="assets"><FixedAssetsTab canManage={canManage} /></TabsContent>
         <TabsContent value="requests"><SupplyRequestsTab canManage={canManage} /></TabsContent>
         {canViewReports && <TabsContent value="cost-report"><SupplyCostReport /></TabsContent>}

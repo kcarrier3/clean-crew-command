@@ -4889,6 +4889,32 @@ export type Database = {
           },
         ]
       }
+      job_site_financials: {
+        Row: {
+          contract_amount: number | null
+          job_site_id: string
+          updated_at: string
+        }
+        Insert: {
+          contract_amount?: number | null
+          job_site_id: string
+          updated_at?: string
+        }
+        Update: {
+          contract_amount?: number | null
+          job_site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_site_financials_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: true
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_sites: {
         Row: {
           access_instructions: string | null
@@ -4935,6 +4961,7 @@ export type Database = {
           nightly_hours: number | null
           postal_code: string | null
           project_manager: string | null
+          progress_billing: boolean
           qr_code_token: string
           remaining_hours: number | null
           safety_requirements: string | null
@@ -4994,6 +5021,7 @@ export type Database = {
           nightly_hours?: number | null
           postal_code?: string | null
           project_manager?: string | null
+          progress_billing?: boolean
           qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
@@ -5053,6 +5081,7 @@ export type Database = {
           nightly_hours?: number | null
           postal_code?: string | null
           project_manager?: string | null
+          progress_billing?: boolean
           qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
@@ -5879,6 +5908,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_sov_lines: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          job_site_id: string
+          project_phase_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_site_id: string
+          project_phase_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_site_id?: string
+          project_phase_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_sov_lines_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_sov_lines_project_phase_id_fkey"
+            columns: ["project_phase_id"]
+            isOneToOne: true
+            referencedRelation: "project_phases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_phases: {
         Row: {
@@ -7885,6 +7959,8 @@ export type Database = {
       can_approve_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_estimate: { Args: { _user_id: string }; Returns: boolean }
       can_manage_billing: { Args: { _user_id: string }; Returns: boolean }
+      can_mark_project_checkpoint: { Args: { _job_site_id: string; _user_id: string }; Returns: boolean }
+      can_view_sov: { Args: { _user_id: string }; Returns: boolean }
       can_manage_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_manage_training: { Args: { _user_id: string }; Returns: boolean }
       can_message_user: {

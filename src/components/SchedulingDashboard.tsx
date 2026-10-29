@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, Clock, Users, MapPin, Plus, ArrowUpDown, CalendarDays } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
+import { JOB_SITE_COLUMNS } from '@/lib/jobSiteColumns';
 import { useToast } from '@/hooks/use-toast';
 import WeeklyScheduleView, { OPEN_SHIFT_ID } from './WeeklyScheduleView';
 import ManagerTimeOffReview from './ManagerTimeOffReview';
@@ -118,7 +119,7 @@ const SchedulingDashboard = () => {
       // Fetch accounts
       const { data: jobSitesData, error: jobSitesError } = await supabase
         .from('job_sites')
-        .select('*')
+        .select(JOB_SITE_COLUMNS)
         .eq('active', true)
         .order('name');
 

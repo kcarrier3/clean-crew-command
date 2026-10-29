@@ -35,14 +35,15 @@ const TERMS = ['Due on receipt', 'Net 15', 'Net 30', 'Net 45', 'Net 60'];
 const TRIGGER_HELP: Record<BillingMode, string> = {
   completion: 'Ready to Bill is created when a manager marks the whole job complete in Job Completion below.',
   progress: 'Ready to Bill is created when a progress milestone is marked complete here.',
-  phased: 'Ready to Bill is created when a crew marks one of the project phases complete in Job Completion below.',
+  phased: 'Ready to Bill is created when a manager marks one of the project phases complete in Job Completion below.',
   manual: 'Nothing enters Ready to Bill automatically — create invoices by hand in Billing.',
 };
 
 export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
-  const { isManager } = useAuth();
+  const { isManager, canViewSov } = useAuth();
   const { toast } = useToast();
   const manager = typeof isManager === 'function' ? isManager() : !!isManager;
+  const seeMoney = canViewSov();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,18 +64,23 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: site }, { data: ph }, { data: ms }] = await Promise.all([
+    const [{ data: site }, { data: moneyRow }, { data: ph }, { data: ms }] = await Promise.all([
       db.from('job_sites')
-        .select('billing_mode, contract_amount, billing_terms, billing_po_number, billing_contact_name, billing_email, billing_notes, crm_company_id, crm_deal_id')
+        .select('billing_mode, billing_terms, billing_po_number, billing_contact_name, billing_email, billing_notes, crm_company_id, crm_deal_id')
         .eq('id', jobSiteId).maybeSingle(),
-      db.from('project_phases').select('id, name, sequence, status, billing_percent, billing_amount')
+      seeMoney
+        ? db.from('job_site_financials').select('contract_amount').eq('job_site_id', jobSiteId).maybeSingle()
+        : Promise.resolve({ data: null }),
+      db.from('project_phases').select('id, name, sequence, status')
         .eq('job_site_id', jobSiteId).order('sequence'),
-      db.from('billing_milestones').select('*').eq('job_site_id', jobSiteId).order('sequence'),
+      db.from('billing_milestones')
+        .select(seeMoney ? 'id, name, sequence, status, billing_percent, billing_amount' : 'id, name, sequence, status')
+        .eq('job_site_id', jobSiteId).order('sequence'),
     ]);
     if (site) {
       setForm({
         billing_mode: (site.billing_mode ?? 'completion') as BillingMode,
-        contract_amount: site.contract_amount == null ? '' : String(site.contract_amount),
+        contract_amount: moneyRow?.contract_amount == null ? '' : String(moneyRow.contract_amount),
         billing_terms: site.billing_terms ?? 'Net 30',
         billing_po_number: site.billing_po_number ?? '',
         billing_contact_name: site.billing_contact_name ?? '',
@@ -136,7 +142,7 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
   };
 
   const save = async () => {
-    if (!pctValid) {
+    if (seeMoney && form.billing_mode === 'progress' && !pctValid) {
       toast({
         title: 'Percentages must total 100%',
         description: `Current total is ${pctTotal.toFixed(2)}%.`,
@@ -148,7 +154,6 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
     try {
       const { error } = await db.from('job_sites').update({
         billing_mode: form.billing_mode,
-        contract_amount: form.contract_amount === '' ? null : Number(form.contract_amount),
         billing_terms: form.billing_terms || null,
         billing_po_number: form.billing_po_number || null,
         billing_contact_name: form.billing_contact_name || null,
@@ -159,17 +164,16 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
       }).eq('id', jobSiteId);
       if (error) throw error;
 
-      if (form.billing_mode === 'phased') {
-        for (const p of phases) {
-          const { error: e } = await db.from('project_phases').update({
-            billing_percent: usePercent ? (p.billing_percent ?? null) : null,
-            billing_amount: usePercent ? null : (p.billing_amount ?? null),
-          }).eq('id', p.id);
-          if (e) throw e;
-        }
+      if (seeMoney) {
+        const amount = form.contract_amount === '' ? null : Number(form.contract_amount);
+        const { data: existing } = await db.from('job_site_financials').select('job_site_id').eq('job_site_id', jobSiteId).maybeSingle();
+        const fin = existing
+          ? await db.from('job_site_financials').update({ contract_amount: amount }).eq('job_site_id', jobSiteId)
+          : await db.from('job_site_financials').insert({ job_site_id: jobSiteId, contract_amount: amount });
+        if (fin.error) throw fin.error;
       }
 
-      if (form.billing_mode === 'progress') {
+      if (seeMoney && form.billing_mode === 'progress') {
         for (const [i, m] of milestones.entries()) {
           if (!m.name.trim()) continue;
           const payload = {
@@ -204,7 +208,7 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
     load();
   };
 
-  if (!manager || loading) return null;
+  if ((!manager && !seeMoney) || loading) return null;
 
   return (
     <Card>
@@ -229,11 +233,13 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
             </p>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="contract_amount">Contract amount ($)</Label>
-            <Input id="contract_amount" type="number" step="0.01" value={form.contract_amount}
-                   onChange={e => setForm(f => ({ ...f, contract_amount: e.target.value }))} />
-          </div>
+          {seeMoney && (
+            <div className="space-y-1.5">
+              <Label htmlFor="contract_amount">Contract amount ($)</Label>
+              <Input id="contract_amount" type="number" step="0.01" value={form.contract_amount}
+                     onChange={e => setForm(f => ({ ...f, contract_amount: e.target.value }))} />
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Payment terms</Label>
             <Select value={form.billing_terms} onValueChange={v => setForm(f => ({ ...f, billing_terms: v }))}>
@@ -273,32 +279,26 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
           </div>
         </div>
 
-        {(form.billing_mode === 'phased' || form.billing_mode === 'progress') && (
+        {seeMoney && form.billing_mode === 'phased' && (
+          <p className="text-xs text-muted-foreground">
+            Phase dollar amounts are on the schedule of values above. Managers and employees see the checkpoint names only.
+          </p>
+        )}
+
+        {seeMoney && form.billing_mode === 'progress' && (
           <div className="space-y-2 rounded-md border p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-medium">
-                {form.billing_mode === 'phased' ? 'Phase billing schedule' : 'Progress milestones'}
-              </p>
+              <p className="text-sm font-medium">Progress milestones</p>
               <label className="flex items-center gap-2 text-xs">
                 <Switch checked={usePercent} onCheckedChange={setUsePercent} />
                 {usePercent ? '% of contract' : 'Fixed dollar amounts'}
               </label>
             </div>
 
-            {form.billing_mode === 'phased' && !phases.length && (
-              <p className="text-xs text-muted-foreground">
-                No project phases yet — add them in Job Completion below, then set each phase's share here.
-              </p>
-            )}
-
             {scheduleRows.map((r, idx) => (
               <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-md border p-2">
-                {form.billing_mode === 'progress' ? (
-                  <Input className="flex-1 min-w-[10rem]" placeholder="Milestone name" value={r.name}
-                         onChange={e => patchRow(r.id, { name: e.target.value })} />
-                ) : (
-                  <span className="flex-1 min-w-[10rem] text-sm truncate">{r.name}</span>
-                )}
+                <Input className="flex-1 min-w-[10rem]" placeholder="Milestone name" value={r.name}
+                       onChange={e => patchRow(r.id, { name: e.target.value })} />
                 {usePercent ? (
                   <div className="flex items-center gap-1">
                     <Input className="w-24" type="number" step="0.01" placeholder="%"

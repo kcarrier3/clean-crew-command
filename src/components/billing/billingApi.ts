@@ -100,9 +100,11 @@ export const createInvoiceFromEvents = async (o: CreateInvoiceOptions): Promise<
 
   const items = o.events.map((e, idx) => ({
     invoice_id: invoice.id,
-    description: e.billing_percent
-      ? `${e.label} (${Number(e.billing_percent)}% of contract)`
-      : e.label,
+    description: e.description
+      ? `${e.label}\n${e.description}`
+      : e.billing_percent
+        ? `${e.label} (${Number(e.billing_percent)}% of contract)`
+        : e.label,
     quantity: 1,
     unit_price: Number(e.amount || 0),
     sort_order: idx,

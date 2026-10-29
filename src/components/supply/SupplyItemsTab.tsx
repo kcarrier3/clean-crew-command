@@ -57,7 +57,7 @@ const computeSale = (cost: string | number, markup: string | number) => {
   return c * (1 + m / 100);
 };
 
-export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
+export default function SupplyItemsTab({ canManage, canPrice }: { canManage: boolean; canPrice: boolean }) {
   const { toast } = useToast();
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -109,11 +109,9 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
       description: form.description || null,
       kind: form.kind,
       unit: form.unit || 'ea',
-      unit_cost: cost,
-      markup_percent: markup,
-      sale_price: sale,
       reorder_point: form.reorder_point ? Number(form.reorder_point) : 0,
       category_id: form.category_id || null,
+      ...(canPrice ? { unit_cost: cost, markup_percent: markup, sale_price: sale } : {}),
     };
     const { error } = editing
       ? await supabase.from('supply_items').update(payload).eq('id', editing.id)
@@ -188,10 +186,10 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div><Label>Unit cost</Label><Input type="number" step="0.01" value={form.unit_cost} onChange={e => setForm({ ...form, unit_cost: e.target.value })} /></div>
+                <div><Label>Unit cost</Label><Input type="number" step="0.01" value={form.unit_cost} disabled={!canPrice} onChange={e => setForm({ ...form, unit_cost: e.target.value })} /></div>
                 <div>
                   <Label>Markup %</Label>
-                  <Input type="number" step="0.01" value={form.markup_percent} onChange={e => setForm({ ...form, markup_percent: e.target.value })} />
+                  <Input type="number" step="0.01" value={form.markup_percent} disabled={!canPrice} onChange={e => setForm({ ...form, markup_percent: e.target.value })} />
                 </div>
                 <div className="col-span-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
                   Calculated sale price:{' '}
@@ -199,6 +197,11 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
                     {form.unit_cost ? `$${computeSale(form.unit_cost, form.markup_percent || 0).toFixed(2)}` : '—'}
                   </span>
                   <span className="text-muted-foreground"> (cost × (1 + markup%))</span>
+                  {!canPrice && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Only Supply Management, Owner, Office Manager, and Operations Manager can change prices.
+                    </p>
+                  )}
                 </div>
                 <div><Label>Reorder point</Label><Input type="number" step="0.01" value={form.reorder_point} onChange={e => setForm({ ...form, reorder_point: e.target.value })} /></div>
                 <div className="col-span-2"><Label>Description</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
@@ -240,7 +243,9 @@ export default function SupplyItemsTab({ canManage }: { canManage: boolean }) {
                   <TableCell className="text-right">{it.reorder_point ?? 0}</TableCell>
                   {canManage && (
                     <TableCell className="text-right whitespace-nowrap">
-                      <Button variant="ghost" size="icon" title="Cost history" onClick={() => openHistory(it)}><History className="h-4 w-4" /></Button>
+                      {canPrice && (
+                        <Button variant="ghost" size="icon" title="Cost history" onClick={() => openHistory(it)}><History className="h-4 w-4" /></Button>
+                      )}
                       <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(it)}><Pencil className="h-4 w-4" /></Button>
                     </TableCell>
                   )}

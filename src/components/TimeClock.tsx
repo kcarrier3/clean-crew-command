@@ -11,6 +11,7 @@ import { useJobSiteAccess } from '@/hooks/useJobSiteAccess';
 import { useNavigate } from 'react-router-dom';
 import QRScanner from './QRScanner';
 import { matchPunchToShift, type ShiftMatch } from '@/lib/shiftMatching';
+import { JOB_SITE_COLUMNS } from '@/lib/jobSiteColumns';
 
 // How long before the scheduled end we warn the worker their shift is wrapping up.
 const END_OF_SHIFT_WARNING_MINUTES = 15;
@@ -211,7 +212,7 @@ const TimeClock = ({ forManager = false, selectedEmployeeId }: TimeClockProps) =
   const fetchJobSites = async () => {
     const { data, error } = await supabase
       .from('job_sites')
-      .select('*')
+      .select(JOB_SITE_COLUMNS)
       .eq('active', true)
       .order('name');
     

@@ -137,7 +137,7 @@ export const CreditsTab = () => {
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Waiting for approval</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-xs text-muted-foreground">Credits over $250 issued by someone other than the Owner or an admin stay here until approved.</p>
+            <p className="text-xs text-muted-foreground">Credits over $250 issued by someone other than Owner, Office Manager, or Operations Manager stay here until approved.</p>
             {pending.map(c => (
               <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm">
                 <span>

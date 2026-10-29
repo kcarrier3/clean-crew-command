@@ -8,6 +8,7 @@ import {
   JobSiteSalesTaxFields, jobSiteTaxFromRow, saveJobSiteTax, type JobSiteTaxForm,
 } from './JobSiteSalesTaxFields';
 import type { Invoice } from '@/lib/billing/types';
+import { JOB_SITE_COLUMNS } from '@/lib/jobSiteColumns';
 
 export const TaxReviewBanner = ({ invoice, onChanged }: { invoice: Invoice; onChanged: () => void }) => {
   const { toast } = useToast();
@@ -31,7 +32,7 @@ export const TaxReviewBanner = ({ invoice, onChanged }: { invoice: Invoice; onCh
 
   const editSite = async () => {
     if (!invoice.job_site_id) return;
-    const { data, error } = await db.from('job_sites').select('*').eq('id', invoice.job_site_id).maybeSingle();
+    const { data, error } = await db.from('job_sites').select(JOB_SITE_COLUMNS).eq('id', invoice.job_site_id).maybeSingle();
     if (error || !data) {
       toast({ title: 'Could not load job site', description: error?.message, variant: 'destructive' });
       return;

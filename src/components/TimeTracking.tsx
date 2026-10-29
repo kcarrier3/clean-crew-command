@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Clock, PlayCircle, StopCircle, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { JOB_SITE_COLUMNS } from '@/lib/jobSiteColumns';
 import { useToast } from '@/hooks/use-toast';
 
 interface Employee {
@@ -96,7 +97,7 @@ const TimeTracking = () => {
   const fetchJobSites = async () => {
     const { data, error } = await supabase
       .from('job_sites')
-      .select('*')
+      .select(JOB_SITE_COLUMNS)
       .eq('active', true)
       .order('name');
     

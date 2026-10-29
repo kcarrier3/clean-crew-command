@@ -180,6 +180,14 @@ export const useAuth = () => {
   const isManager = () => hasRole('admin') || hasRole('manager');
   const isEmployee = () => hasRole('employee');
 
+  // Mirrors public.can_manage_billing. Job title only — the admin role does not grant billing.
+  const canViewSov = () =>
+    profile?.job_title === 'Owner'
+    || profile?.job_title === 'Office Manager'
+    || profile?.job_title === 'Operations Manager';
+
+  const isProjectCrewLead = () => profile?.job_title === 'Project Crew Lead';
+
   // Waypoint is intentionally narrow: owners, office managers, sales reps, or an
   // explicit view_crm grant. Mirrors public.is_crm_user() in the database.
   const CRM_JOB_TITLES = ['Owner', 'Office Manager', 'Sales Rep'];
@@ -246,6 +254,8 @@ export const useAuth = () => {
     hasPermission,
     isManager,
     isEmployee,
+    canViewSov,
+    isProjectCrewLead,
     isCrmUser,
     canEstimate,
     canApproveEstimate,
