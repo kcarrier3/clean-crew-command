@@ -4,6 +4,11 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
 };
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  BILLING_FROM_EMAIL,
+  COMPANY_NAME,
+  withUnmonitoredNotice,
+} from '../_shared/company.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -11,10 +16,10 @@ const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
-/** Sender defaults. Overridable by env, then by the saved Billing setting. */
-const DEFAULT_FROM_EMAIL = Deno.env.get('BILLING_FROM_EMAIL') ?? 'invoices@billing.crewcompass360.com';
-const DEFAULT_FROM_NAME = Deno.env.get('BILLING_FROM_NAME') ?? 'Crew Compass Billing';
-const DEFAULT_REPLY_TO = Deno.env.get('BILLING_REPLY_TO_EMAIL') ?? null;
+/** Sender defaults. BILLING_FROM_NAME and BILLING_REPLY_TO_EMAIL override these; neither is set here. */
+const DEFAULT_FROM_EMAIL = Deno.env.get('BILLING_FROM_EMAIL') ?? BILLING_FROM_EMAIL;
+const DEFAULT_FROM_NAME = Deno.env.get('BILLING_FROM_NAME') ?? COMPANY_NAME;
+const DEFAULT_REPLY_TO = Deno.env.get('BILLING_REPLY_TO_EMAIL')?.trim() || null;
 
 const SENDER_SETTING_KEY = 'billing_email_sender';
 /** Secure invoice link lifetime (7 days). */
@@ -140,11 +145,18 @@ Deno.serve(async (req) => {
     secureLink = signed?.signedUrl ?? null;
   }
 
-  const finalBody = secureLink
+  const linkedBody = secureLink
     ? (body.includes('{{invoice_link}}')
         ? body.replaceAll('{{invoice_link}}', secureLink)
         : `${body}\n\nView or download your invoice (link expires in 7 days):\n${secureLink}`)
     : body.replaceAll('{{invoice_link}}', '');
+
+  const applyCompany = (text: string) => text
+    .replaceAll('{{company_name}}', COMPANY_NAME)
+    .replaceAll('{{company_contact}}', COMPANY_NAME);
+
+  const mailedSubject = applyCompany(subject);
+  const finalBody = withUnmonitoredNotice(applyCompany(linkedBody), replyTo);
 
   const notConfigured = !RESEND_API_KEY;
 
@@ -156,7 +168,7 @@ Deno.serve(async (req) => {
     message_kind: 'invoice',
     to_recipients: to,
     cc_recipients: cc,
-    subject,
+    subject: mailedSubject,
     body: finalBody,
     attachment_path: attachmentPath,
     attachment_paths: attachmentPath ? [attachmentPath] : [],
@@ -227,7 +239,7 @@ ${escapeHtml(finalBody).replace(/\n/g, '<br/>')
         to,
         ...(cc.length ? { cc } : {}),
         ...(replyTo ? { reply_to: replyTo } : {}),
-        subject,
+        subject: mailedSubject,
         text: finalBody,
         html,
         ...(attachment ? { attachments: [attachment] } : {}),

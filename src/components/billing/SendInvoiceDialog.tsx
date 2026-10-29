@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
 import { invoicePdfBlob } from '@/lib/billing/invoicePdf';
 import { money } from '@/lib/billing/types';
+import { COMPANY_NAME, withUnmonitoredNotice } from '@/lib/billing/company';
 import {
   DEFAULT_INVOICE_BODY, DEFAULT_INVOICE_SUBJECT, fetchEmailConfig, renderTemplate,
   sendInvoiceEmail, uploadInvoicePdf, type EmailConfig,
@@ -90,12 +91,17 @@ export const SendInvoiceDialog = ({ invoiceId, open, onOpenChange, onSent }: Pro
         due_date: inv?.due_date ?? '',
         po_number: inv?.po_number ?? '—',
         project_name: site ?? '',
-        company_name: 'Summit Facilities Group',
+        company_name: COMPANY_NAME,
+        company_contact: COMPANY_NAME,
+        amount: money(inv?.total),
         // Resolved server-side into a signed, expiring link to the invoice PDF.
         invoice_link: '{{invoice_link}}',
       };
       setSubject(renderTemplate(tpl?.subject || DEFAULT_INVOICE_SUBJECT, vars));
-      setBody(renderTemplate(tpl?.body || DEFAULT_INVOICE_BODY, vars));
+      setBody(withUnmonitoredNotice(
+        renderTemplate(tpl?.body || DEFAULT_INVOICE_BODY, vars),
+        cfg.reply_to,
+      ));
       setLoading(false);
     })();
   }, [open, invoiceId]);

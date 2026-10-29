@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { COMPANY_NAME } from '@/lib/billing/company';
 
 /** Vendor-neutral invoice shape so both Waypoint quotes/invoices and the
  *  Billing module render the same document. */
@@ -58,7 +59,7 @@ export function buildInvoicePdf({
 
   doc.setFontSize(20);
   doc.setTextColor(40, 80, 40);
-  doc.text('Summit Facilities Group', 14, 20);
+  doc.text(COMPANY_NAME, 14, 20);
   doc.setFontSize(10);
   doc.setTextColor(100);
   doc.text('Crew Compass', 14, 26);

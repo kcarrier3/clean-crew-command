@@ -170,8 +170,10 @@ export const BillingSettingsTab = () => {
             <Save className="h-4 w-4 mr-1" /> Save sender
           </Button>
           <p className="text-xs text-muted-foreground">
-            The sender address must belong to a domain verified with Resend. An account-level reply-to set below
-            overrides this one for that customer.
+            The sender address must belong to a domain verified with Resend. The sender name defaults to the
+            company name unless the BILLING_FROM_NAME secret is set. Leave reply-to blank — the invoice then
+            says this mailbox is not monitored. A reply-to is used only when BILLING_REPLY_TO_EMAIL is set,
+            or when one is saved here. An account-level reply-to set below overrides this one for that customer.
           </p>
 
           <p className="text-muted-foreground">
