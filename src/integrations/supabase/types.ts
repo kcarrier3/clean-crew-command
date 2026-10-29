@@ -444,6 +444,13 @@ export type Database = {
             foreignKeyName: "billing_account_preferences_crm_company_id_fkey"
             columns: ["crm_company_id"]
             isOneToOne: true
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_account_preferences_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: true
             referencedRelation: "crm_companies"
             referencedColumns: ["id"]
           },
@@ -570,6 +577,13 @@ export type Database = {
           warnings?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "billing_check_intakes_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "billing_check_intakes_crm_company_id_fkey"
             columns: ["crm_company_id"]
@@ -871,6 +885,13 @@ export type Database = {
             foreignKeyName: "billing_events_crm_company_id_fkey"
             columns: ["crm_company_id"]
             isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
             referencedRelation: "crm_companies"
             referencedColumns: ["id"]
           },
@@ -967,9 +988,11 @@ export type Database = {
           description: string
           id: string
           invoice_id: string
+          job_site_id: string | null
           line_total: number
           line_type: string
           quantity: number
+          service_location: string | null
           sort_order: number
           taxable: boolean | null
           unit_price: number
@@ -981,9 +1004,11 @@ export type Database = {
           description: string
           id?: string
           invoice_id: string
+          job_site_id?: string | null
           line_total?: number
           line_type?: string
           quantity?: number
+          service_location?: string | null
           sort_order?: number
           taxable?: boolean | null
           unit_price?: number
@@ -995,9 +1020,11 @@ export type Database = {
           description?: string
           id?: string
           invoice_id?: string
+          job_site_id?: string | null
           line_total?: number
           line_type?: string
           quantity?: number
+          service_location?: string | null
           sort_order?: number
           taxable?: boolean | null
           unit_price?: number
@@ -1022,6 +1049,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "billing_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_invoice_items_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
             referencedColumns: ["id"]
           },
         ]
@@ -1070,8 +1104,10 @@ export type Database = {
           qb_sync_error: string | null
           qb_sync_status: string
           qb_synced_at: string | null
+          recurring_group_key: string | null
           recurring_period_end: string | null
           recurring_period_start: string | null
+          recurring_schedule_id: string | null
           sent_at: string | null
           ship_to_address: string | null
           ship_to_city: string | null
@@ -1136,8 +1172,10 @@ export type Database = {
           qb_sync_error?: string | null
           qb_sync_status?: string
           qb_synced_at?: string | null
+          recurring_group_key?: string | null
           recurring_period_end?: string | null
           recurring_period_start?: string | null
+          recurring_schedule_id?: string | null
           sent_at?: string | null
           ship_to_address?: string | null
           ship_to_city?: string | null
@@ -1202,8 +1240,10 @@ export type Database = {
           qb_sync_error?: string | null
           qb_sync_status?: string
           qb_synced_at?: string | null
+          recurring_group_key?: string | null
           recurring_period_end?: string | null
           recurring_period_start?: string | null
+          recurring_schedule_id?: string | null
           sent_at?: string | null
           ship_to_address?: string | null
           ship_to_city?: string | null
@@ -1230,6 +1270,13 @@ export type Database = {
             foreignKeyName: "billing_invoices_crm_company_id_fkey"
             columns: ["crm_company_id"]
             isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_invoices_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
             referencedRelation: "crm_companies"
             referencedColumns: ["id"]
           },
@@ -1252,6 +1299,13 @@ export type Database = {
             columns: ["job_site_id"]
             isOneToOne: false
             referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_invoices_recurring_schedule_id_fkey"
+            columns: ["recurring_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_billing_schedules"
             referencedColumns: ["id"]
           },
           {
@@ -1415,6 +1469,47 @@ export type Database = {
           },
         ]
       }
+      billing_payment_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          amount: number | null
+          created_at: string
+          detail: string | null
+          id: string
+          invoice_id: string | null
+          payment_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          amount?: number | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          invoice_id?: string | null
+          payment_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          amount?: number | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          invoice_id?: string | null
+          payment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_payment_audit_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "billing_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_payments: {
         Row: {
           amount: number
@@ -1436,6 +1531,9 @@ export type Database = {
           qb_synced_at: string | null
           reference_number: string | null
           updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           amount?: number
@@ -1457,6 +1555,9 @@ export type Database = {
           qb_synced_at?: string | null
           reference_number?: string | null
           updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           amount?: number
@@ -1478,8 +1579,18 @@ export type Database = {
           qb_synced_at?: string | null
           reference_number?: string | null
           updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "billing_payments_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "billing_payments_crm_company_id_fkey"
             columns: ["crm_company_id"]
@@ -1873,6 +1984,7 @@ export type Database = {
           state: string | null
           tax_exempt: boolean
           tax_exempt_certificate_expires: string | null
+          tax_exempt_certificate_missing: boolean
           tax_exempt_certificate_on_file: boolean
           tax_exempt_certificate_path: string | null
           tax_exemption_reason: string | null
@@ -1901,6 +2013,7 @@ export type Database = {
           state?: string | null
           tax_exempt?: boolean
           tax_exempt_certificate_expires?: string | null
+          tax_exempt_certificate_missing?: boolean
           tax_exempt_certificate_on_file?: boolean
           tax_exempt_certificate_path?: string | null
           tax_exemption_reason?: string | null
@@ -1929,6 +2042,7 @@ export type Database = {
           state?: string | null
           tax_exempt?: boolean
           tax_exempt_certificate_expires?: string | null
+          tax_exempt_certificate_missing?: boolean
           tax_exempt_certificate_on_file?: boolean
           tax_exempt_certificate_path?: string | null
           tax_exemption_reason?: string | null
@@ -2000,6 +2114,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_contacts_company_id_fkey"
             columns: ["company_id"]
@@ -2089,6 +2210,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
             referencedColumns: ["id"]
           },
           {
@@ -2202,6 +2330,13 @@ export type Database = {
           to_emails?: string[]
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_email_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_email_logs_company_id_fkey"
             columns: ["company_id"]
@@ -2342,6 +2477,13 @@ export type Database = {
             foreignKeyName: "crm_invoices_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "crm_companies"
             referencedColumns: ["id"]
           },
@@ -2435,6 +2577,13 @@ export type Database = {
           uploaded_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_lead_files_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_lead_files_company_id_fkey"
             columns: ["company_id"]
@@ -2536,6 +2685,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_lead_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_lead_notes_company_id_fkey"
             columns: ["company_id"]
@@ -2736,6 +2892,13 @@ export type Database = {
             foreignKeyName: "crm_leads_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "crm_companies"
             referencedColumns: ["id"]
           },
@@ -2831,6 +2994,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_meetings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_meetings_company_id_fkey"
             columns: ["company_id"]
@@ -3190,6 +3360,13 @@ export type Database = {
             foreignKeyName: "crm_tasks_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "crm_companies"
             referencedColumns: ["id"]
           },
@@ -3374,6 +3551,13 @@ export type Database = {
             foreignKeyName: "customer_credits_crm_company_id_fkey"
             columns: ["crm_company_id"]
             isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credits_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
             referencedRelation: "crm_companies"
             referencedColumns: ["id"]
           },
@@ -3382,6 +3566,13 @@ export type Database = {
             columns: ["job_site_id"]
             isOneToOne: false
             referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credits_referred_crm_company_id_fkey"
+            columns: ["referred_crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
             referencedColumns: ["id"]
           },
           {
@@ -4104,6 +4295,13 @@ export type Database = {
             foreignKeyName: "estimate_proposals_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimate_proposals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "crm_companies"
             referencedColumns: ["id"]
           },
@@ -4429,6 +4627,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "estimates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "estimates_company_id_fkey"
             columns: ["company_id"]
@@ -4960,8 +5165,8 @@ export type Database = {
           name: string
           nightly_hours: number | null
           postal_code: string | null
-          project_manager: string | null
           progress_billing: boolean
+          project_manager: string | null
           qr_code_token: string
           remaining_hours: number | null
           safety_requirements: string | null
@@ -5020,8 +5225,8 @@ export type Database = {
           name: string
           nightly_hours?: number | null
           postal_code?: string | null
-          project_manager?: string | null
           progress_billing?: boolean
+          project_manager?: string | null
           qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
@@ -5080,8 +5285,8 @@ export type Database = {
           name?: string
           nightly_hours?: number | null
           postal_code?: string | null
-          project_manager?: string | null
           progress_billing?: boolean
+          project_manager?: string | null
           qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
@@ -5097,6 +5302,13 @@ export type Database = {
           used_hours?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "job_sites_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_sites_crm_company_id_fkey"
             columns: ["crm_company_id"]
@@ -5909,51 +6121,6 @@ export type Database = {
         }
         Relationships: []
       }
-      project_sov_lines: {
-        Row: {
-          amount: number
-          created_at: string
-          created_by: string | null
-          id: string
-          job_site_id: string
-          project_phase_id: string
-          updated_at: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          job_site_id: string
-          project_phase_id: string
-          updated_at?: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          job_site_id?: string
-          project_phase_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_sov_lines_job_site_id_fkey"
-            columns: ["job_site_id"]
-            isOneToOne: false
-            referencedRelation: "job_sites"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_sov_lines_project_phase_id_fkey"
-            columns: ["project_phase_id"]
-            isOneToOne: true
-            referencedRelation: "project_phases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       project_phases: {
         Row: {
           billing_acknowledged_at: string | null
@@ -6009,6 +6176,51 @@ export type Database = {
             columns: ["job_site_id"]
             isOneToOne: false
             referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_sov_lines: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          job_site_id: string
+          project_phase_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_site_id: string
+          project_phase_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_site_id?: string
+          project_phase_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_sov_lines_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_sov_lines_project_phase_id_fkey"
+            columns: ["project_phase_id"]
+            isOneToOne: true
+            referencedRelation: "project_phases"
             referencedColumns: ["id"]
           },
         ]
@@ -6085,6 +6297,90 @@ export type Database = {
         }
         Relationships: []
       }
+      qb_recurring_prefill: {
+        Row: {
+          bill_email: string | null
+          confirmed_schedule_ids: string[]
+          created_at: string
+          distinct_amounts_last6: string | null
+          id: string
+          invoices_last6: number | null
+          job_site_id: string | null
+          job_site_match: string | null
+          job_site_name: string | null
+          latest_date: string | null
+          latest_email_status: string | null
+          latest_invoice: string | null
+          latest_subtotal: number | null
+          latest_tax: number | null
+          lines: string | null
+          memo: string | null
+          months_invoiced_last6: number | null
+          pattern: string | null
+          qb_customer: string
+          qb_customer_id: string | null
+          qb_recurring_template_ids: string | null
+          recurring_invoices_last6: number | null
+          status: string
+          terms: string | null
+          usual_day_of_month: number | null
+        }
+        Insert: {
+          bill_email?: string | null
+          confirmed_schedule_ids?: string[]
+          created_at?: string
+          distinct_amounts_last6?: string | null
+          id?: string
+          invoices_last6?: number | null
+          job_site_id?: string | null
+          job_site_match?: string | null
+          job_site_name?: string | null
+          latest_date?: string | null
+          latest_email_status?: string | null
+          latest_invoice?: string | null
+          latest_subtotal?: number | null
+          latest_tax?: number | null
+          lines?: string | null
+          memo?: string | null
+          months_invoiced_last6?: number | null
+          pattern?: string | null
+          qb_customer: string
+          qb_customer_id?: string | null
+          qb_recurring_template_ids?: string | null
+          recurring_invoices_last6?: number | null
+          status?: string
+          terms?: string | null
+          usual_day_of_month?: number | null
+        }
+        Update: {
+          bill_email?: string | null
+          confirmed_schedule_ids?: string[]
+          created_at?: string
+          distinct_amounts_last6?: string | null
+          id?: string
+          invoices_last6?: number | null
+          job_site_id?: string | null
+          job_site_match?: string | null
+          job_site_name?: string | null
+          latest_date?: string | null
+          latest_email_status?: string | null
+          latest_invoice?: string | null
+          latest_subtotal?: number | null
+          latest_tax?: number | null
+          lines?: string | null
+          memo?: string | null
+          months_invoiced_last6?: number | null
+          pattern?: string | null
+          qb_customer?: string
+          qb_customer_id?: string | null
+          qb_recurring_template_ids?: string | null
+          recurring_invoices_last6?: number | null
+          status?: string
+          terms?: string | null
+          usual_day_of_month?: number | null
+        }
+        Relationships: []
+      }
       radio_transmissions: {
         Row: {
           audio_path: string
@@ -6130,6 +6426,57 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_billing_lines: {
+        Row: {
+          billing_item_id: string | null
+          created_at: string
+          description: string
+          id: string
+          quantity: number
+          rate: number
+          schedule_id: string
+          sort_order: number
+          taxable: boolean
+        }
+        Insert: {
+          billing_item_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          quantity?: number
+          rate?: number
+          schedule_id: string
+          sort_order?: number
+          taxable?: boolean
+        }
+        Update: {
+          billing_item_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          quantity?: number
+          rate?: number
+          schedule_id?: string
+          sort_order?: number
+          taxable?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_billing_lines_billing_item_id_fkey"
+            columns: ["billing_item_id"]
+            isOneToOne: false
+            referencedRelation: "billing_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_billing_lines_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_billing_schedules"
             referencedColumns: ["id"]
           },
         ]
@@ -6212,6 +6559,8 @@ export type Database = {
           billing_day: number
           billing_day_rule: string
           billing_email: string | null
+          cc_recipients: string[]
+          consolidated: boolean
           created_at: string
           created_by: string | null
           crm_company_id: string | null
@@ -6220,12 +6569,19 @@ export type Database = {
           id: string
           invoice_description: string | null
           job_site_id: string
+          label: string
+          memo: string | null
           next_invoice_date: string | null
           notes: string | null
           payment_terms: string | null
           po_number: string | null
           po_required: boolean
+          qb_last_email_status: string | null
+          qb_last_sent_on: string | null
+          reply_to_email: string | null
           service_period: string
+          start_date: string | null
+          status: string
           tax_rate: number
           updated_at: string
         }
@@ -6236,6 +6592,8 @@ export type Database = {
           billing_day?: number
           billing_day_rule?: string
           billing_email?: string | null
+          cc_recipients?: string[]
+          consolidated?: boolean
           created_at?: string
           created_by?: string | null
           crm_company_id?: string | null
@@ -6244,12 +6602,19 @@ export type Database = {
           id?: string
           invoice_description?: string | null
           job_site_id: string
+          label?: string
+          memo?: string | null
           next_invoice_date?: string | null
           notes?: string | null
           payment_terms?: string | null
           po_number?: string | null
           po_required?: boolean
+          qb_last_email_status?: string | null
+          qb_last_sent_on?: string | null
+          reply_to_email?: string | null
           service_period?: string
+          start_date?: string | null
+          status?: string
           tax_rate?: number
           updated_at?: string
         }
@@ -6260,6 +6625,8 @@ export type Database = {
           billing_day?: number
           billing_day_rule?: string
           billing_email?: string | null
+          cc_recipients?: string[]
+          consolidated?: boolean
           created_at?: string
           created_by?: string | null
           crm_company_id?: string | null
@@ -6268,16 +6635,30 @@ export type Database = {
           id?: string
           invoice_description?: string | null
           job_site_id?: string
+          label?: string
+          memo?: string | null
           next_invoice_date?: string | null
           notes?: string | null
           payment_terms?: string | null
           po_number?: string | null
           po_required?: boolean
+          qb_last_email_status?: string | null
+          qb_last_sent_on?: string | null
+          reply_to_email?: string | null
           service_period?: string
+          start_date?: string | null
+          status?: string
           tax_rate?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "recurring_billing_schedules_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "billing_tax_exemption_gaps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recurring_billing_schedules_crm_company_id_fkey"
             columns: ["crm_company_id"]
@@ -6295,7 +6676,7 @@ export type Database = {
           {
             foreignKeyName: "recurring_billing_schedules_job_site_id_fkey"
             columns: ["job_site_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "job_sites"
             referencedColumns: ["id"]
           },
@@ -7817,6 +8198,36 @@ export type Database = {
       }
     }
     Views: {
+      billing_tax_exemption_gaps: {
+        Row: {
+          gap: string | null
+          id: string | null
+          name: string | null
+          tax_exempt_certificate_expires: string | null
+          tax_exempt_certificate_missing: boolean | null
+          tax_exempt_certificate_path: string | null
+          tax_exemption_reason: string | null
+        }
+        Insert: {
+          gap?: never
+          id?: string | null
+          name?: string | null
+          tax_exempt_certificate_expires?: string | null
+          tax_exempt_certificate_missing?: boolean | null
+          tax_exempt_certificate_path?: string | null
+          tax_exemption_reason?: string | null
+        }
+        Update: {
+          gap?: never
+          id?: string | null
+          name?: string | null
+          tax_exempt_certificate_expires?: string | null
+          tax_exempt_certificate_missing?: boolean | null
+          tax_exempt_certificate_path?: string | null
+          tax_exemption_reason?: string | null
+        }
+        Relationships: []
+      }
       profiles_directory: {
         Row: {
           active: boolean | null
@@ -7959,16 +8370,23 @@ export type Database = {
       can_approve_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_estimate: { Args: { _user_id: string }; Returns: boolean }
       can_manage_billing: { Args: { _user_id: string }; Returns: boolean }
-      can_mark_project_checkpoint: { Args: { _job_site_id: string; _user_id: string }; Returns: boolean }
-      can_view_sov: { Args: { _user_id: string }; Returns: boolean }
+      can_manage_supply_pricing: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       can_manage_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_manage_training: { Args: { _user_id: string }; Returns: boolean }
+      can_mark_project_checkpoint: {
+        Args: { _job_site_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_message_user: {
         Args: { _recipient_id: string; _sender_id: string }
         Returns: boolean
       }
       can_publish_schedules: { Args: { _user_id: string }; Returns: boolean }
       can_run_payroll: { Args: { _user_id: string }; Returns: boolean }
+      can_view_sov: { Args: { _user_id: string }; Returns: boolean }
       compute_inspection_score: {
         Args: { p_inspection_id: string }
         Returns: undefined
@@ -8160,6 +8578,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      job_site_contract_amount: {
+        Args: { _job_site_id: string }
+        Returns: number
+      }
       manager_can_view_profile: {
         Args: { _employee_id: string; _manager_id: string }
         Returns: boolean
@@ -8190,8 +8612,20 @@ export type Database = {
         Args: { _application_id: string; _reason?: string }
         Returns: undefined
       }
+      supply_movement_bill_amount: {
+        Args: { m: Database["public"]["Tables"]["supply_movements"]["Row"] }
+        Returns: number
+      }
+      supply_movement_bill_line: {
+        Args: { m: Database["public"]["Tables"]["supply_movements"]["Row"] }
+        Returns: string
+      }
       sync_invoice_credits: { Args: { _invoice_id: string }; Returns: number }
       time_off_department: { Args: { _job_title: string }; Returns: string }
+      unapply_payment_allocation: {
+        Args: { _allocation_id: string; _reason?: string }
+        Returns: undefined
+      }
       void_customer_credit: {
         Args: { _credit_id: string; _reason?: string }
         Returns: {
@@ -8227,6 +8661,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      void_customer_payment: {
+        Args: { _payment_id: string; _reason?: string }
+        Returns: undefined
       }
     }
     Enums: {
