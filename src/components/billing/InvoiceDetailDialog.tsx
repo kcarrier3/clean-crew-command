@@ -92,9 +92,9 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
     toast({ title: 'Pay link copied' });
   };
 
-  const downloadPdf = () => {
+  const downloadPdf = async () => {
     if (!invoice) return;
-    saveInvoicePdf({
+    await saveInvoicePdf({
       invoice: {
         invoice_number: invoice.invoice_number,
         status: invoice.status,

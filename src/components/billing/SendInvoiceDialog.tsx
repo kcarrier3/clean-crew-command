@@ -127,7 +127,7 @@ export const SendInvoiceDialog = ({ invoiceId, open, onOpenChange, onSent }: Pro
     }
     setSending(true);
     try {
-      const blob = invoicePdfBlob({
+      const blob = await invoicePdfBlob({
         invoice: {
           invoice_number: invoice.invoice_number,
           status: invoice.status,
