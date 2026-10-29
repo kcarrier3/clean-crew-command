@@ -3,14 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, ExternalLink, Receipt } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { INVOICE_PDF_BUCKET } from '@/lib/billing/emailService';
-import { TAX_EXEMPT_REASONS, certificateWarning, type CompanyTaxFields } from './companyTax';
+import { useAuth } from '@/hooks/useAuth';
+import { TAX_CERT_BUCKET, TAX_EXEMPT_REASONS, certificateWarning, exemptionSaveError, type CompanyTaxFields } from './companyTax';
 
 interface Props {
   company: CompanyTaxFields & { name?: string };
@@ -19,6 +17,7 @@ interface Props {
 
 export const CompanySalesTaxCard = ({ company, onSaved }: Props) => {
   const { toast } = useToast();
+  const { canViewSov } = useAuth();
   const [exempt, setExempt] = useState(false);
   const [reasonChoice, setReasonChoice] = useState('');
   const [reasonCustom, setReasonCustom] = useState('');
@@ -62,6 +61,17 @@ export const CompanySalesTaxCard = ({ company, onSaved }: Props) => {
       tax_exempt_certificate_path: path,
       ...patch,
     };
+    const block = exemptionSaveError({
+      taxExempt: payload.tax_exempt,
+      reason: payload.tax_exemption_reason,
+      certificatePath: payload.tax_exempt_certificate_path ?? null,
+      certificateMissing: company.tax_exempt_certificate_missing && !payload.tax_exempt_certificate_path,
+    });
+    if (block) {
+      setSaving(false);
+      toast({ title: 'Cannot save tax exempt', description: block, variant: 'destructive' });
+      return;
+    }
     const { error } = await supabase.from('crm_companies').update(payload).eq('id', company.id);
     setSaving(false);
     if (error) {
@@ -77,7 +87,7 @@ export const CompanySalesTaxCard = ({ company, onSaved }: Props) => {
     try {
       const safe = file.name.replace(/[^\w.-]+/g, '_');
       const next = `tax-exempt-certificates/${company.id}/${Date.now()}-${safe}`;
-      const { error } = await supabase.storage.from(INVOICE_PDF_BUCKET).upload(next, file, {
+      const { error } = await supabase.storage.from(TAX_CERT_BUCKET).upload(next, file, {
         upsert: false,
         contentType: file.type || undefined,
       });
@@ -95,13 +105,15 @@ export const CompanySalesTaxCard = ({ company, onSaved }: Props) => {
 
   const view = async () => {
     if (!path) return;
-    const { data, error } = await supabase.storage.from(INVOICE_PDF_BUCKET).createSignedUrl(path, 120);
+    const { data, error } = await supabase.storage.from(TAX_CERT_BUCKET).createSignedUrl(path, 120);
     if (error || !data?.signedUrl) {
       toast({ title: 'Could not open certificate', description: error?.message, variant: 'destructive' });
       return;
     }
     window.open(data.signedUrl, '_blank', 'noopener');
   };
+
+  if (!canViewSov()) return null;
 
   return (
     <Card>
@@ -119,12 +131,18 @@ export const CompanySalesTaxCard = ({ company, onSaved }: Props) => {
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <Label htmlFor="co_exempt">Tax exempt</Label>
-            <p className="text-xs text-muted-foreground">Applies to every invoice for this customer unless a job site is taxed separately.</p>
-          </div>
-          <Switch id="co_exempt" checked={exempt} onCheckedChange={setExempt} />
+        <div className="space-y-1.5">
+          <Label htmlFor="co_tax_status">Sales tax</Label>
+          <select
+            id="co_tax_status"
+            value={exempt ? 'exempt' : 'taxed'}
+            onChange={e => setExempt(e.target.value === 'exempt')}
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="taxed">Taxed</option>
+            <option value="exempt">Tax exempt</option>
+          </select>
+          <p className="text-xs text-muted-foreground">Tax exempt applies to this customer’s invoices. A certificate is required before a new exemption can be saved.</p>
         </div>
 
         {exempt && (
@@ -148,13 +166,10 @@ export const CompanySalesTaxCard = ({ company, onSaved }: Props) => {
               </div>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="co_expires">Certificate expires</Label>
+              <Label htmlFor="co_expires">Certificate expires (optional)</Label>
               <Input id="co_expires" type="date" value={expires} onChange={e => setExpires(e.target.value)} />
             </div>
-            <label className="flex items-center gap-2 text-sm sm:mt-6">
-              <Checkbox checked={onFile} onCheckedChange={v => setOnFile(!!v)} />
-              Certificate on file
-            </label>
+            <p className="text-sm sm:mt-6 text-muted-foreground">{path ? 'Certificate uploaded' : 'No certificate uploaded'}</p>
           </div>
         )}
 
