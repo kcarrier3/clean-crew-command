@@ -74,4 +74,4 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-trick
 
 ## Email senders
 - Employee invites / resend invites (`invite-employee` function): default `Crew Compass <noreply@invites.crewcompass360.com>`. Optional overrides: `INVITE_FROM_EMAIL`, `INVITE_FROM_NAME` secrets (an override wins over the default). The `invites.crewcompass360.com` domain must be verified in Resend.
-- Invoices (`send-invoice-email` function): `Crew Compass Billing <invoices@billing.crewcompass360.com>`, configurable in Billing → Settings. Never share the invite sender.
+- Invoices (`send-invoice-email` function): `Summit Facilities Group <invoices@billing.crewcompass360.com>`. The display name is `COMPANY_NAME` in `supabase/functions/_shared/company.ts` unless `BILLING_FROM_NAME` is set. Reply-to stays unset unless `BILLING_REPLY_TO_EMAIL` is set. Never share the invite sender.

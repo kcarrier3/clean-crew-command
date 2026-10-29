@@ -9,13 +9,14 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 import { FunctionsHttpError } from '@supabase/supabase-js';
+import { BILLING_FROM_EMAIL, COMPANY_NAME } from '@/lib/billing/company';
 
 export const INVOICE_PDF_BUCKET = 'invoice-documents';
 export const SENDER_SETTING_KEY = 'billing_email_sender';
 
 export const DEFAULT_SENDER = {
-  from_email: 'invoices@billing.crewcompass360.com',
-  from_name: 'Crew Compass Billing',
+  from_email: BILLING_FROM_EMAIL,
+  from_name: COMPANY_NAME,
   reply_to: '' as string,
 };
 
@@ -90,11 +91,11 @@ export const EMAIL_TEMPLATE_VARIABLES = [
 ] as const;
 
 export const DEFAULT_INVOICE_SUBJECT =
-  'Invoice {{invoice_number}} from Summit Facilities Group';
+  'Invoice {{invoice_number}} from {{company_name}}';
 
 export const DEFAULT_INVOICE_BODY = `Hello {{billing_contact_first_name}},
 
-Please find attached invoice {{invoice_number}} from Summit Facilities Group for {{customer_name}}.
+Please find attached invoice {{invoice_number}} from {{company_name}} for {{customer_name}}.
 
 Invoice number: {{invoice_number}}
 Invoice date: {{invoice_date}}
@@ -105,10 +106,8 @@ PO number: {{po_number}}
 View or download your invoice here (secure link, expires in 7 days):
 {{invoice_link}}
 
-If you have any questions about this invoice, just reply to this email and our billing team will be glad to help.
-
 Thank you for your business,
-Summit Facilities Group — Billing`;
+{{company_name}} — Billing`;
 
 
 export const renderTemplate = (tpl: string, vars: Record<string, string>) =>
