@@ -1,6 +1,6 @@
 -- Schedule of values and who may see billing dollars.
 -- Checkpoints stay on project_phases. Dollar amounts stay out of the API for
--- everyone except Owner, admin, Office Manager, and Operations Manager.
+-- everyone except Owner, Office Manager, and Operations Manager.
 -- Additive: no columns or rows are dropped. job_sites.contract_amount is copied
 -- into job_site_financials and then hidden from the API. The column is kept so
 -- this can be reversed, and a trigger mirrors later edits back onto it.
@@ -22,7 +22,8 @@ AS $$
   );
 $$;
 
--- Credits over the self-approve limit stay Owner-only. Drop the admin-role shortcut.
+-- Credits over the self-approve limit: Owner, Office Manager, or Operations Manager.
+-- Misty Kelley is Office Manager. This is not keyed off the admin role.
 CREATE OR REPLACE FUNCTION public.can_approve_credits(_user_id uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -32,7 +33,8 @@ SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.profiles p
-    WHERE p.id = _user_id AND p.job_title = 'Owner'
+    WHERE p.id = _user_id
+      AND p.job_title IN ('Owner', 'Office Manager', 'Operations Manager')
   );
 $$;
 
@@ -255,12 +257,93 @@ CREATE POLICY "Billing roles write job site financials"
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.job_site_financials TO authenticated;
 GRANT ALL ON public.job_site_financials TO service_role;
 
-REVOKE SELECT (contract_amount), INSERT (contract_amount), UPDATE (contract_amount)
-  ON public.job_sites FROM PUBLIC, anon, authenticated;
+-- A column-level REVOKE does nothing while SELECT, INSERT, or UPDATE is still
+-- granted on the table. Drop those table privileges, then grant every current
+-- column except the money columns. DELETE is left as it is.
+--
+-- anon is not re-granted. It has no policies on these tables, and the app does
+-- not query them with the anon key (the punch QR uses get_job_site_public_name).
+--
+-- Columns added to job_sites or project_phases later are NOT granted
+-- automatically. Grant SELECT, INSERT, and UPDATE on each new column to
+-- authenticated explicitly, and never grant contract_amount, billing_amount,
+-- or billing_percent.
+REVOKE SELECT, INSERT, UPDATE ON TABLE public.job_sites FROM PUBLIC, anon, authenticated;
+REVOKE SELECT, INSERT, UPDATE ON TABLE public.project_phases FROM PUBLIC, anon, authenticated;
 
-REVOKE SELECT (billing_amount, billing_percent) ON public.project_phases FROM PUBLIC, anon, authenticated;
-REVOKE INSERT (billing_amount, billing_percent) ON public.project_phases FROM PUBLIC, anon, authenticated;
-REVOKE UPDATE (billing_amount, billing_percent) ON public.project_phases FROM PUBLIC, anon, authenticated;
+DO $$
+DECLARE
+  job_cols text;
+  phase_cols text;
+BEGIN
+  SELECT string_agg(quote_ident(a.attname), ', ' ORDER BY a.attnum)
+    INTO job_cols
+  FROM pg_attribute a
+  WHERE a.attrelid = 'public.job_sites'::regclass
+    AND a.attnum > 0
+    AND NOT a.attisdropped
+    AND a.attname <> 'contract_amount';
+
+  SELECT string_agg(quote_ident(a.attname), ', ' ORDER BY a.attnum)
+    INTO phase_cols
+  FROM pg_attribute a
+  WHERE a.attrelid = 'public.project_phases'::regclass
+    AND a.attnum > 0
+    AND NOT a.attisdropped
+    AND a.attname NOT IN ('billing_amount', 'billing_percent');
+
+  IF job_cols IS NULL OR phase_cols IS NULL THEN
+    RAISE EXCEPTION 'column grant list was empty';
+  END IF;
+
+  EXECUTE format(
+    'GRANT SELECT (%s), INSERT (%s), UPDATE (%s) ON TABLE public.job_sites TO authenticated',
+    job_cols, job_cols, job_cols
+  );
+  EXECUTE format(
+    'GRANT SELECT (%s), INSERT (%s), UPDATE (%s) ON TABLE public.project_phases TO authenticated',
+    phase_cols, phase_cols, phase_cols
+  );
+END $$;
+
+DO $$
+BEGIN
+  IF has_column_privilege('authenticated', 'public.job_sites', 'contract_amount', 'SELECT')
+     OR has_column_privilege('authenticated', 'public.project_phases', 'billing_amount', 'SELECT')
+     OR has_column_privilege('authenticated', 'public.project_phases', 'billing_percent', 'SELECT')
+     OR has_column_privilege('anon', 'public.job_sites', 'contract_amount', 'SELECT')
+     OR has_column_privilege('anon', 'public.project_phases', 'billing_amount', 'SELECT')
+     OR has_column_privilege('anon', 'public.project_phases', 'billing_percent', 'SELECT')
+  THEN
+    RAISE EXCEPTION 'protected billing columns are still selectable';
+  END IF;
+
+  IF has_column_privilege('authenticated', 'public.job_sites', 'contract_amount', 'INSERT')
+     OR has_column_privilege('authenticated', 'public.job_sites', 'contract_amount', 'UPDATE')
+     OR has_column_privilege('authenticated', 'public.project_phases', 'billing_amount', 'INSERT')
+     OR has_column_privilege('authenticated', 'public.project_phases', 'billing_amount', 'UPDATE')
+     OR has_column_privilege('authenticated', 'public.project_phases', 'billing_percent', 'INSERT')
+     OR has_column_privilege('authenticated', 'public.project_phases', 'billing_percent', 'UPDATE')
+  THEN
+    RAISE EXCEPTION 'protected billing columns are still writable by authenticated';
+  END IF;
+
+  IF has_table_privilege('authenticated', 'public.job_sites', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.job_sites', 'UPDATE')
+     OR has_table_privilege('authenticated', 'public.project_phases', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.project_phases', 'UPDATE')
+  THEN
+    RAISE EXCEPTION 'table-level SELECT or UPDATE is still granted';
+  END IF;
+
+  IF NOT has_column_privilege('authenticated', 'public.job_sites', 'id', 'SELECT')
+     OR NOT has_column_privilege('authenticated', 'public.project_phases', 'id', 'SELECT')
+     OR NOT has_table_privilege('authenticated', 'public.job_sites', 'DELETE')
+     OR NOT has_table_privilege('authenticated', 'public.project_phases', 'DELETE')
+  THEN
+    RAISE EXCEPTION 'operational column grants or DELETE were lost';
+  END IF;
+END $$;
 
 -- Phase completion -> Ready to Bill. Amount comes from the schedule of values when present.
 CREATE OR REPLACE FUNCTION public.billing_event_from_phase()
@@ -407,8 +490,12 @@ BEGIN
 END $$;
 
 -- Undo (do not run as part of this migration):
---   GRANT SELECT (contract_amount), INSERT (contract_amount), UPDATE (contract_amount)
---     ON public.job_sites TO authenticated;
+--   REVOKE SELECT, INSERT, UPDATE ON TABLE public.job_sites FROM authenticated;
+--   REVOKE SELECT, INSERT, UPDATE ON TABLE public.project_phases FROM authenticated;
+--   GRANT SELECT, INSERT, UPDATE ON TABLE public.job_sites TO anon, authenticated;
+--   GRANT SELECT, INSERT, UPDATE ON TABLE public.project_phases TO anon, authenticated;
+--     Table grants make every column visible again, including contract_amount,
+--     billing_amount, and billing_percent. DELETE was never revoked.
 --   DROP TABLE public.job_site_financials;
 --     The hidden job_sites.contract_amount values are left in place.
 --   Restore can_manage_billing to: admin role OR manager role OR the three job titles.

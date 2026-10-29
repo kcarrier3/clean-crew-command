@@ -85,7 +85,7 @@ export const IssueCreditDialog = ({
       toast({
         title: status === 'pending_approval' ? 'Credit waiting for approval' : 'Credit issued',
         description: status === 'pending_approval'
-          ? `${money(value)} is over the self-approve limit and needs an Owner or admin.`
+          ? `${money(value)} is over the self-approve limit and needs Owner, Office Manager, or Operations Manager.`
           : `${money(value)} is available${autoApply ? ' and will apply to an open invoice when one exists' : ''}.`,
       });
       onOpenChange(false);

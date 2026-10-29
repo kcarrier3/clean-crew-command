@@ -1,10 +1,9 @@
 /**
- * Turns resale supply drop-offs into Ready to Bill items.
+ * Older resale drop-offs that were recorded before the database trigger.
  *
- * A movement is billable when the item is flagged `resale` and it was sold
- * (dropped off) at a customer account. Once it has been pushed into the
- * billing queue we stamp `billing_event_id` on the movement so the same
- * drop-off can never be queued — or billed — twice.
+ * A new sell of a resale item at an account creates its own Ready to Bill
+ * event inside the database and stamps billing_event_id, so it never shows
+ * up here. This queue is only for movements that are still unlinked.
  */
 import { supabase } from '@/integrations/supabase/client';
 import { db } from '@/components/billing/billingApi';

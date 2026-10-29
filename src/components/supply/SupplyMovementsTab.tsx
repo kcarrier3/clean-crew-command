@@ -162,23 +162,27 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
     }
     let error;
     if (editing) {
-      if (editing.billing_event_id) {
-        // Already in billing: only the date, reference and notes may change.
-        ({ error } = await supabase.from('supply_movements').update({
-          occurred_at: payload.occurred_at, reference: payload.reference, notes: payload.notes,
-        } as any).eq('id', editing.id));
-      } else {
-        ({ error } = await supabase.from('supply_movements').update({
-          from_location_id: null, to_location_id: null, job_site_id: null, ...payload,
-        } as any).eq('id', editing.id));
-      }
+      // An invoiced drop-off is rejected by the database. Until then, corrections
+      // update the Ready to Bill item, and clearing the account cancels it.
+      ({ error } = await supabase.from('supply_movements').update({
+        from_location_id: null, to_location_id: null, job_site_id: null, ...payload,
+      } as any).eq('id', editing.id));
     } else {
       const { data: userRes } = await supabase.auth.getUser();
       payload.created_by = userRes.user?.id;
       ({ error } = await supabase.from('supply_movements').insert(payload));
     }
     if (error) { toast({ title: 'Failed', description: error.message, variant: 'destructive' }); return; }
-    toast({ title: editing ? 'Changes saved' : 'Recorded' });
+    const sentToBill = t === 'sell' && !!form.job_site_id && selectedItem?.kind !== 'cleaning';
+    const clearedBill = !!editing && t === 'sell' && !form.job_site_id;
+    toast({
+      title: editing ? 'Changes saved' : 'Recorded',
+      description: sentToBill
+        ? 'Sent to Ready to Bill for the office. Sales tax is added when they invoice it.'
+        : clearedBill
+          ? 'Account cleared. The unbilled Ready to Bill item was cancelled.'
+          : undefined,
+    });
     setEditing(null);
     setOpen(false);
     load();
@@ -213,21 +217,21 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle className="capitalize">{editing ? 'Edit ' : ''}{t === 'sell' ? 'Drop off at account' : t}</DialogTitle></DialogHeader>
-            {editing?.billing_event_id && (
+            {t === 'sell' && (
               <p className="text-xs text-muted-foreground rounded-md bg-muted p-2">
-                This drop-off is already in billing, so only the date, reference and notes can be changed.
+                A resale drop-off at an account is sent to Ready to Bill. Clear the account to cancel that item before it is invoiced. Cleaning supplies are not billed.
               </p>
             )}
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Label>Item</Label>
-                <Select disabled={!!editing?.billing_event_id} value={form.item_id} onValueChange={v => setForm({ ...form, item_id: v })}>
+                <Select value={form.item_id} onValueChange={v => setForm({ ...form, item_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Choose item" /></SelectTrigger>
                   <SelectContent>{items.map(i => <SelectItem key={i.id} value={i.id}>{i.name} — {i.kind}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div><Label>{t === 'sell' ? 'Delivery date' : 'Date'}</Label><Input type="date" value={form.occurred_on} onChange={e => setForm({ ...form, occurred_on: e.target.value })} /></div>
-              <div><Label>Quantity</Label><Input disabled={!!editing?.billing_event_id} type="number" step="0.01" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} /></div>
+              <div><Label>Quantity</Label><Input type="number" step="0.01" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} /></div>
               {showPrice && <div><Label>Price paid (per {selectedItem?.unit || 'unit'})</Label><Input type="number" step="0.01" value={form.unit_price} onChange={e => setForm({ ...form, unit_price: e.target.value })} /></div>}
               {t === 'sell' && (
                 <div>
@@ -253,7 +257,7 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
               {showFrom && (
                 <div className="col-span-2">
                   <Label>From location</Label>
-                  <Select disabled={!!editing?.billing_event_id} value={form.from_location_id} onValueChange={v => setForm({ ...form, from_location_id: v })}>
+                  <Select value={form.from_location_id} onValueChange={v => setForm({ ...form, from_location_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Choose source" /></SelectTrigger>
                     <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name} ({l.kind})</SelectItem>)}</SelectContent>
                   </Select>
@@ -262,7 +266,7 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
               {showTo && (
                 <div className="col-span-2">
                   <Label>To location</Label>
-                  <Select disabled={!!editing?.billing_event_id} value={form.to_location_id} onValueChange={v => setForm({ ...form, to_location_id: v })}>
+                  <Select value={form.to_location_id} onValueChange={v => setForm({ ...form, to_location_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Choose destination" /></SelectTrigger>
                     <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.name} ({l.kind})</SelectItem>)}</SelectContent>
                   </Select>
@@ -271,7 +275,7 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
               {showJobSite && (
                 <div className="col-span-2">
                   <Label>Account</Label>
-                  <Select disabled={!!editing?.billing_event_id} value={form.job_site_id || 'none'} onValueChange={v => setForm({ ...form, job_site_id: v === 'none' ? '' : v })}>
+                  <Select value={form.job_site_id || 'none'} onValueChange={v => setForm({ ...form, job_site_id: v === 'none' ? '' : v })}>
                     <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">— None —</SelectItem>

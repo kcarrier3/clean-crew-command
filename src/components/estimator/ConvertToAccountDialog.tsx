@@ -107,7 +107,7 @@ export function ConvertToAccountDialog({
     }
 
     const { data: site, error: err } = await (supabase as any)
-      .from('job_sites').insert(payload).select().single();
+      .from('job_sites').insert(payload).select('id, name').single();
     if (err || !site) {
       setBusy(false);
       toast({ title: 'Could not create account', description: err?.message, variant: 'destructive' });

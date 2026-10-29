@@ -170,7 +170,7 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
               <Receipt className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium">Nothing waiting to be billed</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Items land here when a manager marks a schedule-of-values checkpoint complete.
+                Items land here when a checkpoint on a progress-billing job is completed, or when supplies are dropped off at an account.
               </p>
             </div>
           ) : visible.map(e => {
@@ -215,6 +215,9 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
                         <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{e.billing_email}</span>
                       )}
                     </div>
+                    {e.description && (
+                      <p className="mt-1 text-xs text-muted-foreground whitespace-pre-line">{e.description}</p>
+                    )}
                     {e.notes && <p className="mt-1 text-xs text-muted-foreground italic">“{e.notes}”</p>}
                     {held && e.hold_reason && (
                       <p className="mt-1 text-xs text-amber-900">Hold reason: {e.hold_reason}</p>
