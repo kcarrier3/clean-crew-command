@@ -30,9 +30,23 @@ export const PERIOD_STATUS_CLASS: Record<RecurringPeriodStatus, string> = {
   skipped: 'bg-muted text-muted-foreground line-through',
 };
 
+export type RecurringScheduleStatus = 'active' | 'hold' | 'inactive';
+
+export interface RecurringLine {
+  id?: string;
+  billing_item_id: string | null;
+  description: string;
+  quantity: number;
+  rate: number;
+  taxable: boolean;
+  sort_order?: number;
+}
+
 export interface RecurringSchedule {
   id: string;
   job_site_id: string;
+  label: string;
+  status: RecurringScheduleStatus;
   active: boolean;
   amount: number;
   frequency: RecurringFrequency;
@@ -44,12 +58,19 @@ export interface RecurringSchedule {
   po_required: boolean;
   billing_contact_name: string | null;
   billing_email: string | null;
+  cc_recipients: string[];
+  reply_to_email: string | null;
+  memo: string | null;
+  start_date: string | null;
+  consolidated: boolean;
   tax_rate: number;
   invoice_description: string | null;
   notes: string | null;
   crm_company_id: string | null;
   crm_deal_id: string | null;
   next_invoice_date: string | null;
+  qb_last_sent_on: string | null;
+  qb_last_email_status: string | null;
 }
 
 export interface RecurringPeriod {
