@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   BRAND_BODY, BRAND_HEADER_GRAY, BRAND_ORANGE, BRAND_STRIPE_GRAY, COMPANY_NAME,
-  INVOICE_LOGO_PATH, hexToRgb,
+  INVOICE_LOGO_EMBED_WIDTH, INVOICE_LOGO_PATH, REMIT_TO_LINES, hexToRgb,
 } from '@/lib/billing/company';
 
 /** Vendor-neutral invoice shape so both Waypoint quotes/invoices and the
@@ -60,11 +60,30 @@ const ORANGE = hexToRgb(BRAND_ORANGE);
 const HEADER_GRAY = hexToRgb(BRAND_HEADER_GRAY);
 const STRIPE_GRAY = hexToRgb(BRAND_STRIPE_GRAY);
 
+/** Customer copies only show a status when the invoice is paid or void. */
+export const customerPdfStatus = (status: string): 'PAID' | 'VOID' | null => {
+  const value = status.toLowerCase();
+  if (value === 'paid') return 'PAID';
+  if (value === 'void') return 'VOID';
+  return null;
+};
+
+/** ASCII hyphen so the built-in PDF font does not drop an em dash. */
+export const taxSummaryLabel = (invoice: Pick<InvoicePdfData, 'tax_exempt' | 'tax_exemption_reason' | 'tax_jurisdiction' | 'tax_rate'>) => {
+  if (invoice.tax_exempt) {
+    const reason = invoice.tax_exemption_reason?.trim();
+    return reason ? `Exempt - ${reason}:` : 'Exempt:';
+  }
+  const place = invoice.tax_jurisdiction?.trim();
+  const rate = `${Number(invoice.tax_rate).toFixed(2)}%`;
+  return place ? `Tax ${place} (${rate}):` : `Tax (${rate}):`;
+};
+
 /** Builds the invoice document; callers decide whether to save or get a blob. */
 export function buildInvoicePdf({
   invoice, items, clientCompany, clientName, clientEmail, projectName, logoDataUrl,
 }: InvoicePdfParams): jsPDF {
-  const doc = new jsPDF();
+  const doc = new jsPDF({ compress: true });
   const w = doc.internal.pageSize.getWidth();
 
   let headerBottom = 22;
@@ -72,7 +91,8 @@ export function buildInvoicePdf({
     // 1160×432 logo. Keep it small so the page stays print-friendly.
     const logoW = 62;
     const logoH = logoW * (432 / 1160);
-    doc.addImage(logoDataUrl, 'PNG', 14, 12, logoW, logoH);
+    const imageFormat = /image\/jpe?g/i.test(logoDataUrl) ? 'JPEG' : 'PNG';
+    doc.addImage(logoDataUrl, imageFormat, 14, 12, logoW, logoH, undefined, 'FAST');
     headerBottom = 12 + logoH;
   } else {
     doc.setFontSize(16);
@@ -90,13 +110,19 @@ export function buildInvoicePdf({
   doc.setFontSize(10);
   doc.setTextColor(90);
   let hy = 26;
-  doc.text(`Status: ${invoice.status.replace(/_/g, ' ').toUpperCase()}`, w - 14, hy, { align: 'right' }); hy += 5;
+  const shownStatus = customerPdfStatus(invoice.status);
+  if (shownStatus) { doc.text(shownStatus, w - 14, hy, { align: 'right' }); hy += 5; }
   doc.text(`Issued: ${invoice.issue_date}`, w - 14, hy, { align: 'right' }); hy += 5;
   if (invoice.due_date) { doc.text(`Due: ${invoice.due_date}`, w - 14, hy, { align: 'right' }); hy += 5; }
   if (invoice.po_number) { doc.text(`PO: ${invoice.po_number}`, w - 14, hy, { align: 'right' }); hy += 5; }
 
   let y = Math.max(headerBottom + 14, hy + 8);
   doc.setFontSize(11); doc.setTextColor(...BODY);
+  doc.text('Remit to:', 14, y); y += 6;
+  doc.setFontSize(10);
+  REMIT_TO_LINES.forEach(line => { doc.text(line, 14, y); y += 5; });
+  y += 4;
+  doc.setFontSize(11);
   const startY = y;
   doc.text('Bill to:', 14, y); y += 6;
   doc.setFontSize(10);
@@ -137,6 +163,9 @@ export function buildInvoicePdf({
     alternateRowStyles: { fillColor: STRIPE_GRAY },
     styles: { textColor: BODY, lineColor: [220, 220, 220] },
     columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+    didParseCell: (data) => {
+      if (data.column.index > 0) data.cell.styles.halign = 'right';
+    },
   });
 
   const fy = (doc as any).lastAutoTable.finalY + 8;
@@ -150,10 +179,7 @@ export function buildInvoicePdf({
   if (invoice.taxable_amount != null) {
     rows.push({ label: 'Taxable amount:', value: moneyText(invoice.taxable_amount) });
   }
-  const taxLabel = invoice.tax_exempt
-    ? `Exempt${invoice.tax_exemption_reason ? ` — ${invoice.tax_exemption_reason}` : ''}:`
-    : `Tax${invoice.tax_jurisdiction ? ` ${invoice.tax_jurisdiction}` : ''} (${Number(invoice.tax_rate).toFixed(2)}%):`;
-  rows.push({ label: taxLabel, value: moneyText(invoice.tax) });
+  rows.push({ label: taxSummaryLabel(invoice), value: moneyText(invoice.tax) });
   rows.push({ label: 'Total:', value: moneyText(invoice.total), bold: true, accent: true });
 
   let rowY = fy;
@@ -161,9 +187,12 @@ export function buildInvoicePdf({
     doc.setFontSize(r.bold ? 12 : 10);
     doc.setFont(undefined as any, r.bold ? 'bold' : 'normal');
     doc.setTextColor(...(r.accent ? ORANGE : BODY));
-    doc.text(r.label, w - 90, rowY);
-    doc.text(r.value, w - 14, rowY, { align: 'right' });
-    rowY += r.bold ? 8 : 6;
+    const valueX = w - 14;
+    const labelX = 78;
+    const lines = doc.splitTextToSize(r.label, valueX - 32 - labelX);
+    doc.text(lines, labelX, rowY);
+    doc.text(r.value, valueX, rowY, { align: 'right' });
+    rowY += Math.max(r.bold ? 8 : 6, lines.length * 5);
   });
   doc.setFont(undefined as any, 'normal');
   doc.setTextColor(...BODY);
@@ -203,13 +232,36 @@ const blobToDataUrl = (blob: Blob) => new Promise<string | null>((resolve) => {
   reader.readAsDataURL(blob);
 });
 
+/** Downscale to about 2x the printed size and store JPEG so the PDF stays small. */
+const shrinkLogo = (dataUrl: string) => new Promise<string>((resolve) => {
+  if (typeof document === 'undefined') { resolve(dataUrl); return; }
+  const img = new Image();
+  img.onload = () => {
+    const scale = Math.min(1, INVOICE_LOGO_EMBED_WIDTH / (img.naturalWidth || img.width || INVOICE_LOGO_EMBED_WIDTH));
+    const width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+    const height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { resolve(dataUrl); return; }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    resolve(canvas.toDataURL('image/jpeg', 0.8));
+  };
+  img.onerror = () => resolve(dataUrl);
+  img.src = dataUrl;
+});
+
 /** Loads the committed logo. Returns null when the file is not served (tests, offline). */
 export const loadInvoiceLogoDataUrl = async (): Promise<string | null> => {
   if (typeof fetch !== 'function') return null;
   try {
     const res = await fetch(INVOICE_LOGO_PATH);
     if (!res.ok) return null;
-    return blobToDataUrl(await res.blob());
+    const dataUrl = await blobToDataUrl(await res.blob());
+    return dataUrl ? shrinkLogo(dataUrl) : null;
   } catch {
     return null;
   }

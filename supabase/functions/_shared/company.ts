@@ -4,8 +4,25 @@
  */
 export const COMPANY_NAME = 'Summit Facilities Group';
 
+/** Remit-to address. ZIP is assumed and lives here so it can be corrected in one place. */
+export const COMPANY_STREET = '44901 N. Ridge Road';
+export const COMPANY_CITY = 'Amherst';
+export const COMPANY_STATE = 'OH';
+export const COMPANY_ZIP = '44001';
+export const COMPANY_PHONE = '440.516.7898';
+
+export const REMIT_TO_LINES = [
+  COMPANY_NAME,
+  COMPANY_STREET,
+  `${COMPANY_CITY}, ${COMPANY_STATE} ${COMPANY_ZIP}`,
+  COMPANY_PHONE,
+];
+
 /** Billing From address. The display name defaults to COMPANY_NAME unless BILLING_FROM_NAME is set. */
 export const BILLING_FROM_EMAIL = 'invoices@billing.crewcompass360.com';
+
+/** On-page logo is about 232px wide. Embed at 2x that so the file stays small. */
+export const INVOICE_LOGO_EMBED_WIDTH = 464;
 
 /** Colors sampled from public/branding/summit-logo.png. */
 export const BRAND_ORANGE = '#FF6000';
@@ -37,8 +54,22 @@ export const invoiceEmailHtml = (escapedBodyHtml: string) => `<div style="font-f
 <img src="cid:${INVOICE_LOGO_CID}" alt="${COMPANY_NAME}" width="232" height="86" style="display:block;border:0;margin:0 0 12px;height:auto" />
 <div style="height:3px;width:96px;background:${BRAND_ORANGE};margin:0 0 18px"></div>
 ${escapedBodyHtml}
-<p style="margin:28px 0 0;padding-top:12px;border-top:1px solid #E5E5E5;font-size:12px;line-height:1.4;color:${BRAND_BODY}">${COMPANY_NAME}</p>
+<p style="margin:28px 0 0;padding-top:12px;border-top:1px solid #E5E5E5;font-size:12px;line-height:1.4;color:${BRAND_BODY}">${REMIT_TO_LINES.join('<br/>')}</p>
 </div>`;
+
+const BLANK_PO_VALUES = new Set(['', '-', '—', '–', 'n/a', 'na', '{{po_number}}']);
+
+/** Drops a "PO:" or "PO number:" line when the value is empty. */
+export const omitBlankPoLine = (body: string) =>
+  body
+    .split('\n')
+    .filter(line => {
+      const match = line.trim().match(/^po(?:\s*number)?\s*:\s*(.*)$/i);
+      if (!match) return true;
+      return !BLANK_PO_VALUES.has(match[1].trim().toLowerCase()) && !BLANK_PO_VALUES.has(match[1].trim());
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n');
 
 /** Added to an invoice email only when no reply-to address is configured. */
 export const INVOICE_UNMONITORED_NOTICE =
