@@ -4935,6 +4935,7 @@ export type Database = {
           nightly_hours: number | null
           postal_code: string | null
           project_manager: string | null
+          progress_billing: boolean
           qr_code_token: string
           remaining_hours: number | null
           safety_requirements: string | null
@@ -4994,6 +4995,7 @@ export type Database = {
           nightly_hours?: number | null
           postal_code?: string | null
           project_manager?: string | null
+          progress_billing?: boolean
           qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
@@ -5053,6 +5055,7 @@ export type Database = {
           nightly_hours?: number | null
           postal_code?: string | null
           project_manager?: string | null
+          progress_billing?: boolean
           qr_code_token?: string
           remaining_hours?: number | null
           safety_requirements?: string | null
@@ -7930,7 +7933,7 @@ export type Database = {
       can_approve_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_estimate: { Args: { _user_id: string }; Returns: boolean }
       can_manage_billing: { Args: { _user_id: string }; Returns: boolean }
-      can_mark_project_checkpoint: { Args: { _user_id: string }; Returns: boolean }
+      can_mark_project_checkpoint: { Args: { _job_site_id: string; _user_id: string }; Returns: boolean }
       can_view_sov: { Args: { _user_id: string }; Returns: boolean }
       can_manage_tm_tickets: { Args: { _user_id: string }; Returns: boolean }
       can_manage_training: { Args: { _user_id: string }; Returns: boolean }

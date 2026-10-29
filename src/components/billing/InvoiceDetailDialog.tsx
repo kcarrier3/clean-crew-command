@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
 import { InvoiceTotals, invoiceNeedsTaxReview } from './InvoiceTotals';
+import { InvoiceProgressSummary } from './InvoiceProgressSummary';
 import { InvoiceLinesEditor } from './InvoiceLinesEditor';
 import { InvoiceCreditsPanel } from './InvoiceCreditsPanel';
 import { TaxReviewBanner } from './TaxReviewBanner';
@@ -233,6 +234,9 @@ export const InvoiceDetailDialog = ({ invoiceId, onOpenChange, onChanged }: Prop
                 />
 
                 <InvoiceTotals invoice={invoice} />
+                {invoice.job_site_id && (
+                  <InvoiceProgressSummary jobSiteId={invoice.job_site_id} invoiceId={invoice.id} />
+                )}
                 <InvoiceCreditsPanel invoice={invoice} items={items} onChanged={() => { load(); onChanged?.(); }} />
 
                 <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">

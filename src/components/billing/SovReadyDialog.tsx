@@ -54,7 +54,10 @@ export const SovReadyDialog = ({ jobSiteId, open, onOpenChange, onInvoice }: Pro
     })().catch(() => setLoading(false));
   }, [open, jobSiteId]);
 
+  const total = rows.reduce((s, r) => s + Number(r.amount || 0), 0);
+  const billed = rows.filter(r => r.billingState === 'billed').reduce((s, r) => s + Number(r.amount || 0), 0);
   const readyAmount = rows.filter(r => r.billingState === 'ready').reduce((s, r) => s + Number(r.amount || 0), 0);
+  const remaining = Math.max(total - billed - readyAmount, 0);
   const readyEvents = events.filter(e => e.status === 'ready' && e.project_phase_id);
 
   return (
@@ -93,9 +96,11 @@ export const SovReadyDialog = ({ jobSiteId, open, onOpenChange, onInvoice }: Pro
               ))}
               {!rows.length && <p className="p-3 text-muted-foreground">This job has no schedule of values.</p>}
             </div>
-            <div className="flex justify-between font-medium">
-              <span>Amount ready to bill</span>
-              <span className="tabular-nums">{money(readyAmount)}</span>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between"><span>Contract total</span><span className="tabular-nums">{money(total)}</span></div>
+              <div className="flex justify-between"><span>Billed to date</span><span className="tabular-nums">{money(billed)}</span></div>
+              <div className="flex justify-between font-medium"><span>This bill</span><span className="tabular-nums">{money(readyAmount)}</span></div>
+              <div className="flex justify-between"><span>Remaining</span><span className="tabular-nums">{money(remaining)}</span></div>
             </div>
           </div>
         )}

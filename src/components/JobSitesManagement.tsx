@@ -19,7 +19,7 @@ import JobBudgetingWidget from './JobBudgetingWidget';
 import { AccountDetail } from './AccountDetail';
 import OfficeLocationCard from './OfficeLocationCard';
 import { DAY_LABELS, monthlyHoursFromNightly, serviceDaysInMonth, describeFrequency } from '@/lib/serviceFrequency';
-import { saveProjectSov, type SovDraftLine } from '@/components/billing/sovApi';
+import { fetchProjectSov, saveProjectSov, type SovDraftLine } from '@/components/billing/sovApi';
 import {
   JobSiteSalesTaxFields, emptyJobSiteTax, jobSiteTaxFromRow, jobSiteTaxPayload, type JobSiteTaxForm,
 } from '@/components/billing/JobSiteSalesTaxFields';
@@ -54,6 +54,7 @@ interface JobSite {
   active: boolean;
   created_at: string;
   updated_at: string;
+  progress_billing?: boolean | null;
   county?: string | null;
   county_needs_review?: boolean | null;
   county_source?: string | null;
@@ -173,7 +174,7 @@ function NightlyAllowanceFields({
 
 export default function JobSitesManagement() {
   const { toast } = useToast();
-  const { isManager, canViewSov } = useAuth();
+  const { isManager, canViewSov, isProjectCrewLead } = useAuth();
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [loading, setLoading] = useState(false);
   const [showInactive, setShowInactive] = useState(true);
@@ -218,6 +219,8 @@ export default function JobSitesManagement() {
   const [taxBaseline, setTaxBaseline] = useState<JobSiteTaxForm>(emptyJobSiteTax());
   const [sovFlat, setSovFlat] = useState(true);
   const [sovLines, setSovLines] = useState<SovDraftLine[]>([{ name: '', amount: '' }]);
+  const [progressBilling, setProgressBilling] = useState(false);
+  const [sovSiteIds, setSovSiteIds] = useState<Set<string>>(new Set());
 
   const salesTaxColumns = () => jobSiteTaxPayload({
     county: formData.county,
@@ -264,6 +267,10 @@ export default function JobSitesManagement() {
 
       if (error) throw error;
       setJobSites(data || []);
+      if (canViewSov()) {
+        const { data: lines } = await supabase.from('project_sov_lines').select('job_site_id');
+        setSovSiteIds(new Set((lines ?? []).map(l => l.job_site_id)));
+      }
     } catch (error) {
       console.error('Error fetching job sites:', error);
       toast({
@@ -302,7 +309,7 @@ export default function JobSitesManagement() {
     setLoading(true);
     try {
       const isProject = !createRecurring;
-      const officeSov = canViewSov() && isProject
+      const officeSov = canViewSov() && isProject && progressBilling
         ? (sovFlat ? sovLines.slice(0, 1) : sovLines).filter(l => l.name.trim())
         : [];
       const phaseNames = isProject && formData.is_phased && officeSov.length === 0
@@ -335,6 +342,7 @@ export default function JobSitesManagement() {
           service_days: formData.service_days,
           active: formData.active,
           is_phased: (isProject && !!formData.is_phased) || officeSov.length > 0,
+          ...(canViewSov() ? { progress_billing: isProject && progressBilling } : {}),
           ...salesTaxColumns(),
         })
         .select('id')
@@ -354,7 +362,9 @@ export default function JobSitesManagement() {
 
       toast({
         title: "Success",
-        description: "Account created successfully"
+        description: isProject && progressBilling && officeSov.length === 0
+          ? "Project created. Schedule of values needed before checkpoints can be billed."
+          : "Account created successfully"
       });
 
       // Reset form and close dialog
@@ -422,14 +432,25 @@ export default function JobSitesManagement() {
           service_days: formData.service_days,
           active: formData.active,
           ...salesTaxColumns(),
+          ...(canViewSov() && !formData.is_recurring_monthly ? { progress_billing: progressBilling } : {}),
         })
         .eq('id', editingJobSite.id);
 
       if (error) throw error;
 
+      const namedSov = (sovFlat ? sovLines.slice(0, 1) : sovLines).filter(l => l.name.trim());
+      if (canViewSov() && progressBilling && !formData.is_recurring_monthly && namedSov.length) {
+        await saveProjectSov(editingJobSite.id, namedSov);
+      }
+      const missingSov = canViewSov() && progressBilling && !formData.is_recurring_monthly
+        && namedSov.length === 0 && !sovSiteIds.has(editingJobSite.id);
+
       toast({
-        title: "Success",
-        description: "Account updated successfully"
+        title: missingSov ? "Schedule of values needed" : "Success",
+        description: missingSov
+          ? "Progress billing is on, but this project has no schedule of values yet."
+          : "Account updated successfully",
+        variant: missingSov ? "destructive" : undefined,
       });
 
       // Reset form and close dialog
@@ -482,6 +503,15 @@ export default function JobSitesManagement() {
         return { ...tax, county_source: tax.county_source || '' };
       })(),
     });
+    setProgressBilling(!!jobSite.progress_billing);
+    if (canViewSov()) {
+      fetchProjectSov(jobSite.id, true).then(rows => {
+        setSovFlat(rows.length <= 1);
+        setSovLines(rows.length
+          ? rows.map(r => ({ phaseId: r.phaseId, name: r.name, amount: r.amount == null ? '' : String(r.amount) }))
+          : [{ name: '', amount: '' }]);
+      }).catch(() => setSovLines([{ name: '', amount: '' }]));
+    }
     setIsEditDialogOpen(true);
   };
 
@@ -518,6 +548,9 @@ export default function JobSitesManagement() {
       crm_company_id: null,
     });
     setTaxBaseline(emptyJobSiteTax());
+    setProgressBilling(false);
+    setSovFlat(true);
+    setSovLines([{ name: '', amount: '' }]);
     setEditingJobSite(null);
   };
 
@@ -640,7 +673,7 @@ export default function JobSitesManagement() {
     }
   };
 
-  if (!isManager() && !canViewSov()) {
+  if (!isManager() && !canViewSov() && !isProjectCrewLead()) {
     return (
       <Card>
         <CardContent className="p-8">
@@ -784,6 +817,22 @@ export default function JobSitesManagement() {
                         />
                       </div>
                       {canViewSov() && (
+                        <label className="flex items-start gap-2 text-sm border-t pt-3">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={progressBilling}
+                            onChange={e => setProgressBilling(e.target.checked)}
+                          />
+                          <span>
+                            Progress billing
+                            <span className="block text-xs text-muted-foreground">
+                              Checking this asks for a schedule of values. Completing a checkpoint then sends that amount to Ready to Bill.
+                            </span>
+                          </span>
+                        </label>
+                      )}
+                      {canViewSov() && progressBilling && (
                         <div className="space-y-2 border-t pt-3">
                           <div className="flex items-center justify-between gap-2">
                             <div>
@@ -1001,6 +1050,44 @@ export default function JobSitesManagement() {
                   <DialogTitle>Edit {isProjectForm ? 'Project' : 'Account'}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
+                  {isProjectForm && canViewSov() && (
+                    <div className="rounded-md border p-3 space-y-3">
+                      <label className="flex items-start gap-2 text-sm">
+                        <input type="checkbox" className="mt-1" checked={progressBilling}
+                               onChange={e => setProgressBilling(e.target.checked)} />
+                        <span>
+                          Progress billing
+                          <span className="block text-xs text-muted-foreground">
+                            Turn this on to enter a schedule of values. Checkpoints then bill as they are completed.
+                          </span>
+                        </span>
+                      </label>
+                      {progressBilling && !sovLines.some(l => l.name.trim()) && (
+                        <p className="text-sm text-amber-800">Schedule of values needed.</p>
+                      )}
+                      {progressBilling && (sovFlat ? sovLines.slice(0, 1) : sovLines).map((line, i) => (
+                        <div key={line.phaseId ?? i} className="grid grid-cols-[1fr_8rem] gap-2">
+                          <Input placeholder={sovFlat ? 'Checkpoint name' : 'Phase name'} value={line.name}
+                                 onChange={e => setSovLines(rows => rows.map((r, idx) => idx === i ? { ...r, name: e.target.value } : r))} />
+                          <Input type="number" min="0" step="0.01" placeholder="Amount" value={line.amount}
+                                 onChange={e => setSovLines(rows => rows.map((r, idx) => idx === i ? { ...r, amount: e.target.value } : r))} />
+                        </div>
+                      ))}
+                      {progressBilling && (
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 text-xs">
+                            <Switch checked={sovFlat} onCheckedChange={setSovFlat} /> Flat price
+                          </label>
+                          {!sovFlat && (
+                            <Button type="button" size="sm" variant="outline"
+                                    onClick={() => setSovLines(rows => [...rows, { name: '', amount: '' }])}>
+                              Add phase
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <Label htmlFor="edit_name">{isProjectForm ? 'Project Name *' : 'Account Name *'}</Label>
                     <Input
@@ -1259,6 +1346,9 @@ export default function JobSitesManagement() {
                                     <Badge variant="default">Active</Badge>
                                     {jobSite.county_needs_review && (
                                       <Badge className="bg-amber-100 text-amber-900">County unconfirmed</Badge>
+                                    )}
+                                    {canViewSov() && jobSite.progress_billing && !sovSiteIds.has(jobSite.id) && (
+                                      <Badge className="bg-amber-100 text-amber-900">Schedule of values needed</Badge>
                                     )}
                                     <Badge variant="secondary">
                                       {jobSite.is_recurring_monthly ? 'Recurring' : 'Project'}

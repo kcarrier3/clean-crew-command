@@ -1,7 +1,26 @@
--- Schedule of values for construction projects.
--- Checkpoints stay on project_phases (names and progress). Dollar amounts live
--- only in project_sov_lines, which billing roles can read. Additive: nothing
--- is dropped, and existing phase rows are left as they are.
+-- Schedule of values and who may see billing dollars.
+-- Checkpoints stay on project_phases. Dollar amounts stay out of the API for
+-- everyone except Owner, admin, Office Manager, and Operations Manager.
+-- Additive: no columns or rows are dropped. job_sites.contract_amount is left
+-- readable because many screens select the whole job site row.
+
+-- Narrow the existing billing gate. The manager app role no longer sees invoices,
+-- Ready to Bill, milestones, or other billing tables. Operations Manager is the
+-- job title, not the manager role.
+CREATE OR REPLACE FUNCTION public.can_manage_billing(_user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.has_role(_user_id, 'admin'::app_role)
+      OR EXISTS (
+        SELECT 1 FROM public.profiles p
+        WHERE p.id = _user_id
+          AND p.job_title IN ('Owner', 'Office Manager', 'Operations Manager')
+      );
+$$;
 
 CREATE OR REPLACE FUNCTION public.can_view_sov(_user_id uuid)
 RETURNS boolean
@@ -10,33 +29,43 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT public.has_role(_user_id, 'admin'::app_role)
-      OR EXISTS (
-        SELECT 1 FROM public.profiles p
-        WHERE p.id = _user_id
-          AND p.job_title IN ('Owner', 'Office Manager')
-      );
+  SELECT public.can_manage_billing(_user_id);
 $$;
 
-CREATE OR REPLACE FUNCTION public.can_mark_project_checkpoint(_user_id uuid)
+-- Billing roles may mark any project. A generic manager may mark any project
+-- (there is no per-project manager assignment). A Project Crew Lead may mark
+-- only job sites they are scheduled on. Employees cannot.
+CREATE OR REPLACE FUNCTION public.can_mark_project_checkpoint(_user_id uuid, _job_site_id uuid)
 RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT public.has_role(_user_id, 'admin'::app_role)
-      OR public.has_role(_user_id, 'manager'::app_role)
+  SELECT public.can_manage_billing(_user_id)
+      OR (
+        public.has_role(_user_id, 'manager'::app_role)
+        AND NOT EXISTS (
+          SELECT 1 FROM public.profiles p
+          WHERE p.id = _user_id AND p.job_title = 'Project Crew Lead'
+        )
+      )
       OR EXISTS (
-        SELECT 1 FROM public.profiles p
+        SELECT 1
+        FROM public.profiles p
+        JOIN public.employee_schedules es ON es.employee_id = p.id
         WHERE p.id = _user_id
-          AND p.job_title IN ('Owner', 'Office Manager', 'Operations Manager')
+          AND p.job_title = 'Project Crew Lead'
+          AND es.job_site_id = _job_site_id
+          AND es.active
+          AND es.start_date <= CURRENT_DATE
+          AND (es.end_date IS NULL OR es.end_date >= CURRENT_DATE)
       );
 $$;
 
 REVOKE ALL ON FUNCTION public.can_view_sov(uuid) FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.can_mark_project_checkpoint(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.can_view_sov(uuid), public.can_mark_project_checkpoint(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.can_mark_project_checkpoint(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.can_view_sov(uuid), public.can_mark_project_checkpoint(uuid, uuid) TO authenticated, service_role;
 
 CREATE TABLE IF NOT EXISTS public.project_sov_lines (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -113,11 +142,39 @@ CREATE POLICY "Billing roles can update job sites"
 DROP POLICY IF EXISTS "Checkpoint managers can update project phases" ON public.project_phases;
 CREATE POLICY "Checkpoint managers can update project phases"
   ON public.project_phases FOR UPDATE TO authenticated
-  USING (public.can_mark_project_checkpoint(auth.uid()))
-  WITH CHECK (public.can_mark_project_checkpoint(auth.uid()));
+  USING (public.can_mark_project_checkpoint(auth.uid(), job_site_id))
+  WITH CHECK (public.can_mark_project_checkpoint(auth.uid(), job_site_id));
 
 -- Hide legacy amount columns on the checkpoint table. select of name/status still works.
 -- The table owner (and security-definer triggers) can still read them for older jobs.
+ALTER TABLE public.job_sites
+  ADD COLUMN IF NOT EXISTS progress_billing boolean NOT NULL DEFAULT false;
+
+CREATE OR REPLACE FUNCTION public.job_sites_guard_progress_billing()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF COALESCE(NEW.progress_billing, false) AND NOT public.can_manage_billing(auth.uid()) THEN
+      RAISE EXCEPTION 'Only billing staff can turn on progress billing';
+    END IF;
+  ELSIF NEW.progress_billing IS DISTINCT FROM OLD.progress_billing
+        AND NOT public.can_manage_billing(auth.uid()) THEN
+    RAISE EXCEPTION 'Only billing staff can change progress billing';
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_job_sites_guard_progress_billing ON public.job_sites;
+CREATE TRIGGER trg_job_sites_guard_progress_billing
+  BEFORE INSERT OR UPDATE ON public.job_sites
+  FOR EACH ROW EXECUTE FUNCTION public.job_sites_guard_progress_billing();
+
+REVOKE ALL ON FUNCTION public.job_sites_guard_progress_billing() FROM PUBLIC, anon, authenticated;
+
 REVOKE SELECT (billing_amount, billing_percent) ON public.project_phases FROM PUBLIC, anon, authenticated;
 REVOKE INSERT (billing_amount, billing_percent) ON public.project_phases FROM PUBLIC, anon, authenticated;
 REVOKE UPDATE (billing_amount, billing_percent) ON public.project_phases FROM PUBLIC, anon, authenticated;
@@ -147,16 +204,24 @@ BEGIN
   SELECT * INTO v_site FROM public.job_sites WHERE id = NEW.job_site_id;
   IF NOT FOUND THEN RETURN NEW; END IF;
 
-  SELECT amount INTO v_sov FROM public.project_sov_lines WHERE project_phase_id = NEW.id;
-  IF v_sov IS NULL AND COALESCE(v_site.billing_mode, 'completion') NOT IN ('phased', 'progress') THEN
-    RETURN NEW;
+  -- Progress-billing jobs bill the checkpoint's schedule amount. Other jobs
+  -- keep the previous phase/percent behavior. A later partial percent or
+  -- retainage can change v_amount without a new table.
+  IF COALESCE(v_site.progress_billing, false) THEN
+    SELECT amount INTO v_sov FROM public.project_sov_lines WHERE project_phase_id = NEW.id;
+    IF v_sov IS NULL THEN RETURN NEW; END IF;
+    v_amount := v_sov;
+    v_pct := NULL;
+  ELSE
+    IF COALESCE(v_site.billing_mode, 'completion') NOT IN ('phased', 'progress') THEN
+      RETURN NEW;
+    END IF;
+    v_pct := NEW.billing_percent;
+    v_amount := COALESCE(NEW.billing_amount,
+                         CASE WHEN v_pct IS NOT NULL AND v_site.contract_amount IS NOT NULL
+                              THEN ROUND(v_site.contract_amount * v_pct / 100.0, 2) END,
+                         0);
   END IF;
-
-  v_pct := NEW.billing_percent;
-  v_amount := COALESCE(v_sov, NEW.billing_amount,
-                       CASE WHEN v_pct IS NOT NULL AND v_site.contract_amount IS NOT NULL
-                            THEN ROUND(v_site.contract_amount * v_pct / 100.0, 2) END,
-                       0);
 
   INSERT INTO public.billing_events (
     job_site_id, project_phase_id, crm_company_id, crm_lead_id, crm_deal_id, source, label,

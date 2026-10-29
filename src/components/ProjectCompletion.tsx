@@ -32,8 +32,8 @@ interface Props {
 
 /** Completion + billing hand-off for one-time (project) job sites. */
 export const ProjectCompletion = ({ jobSiteId, jobSiteName, onChanged }: Props) => {
-  const { user, canMarkCheckpoints } = useAuth();
-  const canMark = canMarkCheckpoints();
+  const { user } = useAuth();
+  const [canMark, setCanMark] = useState(false);
   const { toast } = useToast();
   const [phases, setPhases] = useState<Phase[]>([]);
   const [site, setSite] = useState<any>(null);
@@ -60,6 +60,12 @@ export const ProjectCompletion = ({ jobSiteId, jobSiteName, onChanged }: Props) 
   };
 
   useEffect(() => { load(); }, [jobSiteId]);
+
+  useEffect(() => {
+    if (!user?.id) { setCanMark(false); return; }
+    supabase.rpc('can_mark_project_checkpoint', { _user_id: user.id, _job_site_id: jobSiteId })
+      .then(({ data }) => setCanMark(!!data));
+  }, [user?.id, jobSiteId]);
 
   const submitCompletion = async () => {
     if (!completeTarget) return;

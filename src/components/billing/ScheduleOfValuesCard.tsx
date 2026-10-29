@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { money } from '@/lib/billing/types';
 import { SOV_STATE_LABEL } from '@/lib/billing/sov';
 import { fetchProjectSov, saveProjectSov, type SovCheckpoint, type SovDraftLine } from './sovApi';
+import { db } from './billingApi';
 
 interface Props {
   jobSiteId: string;
@@ -27,11 +28,16 @@ export const ScheduleOfValuesCard = ({ jobSiteId, showAmounts }: Props) => {
   const [editing, setEditing] = useState(false);
   const [flat, setFlat] = useState(false);
   const [draft, setDraft] = useState<SovDraftLine[]>([blank()]);
+  const [progressBilling, setProgressBilling] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const list = await fetchProjectSov(jobSiteId, showAmounts);
+      const [{ data: site }, list] = await Promise.all([
+        db.from('job_sites').select('progress_billing').eq('id', jobSiteId).maybeSingle(),
+        fetchProjectSov(jobSiteId, showAmounts),
+      ]);
+      setProgressBilling(!!site?.progress_billing);
       setRows(list);
       setFlat(list.length <= 1);
       setDraft(list.length
@@ -81,8 +87,13 @@ export const ScheduleOfValuesCard = ({ jobSiteId, showAmounts }: Props) => {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          Dollar amounts are visible to the Owner, an admin, and the Office Manager. Managers and employees see the checkpoint names only.
+          Dollar amounts are visible to the Owner, an admin, the Office Manager, and the Operations Manager. Everyone else sees checkpoint progress only.
         </p>
+        {progressBilling && !rows.length && !editing && (
+          <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            Schedule of values needed. Progress billing is on, but no checkpoints have amounts yet.
+          </p>
+        )}
         {!editing ? (
           <>
             {!rows.length && <p className="text-sm text-muted-foreground">No schedule of values yet.</p>}
