@@ -6,9 +6,13 @@ const corsHeaders = {
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
   BILLING_FROM_EMAIL,
+  BRAND_ORANGE,
   COMPANY_NAME,
+  INVOICE_LOGO_CID,
+  invoiceEmailHtml,
   withUnmonitoredNotice,
 } from '../_shared/company.ts';
+import { SUMMIT_LOGO_BASE64 } from '../_shared/summitLogoBase64.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -221,10 +225,16 @@ Deno.serve(async (req) => {
     return json({ ok: false, messageId: logRow.id, error: reason }, status);
   };
 
-  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#1f2937">
-${escapeHtml(finalBody).replace(/\n/g, '<br/>')
-    .replace(/(https:\/\/[^\s<]+)/g, '<a href="$1" style="color:#c2410c">$1</a>')}
-</div>`;
+  const html = invoiceEmailHtml(
+    escapeHtml(finalBody).replace(/\n/g, '<br/>')
+      .replace(/(https:\/\/[^\s<]+)/g, `<a href="$1" style="color:${BRAND_ORANGE};font-weight:bold">$1</a>`),
+  );
+  const logoAttachment = {
+    filename: 'summit-logo.png',
+    content: SUMMIT_LOGO_BASE64,
+    content_type: 'image/png',
+    content_id: INVOICE_LOGO_CID,
+  };
 
   let response: Response;
   try {
@@ -242,7 +252,7 @@ ${escapeHtml(finalBody).replace(/\n/g, '<br/>')
         subject: mailedSubject,
         text: finalBody,
         html,
-        ...(attachment ? { attachments: [attachment] } : {}),
+        attachments: [...(attachment ? [attachment] : []), logoAttachment],
       }),
     });
   } catch (e) {

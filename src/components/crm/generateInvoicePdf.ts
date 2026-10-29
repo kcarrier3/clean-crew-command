@@ -10,8 +10,8 @@ interface Params {
 }
 
 /** Thin wrapper so legacy Waypoint invoices use the shared PDF renderer. */
-export function generateInvoicePdf({ invoice, items, clientCompany, clientName, clientEmail }: Params) {
-  saveInvoicePdf({
+export async function generateInvoicePdf({ invoice, items, clientCompany, clientName, clientEmail }: Params) {
+  await saveInvoicePdf({
     invoice: {
       invoice_number: invoice.invoice_number,
       status: invoice.status,

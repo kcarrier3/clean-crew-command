@@ -1,7 +1,17 @@
 export {
   BILLING_FROM_EMAIL,
+  BRAND_BLACK,
+  BRAND_BODY,
+  BRAND_HEADER_GRAY,
+  BRAND_ORANGE,
+  BRAND_STRIPE_GRAY,
   COMPANY_NAME,
+  INVOICE_LOGO_CID,
+  INVOICE_LOGO_PATH,
+  INVOICE_LOGO_URL,
   INVOICE_UNMONITORED_NOTICE,
   hasReplyTo,
+  hexToRgb,
+  invoiceEmailHtml,
   withUnmonitoredNotice,
 } from '../../../supabase/functions/_shared/company';
