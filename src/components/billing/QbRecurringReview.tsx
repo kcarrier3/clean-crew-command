@@ -37,6 +37,7 @@ export const QbRecurringReview = ({ onChanged }: { onChanged?: () => void }) => 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [showConfirmed, setShowConfirmed] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, { jobSiteId: string; companyId: string | null; label: string; email: string }>>({});
   const [janitorialId, setJanitorialId] = useState<string | null>(null);
 
@@ -125,21 +126,31 @@ export const QbRecurringReview = ({ onChanged }: { onChanged?: () => void }) => 
   if (loading) return <p className="text-sm text-muted-foreground">Loading QuickBooks suggestions…</p>;
   if (!rows.length) return null;
   const pending = rows.filter(r => r.status !== 'confirmed');
+  const confirmedCount = rows.length - pending.length;
+  // Confirmed suggestions already appear as schedules below; hide them unless asked so nothing shows twice.
+  const shown = showConfirmed ? rows : pending;
 
   return (
     <Card>
       <CardHeader className="pb-2 flex-row items-center justify-between space-y-0 gap-2">
         <CardTitle className="text-base">QuickBooks suggestions</CardTitle>
-        <Button size="sm" variant="outline" onClick={activateSelected} disabled={busy === 'bulk'}>
-          {busy === 'bulk' && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-          Activate selected
-        </Button>
+        {showConfirmed && (
+          <Button size="sm" variant="outline" onClick={activateSelected} disabled={busy === 'bulk'}>
+            {busy === 'bulk' && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+            Activate selected
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          {pending.length} not confirmed. Confirm creates an inactive schedule and billing email. Nothing turns on until you activate it.
+          {pending.length} waiting for review. Confirm creates an inactive schedule in the list below. Nothing turns on until you activate it.
         </p>
-        {rows.map(r => {
+        {confirmedCount > 0 && (
+          <Button size="sm" variant="link" className="h-auto p-0 text-xs" onClick={() => setShowConfirmed(v => !v)}>
+            {showConfirmed ? 'Hide' : 'Show'} {confirmedCount} already set up
+          </Button>
+        )}
+        {shown.map(r => {
           const d = drafts[r.id];
           return (
             <div key={r.id} className="rounded-md border p-3 space-y-2">
