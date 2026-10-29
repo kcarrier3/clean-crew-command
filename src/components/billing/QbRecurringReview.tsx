@@ -43,7 +43,11 @@ export const QbRecurringReview = ({ onChanged }: { onChanged?: () => void }) => 
   const load = async () => {
     setLoading(true);
     const [{ data }, { data: items }] = await Promise.all([
-      db.from('qb_recurring_prefill').select('*').order('qb_customer'),
+      // Only customers set up as recurring transactions in QuickBooks; irregular billing is never suggested.
+      db.from('qb_recurring_prefill').select('*')
+        .eq('pattern', 'qb_recurring_template')
+        .neq('status', 'dismissed')
+        .order('qb_customer'),
       db.from('billing_items').select('id, name').eq('active', true),
     ]);
     setRows(data ?? []);
