@@ -9,4 +9,6 @@
 - [x] Hide QuickBooks recurring suggestions that aren't recurring transactions in QuickBooks
 - [x] Confirm the 5 close-match QuickBooks recurring suggestions (Ganley at full $3,145, no credit)
 - [x] Confirm the 15 exact-match QuickBooks recurring suggestions (latest amounts)
-- [ ] Review remaining 17 QuickBooks recurring suggestions (13 multi-site guesses, 4 unmatched) — waiting on user
+- [x] Review remaining QuickBooks recurring suggestions
+- [ ] Turn on recurring schedules starting December 1 (Aquatic seasonal + Westlake extras stay off)
+- [ ] Planning calendar: hidden from Project Crew Leads; per-manager on/off toggle; leave on for Brianna
