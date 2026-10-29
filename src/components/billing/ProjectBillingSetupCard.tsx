@@ -64,10 +64,13 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: site }, { data: ph }, { data: ms }] = await Promise.all([
+    const [{ data: site }, { data: moneyRow }, { data: ph }, { data: ms }] = await Promise.all([
       db.from('job_sites')
-        .select('billing_mode, contract_amount, billing_terms, billing_po_number, billing_contact_name, billing_email, billing_notes, crm_company_id, crm_deal_id')
+        .select('billing_mode, billing_terms, billing_po_number, billing_contact_name, billing_email, billing_notes, crm_company_id, crm_deal_id')
         .eq('id', jobSiteId).maybeSingle(),
+      seeMoney
+        ? db.from('job_site_financials').select('contract_amount').eq('job_site_id', jobSiteId).maybeSingle()
+        : Promise.resolve({ data: null }),
       db.from('project_phases').select('id, name, sequence, status')
         .eq('job_site_id', jobSiteId).order('sequence'),
       db.from('billing_milestones')
@@ -77,7 +80,7 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
     if (site) {
       setForm({
         billing_mode: (site.billing_mode ?? 'completion') as BillingMode,
-        contract_amount: site.contract_amount == null ? '' : String(site.contract_amount),
+        contract_amount: moneyRow?.contract_amount == null ? '' : String(moneyRow.contract_amount),
         billing_terms: site.billing_terms ?? 'Net 30',
         billing_po_number: site.billing_po_number ?? '',
         billing_contact_name: site.billing_contact_name ?? '',
@@ -151,7 +154,6 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
     try {
       const { error } = await db.from('job_sites').update({
         billing_mode: form.billing_mode,
-        ...(seeMoney ? { contract_amount: form.contract_amount === '' ? null : Number(form.contract_amount) } : {}),
         billing_terms: form.billing_terms || null,
         billing_po_number: form.billing_po_number || null,
         billing_contact_name: form.billing_contact_name || null,
@@ -161,6 +163,15 @@ export const ProjectBillingSetupCard = ({ jobSiteId, jobSiteName }: Props) => {
         crm_deal_id: form.crm_deal_id,
       }).eq('id', jobSiteId);
       if (error) throw error;
+
+      if (seeMoney) {
+        const amount = form.contract_amount === '' ? null : Number(form.contract_amount);
+        const { data: existing } = await db.from('job_site_financials').select('job_site_id').eq('job_site_id', jobSiteId).maybeSingle();
+        const fin = existing
+          ? await db.from('job_site_financials').update({ contract_amount: amount }).eq('job_site_id', jobSiteId)
+          : await db.from('job_site_financials').insert({ job_site_id: jobSiteId, contract_amount: amount });
+        if (fin.error) throw fin.error;
+      }
 
       if (seeMoney && form.billing_mode === 'progress') {
         for (const [i, m] of milestones.entries()) {

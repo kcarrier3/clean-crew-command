@@ -20,6 +20,7 @@ import { AccountDetail } from './AccountDetail';
 import OfficeLocationCard from './OfficeLocationCard';
 import { DAY_LABELS, monthlyHoursFromNightly, serviceDaysInMonth, describeFrequency } from '@/lib/serviceFrequency';
 import { fetchProjectSov, saveProjectSov, type SovDraftLine } from '@/components/billing/sovApi';
+import { JOB_SITE_COLUMNS } from '@/lib/jobSiteColumns';
 import {
   JobSiteSalesTaxFields, emptyJobSiteTax, jobSiteTaxFromRow, jobSiteTaxPayload, type JobSiteTaxForm,
 } from '@/components/billing/JobSiteSalesTaxFields';
@@ -261,7 +262,7 @@ export default function JobSitesManagement() {
     try {
       const { data, error } = await supabase
         .from('job_sites')
-        .select('*')
+        .select(JOB_SITE_COLUMNS)
         .eq('is_office', false)
         .order('name');
 

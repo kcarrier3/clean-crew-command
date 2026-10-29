@@ -4889,6 +4889,32 @@ export type Database = {
           },
         ]
       }
+      job_site_financials: {
+        Row: {
+          contract_amount: number | null
+          job_site_id: string
+          updated_at: string
+        }
+        Insert: {
+          contract_amount?: number | null
+          job_site_id: string
+          updated_at?: string
+        }
+        Update: {
+          contract_amount?: number | null
+          job_site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_site_financials_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: true
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_sites: {
         Row: {
           access_instructions: string | null

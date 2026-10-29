@@ -180,10 +180,9 @@ export const useAuth = () => {
   const isManager = () => hasRole('admin') || hasRole('manager');
   const isEmployee = () => hasRole('employee');
 
-  // Mirrors public.can_manage_billing / can_view_sov. Operations Manager is a job title.
+  // Mirrors public.can_manage_billing. Job title only — the admin role does not grant billing.
   const canViewSov = () =>
-    hasRole('admin')
-    || profile?.job_title === 'Owner'
+    profile?.job_title === 'Owner'
     || profile?.job_title === 'Office Manager'
     || profile?.job_title === 'Operations Manager';
 
