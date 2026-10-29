@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { db } from './billingApi';
 import { invoicePdfBlob } from '@/lib/billing/invoicePdf';
 import { money } from '@/lib/billing/types';
-import { COMPANY_NAME, withUnmonitoredNotice } from '@/lib/billing/company';
+import { COMPANY_NAME, omitBlankPoLine, withUnmonitoredNotice } from '@/lib/billing/company';
 import {
   DEFAULT_INVOICE_BODY, DEFAULT_INVOICE_SUBJECT, fetchEmailConfig, renderTemplate,
   sendInvoiceEmail, uploadInvoicePdf, type EmailConfig,
@@ -89,7 +89,7 @@ export const SendInvoiceDialog = ({ invoiceId, open, onOpenChange, onSent }: Pro
         invoice_total: money(inv?.total),
         invoice_date: inv?.invoice_date ?? '',
         due_date: inv?.due_date ?? '',
-        po_number: inv?.po_number ?? '—',
+        po_number: inv?.po_number?.trim() || '',
         project_name: site ?? '',
         company_name: COMPANY_NAME,
         company_contact: COMPANY_NAME,
@@ -99,7 +99,7 @@ export const SendInvoiceDialog = ({ invoiceId, open, onOpenChange, onSent }: Pro
       };
       setSubject(renderTemplate(tpl?.subject || DEFAULT_INVOICE_SUBJECT, vars));
       setBody(withUnmonitoredNotice(
-        renderTemplate(tpl?.body || DEFAULT_INVOICE_BODY, vars),
+        omitBlankPoLine(renderTemplate(tpl?.body || DEFAULT_INVOICE_BODY, vars)),
         cfg.reply_to,
       ));
       setLoading(false);

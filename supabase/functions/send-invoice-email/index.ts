@@ -10,9 +10,10 @@ import {
   COMPANY_NAME,
   INVOICE_LOGO_CID,
   invoiceEmailHtml,
+  omitBlankPoLine,
   withUnmonitoredNotice,
 } from '../_shared/company.ts';
-import { SUMMIT_LOGO_BASE64 } from '../_shared/summitLogoBase64.ts';
+import { SUMMIT_LOGO_BASE64, SUMMIT_LOGO_MIME } from '../_shared/summitLogoBase64.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
     .replaceAll('{{company_contact}}', COMPANY_NAME);
 
   const mailedSubject = applyCompany(subject);
-  const finalBody = withUnmonitoredNotice(applyCompany(linkedBody), replyTo);
+  const finalBody = withUnmonitoredNotice(omitBlankPoLine(applyCompany(linkedBody)), replyTo);
 
   const notConfigured = !RESEND_API_KEY;
 
@@ -232,7 +233,7 @@ Deno.serve(async (req) => {
   const logoAttachment = {
     filename: 'summit-logo.png',
     content: SUMMIT_LOGO_BASE64,
-    content_type: 'image/png',
+    content_type: SUMMIT_LOGO_MIME,
     content_id: INVOICE_LOGO_CID,
   };
 
