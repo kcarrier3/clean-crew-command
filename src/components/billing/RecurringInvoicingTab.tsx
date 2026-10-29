@@ -103,6 +103,8 @@ export const RecurringInvoicingTab = ({ onOpenInvoice }: Props) => {
       .reduce((s, r) => s + Number(r.period?.amount || 0), 0),
     issues: visible.filter(r => blockingIssue(r)).length,
   };
+  const activeRows = rows.filter(r => r.schedule?.status === 'active');
+  const activeTotal = activeRows.reduce((s, r) => s + (r.lines.length ? scheduleAmount(r.lines) : Number(r.schedule?.amount || 0)), 0);
 
   const toggle = (id: string) => setSelected(s => {
     const n = new Set(s);
@@ -164,7 +166,10 @@ export const RecurringInvoicingTab = ({ onOpenInvoice }: Props) => {
         </Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+        <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">Active recurring (pre-tax)</CardTitle></CardHeader>
+          <CardContent className="pt-0"><p className="text-xl font-semibold">{money(activeTotal)}</p>
+            <p className="text-xs text-muted-foreground">{activeRows.length} active schedule(s)</p></CardContent></Card>
         <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">Ready this period</CardTitle></CardHeader>
           <CardContent className="pt-0"><p className="text-xl font-semibold">{money(totals.ready)}</p>
             <p className="text-xs text-muted-foreground">{readyRows.length} schedule(s)</p></CardContent></Card>
