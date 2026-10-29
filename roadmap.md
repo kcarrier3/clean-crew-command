@@ -6,3 +6,5 @@
 - [x] Copy delivery dates typed into drop-off notes into the delivery date
 - [x] BooksGPT invoice export (Billing → Invoices → Export for BooksGPT)
 - [x] Danger zone: password required + emailed confirmation link before account deletion
+- [x] Hide QuickBooks recurring suggestions that aren't recurring transactions in QuickBooks
+- [ ] Confirm the 5 close-match QuickBooks recurring suggestions (waiting on user: matches + Ganley referral credit)
