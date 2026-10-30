@@ -16,4 +16,4 @@
 - [ ] Password reset emails: send via invite sender (plan pending approval)
 - [x] Crew leads: no estimating even with admin; close creator/owner exceptions
 - [x] Crew leads: view schedules only, no editing (defaults, Brianna, database, app)
-- [ ] Waypoint search: include lost/aged when searching, match account names, normalize spacing
+- [x] Waypoint search: include lost/aged when searching, match account names, normalize spacing
