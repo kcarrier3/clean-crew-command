@@ -20,7 +20,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { user, profile, isManager, isCrmUser, canEstimate, signOut, sendPasswordResetEmail } = useAuth();
+  const { user, profile, isManager, isCrmUser, canEstimate, canViewCalendar, signOut, sendPasswordResetEmail } = useAuth();
   const isNative = useIsNativeApp() || useIsMobile();
   const { isModuleEnabled } = useModuleSettings();
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -41,6 +41,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
     isManager: !!isManager?.(),
     isCrmUser: !!isCrmUser?.(),
     canEstimate: !!canEstimate?.(),
+    canViewCalendar: !!canViewCalendar?.(),
     isModuleEnabled,
   });
 
