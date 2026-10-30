@@ -40,7 +40,7 @@ const jobTitlePermissions: Record<string, string[]> = {
   'Office Manager': [...ALL_PERMISSIONS],
   'Operations Manager': [...ALL_PERMISSIONS],
   'Janitorial Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
-  'Project Crew Lead': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
+  'Project Crew Lead': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings', 'edit_schedules'),
   'Night Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
   'Project Worker': [
     'view_schedules', 'view_time_tracking', 'edit_time_tracking', 'view_notifications', 'use_messaging'

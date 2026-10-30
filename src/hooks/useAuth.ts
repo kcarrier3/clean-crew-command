@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { canUseCalendar } from '@/lib/calendarAccess';
 import { canUseEstimating } from '@/lib/estimatingAccess';
+import { canChangeSchedules, canPublishScheduleWeeks } from '@/lib/scheduleAccess';
 
 export interface UserProfile {
   id: string;
@@ -215,8 +216,11 @@ export const useAuth = () => {
   };
 
   const canViewSchedules = () => hasPermission('view_schedules');
-  const canEditSchedules = () => hasPermission('edit_schedules');
-  const canPublishSchedules = () => hasRole('admin') || hasPermission('publish_schedules');
+  const canEditSchedules = () => hasPermission('edit_schedules') && profile?.job_title !== 'Project Crew Lead';
+  const canPublishSchedules = () =>
+    canPublishScheduleWeeks(roles.map(r => r.role), profile?.job_title, permissions.map(p => p.permission));
+  // Add/edit/delete shifts — mirrors employee_schedules write policies.
+  const canChangeShifts = () => canChangeSchedules(roles.map(r => r.role), profile?.job_title);
   const canViewTimeTracking = () => hasPermission('view_time_tracking');
   const canEditTimeTracking = () => hasPermission('edit_time_tracking');
   const canViewWorkOrders = () => hasPermission('view_work_orders');
@@ -254,6 +258,7 @@ export const useAuth = () => {
     canRunPayroll,
     canViewSchedules,
     canEditSchedules,
+    canChangeShifts,
     canPublishSchedules,
     canViewTimeTracking,
     canEditTimeTracking,
