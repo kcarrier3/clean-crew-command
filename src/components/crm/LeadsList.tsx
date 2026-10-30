@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { matchesSearch } from '@/lib/crmSearch';
+import { fetchAllRows } from './fetchAllRows';
 import { LeadDialog } from './LeadDialog';
 import { MergeDialog } from './MergeDialog';
 import { ClosedLostDialog } from './ClosedLostDialog';
@@ -47,6 +48,15 @@ export function LeadsList({ stages, onChanged }: Props) {
   const [closing, setClosing] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [lostOpen, setLostOpen] = useState(false);
+
+  const [accountNames, setAccountNames] = useState<Record<string, string>>({});
+  const loadAccountNames = async () => {
+    try {
+      const rows = await fetchAllRows<{ id: string; name: string }>('crm_companies', 'id, name', { column: 'name' });
+      setAccountNames(Object.fromEntries(rows.map(r => [r.id, r.name])));
+    } catch { /* search still works on opportunity fields */ }
+  };
+  useEffect(() => { loadAccountNames(); }, []);
 
   const load = async () => {
     setLoading(true);
@@ -120,8 +130,8 @@ export function LeadsList({ stages, onChanged }: Props) {
     )
     .filter(l =>
       !searching ||
-      // company_name holds the opportunity title; name holds the account name.
-      matchesSearch(filter, [l.company_name, l.name, l.contact_name, l.email])
+      // company_name is the opportunity title; the account comes from company_id.
+      matchesSearch(filter, [l.company_name, l.name, l.company_id ? accountNames[l.company_id] : null, l.contact_name, l.email])
     );
 
   const closeOutSelected = async (details: LostDetails) => {
