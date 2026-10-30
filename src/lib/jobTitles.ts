@@ -66,7 +66,8 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
 
   // Everything except CRM, supplies, estimating, calendar, admin settings
   'Janitorial Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
-  'Project Crew Lead': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
+  // Crew leads view schedules but never edit them.
+  'Project Crew Lead': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings', 'edit_schedules'),
   'Night Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
 
   // Own schedule (view only), time clock, messaging

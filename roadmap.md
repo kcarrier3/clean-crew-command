@@ -15,3 +15,4 @@
 - [x] Remove Estimating for Project Crew Leads (frontend + database)
 - [ ] Password reset emails: send via invite sender (plan pending approval)
 - [x] Crew leads: no estimating even with admin; close creator/owner exceptions
+- [x] Crew leads: view schedules only, no editing (defaults, Brianna, database, app)

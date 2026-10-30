@@ -14,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { JOB_SITE_COLUMNS } from '@/lib/jobSiteColumns';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import WeeklyScheduleView, { OPEN_SHIFT_ID } from './WeeklyScheduleView';
 import ManagerTimeOffReview from './ManagerTimeOffReview';
 import PayrollReports from './PayrollReports';
@@ -84,6 +85,8 @@ const SchedulingDashboard = () => {
     notes: '',
     week_interval: 1
   });
+  const { canChangeShifts } = useAuth();
+  const canEditShifts = canChangeShifts();
   const { toast } = useToast();
 
   const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -318,12 +321,14 @@ const SchedulingDashboard = () => {
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full md:w-auto shrink-0" onClick={() => { resetForm(); setEditingSchedule(null); }}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Schedule
-            </Button>
-          </DialogTrigger>
+          {canEditShifts && (
+            <DialogTrigger asChild>
+              <Button className="w-full md:w-auto shrink-0" onClick={() => { resetForm(); setEditingSchedule(null); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Schedule
+              </Button>
+            </DialogTrigger>
+          )}
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
@@ -596,7 +601,7 @@ const SchedulingDashboard = () => {
           sortBy={sortBy}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          onAddShift={handleAddShift}
+          onAddShift={canEditShifts ? handleAddShift : undefined}
         />
       </TabsContent>
 

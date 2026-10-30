@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.53.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.53.0';
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
@@ -40,7 +40,7 @@ const jobTitlePermissions: Record<string, string[]> = {
   'Office Manager': [...ALL_PERMISSIONS],
   'Operations Manager': [...ALL_PERMISSIONS],
   'Janitorial Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
-  'Project Crew Lead': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
+  'Project Crew Lead': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings', 'edit_schedules'),
   'Night Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
   'Project Worker': [
     'view_schedules', 'view_time_tracking', 'edit_time_tracking', 'view_notifications', 'use_messaging'
