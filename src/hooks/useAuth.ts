@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { canUseCalendar } from '@/lib/calendarAccess';
 
 export interface UserProfile {
   id: string;
@@ -238,8 +239,10 @@ export const useAuth = () => {
   const canManageEmployees = () => hasPermission('manage_employees');
   const canViewNotifications = () => hasPermission('view_notifications');
   const canAccessAdminSettings = () => hasPermission('admin_settings');
+  const canViewCalendar = () => canUseCalendar(hasRole('admin'), permissions.map(p => p.permission));
 
   return {
+    canViewCalendar,
     user,
     session,
     profile,

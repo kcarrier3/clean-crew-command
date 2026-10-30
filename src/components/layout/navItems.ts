@@ -8,16 +8,19 @@ export interface NavFlags {
   isManager: boolean;
   isCrmUser: boolean;
   canEstimate: boolean;
+  /** Planning calendar is a per-person permission (admins always). */
+  canViewCalendar?: boolean;
   /** Company-wide module gate; defaults to everything enabled. */
   isModuleEnabled?: (key: string) => boolean;
 }
 
-export const buildNavItems = ({ isManager, isCrmUser, canEstimate, isModuleEnabled }: NavFlags): SidebarItem[] => {
+export const buildNavItems = ({ isManager, isCrmUser, canEstimate, canViewCalendar = false, isModuleEnabled }: NavFlags): SidebarItem[] => {
+  const calendar: SidebarItem[] = canViewCalendar ? [{ v: 'calendar', label: 'Calendar', icon: CalendarRange }] : [];
   const items: SidebarItem[] = isManager
     ? [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
         { v: 'scheduling', label: 'Schedule',        icon: CalendarDays },
-        { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
+        ...calendar,
         { v: 'managerlog', label: 'Manager Log',     icon: BookOpen },
         { v: 'jobsites',   label: 'Accounts',        icon: MapPin },
         { v: 'billing',    label: 'Billing',         icon: Receipt },
@@ -34,7 +37,7 @@ export const buildNavItems = ({ isManager, isCrmUser, canEstimate, isModuleEnabl
     : [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
         { v: 'myschedule', label: 'My Schedule',     icon: CalendarDays },
-        { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
+        ...calendar,
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'training',   label: 'Training',        icon: GraduationCap },

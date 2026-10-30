@@ -45,7 +45,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const { user, loading, profile, isManager, canViewSov, isProjectCrewLead, canManageEmployees, isCrmUser, canEstimate, signOut, sendPasswordResetEmail } = useAuth();
+  const { user, loading, profile, roles, permissions, isManager, canViewSov, isProjectCrewLead, canManageEmployees, isCrmUser, canEstimate, canViewCalendar, signOut, sendPasswordResetEmail } = useAuth();
   const isNativeShell = useIsNativeApp();
   const isPhone = useIsMobile();
   const { isModuleEnabled } = useModuleSettings();
@@ -94,6 +94,13 @@ const Index = () => {
       setActiveTab('dashboard');
     }
   }, [activeTab, isModuleEnabled]);
+
+  // Planning calendar is per-person; send anyone without it back to the dashboard.
+  useEffect(() => {
+    if (loading) return;
+    if (activeTab === 'calendar' && !canViewCalendar()) setActiveTab('dashboard');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, loading, roles, permissions]);
 
   // Require new hires to complete their profile before using the app
   useEffect(() => {
@@ -158,7 +165,7 @@ const Index = () => {
     ? [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
         { v: 'scheduling', label: 'Schedule',        icon: CalendarDays },
-        { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
+        ...(canViewCalendar() ? [{ v: 'calendar', label: 'Calendar', icon: CalendarRange }] : []),
         { v: 'managerlog', label: 'Manager Log',     icon: BookOpen },
         { v: 'jobsites',   label: 'Accounts',        icon: MapPin },
         ...(canViewSov() ? [{ v: 'billing', label: 'Billing', icon: Receipt }] : []),
@@ -175,7 +182,7 @@ const Index = () => {
     : [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
         { v: 'myschedule', label: 'My Schedule',     icon: CalendarDays },
-        { v: 'calendar',   label: 'Calendar',        icon: CalendarRange },
+        ...(canViewCalendar() ? [{ v: 'calendar', label: 'Calendar', icon: CalendarRange }] : []),
         { v: 'timeoff',    label: 'Time Off',        icon: PlaneTakeoff },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'training',   label: 'Training',        icon: GraduationCap },
@@ -408,7 +415,7 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {isModuleEnabled('calendar') && (
+            {isModuleEnabled('calendar') && canViewCalendar() && (
               <TabsContent value="calendar" className="mt-6">
                 <CalendarPlanner />
               </TabsContent>
