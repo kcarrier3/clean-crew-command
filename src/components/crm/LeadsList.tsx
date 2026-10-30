@@ -11,6 +11,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { matchesSearch } from '@/lib/crmSearch';
+import { fetchAllRows } from './fetchAllRows';
 import { LeadDialog } from './LeadDialog';
 import { MergeDialog } from './MergeDialog';
 import { ClosedLostDialog } from './ClosedLostDialog';
@@ -46,6 +48,15 @@ export function LeadsList({ stages, onChanged }: Props) {
   const [closing, setClosing] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [lostOpen, setLostOpen] = useState(false);
+
+  const [accountNames, setAccountNames] = useState<Record<string, string>>({});
+  const loadAccountNames = async () => {
+    try {
+      const rows = await fetchAllRows<{ id: string; name: string }>('crm_companies', 'id, name', { column: 'name' });
+      setAccountNames(Object.fromEntries(rows.map(r => [r.id, r.name])));
+    } catch { /* search still works on opportunity fields */ }
+  };
+  useEffect(() => { loadAccountNames(); }, []);
 
   const load = async () => {
     setLoading(true);
@@ -107,18 +118,20 @@ export function LeadsList({ stages, onChanged }: Props) {
   const activeCount = scoped.length - lostCount;
   const agedCount = scoped.filter(isAged).length;
 
+  // While searching, every status is included so lost history stays findable.
+  const searching = filter.trim().length > 0;
+  const statusOf = (l: CrmLead): 'Lost' | 'Aged' | 'Active' => (isLost(l) ? 'Lost' : isAged(l) ? 'Aged' : 'Active');
   const filtered = scoped
-    .filter(l => (view === 'lost' ? isLost(l) : view === 'aged' ? isAged(l) : !isLost(l)))
+    .filter(l => searching || (view === 'lost' ? isLost(l) : view === 'aged' ? isAged(l) : !isLost(l)))
     .sort((a, b) =>
       view === 'aged'
         ? new Date(lastActivity(a)).getTime() - new Date(lastActivity(b)).getTime()
         : 0
     )
     .filter(l =>
-      !filter ||
-      l.company_name.toLowerCase().includes(filter.toLowerCase()) ||
-      l.contact_name?.toLowerCase().includes(filter.toLowerCase()) ||
-      l.email?.toLowerCase().includes(filter.toLowerCase())
+      !searching ||
+      // company_name is the opportunity title; the account comes from company_id.
+      matchesSearch(filter, [l.company_name, l.name, l.company_id ? accountNames[l.company_id] : null, l.contact_name, l.email])
     );
 
   const closeOutSelected = async (details: LostDetails) => {
@@ -193,7 +206,7 @@ export function LeadsList({ stages, onChanged }: Props) {
             </Select>
           )}
           <Input
-            placeholder="Search opportunities…"
+            placeholder="Search opportunities or accounts…"
             value={filter}
             onChange={e => setFilter(e.target.value)}
             className="max-w-xs"
@@ -240,11 +253,18 @@ export function LeadsList({ stages, onChanged }: Props) {
         onConfirm={closeOutSelected}
       />
 
+      {searching && (
+        <p className="text-xs text-muted-foreground">
+          Showing active, aged and lost matches{pipeline === 'all' ? ' across all pipelines' : ` in the ${PIPELINE_SHORT_LABELS[pipeline]} pipeline only — choose All to search every pipeline`}.
+        </p>
+      )}
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
       ) : filtered.length === 0 ? (
         <Card><CardContent className="py-10 text-center text-muted-foreground">
-          {view === 'lost'
+          {searching
+            ? 'No opportunities or accounts match that search.'
+            : view === 'lost'
             ? 'No lost opportunities.'
             : view === 'aged'
             ? 'No opportunities match this age filter.'
@@ -275,6 +295,11 @@ export function LeadsList({ stages, onChanged }: Props) {
                     )}
                     <Badge className={STATUS_COLORS[lead.status] + ' text-xs'}>{LEAD_STATUS_LABELS[lead.status]}</Badge>
                     {lead.source && <Badge variant="outline" className="text-xs">{lead.source}</Badge>}
+                    {searching && (
+                      <Badge variant={statusOf(lead) === 'Lost' ? 'destructive' : 'outline'} className="text-xs">
+                        {statusOf(lead)}
+                      </Badge>
+                    )}
                     {view === 'aged' && (
                       <Badge variant="outline" className="text-xs flex items-center gap-1">
                         <Clock className="h-3 w-3" />{daysSince(lastActivity(lead))} days idle
