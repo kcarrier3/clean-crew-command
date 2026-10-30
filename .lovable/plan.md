@@ -10,6 +10,7 @@
 - The exact reason Supabase's email settings fail (wrong key, sender domain, or port). I can't read those settings or Supabase's sign-in logs from here.
 
 ## Plan
+0. **Prerequisite (you, in Resend):** invites are currently failing with "This API key is not authorized to send emails from invites.crewcompass360.com". Create a Resend key with sending access to invites.crewcompass360.com (or "All domains"), then update the app's stored Resend key. Do this without breaking invoice emails: either one key with access to both domains, or a separate invite key that I wire up as `INVITE_RESEND_API_KEY`. Steps 1–5 depend on this.
 1. **Send password resets the same way invites go out.** Add a "request password reset" step on our side that:
    - creates the secure reset link
    - emails it from the same invite sender that already works
