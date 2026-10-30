@@ -14,4 +14,4 @@
 - [x] Planning calendar: hidden from Project Crew Leads; per-manager on/off toggle; leave on for Brianna
 - [x] Remove Estimating for Project Crew Leads (frontend + database)
 - [ ] Password reset emails: send via invite sender (plan pending approval)
-- [ ] Crew leads: no estimating even with admin; close creator/owner exceptions
+- [x] Crew leads: no estimating even with admin; close creator/owner exceptions
