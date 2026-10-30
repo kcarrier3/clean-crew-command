@@ -85,6 +85,8 @@ const SchedulingDashboard = () => {
     notes: '',
     week_interval: 1
   });
+  const { canChangeShifts } = useAuth();
+  const canEditShifts = canChangeShifts();
   const { toast } = useToast();
 
   const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
