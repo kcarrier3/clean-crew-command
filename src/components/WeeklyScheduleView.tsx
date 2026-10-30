@@ -90,8 +90,10 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const { isManager, canPublishSchedules } = useAuth();
+  const { isManager, canPublishSchedules, canChangeShifts } = useAuth();
   const canManage = isManager();
+  // Crew leads are managers for call-offs but cannot add/edit/delete shifts.
+  const canEdit = canChangeShifts();
   const canPublish = canPublishSchedules();
   const [weekPublished, setWeekPublished] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -511,7 +513,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                   className={`group/cell relative border-l p-1 min-h-[76px] space-y-1 transition-colors hover:bg-muted/40 ${
                     isToday(d) ? 'bg-primary/[0.03]' : ''
                   }`}
-                  onDoubleClick={() => canManage && onAddShift?.(OPEN_SHIFT_ID, iso)}
+                  onDoubleClick={() => canEdit && onAddShift?.(OPEN_SHIFT_ID, iso)}
                 >
                   {openShifts.map(({ schedule, callOff }) => (
                     <ShiftBlock
@@ -521,11 +523,12 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                       onDelete={onDelete}
                       callOff={callOff}
                       canManage={canManage}
+                      canEdit={canEdit}
                       onCallOff={() => { setReason(''); setCallOffTarget({ schedule, date: iso }); }}
                       onUndoCallOff={undoCallOff}
                     />
                   ))}
-                  {canManage && onAddShift && (
+                  {canEdit && onAddShift && (
                     openShifts.length === 0 ? (
                       <button
                         type="button"
@@ -608,7 +611,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                       className={`group/cell relative border-l p-1 min-h-[76px] space-y-1 transition-colors hover:bg-muted/40 ${
                         isToday(d) ? 'bg-primary/[0.03]' : ''
                       }`}
-                      onDoubleClick={() => canManage && onAddShift?.(emp.id, iso)}
+                      onDoubleClick={() => canEdit && onAddShift?.(emp.id, iso)}
                     >
                       {shifts.map((s) => (
                         <ShiftBlock
@@ -618,12 +621,13 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
                           onDelete={onDelete}
                           callOff={callOffFor(s.id, iso)}
                           canManage={canManage}
+                      canEdit={canEdit}
                           onCallOff={() => { setReason(''); setCallOffTarget({ schedule: s, date: iso }); }}
                           onUndoCallOff={undoCallOff}
                           colorClass={deptColor(deptName)}
                         />
                       ))}
-                      {canManage && onAddShift && (
+                      {canEdit && onAddShift && (
                         shifts.length === 0 ? (
                           <button
                             type="button"
@@ -724,6 +728,7 @@ function ShiftBlock({
   onDelete,
   callOff,
   canManage,
+  canEdit,
   onCallOff,
   onUndoCallOff,
   colorClass,
@@ -733,6 +738,7 @@ function ShiftBlock({
   onDelete: (id: string) => void;
   callOff: CallOff | null;
   canManage: boolean;
+  canEdit: boolean;
   onCallOff: () => void;
   onUndoCallOff: (c: CallOff) => void;
   colorClass?: string;
@@ -794,15 +800,22 @@ function ShiftBlock({
             </DropdownMenuItem>
           )
         )}
-        <DropdownMenuItem onClick={() => onEdit(schedule)}>
-          <Edit2 className="h-4 w-4 mr-2" /> Edit shift
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => onDelete(schedule.id)}
-          className="text-destructive focus:text-destructive"
-        >
-          <Trash2 className="h-4 w-4 mr-2" /> Delete shift
-        </DropdownMenuItem>
+        {canEdit && (
+          <>
+            <DropdownMenuItem onClick={() => onEdit(schedule)}>
+              <Edit2 className="h-4 w-4 mr-2" /> Edit shift
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onDelete(schedule.id)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Delete shift
+            </DropdownMenuItem>
+          </>
+        )}
+        {!canEdit && !(canManage && !unassigned) && (
+          <DropdownMenuItem disabled>View only</DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
