@@ -8,8 +8,11 @@ describe('estimating access', () => {
   it('Project Crew Lead with manager role (and employee) is still denied', () => {
     expect(canUseEstimating(['manager', 'employee'], 'Project Crew Lead')).toBe(false);
   });
-  it('admin role overrides for a Project Crew Lead', () => {
-    expect(canUseEstimating(['admin'], 'Project Crew Lead')).toBe(true);
+  it('admin role does not override for a Project Crew Lead', () => {
+    expect(canUseEstimating(['admin', 'manager'], 'Project Crew Lead')).toBe(false);
+  });
+  it('admin role still grants access to other titles', () => {
+    expect(canUseEstimating(['admin'], 'Supply')).toBe(true);
   });
   it('other estimator titles keep access', () => {
     for (const t of ['Owner', 'Office Manager', 'Operations Manager', 'Janitorial Manager', 'Night Manager']) {
