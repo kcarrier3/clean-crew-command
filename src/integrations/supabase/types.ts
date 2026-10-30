@@ -8523,6 +8523,7 @@ export type Database = {
         Returns: boolean
       }
       is_crm_user: { Args: { _user_id: string }; Returns: boolean }
+      is_project_crew_lead: { Args: { _user_id: string }; Returns: boolean }
       is_pto_manager_title: { Args: { _job_title: string }; Returns: boolean }
       is_punched_in_at: {
         Args: { _job_site_id: string; _user_id: string }
