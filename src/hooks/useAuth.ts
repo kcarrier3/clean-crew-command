@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { canUseCalendar } from '@/lib/calendarAccess';
+import { canUseEstimating } from '@/lib/estimatingAccess';
 
 export interface UserProfile {
   id: string;
@@ -198,20 +199,8 @@ export const useAuth = () => {
     hasPermission('view_crm') ||
     (!!profile?.job_title && CRM_JOB_TITLES.includes(profile.job_title));
 
-  // Sales Estimator access — mirrors public.can_estimate() / can_approve_estimate()
-  const ESTIMATOR_JOB_TITLES = [
-    'Owner',
-    'Office Manager',
-    'Operations Manager',
-    'Janitorial Manager',
-    'Night Manager',
-    'Project Crew Lead',
-  ];
-
-  const canEstimate = () =>
-    hasRole('admin') ||
-    hasRole('manager') ||
-    (!!profile?.job_title && ESTIMATOR_JOB_TITLES.includes(profile.job_title));
+  // Sales Estimator access — mirrors public.can_estimate()
+  const canEstimate = () => canUseEstimating(roles.map(r => r.role), profile?.job_title);
 
   const canApproveEstimate = () => hasRole('admin') || profile?.job_title === 'Owner';
 

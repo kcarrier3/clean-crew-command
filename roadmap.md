@@ -12,3 +12,5 @@
 - [x] Review remaining QuickBooks recurring suggestions
 - [x] Turn on recurring schedules starting December 1 (Aquatic seasonal + Westlake extras stay off)
 - [x] Planning calendar: hidden from Project Crew Leads; per-manager on/off toggle; leave on for Brianna
+- [x] Remove Estimating for Project Crew Leads (frontend + database)
+- [ ] Password reset emails: send via invite sender (plan pending approval)
