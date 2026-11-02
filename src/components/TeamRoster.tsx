@@ -37,6 +37,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { JOB_TITLES, getJobTitleColor, JOB_TITLE_PERMISSIONS, type JobTitle } from '@/lib/jobTitles';
+import { diffPermissions, lockedPermissionReason } from '@/lib/teamPermissions';
 
 const ALL_PERMISSIONS: { key: string; label: string; category: string }[] = [
   { key: 'view_schedules', label: 'View Schedules', category: 'Scheduling' },
@@ -52,6 +53,7 @@ const ALL_PERMISSIONS: { key: string; label: string; category: string }[] = [
   { key: 'edit_quality_control', label: 'Edit Quality Control', category: 'Quality Control' },
   { key: 'view_worker_status', label: 'View Worker Status', category: 'Team' },
   { key: 'manage_employees', label: 'Manage Employees', category: 'Team' },
+  { key: 'view_crm', label: 'Waypoint (CRM)', category: 'Sales' },
   { key: 'view_notifications', label: 'View Notifications', category: 'System' },
   { key: 'admin_settings', label: 'Admin Settings', category: 'System' },
 ];
