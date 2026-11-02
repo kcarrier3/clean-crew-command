@@ -1,31 +1,41 @@
-# Fix "Error sending recovery email" before employee rollout
+# Weekly supply billing with one "Approve" button
 
-## What we know (checked)
-- Invite emails are sent by our own invite function through Resend from `noreply@invites.crewcompass360.com`, and they are being delivered.
-- "Forgot password" on the sign-in page does not use that path. It asks Supabase to send the email using the email settings in the Supabase dashboard.
-- Julian's account has no record of a reset email ever going out. Across all 9 accounts, only one reset email has ever succeeded (July 1).
-- "Error sending recovery email" is the message Supabase gives when its own email settings fail to hand the message off.
+## Goal
+Julian (or any supply worker) records drop-offs as today. Every Monday, Nikki opens a **Supply Billing** screen, reviews last week's drop-offs, and clicks **Approve**. Each account gets one invoice for the week, emailed to its billing address. She does no follow-up and sees no other billing.
 
-## What we don't know
-- The exact reason Supabase's email settings fail (wrong key, sender domain, or port). I can't read those settings or Supabase's sign-in logs from here.
+## What Nikki sees
+- New **Supply Billing** page (in the Supplies area), visible only to people with the new permission.
+- Defaults to **last week** (Sunday–Saturday, matching the pay week); a week picker lets her look at earlier weeks.
+- One card per account: account name, billing email, each drop-off (date, item, quantity, price), subtotal. Sales tax is added when the invoice is created.
+- Per drop-off: **Hold** (skip this week) or **Remove** (not billable).
+- Warnings shown before approving, and those accounts are skipped instead of blocked:
+  - no billing email on file
+  - account has no county, so sales tax can't be worked out
+- One **Approve** button. After it runs she sees a summary: "12 invoices sent, 1 skipped (no billing email)".
 
-## Plan
-0. **Prerequisite (you, in Resend):** invites are currently failing with "This API key is not authorized to send emails from invites.crewcompass360.com". Create a Resend key with sending access to invites.crewcompass360.com (or "All domains"), then update the app's stored Resend key. Do this without breaking invoice emails: either one key with access to both domains, or a separate invite key that I wire up as `INVITE_RESEND_API_KEY`. Steps 1–5 depend on this.
-1. **Send password resets the same way invites go out.** Add a "request password reset" step on our side that:
-   - creates the secure reset link
-   - emails it from the same invite sender that already works
-   - always shows "If that email is on file, a link is on its way," so nobody can probe which emails exist
-   - limits repeat requests (about 1 per minute and 5 per hour per email) so it can't be used to spam people
-   - logs each request so we can see sent or failed status, like invites
-2. **Point the sign-in page and the in-app "reset password" button at this new step**, instead of Supabase's mailer.
-3. **Branded email** matching the invite email (Summit/Crew Compass look, one button, link expiry note).
-4. **Test without emailing staff:** confirm an unknown address returns the generic message, the rate limit kicks in, and the reset page accepts a link. Then send one real test only to an address you choose.
-5. **Optional check for you in Supabase:** Authentication → SMTP settings. Fixing those also helps other Supabase-sent emails (like email-address changes), but the rollout won't depend on them anymore.
+## What happens on Approve
+1. For each account: create one invoice from that week's ready supply drop-offs (one line per drop-off). Sales tax and totals are calculated by the existing invoice rules.
+2. Make the invoice PDF and email it to the billing email on file from the existing billing address, with the same template and logo as other invoices.
+3. The drop-offs are marked invoiced (they leave Ready to Bill and lock, as today).
+4. Clicking Approve twice, or two people approving at once, never sends a second invoice for the same drop-offs.
+
+## Access
+- New per-person permission **Approve Supply Billing**, set from Team → Edit. Turned on for Nikki.
+- It only covers supply drop-offs. It does not open invoices, payments, A/R, contracts, credits or project billing. This is enforced in the database, not just by hiding screens.
+- Office/Owner billing users keep full access. Supply invoices show up in their Invoices list for payments and follow-up.
+- Optional later: a Monday-morning reminder to Nikki.
+
+## Assumptions to confirm
+- Week = Sunday–Saturday (same as pay period).
+- Cleaning-supply drop-offs stay unbilled, as now.
+- Until in-app billing starts, the QuickBooks "Billed in QB" button stays available.
 
 ## Technical details
-- New edge function `request-password-reset` (no login required): zod-validate the email, look up the user server-side, `auth.admin.generateLink({ type: 'recovery', redirectTo: APP_URL + '/reset-password' })`, send via Resend with `INVITE_FROM_EMAIL`/`INVITE_FROM_NAME`. Return 200 with the same body for every outcome.
-- New table `password_reset_requests` (email hash, user id, status, provider id, error, created_at) with GRANTs to service_role only, RLS on, no client policies. Rate limit is checked in the function.
-- `src/pages/Auth.tsx` and `useAuth.sendPasswordResetEmail` call `supabase.functions.invoke('request-password-reset')` instead of `resetPasswordForEmail`.
-- Reuse invite email HTML and helpers from `invite-employee`; keep the billing sender untouched.
-- Record the rule in AGENTS.md: all auth emails go through our Resend auth sender, not Supabase SMTP.
-- Add the item to roadmap.md.
+- Enum value `approve_supply_billing` on `app_permission`; added to the Team permission checkboxes (`src/components/TeamRoster.tsx`) and `useAuth`.
+- New edge function `approve-supply-billing` (service role internally). The caller must have the permission or `can_manage_billing`. Actions:
+  - `preview(weekStart)`: ready `billing_events` with `source='supply_usage'`, completed in the week, grouped by `job_site_id` + billing email, with tax-readiness and email checks.
+  - `create(weekStart, eventIds)`: inside one transaction per account, lock the events (`status='ready'` re-checked), insert `billing_invoices` + items, link events (`status='invoiced'`, `invoice_id`). The idempotency key is the sorted event ids.
+  - `send(invoiceId, pdfBase64)`: only for invoices this flow created (all lines from supply events). It uploads the PDF to `invoice-documents` and sends through shared Resend send code, split out of `send-invoice-email` into `_shared/sendInvoice.ts` so both paths log to `billing_email_messages` and use the same template.
+- The browser makes PDFs with the existing `src/lib/billing/invoicePdf.ts` from the data `create` returns, then calls `send` per invoice.
+- New page `src/components/supply/SupplyBillingWeekly.tsx`. Hold/remove go through the same function, so no new table policies are opened to her.
+- Tests: week boundaries, grouping per account, skip rules (no email / tax review), and a check that duplicate events are never billed twice.
