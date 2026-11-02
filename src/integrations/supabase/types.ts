@@ -795,6 +795,7 @@ export type Database = {
       billing_events: {
         Row: {
           amount: number
+          billed_externally: boolean
           billing_email: string | null
           billing_percent: number | null
           completed_at: string
@@ -805,6 +806,8 @@ export type Database = {
           crm_deal_id: string | null
           crm_lead_id: string | null
           description: string | null
+          external_billed_by: string | null
+          external_reference: string | null
           hold_at: string | null
           hold_by: string | null
           hold_reason: string | null
@@ -824,6 +827,7 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          billed_externally?: boolean
           billing_email?: string | null
           billing_percent?: number | null
           completed_at?: string
@@ -834,6 +838,8 @@ export type Database = {
           crm_deal_id?: string | null
           crm_lead_id?: string | null
           description?: string | null
+          external_billed_by?: string | null
+          external_reference?: string | null
           hold_at?: string | null
           hold_by?: string | null
           hold_reason?: string | null
@@ -853,6 +859,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          billed_externally?: boolean
           billing_email?: string | null
           billing_percent?: number | null
           completed_at?: string
@@ -863,6 +870,8 @@ export type Database = {
           crm_deal_id?: string | null
           crm_lead_id?: string | null
           description?: string | null
+          external_billed_by?: string | null
+          external_reference?: string | null
           hold_at?: string | null
           hold_by?: string | null
           hold_reason?: string | null
