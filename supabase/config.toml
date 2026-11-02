@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.confirm-account-deletion]
 verify_jwt = false
+
+[functions.approve-supply-billing]
+verify_jwt = true
