@@ -37,6 +37,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { JOB_TITLES, getJobTitleColor, JOB_TITLE_PERMISSIONS, type JobTitle } from '@/lib/jobTitles';
+import { diffPermissions, lockedPermissionReason } from '@/lib/teamPermissions';
 
 const ALL_PERMISSIONS: { key: string; label: string; category: string }[] = [
   { key: 'view_schedules', label: 'View Schedules', category: 'Scheduling' },
@@ -52,6 +53,7 @@ const ALL_PERMISSIONS: { key: string; label: string; category: string }[] = [
   { key: 'edit_quality_control', label: 'Edit Quality Control', category: 'Quality Control' },
   { key: 'view_worker_status', label: 'View Worker Status', category: 'Team' },
   { key: 'manage_employees', label: 'Manage Employees', category: 'Team' },
+  { key: 'view_crm', label: 'Waypoint (CRM)', category: 'Sales' },
   { key: 'view_notifications', label: 'View Notifications', category: 'System' },
   { key: 'admin_settings', label: 'Admin Settings', category: 'System' },
 ];
@@ -104,6 +106,17 @@ const TeamRoster = () => {
   const [initialAccessLevel, setInitialAccessLevel] = useState<'admin' | 'manager' | 'employee'>('employee');
   const [editLoading, setEditLoading] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editPermissions, setEditPermissions] = useState<string[]>([]);
+  const [initialEditPermissions, setInitialEditPermissions] = useState<string[]>([]);
+  // Matches the database rule: admins or people with Manage Employees can change permissions.
+  const canEditPerms = hasRole('admin') || canManageEmployees();
+  const permLockReason = (key: string) =>
+    lockedPermissionReason(key, {
+      memberJobTitle: editForm.job_title || editMember?.job_title,
+      editorIsAdmin: hasRole('admin'),
+      editingSelf: !!user?.id && editMember?.id === user.id,
+    });
+  const isPermLocked = (key: string) => !!permLockReason(key);
   const [confirmDelete, setConfirmDelete] = useState<RosterMember | null>(null);
   const [resending, setResending] = useState(false);
   const [lastInvite, setLastInvite] = useState<{ status: string; sent_at: string | null; error_message: string | null; link_expires_at: string | null } | null>(null);
@@ -283,10 +296,13 @@ const TeamRoster = () => {
     if (!canManage) return;
     setEditMember(m);
     setEditLoading(true);
+    setEditPermissions([]);
+    setInitialEditPermissions([]);
     Promise.all([
       supabase.from('profiles').select('*').eq('id', m.id).maybeSingle(),
       supabase.from('user_roles').select('role').eq('user_id', m.id),
-    ]).then(([profileRes, rolesRes]) => {
+      supabase.from('user_permissions').select('permission').eq('user_id', m.id),
+    ]).then(([profileRes, rolesRes, permsRes]) => {
       setEditLoading(false);
       const { data, error } = profileRes;
       if (error || !data) {
@@ -324,6 +340,9 @@ const TeamRoster = () => {
         : 'employee';
       setEditAccessLevel(highest);
       setInitialAccessLevel(highest);
+      const permKeys = ((permsRes.data ?? []) as { permission: string }[]).map((r) => r.permission);
+      setEditPermissions(permKeys);
+      setInitialEditPermissions(permKeys);
     });
   };
 
@@ -385,6 +404,34 @@ const TeamRoster = () => {
         setSavingEdit(false);
         toast({ title: 'Error', description: `Could not set new access level: ${insErr.message}`, variant: 'destructive' });
         return;
+      }
+    }
+    // Persist individual permission changes (only the ones that changed)
+    if (canEditPerms) {
+      const { add, remove } = diffPermissions(initialEditPermissions, editPermissions);
+      const toAdd = add.filter((k) => !isPermLocked(k));
+      const toRemove = remove.filter((k) => !isPermLocked(k));
+      if (toRemove.length > 0) {
+        const { error: rmErr } = await supabase
+          .from('user_permissions')
+          .delete()
+          .eq('user_id', editMember.id)
+          .in('permission', toRemove as any);
+        if (rmErr) {
+          setSavingEdit(false);
+          toast({ title: 'Error', description: `Could not remove permissions: ${rmErr.message}`, variant: 'destructive' });
+          return;
+        }
+      }
+      if (toAdd.length > 0) {
+        const { error: addErr } = await supabase
+          .from('user_permissions')
+          .insert(toAdd.map((p) => ({ user_id: editMember.id, permission: p as any })));
+        if (addErr) {
+          setSavingEdit(false);
+          toast({ title: 'Error', description: `Could not add permissions: ${addErr.message}`, variant: 'destructive' });
+          return;
+        }
       }
     }
     setSavingEdit(false);
@@ -865,6 +912,76 @@ const TeamRoster = () => {
                   Overrides the default permissions tied to the job title. Only admins can change this.
                 </p>
               </div>
+            </section>
+
+            <section className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Permissions</h3>
+                {canEditPerms && editForm.job_title && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const defaults = (JOB_TITLE_PERMISSIONS as Record<string, string[]>)[editForm.job_title] ?? [];
+                      // Keep locked permissions as they are; only reset the ones this editor may change.
+                      setEditPermissions((prev) => {
+                        const locked = ALL_PERMISSIONS.map((p) => p.key).filter((k) => isPermLocked(k));
+                        const keepLocked = prev.filter((k) => locked.includes(k));
+                        const resettable = defaults.filter((k) => !locked.includes(k));
+                        return Array.from(new Set([...keepLocked, ...resettable]));
+                      });
+                    }}
+                  >
+                    Reset to job title defaults
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {canEditPerms
+                  ? 'Check or uncheck to add or remove access for this person. Changes apply when you save.'
+                  : 'Only admins and people with Manage Employees can change permissions.'}
+              </p>
+              <div className="border rounded-md p-3 space-y-3">
+                {Array.from(new Set(ALL_PERMISSIONS.map((p) => p.category))).map((cat) => (
+                  <div key={cat}>
+                    <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">{cat}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {ALL_PERMISSIONS.filter((p) => p.category === cat).map((p) => {
+                        const reason = canEditPerms ? permLockReason(p.key) : null;
+                        const disabled = !canEditPerms || !!reason;
+                        return (
+                          <label
+                            key={p.key}
+                            className={`flex items-start gap-2 text-sm ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                            title={reason ?? undefined}
+                          >
+                            <Checkbox
+                              className="mt-0.5"
+                              checked={editPermissions.includes(p.key)}
+                              disabled={disabled}
+                              onCheckedChange={() =>
+                                setEditPermissions((prev) =>
+                                  prev.includes(p.key) ? prev.filter((k) => k !== p.key) : [...prev, p.key]
+                                )
+                              }
+                            />
+                            <span>
+                              {p.label}
+                              {reason && <span className="block text-xs text-muted-foreground">{reason}</span>}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {editAccessLevel === 'admin' && (
+                <p className="text-xs text-muted-foreground">
+                  Admins can already reach most areas regardless of these boxes.
+                </p>
+              )}
             </section>
 
             <section className="space-y-3">
