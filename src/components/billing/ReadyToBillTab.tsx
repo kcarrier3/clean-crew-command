@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
-  AlertTriangle, Building2, CalendarClock, FileText, Mail, PauseCircle, PlayCircle,
-  Receipt, Search, XCircle,
+  AlertTriangle, Building2, CalendarClock, CheckCircle2, FileText, Mail, PauseCircle, PlayCircle,
+  Receipt, Search, Undo2, XCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -36,13 +36,23 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
   const [holdTarget, setHoldTarget] = useState<BillingEvent | null>(null);
   const [sovSiteId, setSovSiteId] = useState<string | null>(null);
   const [holdReason, setHoldReason] = useState('');
+  // Temporary: until invoicing moves into Crew Compass, items billed in QuickBooks are marked here.
+  const [qbTargets, setQbTargets] = useState<BillingEvent[]>([]);
+  const [qbRef, setQbRef] = useState('');
+  const [qbSaving, setQbSaving] = useState(false);
+  const [recentQb, setRecentQb] = useState<any[]>([]);
 
   const load = async () => {
     setLoading(true);
     try {
       const rows = await fetchBillingEvents(['ready', 'hold']);
       setEvents(rows);
-      const siteIds = [...new Set(rows.map(r => r.job_site_id).filter(Boolean))] as string[];
+      const { data: billed } = await db.from('billing_events')
+        .select('id, label, amount, job_site_id, invoiced_at, external_reference')
+        .eq('billed_externally', true).eq('status', 'invoiced')
+        .order('invoiced_at', { ascending: false }).limit(20);
+      setRecentQb(billed ?? []);
+      const siteIds = [...new Set([...rows, ...(billed ?? [])].map((r: any) => r.job_site_id).filter(Boolean))] as string[];
       const leadIds = [...new Set(rows.map(r => r.crm_lead_id).filter(Boolean))] as string[];
       if (siteIds.length) {
         const { data } = await db.from('job_sites').select('id, name, client_name').in('id', siteIds);
@@ -108,6 +118,32 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
     load();
   };
 
+  const markBilledInQb = async () => {
+    if (!qbTargets.length) return;
+    setQbSaving(true);
+    const { data: u } = await db.auth.getUser();
+    const { error } = await db.from('billing_events').update({
+      status: 'invoiced', invoiced_at: new Date().toISOString(),
+      billed_externally: true, external_reference: qbRef.trim() || null,
+      external_billed_by: u?.user?.id ?? null,
+    }).in('id', qbTargets.map(e => e.id)).eq('status', 'ready');
+    setQbSaving(false);
+    if (error) return toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    toast({ title: `Marked ${qbTargets.length === 1 ? 'item' : `${qbTargets.length} items`} billed in QuickBooks` });
+    setQbTargets([]); setQbRef(''); setSelected({});
+    load();
+  };
+
+  const undoQb = async (id: string) => {
+    const { error } = await db.from('billing_events').update({
+      status: 'ready', invoiced_at: null,
+      billed_externally: false, external_reference: null, external_billed_by: null,
+    }).eq('id', id).eq('billed_externally', true).is('invoice_id', null);
+    if (error) return toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    toast({ title: 'Moved back to Ready to Bill' });
+    load();
+  };
+
   const openGenerate = (list: BillingEvent[]) => {
     if (!list.length) return;
     const site = list[0].job_site_id;
@@ -156,6 +192,11 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={showHeld} onCheckedChange={v => setShowHeld(!!v)} /> Show holds
             </label>
+            <Button size="sm" variant="outline" disabled={!selectedEvents.length}
+                    onClick={() => { setQbTargets(selectedEvents); setQbRef(''); }}>
+              <CheckCircle2 className="h-4 w-4 mr-1" />
+              Billed in QuickBooks{selectedEvents.length ? ` (${selectedEvents.length})` : ''}
+            </Button>
             <Button size="sm" disabled={!selectedEvents.length} onClick={() => openGenerate(selectedEvents)}>
               <FileText className="h-4 w-4 mr-1" />
               Invoice selected{selectedEvents.length ? ` (${selectedEvents.length})` : ''}
@@ -232,6 +273,11 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
                         </Button>
                       )}
                       {!held && (
+                        <Button size="sm" variant="outline" onClick={() => { setQbTargets([e]); setQbRef(''); }}>
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Billed in QB
+                        </Button>
+                      )}
+                      {!held && (
                         <Button size="sm" onClick={() => openGenerate([e])}>
                           <FileText className="h-3.5 w-3.5 mr-1" /> Invoice
                         </Button>
@@ -257,6 +303,57 @@ export const ReadyToBillTab = ({ onInvoiceCreated }: Props) => {
           })}
         </CardContent>
       </Card>
+
+      {recentQb.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" /> Recently marked billed in QuickBooks
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {recentQb.map(r => (
+              <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{r.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {siteNames[r.job_site_id ?? ''] ?? 'Account'}
+                    {r.invoiced_at && ` · ${format(new Date(r.invoiced_at), 'MMM d, yyyy')}`}
+                    {r.external_reference && ` · QB #${r.external_reference}`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="tabular-nums">{money(r.amount)}</span>
+                  <Button size="sm" variant="ghost" onClick={() => undoQb(r.id)}>
+                    <Undo2 className="h-3.5 w-3.5 mr-1" /> Undo
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={qbTargets.length > 0} onOpenChange={o => !o && setQbTargets([])}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Mark as billed in QuickBooks</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This takes {qbTargets.length === 1 ? 'this item' : `these ${qbTargets.length} items`} off Ready to Bill without creating an invoice here.
+            Total {money(qbTargets.reduce((s, e) => s + Number(e.amount || 0), 0))}.
+          </p>
+          <ul className="text-sm list-disc pl-5 max-h-40 overflow-y-auto">
+            {qbTargets.map(e => <li key={e.id}>{e.label}</li>)}
+          </ul>
+          <div className="space-y-2">
+            <Label htmlFor="qb_ref">QuickBooks invoice # (optional)</Label>
+            <Input id="qb_ref" value={qbRef} onChange={e => setQbRef(e.target.value)} placeholder="e.g. 3726" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQbTargets([])} disabled={qbSaving}>Cancel</Button>
+            <Button onClick={markBilledInQb} disabled={qbSaving}>{qbSaving ? 'Saving…' : 'Mark billed'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <SovReadyDialog
         jobSiteId={sovSiteId}
