@@ -106,6 +106,17 @@ const TeamRoster = () => {
   const [initialAccessLevel, setInitialAccessLevel] = useState<'admin' | 'manager' | 'employee'>('employee');
   const [editLoading, setEditLoading] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editPermissions, setEditPermissions] = useState<string[]>([]);
+  const [initialEditPermissions, setInitialEditPermissions] = useState<string[]>([]);
+  // Matches the database rule: admins or people with Manage Employees can change permissions.
+  const canEditPerms = hasRole('admin') || canManageEmployees();
+  const permLockReason = (key: string) =>
+    lockedPermissionReason(key, {
+      memberJobTitle: editForm.job_title || editMember?.job_title,
+      editorIsAdmin: hasRole('admin'),
+      editingSelf: !!user?.id && editMember?.id === user.id,
+    });
+  const isPermLocked = (key: string) => !!permLockReason(key);
   const [confirmDelete, setConfirmDelete] = useState<RosterMember | null>(null);
   const [resending, setResending] = useState(false);
   const [lastInvite, setLastInvite] = useState<{ status: string; sent_at: string | null; error_message: string | null; link_expires_at: string | null } | null>(null);
@@ -285,10 +296,13 @@ const TeamRoster = () => {
     if (!canManage) return;
     setEditMember(m);
     setEditLoading(true);
+    setEditPermissions([]);
+    setInitialEditPermissions([]);
     Promise.all([
       supabase.from('profiles').select('*').eq('id', m.id).maybeSingle(),
       supabase.from('user_roles').select('role').eq('user_id', m.id),
-    ]).then(([profileRes, rolesRes]) => {
+      supabase.from('user_permissions').select('permission').eq('user_id', m.id),
+    ]).then(([profileRes, rolesRes, permsRes]) => {
       setEditLoading(false);
       const { data, error } = profileRes;
       if (error || !data) {
@@ -326,6 +340,9 @@ const TeamRoster = () => {
         : 'employee';
       setEditAccessLevel(highest);
       setInitialAccessLevel(highest);
+      const permKeys = ((permsRes.data ?? []) as { permission: string }[]).map((r) => r.permission);
+      setEditPermissions(permKeys);
+      setInitialEditPermissions(permKeys);
     });
   };
 
@@ -387,6 +404,34 @@ const TeamRoster = () => {
         setSavingEdit(false);
         toast({ title: 'Error', description: `Could not set new access level: ${insErr.message}`, variant: 'destructive' });
         return;
+      }
+    }
+    // Persist individual permission changes (only the ones that changed)
+    if (canEditPerms) {
+      const { add, remove } = diffPermissions(initialEditPermissions, editPermissions);
+      const toAdd = add.filter((k) => !isPermLocked(k));
+      const toRemove = remove.filter((k) => !isPermLocked(k));
+      if (toRemove.length > 0) {
+        const { error: rmErr } = await supabase
+          .from('user_permissions')
+          .delete()
+          .eq('user_id', editMember.id)
+          .in('permission', toRemove as any);
+        if (rmErr) {
+          setSavingEdit(false);
+          toast({ title: 'Error', description: `Could not remove permissions: ${rmErr.message}`, variant: 'destructive' });
+          return;
+        }
+      }
+      if (toAdd.length > 0) {
+        const { error: addErr } = await supabase
+          .from('user_permissions')
+          .insert(toAdd.map((p) => ({ user_id: editMember.id, permission: p as any })));
+        if (addErr) {
+          setSavingEdit(false);
+          toast({ title: 'Error', description: `Could not add permissions: ${addErr.message}`, variant: 'destructive' });
+          return;
+        }
       }
     }
     setSavingEdit(false);
