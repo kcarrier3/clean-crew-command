@@ -108,6 +108,10 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
   const previewTax = Math.round(Math.max(taxableBase, 0) * previewRate) / 100;
 
   const submit = async () => {
+    if (!site) {
+      toast({ title: 'Pick an account', description: 'Sales tax needs the account\'s county, so choose an account first.', variant: 'destructive' });
+      return;
+    }
     setSaving(true);
     try {
       const inv = await createManualInvoice({
@@ -133,12 +137,13 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="ni_site">Account (optional)</Label>
+            <Label htmlFor="ni_site">Account *</Label>
             <select id="ni_site" value={siteId} onChange={e => pickSite(e.target.value)}
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-              <option value="">No account</option>
+              <option value="" disabled>Select an account</option>
               {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
+            <p className="text-xs text-muted-foreground">Sales tax uses the account's county, so every invoice needs one.</p>
           </div>
           <div className="space-y-1.5"><Label htmlFor="ni_cust">Customer name</Label>
             <Input id="ni_cust" value={customer} onChange={e => setCustomer(e.target.value)} /></div>
