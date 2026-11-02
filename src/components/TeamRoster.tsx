@@ -870,6 +870,76 @@ const TeamRoster = () => {
             </section>
 
             <section className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Permissions</h3>
+                {canEditPerms && editForm.job_title && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const defaults = (JOB_TITLE_PERMISSIONS as Record<string, string[]>)[editForm.job_title] ?? [];
+                      // Keep locked permissions as they are; only reset the ones this editor may change.
+                      setEditPermissions((prev) => {
+                        const locked = ALL_PERMISSIONS.map((p) => p.key).filter((k) => isPermLocked(k));
+                        const keepLocked = prev.filter((k) => locked.includes(k));
+                        const resettable = defaults.filter((k) => !locked.includes(k));
+                        return Array.from(new Set([...keepLocked, ...resettable]));
+                      });
+                    }}
+                  >
+                    Reset to job title defaults
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {canEditPerms
+                  ? 'Check or uncheck to add or remove access for this person. Changes apply when you save.'
+                  : 'Only admins and people with Manage Employees can change permissions.'}
+              </p>
+              <div className="border rounded-md p-3 space-y-3">
+                {Array.from(new Set(ALL_PERMISSIONS.map((p) => p.category))).map((cat) => (
+                  <div key={cat}>
+                    <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">{cat}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {ALL_PERMISSIONS.filter((p) => p.category === cat).map((p) => {
+                        const reason = canEditPerms ? permLockReason(p.key) : null;
+                        const disabled = !canEditPerms || !!reason;
+                        return (
+                          <label
+                            key={p.key}
+                            className={`flex items-start gap-2 text-sm ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                            title={reason ?? undefined}
+                          >
+                            <Checkbox
+                              className="mt-0.5"
+                              checked={editPermissions.includes(p.key)}
+                              disabled={disabled}
+                              onCheckedChange={() =>
+                                setEditPermissions((prev) =>
+                                  prev.includes(p.key) ? prev.filter((k) => k !== p.key) : [...prev, p.key]
+                                )
+                              }
+                            />
+                            <span>
+                              {p.label}
+                              {reason && <span className="block text-xs text-muted-foreground">{reason}</span>}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {editAccessLevel === 'admin' && (
+                <p className="text-xs text-muted-foreground">
+                  Admins can already reach most areas regardless of these boxes.
+                </p>
+              )}
+            </section>
+
+            <section className="space-y-3">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Pay & Incentives</h3>
               <div className="grid grid-cols-3 gap-3">
                 <div>
