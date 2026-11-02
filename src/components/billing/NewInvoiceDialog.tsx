@@ -210,7 +210,7 @@ export const NewInvoiceDialog = ({ open, onOpenChange, onCreated }: Props) => {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-          <Button onClick={submit} disabled={saving}>
+          <Button onClick={submit} disabled={saving || !site}>
             {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Create invoice
           </Button>
         </DialogFooter>
