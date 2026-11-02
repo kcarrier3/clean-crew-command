@@ -8699,6 +8699,7 @@ export type Database = {
         | "view_calendar"
         | "use_messaging"
         | "publish_schedules"
+        | "approve_supply_billing"
       app_role: "admin" | "manager" | "employee"
       calendar_draft_kind: "shift_draft" | "event" | "holiday" | "note"
       time_off_status: "pending" | "approved" | "declined"
@@ -8853,6 +8854,7 @@ export const Constants = {
         "view_calendar",
         "use_messaging",
         "publish_schedules",
+        "approve_supply_billing",
       ],
       app_role: ["admin", "manager", "employee"],
       calendar_draft_kind: ["shift_draft", "event", "holiday", "note"],
