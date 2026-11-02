@@ -17,7 +17,43 @@ export const TaxReviewBanner = ({ invoice, onChanged }: { invoice: Invoice; onCh
   const [form, setForm] = useState<JobSiteTaxForm | null>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setOpen(false); }, [invoice.id]);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [sites, setSites] = useState<{ id: string; name: string; crm_company_id: string | null }[]>([]);
+  const [attachId, setAttachId] = useState('');
+
+  useEffect(() => { setOpen(false); setAttachOpen(false); setAttachId(''); }, [invoice.id]);
+
+  // Invoices saved without an account have no tax county; let billing staff attach one.
+  const openAttach = async () => {
+    const { data, error } = await db.from('job_sites').select('id, name, crm_company_id').eq('active', true).order('name');
+    if (error) {
+      toast({ title: 'Could not load accounts', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setSites(data ?? []);
+    setAttachOpen(true);
+  };
+
+  const saveAttach = async () => {
+    const s = sites.find(x => x.id === attachId);
+    if (!s) return;
+    setSaving(true);
+    try {
+      // The invoice trigger recalculates sales tax from the new account on save.
+      const { error } = await db.from('billing_invoices')
+        .update({ job_site_id: s.id, crm_company_id: invoice.crm_company_id ?? s.crm_company_id ?? null })
+        .eq('id', invoice.id);
+      if (error) throw error;
+      toast({ title: 'Account attached', description: 'Sales tax was recalculated.' });
+      setAttachOpen(false);
+      onChanged();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Could not attach account';
+      toast({ title: 'Could not attach account', description: message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const recalc = async () => {
     try {
@@ -72,6 +108,9 @@ export const TaxReviewBanner = ({ invoice, onChanged }: { invoice: Invoice; onCh
         {invoice.job_site_id && (
           <Button size="sm" variant="outline" onClick={editSite}>Fix job site county</Button>
         )}
+        {!invoice.job_site_id && (
+          <Button size="sm" variant="outline" onClick={openAttach}>Choose account</Button>
+        )}
         {invoice.crm_company_id && (
           <Button size="sm" variant="outline" asChild>
             <Link to={`/crm/accounts/${invoice.crm_company_id}`}>Customer certificate</Link>
@@ -79,6 +118,20 @@ export const TaxReviewBanner = ({ invoice, onChanged }: { invoice: Invoice; onCh
         )}
         <Button size="sm" variant="ghost" onClick={recalc}>Recalculate</Button>
       </div>
+      {attachOpen && (
+        <div className="space-y-2 bg-white text-foreground rounded-md p-2">
+          <label htmlFor="trb_site" className="text-xs font-medium">Account for this invoice</label>
+          <select id="trb_site" value={attachId} onChange={e => setAttachId(e.target.value)}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+            <option value="" disabled>Select an account</option>
+            {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={saveAttach} disabled={saving || !attachId}>{saving ? 'Saving…' : 'Save and recalculate'}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setAttachOpen(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
       {open && form && (
         <div className="space-y-2 bg-white text-foreground rounded-md p-2">
           <JobSiteSalesTaxFields value={form} onChange={patch => setForm(f => f && ({ ...f, ...patch }))} />
