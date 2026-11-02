@@ -54,6 +54,7 @@ const ALL_PERMISSIONS: { key: string; label: string; category: string }[] = [
   { key: 'view_worker_status', label: 'View Worker Status', category: 'Team' },
   { key: 'manage_employees', label: 'Manage Employees', category: 'Team' },
   { key: 'view_crm', label: 'Waypoint (CRM)', category: 'Sales' },
+  { key: 'approve_supply_billing', label: 'Approve Supply Billing', category: 'Supplies' },
   { key: 'view_notifications', label: 'View Notifications', category: 'System' },
   { key: 'admin_settings', label: 'Admin Settings', category: 'System' },
 ];

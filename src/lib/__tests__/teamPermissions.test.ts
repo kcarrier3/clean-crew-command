@@ -19,6 +19,10 @@ describe('Team member permission editing', () => {
     expect(lockedPermissionReason('manage_employees', manager)).not.toBeNull();
     expect(lockedPermissionReason('admin_settings', admin)).toBeNull();
   });
+  it('only admins can give someone Approve Supply Billing, since it emails invoices', () => {
+    expect(lockedPermissionReason('approve_supply_billing', manager)).not.toBeNull();
+    expect(lockedPermissionReason('approve_supply_billing', admin)).toBeNull();
+  });
   it('Project Crew Leads cannot be given schedule editing, even by an admin', () => {
     const crewLead = { ...admin, memberJobTitle: 'Project Crew Lead' };
     expect(lockedPermissionReason('edit_schedules', crewLead)).not.toBeNull();
