@@ -137,8 +137,9 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
       payload.to_location_id = form.to_location_id;
     } else if (t === 'sell') {
       if (!form.from_location_id) { toast({ title: 'Source required', variant: 'destructive' }); return; }
+      if (!form.job_site_id) { toast({ title: 'Account required', description: 'Choose the account this drop-off is for.', variant: 'destructive' }); return; }
       payload.from_location_id = form.from_location_id;
-      payload.job_site_id = form.job_site_id || null;
+      payload.job_site_id = form.job_site_id;
       if (selectedItem?.kind === 'cleaning') {
         // Cleaning supplies aren't billed to the customer: no revenue.
         // Their cost still rolls into the account's job cost via the item's unit cost.
@@ -174,14 +175,11 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
     }
     if (error) { toast({ title: 'Failed', description: error.message, variant: 'destructive' }); return; }
     const sentToBill = t === 'sell' && !!form.job_site_id && selectedItem?.kind !== 'cleaning';
-    const clearedBill = !!editing && t === 'sell' && !form.job_site_id;
     toast({
       title: editing ? 'Changes saved' : 'Recorded',
       description: sentToBill
         ? 'Sent to Ready to Bill for the office. Sales tax is added when they invoice it.'
-        : clearedBill
-          ? 'Account cleared. The unbilled Ready to Bill item was cancelled.'
-          : undefined,
+        : undefined,
     });
     setEditing(null);
     setOpen(false);
@@ -219,7 +217,7 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
             <DialogHeader><DialogTitle className="capitalize">{editing ? 'Edit ' : ''}{t === 'sell' ? 'Drop off at account' : t}</DialogTitle></DialogHeader>
             {t === 'sell' && (
               <p className="text-xs text-muted-foreground rounded-md bg-muted p-2">
-                A resale drop-off at an account is sent to Ready to Bill. Clear the account to cancel that item before it is invoiced. Cleaning supplies are not billed.
+                Every drop-off needs an account. A resale drop-off is sent to Ready to Bill; to cancel it before it is invoiced, remove it from the Ready to Bill queue. Cleaning supplies are not billed.
               </p>
             )}
             <div className="grid grid-cols-2 gap-3">
@@ -274,11 +272,10 @@ export default function SupplyMovementsTab({ canManage }: { canManage: boolean }
               )}
               {showJobSite && (
                 <div className="col-span-2">
-                  <Label>Account</Label>
-                  <Select value={form.job_site_id || 'none'} onValueChange={v => setForm({ ...form, job_site_id: v === 'none' ? '' : v })}>
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <Label>Account *</Label>
+                  <Select value={form.job_site_id || undefined} onValueChange={v => setForm({ ...form, job_site_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Choose account" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">— None —</SelectItem>
                       {jobSites.map(j => <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
