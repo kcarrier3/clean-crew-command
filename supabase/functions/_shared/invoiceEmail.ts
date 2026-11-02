@@ -104,7 +104,7 @@ export const deliverInvoiceEmail = async (admin: any, p: DeliverParams): Promise
     const { data: existing } = await admin.from('billing_email_messages')
       .select('id, status, provider_message_id')
       .eq('idempotency_key', idempotencyKey).maybeSingle();
-    if (existing && existing.status !== 'draft' && existing.status !== 'failed') {
+    if (existing && existing.status !== 'draft') {
       return {
         status: 200,
         body: {
@@ -148,14 +148,6 @@ export const deliverInvoiceEmail = async (admin: any, p: DeliverParams): Promise
 
   const notConfigured = !RESEND_API_KEY;
 
-  // A failed earlier attempt with the same key is retried under a fresh log row.
-  const logKey = idempotencyKey;
-  if (logKey) {
-    await admin.from('billing_email_messages')
-      .update({ idempotency_key: null })
-      .eq('idempotency_key', logKey).in('status', ['draft', 'failed']);
-  }
-
   const { data: logRow, error: logErr } = await admin.from('billing_email_messages').insert({
     invoice_id: invoice.id,
     crm_company_id: invoice.crm_company_id,
@@ -168,7 +160,7 @@ export const deliverInvoiceEmail = async (admin: any, p: DeliverParams): Promise
     body: finalBody,
     attachment_path: attachmentPath,
     attachment_paths: attachmentPath ? [attachmentPath] : [],
-    idempotency_key: logKey,
+    idempotency_key: idempotencyKey,
     status: notConfigured ? 'draft' : 'queued',
     provider: notConfigured ? null : 'resend',
     queued_at: notConfigured ? null : new Date().toISOString(),
