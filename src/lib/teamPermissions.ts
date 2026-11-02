@@ -10,7 +10,7 @@ export interface PermissionEditContext {
 }
 
 // Only admins may hand out (or take away) the keys to the whole system.
-const ADMIN_ONLY_PERMISSIONS = ['admin_settings', 'manage_employees'];
+const ADMIN_ONLY_PERMISSIONS = ['admin_settings', 'manage_employees', 'approve_supply_billing'];
 
 // Project Crew Leads are always view-only for schedules (enforced in the database too).
 const CREW_LEAD_BLOCKED = ['edit_schedules', 'publish_schedules'];

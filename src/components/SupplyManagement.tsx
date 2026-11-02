@@ -11,9 +11,12 @@ import SupplyLocationsTab from './supply/SupplyLocationsTab';
 import FixedAssetsTab from './supply/FixedAssetsTab';
 import SupplyCostReport from './supply/SupplyCostReport';
 import SupplyBillingReport from './supply/SupplyBillingReport';
+import SupplyBillingWeekly from './supply/SupplyBillingWeekly';
 
 const SupplyManagement = () => {
-  const { isManager, profile } = useAuth();
+  const { isManager, profile, hasPermission, canViewSov } = useAuth();
+  // Weekly supply billing: explicit permission, or full billing access (Owner / Office / Operations Manager).
+  const canApproveSupplyBilling = hasPermission('approve_supply_billing') || canViewSov();
   const { canManage, canViewReports, canPrice } = getSupplyAccess(isManager(), profile?.job_title);
 
   return (
@@ -40,6 +43,7 @@ const SupplyManagement = () => {
           <TabsTrigger value="requests">Requests</TabsTrigger>
           {canViewReports && <TabsTrigger value="cost-report">Cost Report</TabsTrigger>}
           {canViewReports && <TabsTrigger value="billing-report">Billing Report</TabsTrigger>}
+          {canApproveSupplyBilling && <TabsTrigger value="weekly-billing">Supply Billing</TabsTrigger>}
           {canManage && <TabsTrigger value="locations">Locations</TabsTrigger>}
         </TabsList>
         <TabsContent value="stock" className="space-y-6">
@@ -51,6 +55,7 @@ const SupplyManagement = () => {
         <TabsContent value="requests"><SupplyRequestsTab canManage={canManage} /></TabsContent>
         {canViewReports && <TabsContent value="cost-report"><SupplyCostReport /></TabsContent>}
         {canViewReports && <TabsContent value="billing-report"><SupplyBillingReport /></TabsContent>}
+        {canApproveSupplyBilling && <TabsContent value="weekly-billing"><SupplyBillingWeekly /></TabsContent>}
         {canManage && <TabsContent value="locations"><SupplyLocationsTab /></TabsContent>}
       </Tabs>
     </div>

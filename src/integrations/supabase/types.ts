@@ -1082,6 +1082,7 @@ export type Database = {
           billing_email: string | null
           created_at: string
           created_by: string | null
+          created_via: string | null
           credits_applied: number
           crm_company_id: string | null
           crm_deal_id: string | null
@@ -1150,6 +1151,7 @@ export type Database = {
           billing_email?: string | null
           created_at?: string
           created_by?: string | null
+          created_via?: string | null
           credits_applied?: number
           crm_company_id?: string | null
           crm_deal_id?: string | null
@@ -1218,6 +1220,7 @@ export type Database = {
           billing_email?: string | null
           created_at?: string
           created_by?: string | null
+          created_via?: string | null
           credits_applied?: number
           crm_company_id?: string | null
           crm_deal_id?: string | null
@@ -8413,6 +8416,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_supply_week_invoice: {
+        Args: {
+          _created_by: string
+          _event_ids: string[]
+          _invoice_date: string
+          _job_site_id: string
+          _note: string
+        }
+        Returns: string
+      }
       credit_default_item_id: { Args: { _reason: string }; Returns: string }
       credit_matches_invoice: {
         Args: {
@@ -8621,6 +8634,47 @@ export type Database = {
       reverse_credit_application: {
         Args: { _application_id: string; _reason?: string }
         Returns: undefined
+      }
+      supply_billing_week_events: {
+        Args: { _week_start: string }
+        Returns: {
+          amount: number
+          billed_externally: boolean
+          billing_email: string | null
+          billing_percent: number | null
+          completed_at: string
+          contract_amount: number | null
+          created_at: string
+          created_by: string | null
+          crm_company_id: string | null
+          crm_deal_id: string | null
+          crm_lead_id: string | null
+          description: string | null
+          external_billed_by: string | null
+          external_reference: string | null
+          hold_at: string | null
+          hold_by: string | null
+          hold_reason: string | null
+          id: string
+          invoice_id: string | null
+          invoiced_at: string | null
+          job_site_id: string | null
+          label: string
+          milestone_id: string | null
+          notes: string | null
+          po_number: string | null
+          project_phase_id: string | null
+          ready_at: string
+          source: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "billing_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       supply_movement_bill_amount: {
         Args: { m: Database["public"]["Tables"]["supply_movements"]["Row"] }
