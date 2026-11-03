@@ -18,7 +18,9 @@ import QualityControlDashboard from './QualityControlDashboard';
 import JobBudgetingWidget from './JobBudgetingWidget';
 import { AccountDetail } from './AccountDetail';
 import OfficeLocationCard from './OfficeLocationCard';
-import { DAY_LABELS, monthlyHoursFromNightly, serviceDaysInMonth, describeFrequency } from '@/lib/serviceFrequency';
+import {
+  DAY_LABELS, monthlyHoursFromNightly, monthlyHoursForSchedule, serviceDaysInMonth, describeFrequency, describeNightlyByDay,
+} from '@/lib/serviceFrequency';
 import { fetchProjectSov, saveProjectSov, type SovDraftLine } from '@/components/billing/sovApi';
 import { JOB_SITE_COLUMNS } from '@/lib/jobSiteColumns';
 import {
@@ -45,6 +47,7 @@ interface JobSite {
   current_month_used_hours: number | null;
   current_month_year: string | null;
   nightly_hours?: number | null;
+  nightly_hours_by_day?: number[] | null;
   service_days?: number[] | null;
   city?: string | null;
   state?: string | null;
@@ -87,6 +90,9 @@ interface FormData {
   budgeted_hours: string;
   nightly_hours: string;
   service_days: number[];
+  /** Each service night has its own allowance (Sunday..Saturday boxes). */
+  variable_nightly: boolean;
+  nightly_by_day: string[];
   active: boolean;
   /** Project-only: phased job with named phases (one per line). */
   is_phased?: boolean;
@@ -104,20 +110,42 @@ interface FormData {
 const parsePhaseNames = (raw: string) =>
   raw.split('\n').map((s) => s.trim()).filter(Boolean);
 
+type NightlyPatch = {
+  nightly_hours?: string;
+  service_days?: number[];
+  variable_nightly?: boolean;
+  nightly_by_day?: string[];
+};
+
+const EMPTY_BY_DAY = ['', '', '', '', '', '', ''];
+
+/** Parse the 7 per-night boxes; blanks count as 0. */
+const parseByDay = (raw: string[]) => raw.map((v) => {
+  const n = parseFloat(v);
+  return isNaN(n) || n < 0 ? 0 : n;
+});
+
 function NightlyAllowanceFields({
   idPrefix,
   nightlyHours,
   serviceDays,
+  variable,
+  byDay,
   onChange,
 }: {
   idPrefix: string;
   nightlyHours: string;
   serviceDays: number[];
-  onChange: (patch: { nightly_hours?: string; service_days?: number[] }) => void;
+  variable: boolean;
+  byDay: string[];
+  onChange: (patch: NightlyPatch) => void;
 }) {
   const nightly = parseFloat(nightlyHours);
   const nights = serviceDaysInMonth(serviceDays);
-  const monthly = monthlyHoursFromNightly(isNaN(nightly) ? null : nightly, serviceDays);
+  const parsedByDay = parseByDay(byDay);
+  const monthly = variable
+    ? monthlyHoursForSchedule(null, parsedByDay, serviceDays)
+    : monthlyHoursFromNightly(isNaN(nightly) ? null : nightly, serviceDays);
 
   const toggleDay = (day: number) => {
     onChange({
@@ -127,21 +155,27 @@ function NightlyAllowanceFields({
     });
   };
 
+  const toggleVariable = (on: boolean) => {
+    if (on) {
+      // Start every night at the flat allowance so nothing has to be retyped.
+      const seed = !isNaN(nightly) && nightly > 0 ? String(nightly) : '';
+      onChange({
+        variable_nightly: true,
+        nightly_by_day: byDay.some((v) => v !== '') ? byDay : EMPTY_BY_DAY.map(() => seed),
+      });
+    } else {
+      onChange({ variable_nightly: false });
+    }
+  };
+
+  const setNight = (day: number, value: string) => {
+    const next = [...byDay];
+    next[day] = value;
+    onChange({ nightly_by_day: next });
+  };
+
   return (
     <div className="space-y-3 rounded-md border p-3">
-      <div>
-        <Label htmlFor={`${idPrefix}nightly_hours`}>Nightly Hour Allowance</Label>
-        <Input
-          id={`${idPrefix}nightly_hours`}
-          type="number"
-          min="0"
-          step="0.25"
-          value={nightlyHours}
-          onChange={(e) => onChange({ nightly_hours: e.target.value })}
-          placeholder="Hours allowed per night of service..."
-        />
-      </div>
-
       <div>
         <Label>Service Frequency</Label>
         <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -161,11 +195,63 @@ function NightlyAllowanceFields({
         <p className="text-xs text-muted-foreground mt-1.5">{describeFrequency(serviceDays)}</p>
       </div>
 
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <Label htmlFor={`${idPrefix}variable_nightly`}>Variable hours by night</Label>
+          <p className="text-xs text-muted-foreground">Set different allowed hours for each service night.</p>
+        </div>
+        <Switch
+          id={`${idPrefix}variable_nightly`}
+          checked={variable}
+          onCheckedChange={toggleVariable}
+        />
+      </div>
+
+      {variable ? (
+        serviceDays.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Pick the service days above, then enter hours for each night.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {serviceDays.map((day) => (
+              <div key={day}>
+                <Label htmlFor={`${idPrefix}night_${day}`} className="text-xs">{DAY_LABELS[day]} hours</Label>
+                <Input
+                  id={`${idPrefix}night_${day}`}
+                  type="number"
+                  min="0"
+                  step="0.25"
+                  inputMode="decimal"
+                  value={byDay[day] ?? ''}
+                  onChange={(e) => setNight(day, e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        <div>
+          <Label htmlFor={`${idPrefix}nightly_hours`}>Nightly Hour Allowance</Label>
+          <Input
+            id={`${idPrefix}nightly_hours`}
+            type="number"
+            min="0"
+            step="0.25"
+            value={nightlyHours}
+            onChange={(e) => onChange({ nightly_hours: e.target.value })}
+            placeholder="Hours allowed per night of service..."
+          />
+        </div>
+      )}
+
       {monthly !== null && (
         <div className="rounded-md bg-muted p-2 text-sm">
           <strong>{monthly} hrs</strong> allowed this month
           <span className="text-muted-foreground">
-            {' '}({nightly} hrs × {nights} service days). Recalculates each month.
+            {variable
+              ? <> ({describeNightlyByDay(parsedByDay, serviceDays)} across {nights} service days).</>
+              : <> ({nightly} hrs × {nights} service days).</>}
+            {' '}Recalculates each month.
           </span>
         </div>
       )}
@@ -208,6 +294,8 @@ export default function JobSitesManagement() {
     budgeted_hours: '',
     nightly_hours: '',
     service_days: [],
+    variable_nightly: false,
+    nightly_by_day: EMPTY_BY_DAY,
     active: true,
     county: '',
     county_needs_review: false,
@@ -339,7 +427,7 @@ export default function JobSitesManagement() {
           safety_requirements: formData.safety_requirements.trim() || null,
           is_recurring_monthly: createRecurring,
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
-          nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
+          ...nightlyPayload(),
           service_days: formData.service_days,
           active: formData.active,
           is_phased: (isProject && !!formData.is_phased) || officeSov.length > 0,
@@ -429,7 +517,7 @@ export default function JobSitesManagement() {
           safety_requirements: formData.safety_requirements.trim() || null,
           is_recurring_monthly: formData.is_recurring_monthly,
           budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
-          nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null,
+          ...nightlyPayload(),
           service_days: formData.service_days,
           active: formData.active,
           ...salesTaxColumns(),
@@ -497,6 +585,10 @@ export default function JobSitesManagement() {
       budgeted_hours: jobSite.budgeted_hours ? jobSite.budgeted_hours.toString() : '',
       nightly_hours: jobSite.nightly_hours ? jobSite.nightly_hours.toString() : '',
       service_days: jobSite.service_days || [],
+      variable_nightly: !!jobSite.nightly_hours_by_day,
+      nightly_by_day: jobSite.nightly_hours_by_day
+        ? jobSite.nightly_hours_by_day.map((h) => (h ? String(h) : ''))
+        : EMPTY_BY_DAY,
       active: jobSite.active,
       ...(() => {
         const tax = jobSiteTaxFromRow(jobSite);
@@ -515,6 +607,11 @@ export default function JobSitesManagement() {
     }
     setIsEditDialogOpen(true);
   };
+
+  /** Flat allowance or per-night allowance, never both. */
+  const nightlyPayload = () => formData.variable_nightly
+    ? { nightly_hours: null, nightly_hours_by_day: parseByDay(formData.nightly_by_day) }
+    : { nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null, nightly_hours_by_day: null };
 
   const resetForm = () => {
     setFormData({ 
@@ -539,6 +636,8 @@ export default function JobSitesManagement() {
       budgeted_hours: '',
       nightly_hours: '',
       service_days: [],
+      variable_nightly: false,
+      nightly_by_day: EMPTY_BY_DAY,
       active: true,
       county: '',
       county_needs_review: false,
@@ -798,6 +897,8 @@ export default function JobSitesManagement() {
                       idPrefix=""
                       nightlyHours={formData.nightly_hours}
                       serviceDays={formData.service_days}
+                      variable={formData.variable_nightly}
+                      byDay={formData.nightly_by_day}
                       onChange={(patch) => setFormData({ ...formData, ...patch })}
                     />
                   )}
@@ -1133,6 +1234,8 @@ export default function JobSitesManagement() {
                       idPrefix="edit_"
                       nightlyHours={formData.nightly_hours}
                       serviceDays={formData.service_days}
+                      variable={formData.variable_nightly}
+                      byDay={formData.nightly_by_day}
                       onChange={(patch) => setFormData({ ...formData, ...patch })}
                     />
                   )}
