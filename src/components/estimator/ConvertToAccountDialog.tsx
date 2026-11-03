@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { isRecurringService, SERVICE_LABELS, type ServiceType } from './serviceTypes';
+import { monthlyHoursFromNightly } from '@/lib/serviceFrequency';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -67,11 +68,11 @@ export function ConvertToAccountDialog({
   const toggleDay = (d: number) =>
     setDays(prev => (prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort((a, b) => a - b)));
 
-  const monthlyPreview = useMemo(() => {
-    const n = parseFloat(nightly) || 0;
-    // Rough preview only — the database recomputes the exact monthly allowance.
-    return Math.round(n * days.length * 4.33 * 100) / 100;
-  }, [nightly, days]);
+  // This month's budget from the nightly allowance; the database recalculates it every month.
+  const monthlyPreview = useMemo(
+    () => monthlyHoursFromNightly(parseFloat(nightly) || 0, days) ?? 0,
+    [nightly, days]
+  );
 
   const error = (() => {
     if (!name.trim()) return 'Add an account name.';
