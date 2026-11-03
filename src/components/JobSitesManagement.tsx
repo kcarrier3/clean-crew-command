@@ -131,6 +131,7 @@ function NightlyAllowanceFields({
   serviceDays,
   variable,
   byDay,
+  fixedMonthly,
   onChange,
 }: {
   idPrefix: string;
@@ -138,6 +139,8 @@ function NightlyAllowanceFields({
   serviceDays: number[];
   variable: boolean;
   byDay: string[];
+  /** Old fixed monthly figure on accounts that have no nightly allowance yet. */
+  fixedMonthly?: number | null;
   onChange: (patch: NightlyPatch) => void;
 }) {
   const nightly = parseFloat(nightlyHours);
@@ -244,16 +247,25 @@ function NightlyAllowanceFields({
         </div>
       )}
 
-      {monthly !== null && (
+      {monthly !== null ? (
         <div className="rounded-md bg-muted p-2 text-sm">
-          <strong>{monthly} hrs</strong> allowed this month
+          <strong>{monthly} hrs</strong> monthly budget this month
           <span className="text-muted-foreground">
             {variable
               ? <> ({describeNightlyByDay(parsedByDay, serviceDays)} across {nights} service days).</>
               : <> ({nightly} hrs × {nights} service days).</>}
-            {' '}Recalculates each month.
+            {' '}Worked out again each month from the nights in that month.
           </span>
         </div>
+      ) : fixedMonthly ? (
+        <div className="rounded-md bg-muted p-2 text-sm">
+          This account still uses a fixed <strong>{fixedMonthly} hrs</strong> per month.
+          <span className="text-muted-foreground"> Pick the service days and enter a nightly allowance to replace it.</span>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          The monthly budget is worked out from the service days and nightly allowance.
+        </p>
       )}
     </div>
   );
@@ -395,6 +407,8 @@ export default function JobSitesManagement() {
       return;
     }
 
+    if (nightlyNeedsDays(createRecurring)) return;
+
     setLoading(true);
     try {
       const isProject = !createRecurring;
@@ -426,7 +440,7 @@ export default function JobSitesManagement() {
           access_instructions: formData.access_instructions.trim() || null,
           safety_requirements: formData.safety_requirements.trim() || null,
           is_recurring_monthly: createRecurring,
-          budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
+          budgeted_hours: budgetedHoursPayload(createRecurring, null),
           ...nightlyPayload(),
           service_days: formData.service_days,
           active: formData.active,
@@ -493,6 +507,8 @@ export default function JobSitesManagement() {
       return;
     }
 
+    if (nightlyNeedsDays(formData.is_recurring_monthly)) return;
+
     setLoading(true);
     try {
       const { error } = await supabase
@@ -516,7 +532,7 @@ export default function JobSitesManagement() {
           access_instructions: formData.access_instructions.trim() || null,
           safety_requirements: formData.safety_requirements.trim() || null,
           is_recurring_monthly: formData.is_recurring_monthly,
-          budgeted_hours: formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null,
+          budgeted_hours: budgetedHoursPayload(formData.is_recurring_monthly, editingJobSite),
           ...nightlyPayload(),
           service_days: formData.service_days,
           active: formData.active,
@@ -612,6 +628,36 @@ export default function JobSitesManagement() {
   const nightlyPayload = () => formData.variable_nightly
     ? { nightly_hours: null, nightly_hours_by_day: parseByDay(formData.nightly_by_day) }
     : { nightly_hours: formData.nightly_hours ? parseFloat(formData.nightly_hours) : null, nightly_hours_by_day: null };
+
+  const hasNightlyAllowance = () => formData.variable_nightly
+    ? parseByDay(formData.nightly_by_day).some((h) => h > 0)
+    : parseFloat(formData.nightly_hours) > 0;
+
+  /** Recurring accounts saved before nightly allowances keep their fixed monthly figure until one is entered. */
+  const legacyMonthlyBudget = (site: JobSite | null) =>
+    site && site.is_recurring_monthly && site.nightly_hours == null && !site.nightly_hours_by_day
+      ? site.budgeted_hours
+      : null;
+
+  /** Projects use the typed total. Recurring accounts get their month from the nightly allowance (set by the database). */
+  const budgetedHoursPayload = (recurring: boolean, site: JobSite | null) => {
+    if (!recurring) return formData.budgeted_hours ? parseFloat(formData.budgeted_hours) : null;
+    if (hasNightlyAllowance()) return null;
+    return legacyMonthlyBudget(site);
+  };
+
+  /** A nightly allowance needs service nights to turn into monthly hours. */
+  const nightlyNeedsDays = (recurring: boolean) => {
+    if (recurring && hasNightlyAllowance() && formData.service_days.length === 0) {
+      toast({
+        title: 'Pick service days',
+        description: 'Select the nights this account is serviced so the monthly hours can be worked out.',
+        variant: 'destructive',
+      });
+      return true;
+    }
+    return false;
+  };
 
   const resetForm = () => {
     setFormData({ 
@@ -873,23 +919,23 @@ export default function JobSitesManagement() {
                         placeholder="Enter customer name..."
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="budgeted_hours">Budgeted Hours</Label>
-                      <Input
-                        id="budgeted_hours"
-                        type="number"
-                        min="0"
-                        step="0.25"
-                        value={formData.budgeted_hours}
-                        onChange={(e) => setFormData({ ...formData, budgeted_hours: e.target.value })}
-                        placeholder={formData.is_recurring_monthly ? 'Hours per month...' : 'Total hours for the job...'}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formData.is_recurring_monthly
-                          ? 'Monthly hour allotment. Usage resets at the start of each month.'
-                          : 'Total hours for this one-time project. Only changes with a change order.'}
-                      </p>
-                    </div>
+                    {isProjectForm && (
+                      <div>
+                        <Label htmlFor="budgeted_hours">Budgeted Hours</Label>
+                        <Input
+                          id="budgeted_hours"
+                          type="number"
+                          min="0"
+                          step="0.25"
+                          value={formData.budgeted_hours}
+                          onChange={(e) => setFormData({ ...formData, budgeted_hours: e.target.value })}
+                          placeholder="Total hours for the job..."
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Total hours for this one-time project. Only changes with a change order.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {!isProjectForm && (
@@ -1210,23 +1256,23 @@ export default function JobSitesManagement() {
                         placeholder="Enter customer name..."
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="edit_budgeted_hours">Budgeted Hours</Label>
-                      <Input
-                        id="edit_budgeted_hours"
-                        type="number"
-                        min="0"
-                        step="0.25"
-                        value={formData.budgeted_hours}
-                        onChange={(e) => setFormData({ ...formData, budgeted_hours: e.target.value })}
-                        placeholder={formData.is_recurring_monthly ? 'Hours per month...' : 'Total hours for the job...'}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formData.is_recurring_monthly
-                          ? 'Monthly hour allotment. Usage resets at the start of each month.'
-                          : 'Total hours for this one-time project. Only changes with a change order.'}
-                      </p>
-                    </div>
+                    {!formData.is_recurring_monthly && (
+                      <div>
+                        <Label htmlFor="edit_budgeted_hours">Budgeted Hours</Label>
+                        <Input
+                          id="edit_budgeted_hours"
+                          type="number"
+                          min="0"
+                          step="0.25"
+                          value={formData.budgeted_hours}
+                          onChange={(e) => setFormData({ ...formData, budgeted_hours: e.target.value })}
+                          placeholder="Total hours for the job..."
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Total hours for this one-time project. Only changes with a change order.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {formData.is_recurring_monthly && (
@@ -1236,6 +1282,7 @@ export default function JobSitesManagement() {
                       serviceDays={formData.service_days}
                       variable={formData.variable_nightly}
                       byDay={formData.nightly_by_day}
+                      fixedMonthly={legacyMonthlyBudget(editingJobSite)}
                       onChange={(patch) => setFormData({ ...formData, ...patch })}
                     />
                   )}
@@ -1252,7 +1299,7 @@ export default function JobSitesManagement() {
                       </Label>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Projects bill once with a fixed hour budget. Recurring accounts bill the same amount each month with the same monthly hours. Changing this moves the record between the Project and Account tabs.
+                      Projects bill once with a fixed hour budget. Recurring accounts bill the same amount each month, and their monthly hours come from the nightly allowance. Changing this moves the record between the Project and Account tabs.
                     </p>
                   </div>
                   
