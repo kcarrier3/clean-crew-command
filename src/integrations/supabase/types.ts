@@ -5176,6 +5176,7 @@ export type Database = {
           location_code: string | null
           name: string
           nightly_hours: number | null
+          nightly_hours_by_day: number[] | null
           postal_code: string | null
           progress_billing: boolean
           project_manager: string | null
@@ -5236,6 +5237,7 @@ export type Database = {
           location_code?: string | null
           name: string
           nightly_hours?: number | null
+          nightly_hours_by_day?: number[] | null
           postal_code?: string | null
           progress_billing?: boolean
           project_manager?: string | null
@@ -5296,6 +5298,7 @@ export type Database = {
           location_code?: string | null
           name?: string
           nightly_hours?: number | null
+          nightly_hours_by_day?: number[] | null
           postal_code?: string | null
           progress_billing?: boolean
           project_manager?: string | null
@@ -8612,6 +8615,15 @@ export type Database = {
       mark_conversation_read: {
         Args: { _conversation_id: string }
         Returns: undefined
+      }
+      monthly_hours_for_schedule: {
+        Args: {
+          _by_day: number[]
+          _month: string
+          _nightly: number
+          _service_days: number[]
+        }
+        Returns: number
       }
       monthly_hours_from_nightly: {
         Args: { _month: string; _nightly: number; _service_days: number[] }
