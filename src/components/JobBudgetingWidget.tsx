@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Clock, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react';
-import { describeFrequency, describeNightlyByDay, serviceDaysInMonth } from '@/lib/serviceFrequency';
+import { describeFrequency, describeNightlyByDay, hoursAllowedToDate, serviceDaysInMonth } from '@/lib/serviceFrequency';
 
 interface JobBudgetingWidgetProps {
   jobSite: {
@@ -45,6 +45,12 @@ const JobBudgetingWidget = ({ jobSite, className }: JobBudgetingWidgetProps) => 
   
   const remainingHours = budgetedHours - usedHours;
   const progressPercentage = Math.min((usedHours / budgetedHours) * 100, 100);
+
+  // Pace check: what the nightly allowance has allowed from the 1st through today.
+  const allowedToDate = jobSite.is_recurring_monthly
+    ? hoursAllowedToDate(jobSite.nightly_hours, jobSite.nightly_hours_by_day, jobSite.service_days)
+    : null;
+  const paceDiff = allowedToDate === null ? 0 : Math.round((allowedToDate - usedHours) * 100) / 100;
 
   const getBudgetStatus = () => {
     if (remainingHours <= 0) {
@@ -114,6 +120,18 @@ const JobBudgetingWidget = ({ jobSite, className }: JobBudgetingWidgetProps) => 
             </div>
           </div>
         </div>
+
+        {allowedToDate !== null && (
+          <div className="flex justify-between text-xs border-t pt-2">
+            <span className="text-muted-foreground">Allowed so far (through today)</span>
+            <span className="font-medium">
+              {allowedToDate}h ·{' '}
+              <span className={paceDiff < 0 ? 'text-destructive' : ''}>
+                {paceDiff < 0 ? `${Math.abs(paceDiff)}h over pace` : `${paceDiff}h under pace`}
+              </span>
+            </span>
+          </div>
+        )}
 
         {(jobSite.nightly_hours || jobSite.nightly_hours_by_day) && jobSite.service_days && jobSite.service_days.length > 0 && (
           <p className="text-xs text-muted-foreground border-t pt-2">
