@@ -8847,6 +8847,14 @@ export type Database = {
       }
       sync_invoice_credits: { Args: { _invoice_id: string }; Returns: number }
       time_off_department: { Args: { _job_title: string }; Returns: string }
+      training_manager_options: {
+        Args: never
+        Returns: {
+          first_name: string
+          id: string
+          last_name: string
+        }[]
+      }
       unapply_payment_allocation: {
         Args: { _allocation_id: string; _reason?: string }
         Returns: undefined
