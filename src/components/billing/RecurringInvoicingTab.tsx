@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -12,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
-  fetchRecurringRows, generateMany, recurringRowKey, setPeriodStatus, type RecurringRow,
+  fetchRecurringRows, generateMany, recurringRowKey, setPeriodStatus, setRecurringScheduleEnabled, type RecurringRow,
 } from './recurringApi';
 import { RecurringScheduleWizard } from './RecurringScheduleWizard';
 import { QbRecurringReview } from './QbRecurringReview';
@@ -62,6 +63,7 @@ export const RecurringInvoicingTab = ({ onOpenInvoice }: Props) => {
   const [rows, setRows] = useState<RecurringRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [updatingSchedule, setUpdatingSchedule] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<'all' | 'not-sent' | 'bounced'>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -96,7 +98,7 @@ export const RecurringInvoicingTab = ({ onOpenInvoice }: Props) => {
   }), [rows, q, period, filter, today]);
 
   const readyRows = visible.filter(r => rowStatus(r) === 'ready' && !blockingIssue(r));
-  const selectedRows = visible.filter(r => selected.has(recurringRowKey(r)));
+  const selectedRows = readyRows.filter(r => selected.has(recurringRowKey(r)));
   const totals = {
     ready: readyRows.reduce((s, r) => s + (r.lines.length ? scheduleAmount(r.lines) : Number(r.schedule?.amount || 0)), 0),
     generated: visible.filter(r => rowStatus(r) === 'generated')
@@ -134,6 +136,20 @@ export const RecurringInvoicingTab = ({ onOpenInvoice }: Props) => {
       load();
     } catch (e: any) {
       toast({ title: 'Could not update', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  const setEnabled = async (r: RecurringRow, enabled: boolean) => {
+    if (!r.schedule) return;
+    setUpdatingSchedule(r.schedule.id);
+    try {
+      await setRecurringScheduleEnabled(r.schedule.id, enabled);
+      await load();
+      toast({ title: `Recurring invoicing ${enabled ? 'on' : 'off'}`, description: r.site.name });
+    } catch (e: any) {
+      toast({ title: 'Could not update recurring invoicing', description: e.message, variant: 'destructive' });
+    } finally {
+      setUpdatingSchedule(null);
     }
   };
 
@@ -181,7 +197,7 @@ export const RecurringInvoicingTab = ({ onOpenInvoice }: Props) => {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => run(selectedRows)} disabled={busy || !selectedRows.length}>
+        <Button size="sm" onClick={() => run(selectedRows)} disabled={busy || !!updatingSchedule || !selectedRows.length}>
           {busy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <PlayCircle className="h-4 w-4 mr-1" />}
           Generate {selectedRows.length || ''} selected
         </Button>
@@ -235,6 +251,19 @@ export const RecurringInvoicingTab = ({ onOpenInvoice }: Props) => {
               </div>
               <span className="text-sm font-semibold tabular-nums">{money(amount)}</span>
               <Badge className={PERIOD_STATUS_CLASS[status]}>{PERIOD_STATUS_LABEL[status]}</Badge>
+              {r.schedule && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={r.schedule.status === 'active'}
+                    disabled={busy || !!updatingSchedule}
+                    onCheckedChange={enabled => setEnabled(r, enabled)}
+                    aria-label={`Recurring invoicing for ${r.site.name}${r.schedule.label ? ` — ${r.schedule.label}` : ''}`}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {updatingSchedule === r.schedule.id ? 'Saving…' : r.schedule.status === 'active' ? 'On' : r.schedule.status === 'hold' ? 'On hold' : 'Off'}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-1">
                 <Button size="sm" variant="outline" onClick={() => setWizard(r)}>
                   <Settings2 className="h-3.5 w-3.5 mr-1" /> Set up billing
@@ -246,7 +275,7 @@ export const RecurringInvoicingTab = ({ onOpenInvoice }: Props) => {
                 )}
                 {r.schedule && status !== 'generated' && (
                   <>
-                    <Button size="sm" variant="outline" disabled={!!issue || busy} onClick={() => run([r])}>Generate</Button>
+                    <Button size="sm" variant="outline" disabled={!!issue || busy || !!updatingSchedule} onClick={() => run([r])}>Generate</Button>
                     {status !== 'held' ? (
                       <Button size="icon" variant="ghost" aria-label="Hold" onClick={() => mark(r, 'held')}><PauseCircle className="h-4 w-4" /></Button>
                     ) : (

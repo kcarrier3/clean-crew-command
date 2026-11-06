@@ -490,3 +490,11 @@ export const activateSchedules = async (scheduleIds: string[]) => {
   const { error } = await db.from('recurring_billing_schedules').update({ status: 'active' }).in('id', scheduleIds);
   if (error) throw error;
 };
+
+export const setRecurringScheduleEnabled = async (scheduleId: string, enabled: boolean) => {
+  const { error } = await db.from('recurring_billing_schedules')
+    .update({ status: enabled ? 'active' : 'inactive' })
+    .eq('id', scheduleId)
+    .select('id').single();
+  if (error) throw error;
+};
