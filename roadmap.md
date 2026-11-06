@@ -17,3 +17,6 @@
 - [x] Crew leads: no estimating even with admin; close creator/owner exceptions
 - [x] Crew leads: view schedules only, no editing (defaults, Brianna, database, app)
 - [x] Waypoint search: include lost/aged when searching, match account names, normalize spacing
+- [ ] Training Planner: worker sessions linked to draft schedules, publishing required, assigned manager required
+- [ ] Manager dashboard: show that manager's trainees for the current week
+- [ ] New Account Calendar: managers' lookahead restricted to existing Accounts entries
