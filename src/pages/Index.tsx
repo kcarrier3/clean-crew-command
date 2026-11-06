@@ -39,6 +39,7 @@ import { useModuleSettings } from '@/hooks/useModuleSettings';
 import HelpCenter from '@/components/help/HelpCenter';
 import ModuleHelp from '@/components/help/ModuleHelp';
 import TrainingCenter from '@/components/training/TrainingCenter';
+import LookaheadCalendar from '@/components/planners/LookaheadCalendar';
 import { GraduationCap } from 'lucide-react';
 
 const Index = () => {
@@ -173,6 +174,8 @@ const Index = () => {
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
         { v: 'training',   label: 'Training',        icon: GraduationCap },
+        { v: 'trainingplanner', label: 'Training Planner', icon: GraduationCap },
+        { v: 'newaccountcalendar', label: 'New Account Calendar', icon: CalendarDays },
         ...(isCrmUser() ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate() ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
@@ -419,6 +422,13 @@ const Index = () => {
               <TabsContent value="calendar" className="mt-6">
                 <CalendarPlanner />
               </TabsContent>
+            )}
+
+            {isManager() && isModuleEnabled('trainingplanner') && (
+              <TabsContent value="trainingplanner" className="mt-6"><LookaheadCalendar training /></TabsContent>
+            )}
+            {isManager() && isModuleEnabled('newaccountcalendar') && (
+              <TabsContent value="newaccountcalendar" className="mt-6"><LookaheadCalendar training={false} /></TabsContent>
             )}
 
             {isModuleEnabled('supplies') && (

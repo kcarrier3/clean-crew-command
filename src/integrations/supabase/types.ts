@@ -3979,6 +3979,7 @@ export type Database = {
           recurrence_anchor_date: string | null
           start_date: string
           start_time: string | null
+          training_session_id: string | null
           updated_at: string
           week_interval: number
         }
@@ -3995,6 +3996,7 @@ export type Database = {
           recurrence_anchor_date?: string | null
           start_date: string
           start_time?: string | null
+          training_session_id?: string | null
           updated_at?: string
           week_interval?: number
         }
@@ -4011,6 +4013,7 @@ export type Database = {
           recurrence_anchor_date?: string | null
           start_date?: string
           start_time?: string | null
+          training_session_id?: string | null
           updated_at?: string
           week_interval?: number
         }
@@ -4034,6 +4037,13 @@ export type Database = {
             columns: ["job_site_id"]
             isOneToOne: false
             referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_schedules_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: true
+            referencedRelation: "training_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -5658,6 +5668,61 @@ export type Database = {
           used_hours?: number
         }
         Relationships: []
+      }
+      new_account_calendar_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          job_site_id: string
+          manager_id: string | null
+          notes: string | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          job_site_id: string
+          manager_id?: string | null
+          notes?: string | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          job_site_id?: string
+          manager_id?: string | null
+          notes?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "new_account_calendar_entries_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "new_account_calendar_entries_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "new_account_calendar_entries_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       onboarding_documents: {
         Row: {
@@ -7988,6 +8053,90 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "training_courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_sessions: {
+        Row: {
+          created_at: string
+          created_by: string
+          end_time: string
+          id: string
+          job_site_id: string
+          manager_id: string
+          notes: string | null
+          published_at: string | null
+          schedule_id: string
+          session_date: string
+          start_time: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          end_time: string
+          id?: string
+          job_site_id: string
+          manager_id: string
+          notes?: string | null
+          published_at?: string | null
+          schedule_id?: string
+          session_date: string
+          start_time: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          end_time?: string
+          id?: string
+          job_site_id?: string
+          manager_id?: string
+          notes?: string | null
+          published_at?: string | null
+          schedule_id?: string
+          session_date?: string
+          start_time?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_sessions_job_site_id_fkey"
+            columns: ["job_site_id"]
+            isOneToOne: false
+            referencedRelation: "job_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_directory"
             referencedColumns: ["id"]
           },
         ]

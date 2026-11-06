@@ -14,6 +14,8 @@ export const APP_MODULES: ModuleDef[] = [
   { key: 'scheduling', label: 'Schedule', description: 'Manager scheduling dashboard and weekly schedule.' },
   { key: 'myschedule', label: 'My Schedule', description: 'Employee view of their own shifts.' },
   { key: 'calendar', label: 'Calendar', description: 'Customer/service calendar planner.' },
+  { key: 'trainingplanner', label: 'Training Planner', description: 'Training sessions linked to published worker schedules.' },
+  { key: 'newaccountcalendar', label: 'New Account Calendar', description: 'Manager lookahead for existing accounts starting service.' },
   { key: 'managerlog', label: 'Manager Log', description: 'Nightly manager reports and log entries.' },
   { key: 'jobsites', label: 'Accounts', description: 'Job sites, budgets, and account management.' },
   { key: 'billing', label: 'Billing', description: 'Invoicing, payments, and check intake.' },

@@ -12,6 +12,7 @@ import AccountCostReport from './AccountCostReport';
 import ShiftRoster from './ShiftRoster';
 import PayPeriodHoursReport from './PayPeriodHoursReport';
 import RevenuePerHourReport from './RevenuePerHourReport';
+import ManagerTrainingWeek from './planners/ManagerTrainingWeek';
 
 
 interface TimeEntry {
@@ -148,6 +149,7 @@ const ManagerDashboard = () => {
 
   return (
     <div className="space-y-6">
+      <ManagerTrainingWeek />
       {/* Main Content Tabs */}
       <Tabs defaultValue="timeclock" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 h-auto gap-1">

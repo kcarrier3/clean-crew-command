@@ -97,6 +97,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
   const canPublish = canPublishSchedules();
   const [weekPublished, setWeekPublished] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [pendingTraining, setPendingTraining] = useState(0);
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -137,11 +138,14 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
       .eq('week_start', toISODate(weekStart))
       .maybeSingle();
     setWeekPublished(!!data?.published);
+    const { count } = await supabase.from('training_sessions').select('id', { count: 'exact', head: true })
+      .gte('session_date', toISODate(weekStart)).lte('session_date', toISODate(addDays(weekStart, 6))).is('published_at', null);
+    setPendingTraining(count ?? 0);
   };
 
   const togglePublish = async () => {
     setPublishing(true);
-    const next = !weekPublished;
+    const next = pendingTraining > 0 || !weekPublished;
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await (supabase as any)
       .from('schedule_weeks')
@@ -160,6 +164,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
       return;
     }
     setWeekPublished(next);
+    await loadWeekStatus();
     toast({
       title: next ? 'Schedule published' : 'Schedule moved back to draft',
       description: next
@@ -373,8 +378,8 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
   return (
     <Card className="overflow-hidden border-border">
       {/* Top toolbar */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b bg-background">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b bg-background">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -412,7 +417,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="hidden md:inline text-xs text-muted-foreground">
             Post by {formatDeadline(janitorialDeadline)} (janitorial) · {formatDeadline(projectDeadline)} (project)
           </span>

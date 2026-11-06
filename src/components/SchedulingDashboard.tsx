@@ -105,7 +105,7 @@ const SchedulingDashboard = () => {
           employees:employee_id(id, employee_id, first_name, last_name, job_title),
           job_sites:job_site_id(id, name, address, client_name)
         `)
-        .eq('active', true)
+        .or('active.eq.true,training_session_id.not.is.null')
         .order('start_date', { ascending: true });
 
       if (schedulesError) throw schedulesError;
