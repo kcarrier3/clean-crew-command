@@ -18,13 +18,24 @@ async function paged<T>(fetch: (start: number, end: number) => PromiseLike<{ dat
   }
 }
 export async function plannerOptions() {
-  const [people, accounts, roles] = await Promise.all([
+  const [people, accounts] = await Promise.all([
     paged<PersonOption>((a,b) => supabase.from('profiles_directory').select('id, first_name, last_name').eq('active',true).order('id').range(a,b)),
     paged<AccountOption>((a,b) => supabase.from('job_sites').select('id, name').eq('active',true).order('id').range(a,b)),
-    paged<{ user_id: string }>((a,b) => supabase.from('user_roles').select('user_id').in('role',['manager','admin']).order('id').range(a,b)),
   ]);
-  const managerIds = new Set(roles.map(row => row.user_id));
-  return { people: people.sort((a,b) => personName(a).localeCompare(personName(b))), accounts: accounts.sort((a,b) => a.name.localeCompare(b.name)), managers: people.filter(row => managerIds.has(row.id)) };
+  const managers: PersonOption[] = [];
+  // Existing authenticated role helpers avoid widening access to user_roles.
+  for (let offset = 0; offset < people.length; offset += 12) {
+    const checked = await Promise.all(people.slice(offset,offset+12).map(async person => {
+      const results = await Promise.all([
+        supabase.rpc('has_role', { _user_id: person.id, _role: 'manager' }),
+        supabase.rpc('has_role', { _user_id: person.id, _role: 'admin' }),
+      ]);
+      for (const result of results) if (result.error) throw new Error(result.error.message);
+      return results.some(result => result.data) ? person : null;
+    }));
+    checked.forEach(person => { if (person) managers.push(person); });
+  }
+  return { people: people.sort((a,b) => personName(a).localeCompare(personName(b))), accounts: accounts.sort((a,b) => a.name.localeCompare(b.name)), managers };
 }
 export async function plannerEntries(training: boolean, first: string, last: string): Promise<PlannerEntry[]> {
   if (training) return paged<TrainingSession>((a,b) => supabase.from('training_sessions').select('*').gte('session_date',first).lte('session_date',last).order('session_date').order('id').range(a,b));

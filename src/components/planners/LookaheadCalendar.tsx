@@ -27,6 +27,7 @@ export default function LookaheadCalendar({ training }: { training: boolean }) {
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PlannerEntry | null>(null);
+  const [newId, setNewId] = useState('');
   const [form, setForm] = useState(blank(format(new Date(),'yyyy-MM-dd')));
   const [saving, setSaving] = useState(false);
   const canEdit = isManager() && (!training || canChangeShifts());
@@ -44,6 +45,7 @@ export default function LookaheadCalendar({ training }: { training: boolean }) {
   useEffect(() => { void load(); }, [load]);
   const edit = (entry: PlannerEntry | null, day = format(date,'yyyy-MM-dd')) => {
     setEditing(entry);
+    setNewId(crypto.randomUUID());
     setForm(entry ? { worker_id: 'worker_id' in entry ? entry.worker_id : '', manager_id: entry.manager_id ?? '', job_site_id: entry.job_site_id, session_date: entryDate(entry), start_time: 'start_time' in entry ? entry.start_time.slice(0,5) : '09:00', end_time: 'end_time' in entry ? entry.end_time.slice(0,5) : '12:00', notes: entry.notes ?? '' } : blank(day));
     setOpen(true);
   };
@@ -52,7 +54,7 @@ export default function LookaheadCalendar({ training }: { training: boolean }) {
     const problem = training ? validateTraining(form) : !form.job_site_id ? 'Choose an existing account' : !form.session_date ? 'Choose a start date' : null;
     if (problem) { toast({ title: problem, variant: 'destructive' }); return; }
     setSaving(true);
-    const id = editing?.id ?? crypto.randomUUID();
+    const id = editing?.id ?? newId;
     const result = training
       ? await supabase.from('training_sessions').upsert({ id, ...form, notes: form.notes || null })
       : await supabase.from('new_account_calendar_entries').upsert({ id, job_site_id: form.job_site_id, start_date: form.session_date, manager_id: form.manager_id || null, notes: form.notes || null });

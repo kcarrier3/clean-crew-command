@@ -1,0 +1,1 @@
+DROP FUNCTION public.training_manager_options();

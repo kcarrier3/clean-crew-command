@@ -47,6 +47,7 @@ interface Schedule {
   end_date: string | null;
   notes: string | null;
   active: boolean;
+  training_session_id?: string | null;
   week_interval?: number | null;
   recurrence_anchor_date?: string | null;
   employees: Employee | null;
@@ -213,6 +214,10 @@ const SchedulingDashboard = () => {
   };
 
   const handleEdit = (schedule: Schedule) => {
+    if (schedule.training_session_id) {
+      window.location.assign('/?tab=trainingplanner');
+      return;
+    }
     setEditingSchedule(schedule);
     setDateLocked(false);
     setFormData({
@@ -230,6 +235,10 @@ const SchedulingDashboard = () => {
   };
 
   const handleDelete = async (scheduleId: string) => {
+    if (schedules.find(schedule => schedule.id === scheduleId)?.training_session_id) {
+      toast({ title: 'Remove this training in Training Planner' });
+      return;
+    }
     try {
       const { error } = await supabase
         .from('employee_schedules')

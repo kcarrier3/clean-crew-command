@@ -443,7 +443,7 @@ const WeeklyScheduleView = ({ schedules, allEmployees = [], sortBy, onEdit, onDe
               disabled={publishing}
               onClick={togglePublish}
             >
-              {publishing ? 'Saving…' : weekPublished ? 'Unpublish' : 'Publish week'}
+              {publishing ? 'Saving…' : pendingTraining > 0 && weekPublished ? `Publish training (${pendingTraining})` : weekPublished ? 'Unpublish' : 'Publish week'}
             </Button>
           )}
         </div>

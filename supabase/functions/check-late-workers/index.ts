@@ -86,6 +86,7 @@ serve(async (req) => {
         .from('employee_schedules')
         .select('*')
         .eq('id', timeEntry.schedule_id)
+        .eq('active', true)
         .maybeSingle();
       if (matched) matchedSchedules = [matched];
     }
