@@ -171,14 +171,14 @@ const ManagerDashboard = () => {
           </MobileDisclosure>
         </div>
         <div className="hidden md:block">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 h-auto gap-1">
-          <TabsTrigger value="timeclock" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Time Clock</TabsTrigger>
-          <TabsTrigger value="active" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Shift Roster</TabsTrigger>
-          <TabsTrigger value="reports" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Weekly Report</TabsTrigger>
-          <TabsTrigger value="budget" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Budget Reports</TabsTrigger>
-          <TabsTrigger value="pay-period" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Pay Period Hours</TabsTrigger>
-          {canViewAccountCost && <TabsTrigger value="revenue-per-hour" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Revenue / Hour</TabsTrigger>}
-          {canViewAccountCost && <TabsTrigger value="account-cost" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Account Cost</TabsTrigger>}
+        <TabsList className="grid w-full grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] h-auto gap-1 [&>button]:min-w-0 [&>button]:min-h-11 [&>button]:h-full [&>button]:whitespace-normal [&>button]:[overflow-wrap:anywhere]">
+          <TabsTrigger value="timeclock">Time Clock</TabsTrigger>
+          <TabsTrigger value="active">Shift Roster</TabsTrigger>
+          <TabsTrigger value="reports">Weekly Report</TabsTrigger>
+          <TabsTrigger value="budget">Budget Reports</TabsTrigger>
+          <TabsTrigger value="pay-period">Pay Period Hours</TabsTrigger>
+          {canViewAccountCost && <TabsTrigger value="revenue-per-hour">Revenue / Hour</TabsTrigger>}
+          {canViewAccountCost && <TabsTrigger value="account-cost">Account Cost</TabsTrigger>}
         </TabsList>
         </div>
 
