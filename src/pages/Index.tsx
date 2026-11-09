@@ -29,6 +29,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsNativeApp } from '@/hooks/useIsNativeApp';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AppSidebar, type SidebarItem } from '@/components/layout/AppSidebar';
+import { groupCalendarItems } from '@/components/layout/navItems';
+import { CalendarMenuItem } from '@/components/layout/CalendarMenuItem';
 import CalendarPlanner from '@/components/CalendarPlanner';
 import SupplyManagement from '@/components/SupplyManagement';
 import TeamRoster from '@/components/TeamRoster';
@@ -198,9 +200,9 @@ const Index = () => {
         { v: 'radio',      label: 'Radio',           icon: RadioIcon },
       ];
 
-  const navItems: SidebarItem[] = allNavItems.filter(
+  const navItems: SidebarItem[] = groupCalendarItems(allNavItems.filter(
     (i) => i.v === 'dashboard' || isModuleEnabled(i.v),
-  );
+  ));
 
   // Extra destinations that only make sense outside the sidebar.
   const extraNavItems: SidebarItem[] = [
@@ -300,6 +302,9 @@ const Index = () => {
                       {user.email}
                     </div>
                     {mobileMenuItems.map((item) => {
+                      if (item.children?.length) {
+                        return <CalendarMenuItem key={item.v} item={item} active={activeTab} onChange={(value) => { handleNavChange(value); setMoreMenuOpen(false); }} />;
+                      }
                       const Icon = item.icon;
                       return (
                         <Button

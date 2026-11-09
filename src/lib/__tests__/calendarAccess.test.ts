@@ -4,7 +4,7 @@ import { JOB_TITLE_PERMISSIONS } from '../jobTitles';
 import { buildNavItems } from '@/components/layout/navItems';
 
 const hasCalendar = (canViewCalendar: boolean, isManager = true) =>
-  buildNavItems({ isManager, isCrmUser: false, canEstimate: false, canViewCalendar }).some(i => i.v === 'calendar');
+  buildNavItems({ isManager, isCrmUser: false, canEstimate: false, canViewCalendar }).some(i => i.v === 'calendar' || i.children?.some(child => child.v === 'calendar'));
 
 describe('planning calendar access', () => {
   it('Project Crew Leads do not get the planning calendar by default', () => {

@@ -22,11 +22,13 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CalendarMenuItem } from './CalendarMenuItem';
 
 export interface SidebarItem {
   v: string;
   label: string;
   icon: LucideIcon;
+  children?: SidebarItem[];
 }
 
 interface AppSidebarProps {
@@ -85,6 +87,9 @@ export const AppSidebar = ({
       <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
         <TooltipProvider delayDuration={150}>
           {items.map((item) => {
+            if (item.children?.length) {
+              return <CalendarMenuItem key={item.v} item={item} active={active} onChange={onChange} collapsed={collapsed} />;
+            }
             const Icon = item.icon;
             const isActive = active === item.v;
             const button = (

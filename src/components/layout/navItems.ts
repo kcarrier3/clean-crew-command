@@ -14,6 +14,21 @@ export interface NavFlags {
   isModuleEnabled?: (key: string) => boolean;
 }
 
+/** Group only already-authorized, module-filtered calendar destinations. */
+export function groupCalendarItems(items: SidebarItem[]): SidebarItem[] {
+  const keys = ['calendar', 'newaccountcalendar', 'trainingplanner'];
+  const labels = ['Planning Calendar', 'New Accounts', 'Training Planner'];
+  const children = keys.flatMap((key, index) => {
+    const item = items.find(candidate => candidate.v === key);
+    return item ? [{ ...item, label: labels[index] }] : [];
+  });
+  if (!children.length) return items;
+  const first = items.findIndex(item => keys.includes(item.v));
+  return items.flatMap((item, index) => index === first
+    ? [{ v: 'calendars', label: 'Calendar', icon: CalendarRange, children }]
+    : keys.includes(item.v) ? [] : [item]);
+}
+
 export const buildNavItems = ({ isManager, isCrmUser, canEstimate, canViewCalendar = false, isModuleEnabled }: NavFlags): SidebarItem[] => {
   const calendar: SidebarItem[] = canViewCalendar ? [{ v: 'calendar', label: 'Calendar', icon: CalendarRange }] : [];
   const items: SidebarItem[] = isManager
@@ -28,6 +43,8 @@ export const buildNavItems = ({ isManager, isCrmUser, canEstimate, canViewCalend
         { v: 'team',       label: 'Team',            icon: UsersIcon },
         { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
         { v: 'training',   label: 'Training',        icon: GraduationCap },
+        { v: 'trainingplanner', label: 'Training Planner', icon: GraduationCap },
+        { v: 'newaccountcalendar', label: 'New Accounts', icon: CalendarDays },
         ...(isCrmUser ? [{ v: 'crm', label: 'Waypoint', icon: Briefcase }] : []),
         ...(canEstimate ? [{ v: 'estimating', label: 'Estimating', icon: Calculator }] : []),
         { v: 'supplies',   label: 'Supplies',        icon: Package },
@@ -53,5 +70,5 @@ export const buildNavItems = ({ isManager, isCrmUser, canEstimate, canViewCalend
     : items;
 
   // Help is never module-gated.
-  return [...visible, { v: 'help', label: 'Help & How-To', icon: HelpCircle }];
+  return [...groupCalendarItems(visible), { v: 'help', label: 'Help & How-To', icon: HelpCircle }];
 };

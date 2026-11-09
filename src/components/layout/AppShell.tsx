@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { buildNavItems } from './navItems';
+import { CalendarMenuItem } from './CalendarMenuItem';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -93,7 +94,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   );
 
   if (isNative) {
-    const primary = items.filter((i) => i.v !== 'dashboard').slice(0, 3);
+    const primary = items.filter((i) => i.v !== 'dashboard' && !i.children?.length).slice(0, 3);
     return (
       <div className="min-h-screen pb-24">
         <div className="px-3 pt-3">{logo}</div>
@@ -138,6 +139,9 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
             </SheetHeader>
             <div className="mt-6 space-y-1 overflow-y-auto flex-1">
               {items.map((item) => {
+                if (item.children?.length) {
+                  return <CalendarMenuItem key={item.v} item={item} active={active} onChange={(value) => { setMoreOpen(false); handleChange(value); }} />;
+                }
                 const Icon = item.icon;
                 return (
                   <button
