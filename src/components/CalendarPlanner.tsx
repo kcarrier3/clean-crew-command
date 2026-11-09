@@ -61,6 +61,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { COLOR_SWATCHES } from '@/lib/calendarColors';
 
 type DraftKind = 'shift_draft' | 'event' | 'holiday' | 'note';
 
@@ -100,17 +101,6 @@ const KIND_STYLE: Record<DraftKind, string> = {
   holiday: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
   note: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
 };
-
-const COLOR_SWATCHES: { label: string; value: string }[] = [
-  { label: 'Default', value: '' },
-  { label: 'Blue', value: '#3b82f6' },
-  { label: 'Green', value: '#10b981' },
-  { label: 'Amber', value: '#f59e0b' },
-  { label: 'Rose', value: '#f43f5e' },
-  { label: 'Violet', value: '#8b5cf6' },
-  { label: 'Teal', value: '#14b8a6' },
-  { label: 'Slate', value: '#64748b' },
-];
 
 /** Repeating frequency options for planning-calendar entries. */
 type RepeatFreq =

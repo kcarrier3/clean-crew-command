@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { MapPin, Plus, Edit2, Building2, Users, Trash2, Phone, Mail, User, AlertTriangle, Calendar, DollarSign, FileText, Shield, Lock } from 'lucide-react';
+import { MapPin, Plus, Edit2, Building2, Users, Trash2, Phone, Mail, User, AlertTriangle, Calendar, DollarSign, FileText, Shield, Lock, Search, X } from 'lucide-react';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ import {
 } from '@/lib/serviceFrequency';
 import { fetchProjectSov, saveProjectSov, type SovDraftLine } from '@/components/billing/sovApi';
 import { JOB_SITE_COLUMNS } from '@/lib/jobSiteColumns';
+import { matchesAccountSearch } from '@/lib/accountSearch';
 import {
   JobSiteSalesTaxFields, emptyJobSiteTax, jobSiteTaxFromRow, jobSiteTaxPayload, type JobSiteTaxForm,
 } from '@/components/billing/JobSiteSalesTaxFields';
@@ -277,6 +278,7 @@ export default function JobSitesManagement() {
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [loading, setLoading] = useState(false);
   const [showInactive, setShowInactive] = useState(true);
+  const [search, setSearch] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingJobSite, setEditingJobSite] = useState<JobSite | null>(null);
@@ -833,8 +835,10 @@ export default function JobSitesManagement() {
   const tabSites = jobSites.filter(site =>
     isProjectsTab ? !site.is_recurring_monthly : !!site.is_recurring_monthly
   );
-  const activeJobSites = tabSites.filter(site => site.active);
-  const inactiveJobSites = tabSites.filter(site => !site.active);
+  const searchActive = search.trim().length > 0;
+  const searchedSites = tabSites.filter(site => matchesAccountSearch(search, site));
+  const activeJobSites = searchedSites.filter(site => site.active);
+  const inactiveJobSites = searchedSites.filter(site => !site.active);
   const isProjectForm = !formData.is_recurring_monthly;
   const entityLabel = isProjectsTab ? 'Project' : 'Account';
 
@@ -870,7 +874,28 @@ export default function JobSitesManagement() {
 
         <TabsContent value={activeTab === 'quality' ? '__none' : activeTab} className="mt-6 space-y-6">
           {!isProjectsTab && <OfficeLocationCard />}
-          <div className="flex items-center justify-end gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="relative w-full sm:w-80">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={`Search ${entityLabel.toLowerCase()}s...`}
+                title="Search by name, customer, address, city, contact, phone, email, or code"
+                aria-label={`Search ${entityLabel.toLowerCase()}s`}
+                className="pl-9 pr-8"
+              />
+              {searchActive && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
             <div className="flex items-center space-x-2">
               <Switch
                 id="show-inactive"
@@ -1480,8 +1505,17 @@ export default function JobSitesManagement() {
                     <Card>
                       <CardContent className="p-8 text-center">
                         <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">No active {entityLabel.toLowerCase()}s found</p>
-                        <p className="text-sm text-muted-foreground mt-1">Create your first {entityLabel.toLowerCase()} to get started</p>
+                        {searchActive ? (
+                          <>
+                            <p className="text-muted-foreground">No {entityLabel.toLowerCase()}s match "{search.trim()}"</p>
+                            <p className="text-sm text-muted-foreground mt-1">Try a name, customer, city, contact, or code instead</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-muted-foreground">No active {entityLabel.toLowerCase()}s found</p>
+                            <p className="text-sm text-muted-foreground mt-1">Create your first {entityLabel.toLowerCase()} to get started</p>
+                          </>
+                        )}
                       </CardContent>
                     </Card>
                   ) : (
