@@ -205,10 +205,17 @@ const addDaysISO = (iso: string, days: number) => {
   return d.toISOString();
 };
 
-function DayCell({ dayKey, children, className }: { dayKey: string; children: React.ReactNode; className?: string }) {
+function DayCell({ dayKey, children, className, onSelect }: { dayKey: string; children: React.ReactNode; className?: string; onSelect: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day:${dayKey}` });
   return (
-    <div ref={setNodeRef} className={cn(className, isOver && 'ring-2 ring-inset ring-primary/60 bg-primary/5')}>
+    <div
+      ref={setNodeRef}
+      onClick={(event) => {
+        if (event.target instanceof Element && event.target.closest('button, [role="button"]')) return;
+        onSelect();
+      }}
+      className={cn(className, isOver && 'ring-2 ring-inset ring-primary/60 bg-primary/5')}
+    >
       {children}
     </div>
   );
@@ -291,6 +298,7 @@ const CalendarPlanner = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [cursor, setCursor] = useState(new Date());
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [jobSites, setJobSites] = useState<JobSiteOpt[]>([]);
   const [filterKind, setFilterKind] = useState<DraftKind | 'all'>('all');
@@ -713,21 +721,39 @@ const CalendarPlanner = () => {
                 <DayCell
                   key={key}
                   dayKey={key}
+                  onSelect={() => setSelectedDayKey(key)}
                   className={cn(
-                    'min-h-[110px] bg-background p-1.5 align-top',
+                    'min-h-[110px] bg-background p-1.5 align-top cursor-pointer',
                     muted && 'bg-muted/30 text-muted-foreground',
+                    selectedDayKey === key && 'ring-2 ring-inset ring-primary/60',
                   )}
                 >
-                  <div className="flex items-center justify-between">
-                    <button
+                  <div className="flex h-16 flex-col items-start justify-between sm:h-8 sm:flex-row sm:items-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Select ${format(day, 'MMMM d, yyyy')}`}
+                      aria-pressed={selectedDayKey === key}
                       className={cn(
-                        'text-xs font-medium rounded px-1.5 py-0.5 hover:bg-muted',
+                        'h-7 text-xs font-medium rounded px-1.5 py-0.5 hover:bg-muted',
                         isSameDay(day, new Date()) && 'bg-primary text-primary-foreground hover:bg-primary',
                       )}
-                      onClick={() => openNew(day)}
+                      onClick={() => setSelectedDayKey(key)}
                     >
                       {format(day, 'd')}
-                    </button>
+                    </Button>
+                    {selectedDayKey === key && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-primary"
+                        aria-label={`Add event on ${format(day, 'MMMM d, yyyy')}`}
+                        title={`Add event on ${format(day, 'MMMM d, yyyy')}`}
+                        onClick={() => openNew(day)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                   <div className="mt-1 space-y-1">
                     {items.map((d) => {
