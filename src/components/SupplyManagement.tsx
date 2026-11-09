@@ -12,8 +12,11 @@ import FixedAssetsTab from './supply/FixedAssetsTab';
 import SupplyCostReport from './supply/SupplyCostReport';
 import SupplyBillingReport from './supply/SupplyBillingReport';
 import SupplyBillingWeekly from './supply/SupplyBillingWeekly';
+import { useState } from 'react';
+import { SectionNavigation } from './layout/SectionNavigation';
 
 const SupplyManagement = () => {
+  const [tab, setTab] = useState('stock');
   const { isManager, profile, hasPermission, canViewSov } = useAuth();
   // Weekly supply billing: explicit permission, or full billing access (Owner / Office / Operations Manager).
   const canApproveSupplyBilling = hasPermission('approve_supply_billing') || canViewSov();
@@ -21,7 +24,8 @@ const SupplyManagement = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <h2 className="text-xl font-semibold md:hidden">Supplies</h2>
+      <Card className="hidden md:block">
         <CardHeader className="flex flex-row items-start gap-4">
           <div className="p-3 rounded-md bg-primary/10 text-primary">
             <Package className="h-6 w-6" />
@@ -35,7 +39,14 @@ const SupplyManagement = () => {
         </CardHeader>
       </Card>
 
-      <Tabs defaultValue="stock" className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+        <SectionNavigation label="Supplies" value={tab} onValueChange={setTab} options={[
+          { value: 'stock', label: 'Stock' }, { value: 'items', label: 'Items' },
+          { value: 'assets', label: 'Fixed Assets' }, { value: 'requests', label: 'Requests' },
+          ...(canViewReports ? [{ value: 'cost-report', label: 'Cost Report' }, { value: 'billing-report', label: 'Billing Report' }] : []),
+          ...(canApproveSupplyBilling ? [{ value: 'weekly-billing', label: 'Supply Billing' }] : []),
+          ...(canManage ? [{ value: 'locations', label: 'Locations' }] : []),
+        ]}>
         <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="stock">Stock</TabsTrigger>
           <TabsTrigger value="items">Items</TabsTrigger>
@@ -46,6 +57,7 @@ const SupplyManagement = () => {
           {canApproveSupplyBilling && <TabsTrigger value="weekly-billing">Supply Billing</TabsTrigger>}
           {canManage && <TabsTrigger value="locations">Locations</TabsTrigger>}
         </TabsList>
+        </SectionNavigation>
         <TabsContent value="stock" className="space-y-6">
           <SupplyStockTab />
           <SupplyMovementsTab canManage={canManage} />

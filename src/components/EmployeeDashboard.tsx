@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import TimeClock from '@/components/TimeClock';
+import { MobileDisclosure } from './layout/MobileDisclosure';
 
 interface Schedule {
   id: string;
@@ -193,16 +194,11 @@ const EmployeeDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Time Clock */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Time Clock
-          </CardTitle>
+      <Card className="border-0 bg-transparent shadow-none md:border md:bg-card md:shadow-sm">
+        <CardHeader className="hidden md:block">
+          <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />Time Clock</CardTitle>
         </CardHeader>
-        <CardContent>
-          <TimeClock forManager={false} />
-        </CardContent>
+        <CardContent className="p-0 md:p-6 md:pt-0"><TimeClock forManager={false} /></CardContent>
       </Card>
 
       {/* Today's Schedule */}
@@ -312,6 +308,7 @@ const EmployeeDashboard = () => {
       </Card>
 
       {/* Week Look-Ahead */}
+      <MobileDisclosure title="This Week">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -349,6 +346,7 @@ const EmployeeDashboard = () => {
           </div>
         </CardContent>
       </Card>
+      </MobileDisclosure>
 
     </div>
   );

@@ -8,6 +8,7 @@ import { EmailActivityTab } from './EmailActivityTab';
 import { BillingPerformanceTab } from './BillingPerformanceTab';
 import { BillingSettingsTab } from './BillingSettingsTab';
 import { CreditsTab } from './CreditsTab';
+import { SectionNavigation } from '@/components/layout/SectionNavigation';
 
 export const BillingDashboard = () => {
   const [tab, setTab] = useState('ready');
@@ -19,12 +20,18 @@ export const BillingDashboard = () => {
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-semibold">Billing</h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="hidden md:block text-sm text-muted-foreground">
           Completed work flows straight into the billing queue so nothing gets finished and forgotten.
         </p>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
+        <SectionNavigation label="Billing" value={tab} onValueChange={setTab} options={[
+          { value: 'ready', label: 'Ready to Bill' }, { value: 'recurring', label: 'Recurring Invoicing' },
+          { value: 'invoices', label: 'Invoices' }, { value: 'credits', label: 'Credits' },
+          { value: 'payments', label: 'Payments' }, { value: 'email', label: 'Email Activity' },
+          { value: 'performance', label: 'Performance' }, { value: 'settings', label: 'Settings' },
+        ]}>
         <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-flex md:w-auto md:h-10">
           <TabsTrigger value="ready">Ready to Bill</TabsTrigger>
           <TabsTrigger value="recurring">Recurring Invoicing</TabsTrigger>
@@ -35,6 +42,7 @@ export const BillingDashboard = () => {
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
+        </SectionNavigation>
 
         <TabsContent value="ready" className="mt-4">
           <ReadyToBillTab onInvoiceCreated={openInvoice} />

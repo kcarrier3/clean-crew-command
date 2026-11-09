@@ -18,6 +18,7 @@ import QualityControlDashboard from './QualityControlDashboard';
 import JobBudgetingWidget from './JobBudgetingWidget';
 import { AccountDetail } from './AccountDetail';
 import OfficeLocationCard from './OfficeLocationCard';
+import { SectionNavigation } from './layout/SectionNavigation';
 import {
   DAY_LABELS, monthlyHoursFromNightly, monthlyHoursForSchedule, serviceDaysInMonth, describeFrequency, describeNightlyByDay,
 } from '@/lib/serviceFrequency';
@@ -857,7 +858,7 @@ export default function JobSitesManagement() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold">{isProjectsTab ? 'Project Management' : 'Account Management'}</h2>
-          <p className="text-muted-foreground">
+          <p className="hidden md:block text-muted-foreground">
             {isProjectsTab
               ? 'Manage one-time projects, site contacts, and budgeted hours'
               : "Manage your company's recurring accounts, locations, and quality control"}
@@ -866,11 +867,16 @@ export default function JobSitesManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <SectionNavigation label="Accounts" value={activeTab} onValueChange={setActiveTab} options={[
+          { value: 'accounts', label: 'Accounts' }, { value: 'projects', label: 'Projects' },
+          { value: 'quality', label: 'Quality Control' },
+        ]}>
         <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="accounts">Account Management</TabsTrigger>
           <TabsTrigger value="projects">Project Management</TabsTrigger>
           <TabsTrigger value="quality">Quality Control</TabsTrigger>
         </TabsList>
+        </SectionNavigation>
 
         <TabsContent value={activeTab === 'quality' ? '__none' : activeTab} className="mt-6 space-y-6">
           {!isProjectsTab && <OfficeLocationCard />}

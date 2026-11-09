@@ -1,5 +1,10 @@
 # Roadmap
 
+- [x] Mobile cleanup: compact shared headers and page section menus (Billing, Waypoint, Supplies, Accounts)
+- [x] Mobile dashboard: prioritize time clock and shifts; expand summaries and reports on demand
+- [x] Verify shared mobile controls and desktop preservation without changing permissions
+- [ ] Full signed-in mobile page checks (blocked: external Supabase session unavailable; shared controls verified separately)
+
 - [x] Saved billable items catalog; invoice lines pick from a dropdown (for billing-by-item reports)
 - [x] Supply drop-offs editable after the fact (customer/account, delivery date, qty) and delivery date choosable when logging
 - [x] Fix Oct 7 multifold drop-off with no customer → Stelfast

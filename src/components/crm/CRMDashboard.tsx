@@ -18,6 +18,8 @@ import { TasksList } from './TasksList';
 import { CRMReports } from './CRMReports';
 import { LostReport } from './LostReport';
 import { SalesGoalCard } from './SalesGoalCard';
+import { SectionNavigation } from '@/components/layout/SectionNavigation';
+import { MobileDisclosure } from '@/components/layout/MobileDisclosure';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LEAD_STATUS_LABELS, PIPELINE_SHORT_LABELS, type CrmDeal, type CrmLead, type CrmStage, type CrmPipeline } from './types';
 
@@ -171,6 +173,8 @@ export default function CRMDashboard() {
 
   return (
     <div className="space-y-6">
+      <h2 className="text-xl font-semibold md:hidden">Waypoint</h2>
+      <MobileDisclosure title="Sales overview" summary={`${openPipelineCount} open · $${openDealsValue.toLocaleString()} pipeline`}>
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-4">
@@ -193,8 +197,15 @@ export default function CRMDashboard() {
 
       {/* Goal tracking sits above the tabs so it's visible on every Waypoint view. */}
       <SalesGoalCard leads={leads} deals={deals} stages={stages} />
+      </MobileDisclosure>
 
       <Tabs value={tab} onValueChange={setTab}>
+        <SectionNavigation label="Waypoint" value={tab} onValueChange={setTab} options={[
+          { value: 'recent', label: 'Recent' }, { value: 'pipeline', label: 'Pipeline' },
+          { value: 'leads', label: 'Opportunities' }, { value: 'companies', label: 'Accounts' },
+          { value: 'contacts', label: 'Contacts' }, { value: 'tasks', label: 'Tasks' },
+          { value: 'reports', label: 'Reports' }, { value: 'activities', label: 'Follow-ups' },
+        ]}>
         <TabsList className="grid w-full grid-cols-2 h-auto gap-1 md:inline-grid md:grid-flow-col md:w-auto">
           <TabsTrigger value="recent">Recent</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
@@ -205,6 +216,7 @@ export default function CRMDashboard() {
           <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="activities">Follow-ups</TabsTrigger>
         </TabsList>
+        </SectionNavigation>
 
         <TabsContent value="recent" className="mt-4">
           <div className="grid gap-6 lg:grid-cols-3">

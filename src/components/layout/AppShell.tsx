@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useModuleSettings } from '@/hooks/useModuleSettings';
 import { moduleForPath } from '@/lib/modules';
 import ModuleHelp from '@/components/help/ModuleHelp';
+import { Button } from '@/components/ui/button';
+import { mobileNavigationKeys } from './mobileNavigation';
 
 /**
  * Wraps routed (non-tab) pages so the Crew Compass sidebar stays available
@@ -78,9 +80,9 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
   };
 
   const logo = (
-    <button
+    <Button variant="ghost"
       onClick={() => navigate('/')}
-      className="inline-flex items-center"
+      className="h-auto inline-flex items-center p-0 hover:bg-transparent"
       aria-label="Crew Compass home"
     >
       <img
@@ -88,13 +90,15 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
         alt="Crew Compass"
         width="512"
         height="256"
-        className="h-28 md:h-32 w-auto"
+        className="h-12 md:h-32 w-auto"
       />
-    </button>
+    </Button>
   );
 
   if (isNative) {
-    const primary = items.filter((i) => i.v !== 'dashboard' && !i.children?.length).slice(0, 3);
+    const keys = mobileNavigationKeys(isManager(), profile?.job_title === 'Supply' || profile?.job_title === 'Supply Management');
+    const primary = keys.flatMap(key => items.filter(item => item.v === key));
+    const overflow = items.filter(item => !keys.includes(item.v));
     return (
       <div className="min-h-screen pb-24">
         <div className="px-3 pt-3">{logo}</div>
@@ -108,27 +112,27 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
         {/* Mobile bottom navigation, mirroring the main dashboard shell */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border p-3 pb-safe safe-x">
           <div className="flex justify-around items-center max-w-md mx-auto">
-            {items.filter((i) => i.v === 'dashboard').concat(primary).map((item) => {
+            {primary.map((item) => {
               const Icon = item.icon;
               const isActive = active === item.v;
               return (
-                <button
+                <Button variant="ghost"
                   key={item.v}
                   onClick={() => handleChange(item.v)}
-                  className={`flex flex-col items-center gap-1 px-2 py-1 text-[11px] ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+                  className={`h-auto flex flex-col items-center gap-1 px-2 py-1 text-[11px] ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
                 >
                   <Icon className="h-5 w-5" />
-                  <span className="truncate max-w-[4.5rem]">{item.label}</span>
-                </button>
+                  <span className="truncate max-w-[4.5rem]">{item.v === 'quality' ? 'QC' : item.v === 'managerlog' ? 'Log' : item.v === 'myschedule' ? 'Schedule' : item.label}</span>
+                </Button>
               );
             })}
-            <button
+            <Button variant="ghost"
               onClick={() => setMoreOpen(true)}
-              className="flex flex-col items-center gap-1 px-2 py-1 text-[11px] text-muted-foreground"
+              className="h-auto flex flex-col items-center gap-1 px-2 py-1 text-[11px] text-muted-foreground"
             >
               <Menu className="h-5 w-5" />
               <span>More</span>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -138,7 +142,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
               <SheetTitle>Menu</SheetTitle>
             </SheetHeader>
             <div className="mt-6 space-y-1 overflow-y-auto flex-1">
-              {items.map((item) => {
+              {overflow.map((item) => {
                 if (item.children?.length) {
                   return <CalendarMenuItem key={item.v} item={item} active={active} onChange={(value) => { setMoreOpen(false); handleChange(value); }} />;
                 }

@@ -19,3 +19,4 @@
 - Training sessions own linked one-day shifts, synchronized by database triggers; unpublished training shifts are inactive and hidden from workers by restrictive RLS, and weekly publication activates them. Edit training through Training Planner only; why: calendar changes cannot duplicate shifts or silently bypass publishing.
 - New Account Calendar entries reference operational job_sites and never create schedules or accounts; why: manager lookahead must not change staffing, billing, or account data.
 - Calendar navigation is grouped after access and module filtering and uses a shared dropdown in desktop and phone menus; why: grouping must not expose restricted destinations or diverge between pages.
+- Mobile page sections use SectionNavigation with the existing controlled tab value and permission-filtered options; secondary summaries use MobileDisclosure, leaving desktop content open, so presentation changes preserve navigation and authorization.

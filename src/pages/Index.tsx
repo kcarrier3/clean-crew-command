@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Clock, Calendar, FileText, LogOut, User, MessageSquare, BookOpen, MapPin, Trash2, KeyRound, CalendarDays, Menu, Home, PlaneTakeoff, Briefcase, ClipboardCheck, CalendarRange, Package, Users as UsersIcon, FileSpreadsheet, Contact, Calculator, Receipt, Radio as RadioIcon, Settings as SettingsIcon, HelpCircle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import DeleteAccountDialog from '@/components/DeleteAccountDialog';
 import ManagerDashboard from '@/components/ManagerDashboard';
 import WorkerStatusDashboard from '@/components/WorkerStatusDashboard';
@@ -30,6 +30,7 @@ import { useIsNativeApp } from '@/hooks/useIsNativeApp';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AppSidebar, type SidebarItem } from '@/components/layout/AppSidebar';
 import { groupCalendarItems } from '@/components/layout/navItems';
+import { mobileNavigationKeys } from '@/components/layout/mobileNavigation';
 import { CalendarMenuItem } from '@/components/layout/CalendarMenuItem';
 import CalendarPlanner from '@/components/CalendarPlanner';
 import SupplyManagement from '@/components/SupplyManagement';
@@ -216,10 +217,7 @@ const Index = () => {
   const sidebarItems = [...navItems, helpNavItem];
 
   // Keys shown in the mobile bottom bar — everything else lands in the menu.
-  const bottomBarKeys = (isManager()
-    ? ['dashboard', 'scheduling', 'managerlog', isSupplyStaff ? 'supplies' : 'quality']
-    : ['dashboard', 'myschedule', isSupplyStaff ? 'supplies' : 'timeoff', 'messages']
-  ).filter((k) => k === 'dashboard' || isModuleEnabled(k));
+  const bottomBarKeys = mobileNavigationKeys(isManager(), isSupplyStaff).filter((k) => k === 'dashboard' || isModuleEnabled(k));
 
   const mobileMenuItems = [...navItems, ...extraNavItems, helpNavItem].filter(
     (item) => !bottomBarKeys.includes(item.v),
@@ -265,14 +263,14 @@ const Index = () => {
       >
         <main className="max-w-6xl mx-auto min-w-0">
           <h1 className="sr-only">Crew Compass — Janitorial Team & Operations Management</h1>
-          <div className="mb-8 flex justify-between items-center">
+          <div className="mb-3 md:mb-8 flex justify-between items-center">
             <div>
               <img
                 src="/crew-compass-logo-notag.png?v=4"
                 alt="Crew Compass"
                 width="512"
                 height="256"
-                className="h-28 md:h-32 w-auto"
+                className="h-12 md:h-32 w-auto"
               />
             </div>
             <div className="flex items-center gap-3">
@@ -281,6 +279,7 @@ const Index = () => {
                 variant="ghost"
                 size="sm"
                 aria-label="Settings"
+                className="hidden md:inline-flex"
                 onClick={() => navigate('/settings')}
               >
                 <SettingsIcon className="h-5 w-5" />
@@ -288,11 +287,6 @@ const Index = () => {
 
               {/* Mobile hamburger menu for lesser-used functions */}
               <Sheet open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="md:hidden">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
                 <SheetContent side="right" className="w-72 flex flex-col overflow-y-auto max-h-screen pb-safe">
                   <SheetHeader className="shrink-0">
                     <SheetTitle>Menu</SheetTitle>
@@ -413,7 +407,7 @@ const Index = () => {
               <HelpCenter />
             </TabsContent>
 
-            <TabsContent value="dashboard" className="mt-6">
+            <TabsContent value="dashboard" className="mt-3 md:mt-6">
               {isManager() ? <ManagerDashboard /> : <EmployeeDashboard />}
             </TabsContent>
             
@@ -549,7 +543,7 @@ const Index = () => {
       </div>
 
       {/* Mobile Bottom Navigation - Role-based with safe area */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 pb-safe safe-x">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border p-3 pb-safe safe-x">
         <div className="flex justify-around items-center max-w-md mx-auto">
           {isManager() ? (
               <>

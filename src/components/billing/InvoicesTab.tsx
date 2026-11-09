@@ -4,7 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, FileText, Mail, Plus, Search } from 'lucide-react';
+import { Download, FileText, Mail, Plus, Search, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MobileDisclosure } from '@/components/layout/MobileDisclosure';
 import { useToast } from '@/hooks/use-toast';
 import { fetchInvoices } from './billingApi';
 import { InvoiceDetailDialog } from './InvoiceDetailDialog';
@@ -58,6 +60,7 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
 
   return (
     <div className="space-y-4">
+      <MobileDisclosure title="Invoice summary" summary={`${money(openBalance)} open A/R`}>
       <div className="grid gap-3 sm:grid-cols-3">
         <Card><CardContent className="p-4">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Open A/R</p>
@@ -74,20 +77,26 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
           </p>
         </CardContent></Card>
       </div>
+      </MobileDisclosure>
 
       <Card>
         <CardHeader className="pb-3 gap-3 sm:flex-row sm:items-center sm:justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Invoices</CardTitle>
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => setNewOpen(true)}><Plus className="h-4 w-4 mr-1" /> New invoice</Button>
-            <Button variant="outline" onClick={() => setExportOpen(true)}>
+            <Button variant="outline" className="hidden md:inline-flex" onClick={() => setExportOpen(true)}>
               <Download className="h-4 w-4 mr-1" /> Export for BooksGPT
             </Button>
-            <div className="relative">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="md:hidden" aria-label="More invoice actions"><MoreHorizontal /></Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => setExportOpen(true)}><Download className="mr-2 h-4 w-4" />Export for BooksGPT</DropdownMenuItem></DropdownMenuContent>
+            </DropdownMenu>
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search number, customer, PO"
                      className="pl-8 w-full sm:w-64" />
             </div>
+            <MobileDisclosure title={`Filters${status !== 'all' ? ' (1)' : ''}`} summary={status !== 'all' ? (INVOICE_STATUS_LABEL[status as Invoice['status']] || 'Needs tax review') : undefined}>
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -97,6 +106,7 @@ export const InvoicesTab = ({ focusInvoiceId, onFocusHandled }: Props) => {
                   <SelectItem key={v} value={v}>{l}</SelectItem>)}
               </SelectContent>
             </Select>
+            </MobileDisclosure>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">

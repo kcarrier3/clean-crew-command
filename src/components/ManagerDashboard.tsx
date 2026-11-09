@@ -13,6 +13,8 @@ import ShiftRoster from './ShiftRoster';
 import PayPeriodHoursReport from './PayPeriodHoursReport';
 import RevenuePerHourReport from './RevenuePerHourReport';
 import ManagerTrainingWeek from './planners/ManagerTrainingWeek';
+import { SectionNavigation } from './layout/SectionNavigation';
+import { MobileDisclosure } from './layout/MobileDisclosure';
 
 
 interface TimeEntry {
@@ -32,6 +34,7 @@ interface TimeEntry {
 }
 
 const ManagerDashboard = () => {
+  const [tab, setTab] = useState('timeclock');
   const [activeEntries, setActiveEntries] = useState<TimeEntry[]>([]);
   const [weekEntries, setWeekEntries] = useState<TimeEntry[]>([]);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -148,10 +151,26 @@ const ManagerDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <ManagerTrainingWeek />
+    <div className="flex flex-col gap-4 md:gap-6">
+      <div className="order-2 md:order-1">
+        <MobileDisclosure title="This week's training"><ManagerTrainingWeek /></MobileDisclosure>
+      </div>
       {/* Main Content Tabs */}
-      <Tabs defaultValue="timeclock" className="w-full">
+      <Tabs value={tab} onValueChange={setTab} className="order-1 md:order-2 w-full">
+        <div className="md:hidden space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant={tab === 'timeclock' ? 'secondary' : 'ghost'} className="h-11" onClick={() => setTab('timeclock')}>Time Clock</Button>
+            <Button variant={tab === 'active' ? 'secondary' : 'ghost'} className="h-11" onClick={() => setTab('active')}>Shift Roster</Button>
+          </div>
+          <MobileDisclosure title="Reports" summary={tab !== 'timeclock' && tab !== 'active' ? 'Viewing a report' : undefined}>
+            <SectionNavigation label="Reports" value={tab === 'timeclock' || tab === 'active' ? '' : tab} onValueChange={setTab} options={[
+              { value: 'reports', label: 'Weekly Report' }, { value: 'budget', label: 'Budget Reports' },
+              { value: 'pay-period', label: 'Pay Period Hours' },
+              ...(canViewAccountCost ? [{ value: 'revenue-per-hour', label: 'Revenue / Hour' }, { value: 'account-cost', label: 'Account Cost' }] : []),
+            ]}>{null}</SectionNavigation>
+          </MobileDisclosure>
+        </div>
+        <div className="hidden md:block">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 h-auto gap-1">
           <TabsTrigger value="timeclock" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Time Clock</TabsTrigger>
           <TabsTrigger value="active" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Shift Roster</TabsTrigger>
@@ -161,9 +180,11 @@ const ManagerDashboard = () => {
           {canViewAccountCost && <TabsTrigger value="revenue-per-hour" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Revenue / Hour</TabsTrigger>}
           {canViewAccountCost && <TabsTrigger value="account-cost" className="text-xs md:text-sm whitespace-normal md:whitespace-nowrap">Account Cost</TabsTrigger>}
         </TabsList>
+        </div>
 
         <TabsContent value="timeclock">
           <TimeClock forManager={true} />
+          <div className="mt-4 md:hidden"><ShiftRoster /></div>
         </TabsContent>
 
         <TabsContent value="active">
