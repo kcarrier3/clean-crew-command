@@ -26,3 +26,5 @@
 - [x] Manager dashboard: show that manager's trainees for the current week
 - [x] New Account Calendar: managers' lookahead restricted to existing Accounts entries
 - [ ] Calendar signed-in end-to-end and desktop/phone visual checks (blocked: external Supabase session unavailable)
+
+- [ ] Worker dashboard MOD card (janitorial: standing MODs; project: manager scheduled on same job that day) — awaiting user answers
