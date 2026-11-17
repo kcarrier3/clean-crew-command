@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import TimeClock from '@/components/TimeClock';
+import ManagerOnDutyCard from '@/components/dashboard/ManagerOnDutyCard';
 import { MobileDisclosure } from './layout/MobileDisclosure';
 
 interface Schedule {
@@ -200,6 +201,8 @@ const EmployeeDashboard = () => {
         </CardHeader>
         <CardContent className="p-0 md:p-6 md:pt-0"><TimeClock forManager={false} /></CardContent>
       </Card>
+
+      <ManagerOnDutyCard />
 
       {/* Today's Schedule */}
       <Card>
