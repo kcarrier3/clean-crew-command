@@ -8639,6 +8639,19 @@ export type Database = {
           unread_count: number
         }[]
       }
+      get_my_manager_on_duty: {
+        Args: never
+        Returns: {
+          full_name: string
+          is_current: boolean
+          job_site_name: string
+          job_title: string
+          manager_id: string
+          phone: string
+          shift_date: string
+          start_time: string
+        }[]
+      }
       get_or_create_conversation: {
         Args: { _user1_id: string; _user2_id: string }
         Returns: string
