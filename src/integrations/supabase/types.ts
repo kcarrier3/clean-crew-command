@@ -5364,6 +5364,24 @@ export type Database = {
           },
         ]
       }
+      job_title_reporting: {
+        Row: {
+          job_title: string
+          reports_to_title: string
+          updated_at: string
+        }
+        Insert: {
+          job_title: string
+          reports_to_title: string
+          updated_at?: string
+        }
+        Update: {
+          job_title?: string
+          reports_to_title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       late_notifications: {
         Row: {
           created_at: string

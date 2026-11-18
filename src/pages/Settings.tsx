@@ -12,6 +12,7 @@ import OfficeLocationCard from '@/components/OfficeLocationCard';
 import { RoleManagement } from '@/components/RoleManagement';
 import DepartmentManagement from '@/components/DepartmentManagement';
 import DirectoryAccessRules from '@/components/DirectoryAccessRules';
+import ChainOfCommandSettings from '@/components/ChainOfCommandSettings';
 import TimeOffPolicySettings from '@/components/TimeOffPolicySettings';
 import WaypointDataSettings from '@/components/crm/WaypointDataSettings';
 import AdpSettings from '@/components/AdpSettings';
@@ -157,6 +158,15 @@ export default function Settings() {
                 </CardHeader>
                 <CardContent>
                   <DirectoryAccessRules />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2"><Users className="h-4 w-4" /> Chain of command</CardTitle>
+                  <CardDescription>Who each job title reports to. Used for Manager on Duty and missed-punch texts.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChainOfCommandSettings />
                 </CardContent>
               </Card>
             </TabsContent>
