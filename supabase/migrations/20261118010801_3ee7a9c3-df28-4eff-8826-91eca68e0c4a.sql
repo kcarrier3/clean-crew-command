@@ -1,0 +1,3 @@
+UPDATE public.job_title_reporting SET reports_to_title='Owner', updated_at=now() WHERE job_title='Sales Rep';
+UPDATE public.job_title_reporting SET reports_to_title='Operations Manager', updated_at=now() WHERE job_title='Office Manager';
+INSERT INTO public.app_settings(key, value, description) VALUES ('time_off_approver_title','Office Manager','Job title responsible for approving time off requests') ON CONFLICT (key) DO NOTHING;

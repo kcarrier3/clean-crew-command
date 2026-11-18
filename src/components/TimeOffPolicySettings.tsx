@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarDays, Palmtree, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { JOB_TITLES } from '@/lib/jobTitles';
 
 interface Policy {
   id: string;
@@ -44,6 +46,7 @@ const TimeOffPolicySettings = () => {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [managerWeeks, setManagerWeeks] = useState('2');
   const [saving, setSaving] = useState(false);
+  const [approverTitle, setApproverTitle] = useState('Office Manager');
 
   const load = async () => {
     const [p, t, h, s] = await Promise.all([
@@ -56,6 +59,8 @@ const TimeOffPolicySettings = () => {
     setTiers((t.data as Tier[]) || []);
     setHolidays((h.data as Holiday[]) || []);
     if (s.data?.value) setManagerWeeks(String(s.data.value));
+    const a = await supabase.from('app_settings').select('value').eq('key', 'time_off_approver_title').maybeSingle();
+    if (a.data?.value) setApproverTitle(String(a.data.value));
   };
 
   useEffect(() => {
@@ -87,6 +92,10 @@ const TimeOffPolicySettings = () => {
         .from('app_settings')
         .upsert({ key: 'pto_manager_weeks', value: managerWeeks }, { onConflict: 'key' });
       if (sErr) throw sErr;
+      const { error: aErr } = await supabase
+        .from('app_settings')
+        .upsert({ key: 'time_off_approver_title', value: approverTitle }, { onConflict: 'key' });
+      if (aErr) throw aErr;
       toast({ title: 'Saved', description: 'Time off and PTO settings updated.' });
     } catch (e) {
       console.error(e);
@@ -98,6 +107,20 @@ const TimeOffPolicySettings = () => {
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Time off approvals</CardTitle>
+          <CardDescription>Who is responsible for reviewing time off requests.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={approverTitle} onValueChange={setApproverTitle}>
+            <SelectTrigger className="sm:w-64"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {JOB_TITLES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">

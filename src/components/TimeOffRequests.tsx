@@ -47,6 +47,11 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
   const [requests, setRequests] = useState<TimeOffRequest[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [approverTitle, setApproverTitle] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.from('app_settings').select('value').eq('key', 'time_off_approver_title').maybeSingle()
+      .then(({ data }) => setApproverTitle(data?.value ? String(data.value) : null));
+  }, []);
   const [formData, setFormData] = useState({
     employee_id: currentEmployeeId || '',
     start_date: '',
@@ -241,6 +246,9 @@ const TimeOffRequests = ({ isManager = false, currentEmployeeId }: TimeOffReques
             <Calendar className="h-5 w-5" />
             Time Off Requests
           </CardTitle>
+          {approverTitle && (
+            <span className="text-xs text-muted-foreground">Reviewed by: {approverTitle}</span>
+          )}
           {(!isManager || (isManager && currentEmployeeId)) && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
