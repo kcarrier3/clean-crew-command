@@ -84,7 +84,8 @@ export const ModuleTour = ({ moduleKey }: { moduleKey: string }) => {
           // devices don't show it again either.
           void supabase
             .from('user_tour_progress')
-            .upsert({ user_id: user.id, module_key: moduleKey }, { onConflict: 'user_id,module_key' });
+            .upsert({ user_id: user.id, module_key: moduleKey }, { onConflict: 'user_id,module_key' })
+            .then(({ error }) => { if (error) console.error('Tour progress save failed', error); });
         }
       } catch {
         if (!cancelled && !hasSeenLocal(moduleKey)) setOpen(true);
@@ -109,14 +110,16 @@ export const ModuleTour = ({ moduleKey }: { moduleKey: string }) => {
       if (user?.id) {
         void supabase
           .from('user_tour_progress')
-          .upsert({ user_id: user.id, module_key: ALL_KEY }, { onConflict: 'user_id,module_key' });
+          .upsert({ user_id: user.id, module_key: ALL_KEY }, { onConflict: 'user_id,module_key' })
+            .then(({ error }) => { if (error) console.error('Tour progress save failed', error); });
       }
     }
     setOpen(false);
     if (user?.id) {
       void supabase
         .from('user_tour_progress')
-        .upsert({ user_id: user.id, module_key: moduleKey }, { onConflict: 'user_id,module_key' });
+        .upsert({ user_id: user.id, module_key: moduleKey }, { onConflict: 'user_id,module_key' })
+            .then(({ error }) => { if (error) console.error('Tour progress save failed', error); });
     }
   };
 
