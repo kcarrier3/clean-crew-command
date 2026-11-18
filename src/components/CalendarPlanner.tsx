@@ -713,7 +713,7 @@ const CalendarPlanner = () => {
                   dayKey={key}
                   onSelect={() => setSelectedDayKey(key)}
                   className={cn(
-                    'min-h-[110px] bg-background p-1.5 align-top cursor-pointer',
+                    'group min-h-[110px] bg-background p-1.5 align-top cursor-pointer',
                     muted && 'bg-muted/30 text-muted-foreground',
                     selectedDayKey === key && 'ring-2 ring-inset ring-primary/60',
                   )}
@@ -732,18 +732,21 @@ const CalendarPlanner = () => {
                     >
                       {format(day, 'd')}
                     </Button>
-                    {selectedDayKey === key && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0 text-primary"
-                        aria-label={`Add event on ${format(day, 'MMMM d, yyyy')}`}
-                        title={`Add event on ${format(day, 'MMMM d, yyyy')}`}
-                        onClick={() => openNew(day)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-8 w-8 shrink-0 text-primary transition-opacity',
+                        selectedDayKey === key
+                          ? 'opacity-100'
+                          : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+                      )}
+                      aria-label={`Add event on ${format(day, 'MMMM d, yyyy')}`}
+                      title={`Add event on ${format(day, 'MMMM d, yyyy')}`}
+                      onClick={() => openNew(day)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
                   <div className="mt-1 space-y-1">
                     {items.map((d) => {
