@@ -8609,6 +8609,19 @@ export type Database = {
         Returns: undefined
       }
       delete_own_account: { Args: never; Returns: undefined }
+      get_chain_directory: {
+        Args: never
+        Returns: {
+          active: boolean
+          email: string
+          employee_id: string
+          first_name: string
+          id: string
+          job_title: string
+          last_name: string
+          phone: string
+        }[]
+      }
       get_coworkers_at_shared_accounts: {
         Args: never
         Returns: {

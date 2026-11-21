@@ -153,11 +153,15 @@ const TeamRoster = () => {
       .from('profiles_directory')
       .select('id, first_name, last_name, email, phone, job_title, employee_id, active')
       .order('last_name', { ascending: true });
+    const { data: chain } = await (supabase as any).rpc('get_chain_directory');
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       setMembers([]);
     } else {
-      setMembers((data ?? []) as RosterMember[]);
+      const byId = new Map<string, RosterMember>();
+      for (const m of (data ?? []) as RosterMember[]) byId.set(m.id, m);
+      for (const m of (chain ?? []) as RosterMember[]) if (!byId.has(m.id)) byId.set(m.id, m);
+      setMembers(Array.from(byId.values()).sort((a, b) => (a.last_name ?? '').localeCompare(b.last_name ?? '')));
     }
     setLoading(false);
   };
