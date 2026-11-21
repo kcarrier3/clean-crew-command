@@ -22,4 +22,4 @@
 - Mobile page sections use SectionNavigation with the existing controlled tab value and permission-filtered options; secondary summaries use MobileDisclosure, leaving desktop content open, so presentation changes preserve navigation and authorization.
 - Default reporting lines live in `job_title_reporting` (title → reports-to title), read by `get_my_manager_on_duty` and `get_employee_managers`; department managers still take precedence for missed-punch texts; why: one table decides who workers report to.
 - Non-admin directory adds `get_chain_directory()` (chain up/down, no Owner, name/phone/title only); why: no full profile reads for workers.
-- Position permissions live in `job_title_permissions`; saving runs `apply_job_title_permissions` to overwrite holders' `user_permissions`; code defaults are fallback only; why: one source per position.
+- Position permissions live in `job_title_permissions`; they only prefill new invites/title changes and never rewrite existing `user_permissions`; code defaults are fallback only; why: per-person access stays as set.

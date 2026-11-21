@@ -53,9 +53,7 @@ export default function PositionPermissionsSettings() {
         const { error } = await (supabase as any).from('job_title_permissions').delete().eq('job_title', title).in('permission', remove);
         if (error) throw error;
       }
-      const { data: count, error } = await (supabase as any).rpc('apply_job_title_permissions', { _job_title: title });
-      if (error) throw error;
-      toast({ title: `${title} updated`, description: `Applied to ${count ?? 0} ${count === 1 ? 'person' : 'people'}.` });
+      toast({ title: `${title} defaults saved`, description: 'New people in this position will start with these permissions.' });
       await load();
     } catch (e: any) {
       toast({ title: 'Save failed', description: e.message, variant: 'destructive' });
@@ -68,7 +66,7 @@ export default function PositionPermissionsSettings() {
       <CardHeader>
         <CardTitle>Position permissions</CardTitle>
         <CardDescription>
-          Choose what each position can see and do. Saving updates everyone in that position, including anyone customized by hand.
+          Choose the starting permissions for each position. People get these when they're invited or moved into the position. Saving here doesn't change anyone who already has the position.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -99,7 +97,7 @@ export default function PositionPermissionsSettings() {
           </div>
         )}
         <div className="flex justify-end">
-          <Button onClick={save} disabled={!dirty || saving}>{saving ? 'Saving…' : 'Save and apply'}</Button>
+          <Button onClick={save} disabled={!dirty || saving}>{saving ? 'Saving…' : 'Save defaults'}</Button>
         </div>
       </CardContent>
     </Card>
