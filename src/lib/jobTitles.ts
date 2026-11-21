@@ -64,17 +64,16 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
     'use_messaging',
   ],
 
-  // Everything except CRM, supplies, estimating, calendar, admin settings
-  'Janitorial Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
+  // Everything except CRM, supplies, estimating, calendar, admin settings, time edits
+  'Janitorial Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings', 'edit_time_tracking'),
   // Crew leads view schedules but never edit them.
-  'Project Crew Lead': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings', 'edit_schedules'),
-  'Night Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings'),
+  'Project Crew Lead': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings', 'edit_schedules', 'edit_time_tracking'),
+  'Night Manager': without('view_crm', 'view_supplies', 'use_estimating', 'view_calendar', 'admin_settings', 'edit_time_tracking'),
 
   // Own schedule (view only), time clock, messaging
   'Project Worker': [
     'view_schedules',
     'view_time_tracking',
-    'edit_time_tracking',
     'view_notifications',
     'use_messaging',
   ],
@@ -82,7 +81,6 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
   'Janitorial Staff': [
     'view_schedules',
     'view_time_tracking',
-    'edit_time_tracking',
     'view_work_orders',
     'view_notifications',
     'use_messaging',
@@ -91,21 +89,19 @@ export const JOB_TITLE_PERMISSIONS: Record<JobTitle, string[]> = {
   'Floaters': [
     'view_schedules',
     'view_time_tracking',
-    'edit_time_tracking',
     'view_work_orders',
     'view_worker_status',
     'view_notifications',
     'use_messaging',
   ],
 
-  // Everything except CRM, estimating, admin settings, calendar
-  'Supply Management': without('view_crm', 'use_estimating', 'admin_settings', 'view_calendar'),
+  // Everything except CRM, estimating, admin settings, calendar, time edits
+  'Supply Management': without('view_crm', 'use_estimating', 'admin_settings', 'view_calendar', 'edit_time_tracking'),
 
   // Own schedule (view only), time clock, supplies, messaging
   'Supply': [
     'view_schedules',
     'view_time_tracking',
-    'edit_time_tracking',
     'view_supplies',
     'view_notifications',
     'use_messaging',
