@@ -5364,6 +5364,24 @@ export type Database = {
           },
         ]
       }
+      job_title_permissions: {
+        Row: {
+          created_at: string
+          job_title: string
+          permission: Database["public"]["Enums"]["app_permission"]
+        }
+        Insert: {
+          created_at?: string
+          job_title: string
+          permission: Database["public"]["Enums"]["app_permission"]
+        }
+        Update: {
+          created_at?: string
+          job_title?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+        }
+        Relationships: []
+      }
       job_title_reporting: {
         Row: {
           job_title: string
