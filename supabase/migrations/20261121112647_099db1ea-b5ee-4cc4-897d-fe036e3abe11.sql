@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.apply_job_title_permissions(text);
