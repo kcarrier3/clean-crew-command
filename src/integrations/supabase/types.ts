@@ -8508,6 +8508,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      apply_job_title_permissions: {
+        Args: { _job_title: string }
+        Returns: number
+      }
       approve_customer_credit: {
         Args: { _credit_id: string }
         Returns: {

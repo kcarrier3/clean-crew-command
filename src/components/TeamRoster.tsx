@@ -39,7 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import { JOB_TITLES, getJobTitleColor, JOB_TITLE_PERMISSIONS, type JobTitle } from '@/lib/jobTitles';
 import { diffPermissions, lockedPermissionReason } from '@/lib/teamPermissions';
 
-const ALL_PERMISSIONS: { key: string; label: string; category: string }[] = [
+export const ALL_PERMISSIONS: { key: string; label: string; category: string }[] = [
   { key: 'view_schedules', label: 'View Schedules', category: 'Scheduling' },
   { key: 'edit_schedules', label: 'Edit Schedules', category: 'Scheduling' },
   { key: 'publish_schedules', label: 'Publish Schedules', category: 'Scheduling' },
@@ -147,6 +147,18 @@ const TeamRoster = () => {
   const [jobSiteOptions, setJobSiteOptions] = useState<JobSiteOption[]>([]);
   const [addAccountIds, setAddAccountIds] = useState<string[]>([]);
 
+  const [positionPerms, setPositionPerms] = useState<Record<string, string[]> | null>(null);
+  useEffect(() => {
+    (supabase as any).from('job_title_permissions').select('job_title, permission').then(({ data }: any) => {
+      if (!data || data.length === 0) return;
+      const map: Record<string, string[]> = {};
+      for (const r of data) (map[r.job_title] ??= []).push(r.permission);
+      setPositionPerms(map);
+    });
+  }, []);
+  const titleDefaults = (jt: string): string[] =>
+    positionPerms?.[jt] ?? (JOB_TITLE_PERMISSIONS as Record<string, string[]>)[jt] ?? [];
+
   const fetchMembers = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -207,7 +219,7 @@ const TeamRoster = () => {
     setForm((f) => ({ ...f, job_title: jt }));
     setAddAccessLevel(jobTitleToAccessLevel(jt));
     if (!addCustomizedPerms) {
-      const defaults = (JOB_TITLE_PERMISSIONS as Record<string, string[]>)[jt] ?? [];
+      const defaults = titleDefaults(jt) ?? [];
       setAddPermissions(defaults);
     }
   };
@@ -737,7 +749,7 @@ const TeamRoster = () => {
                     onClick={() => {
                       setAddCustomizedPerms(false);
                       setAddPermissions(
-                        (JOB_TITLE_PERMISSIONS as Record<string, string[]>)[form.job_title] ?? []
+                        titleDefaults(form.job_title) ?? []
                       );
                     }}
                   >
@@ -928,7 +940,7 @@ const TeamRoster = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      const defaults = (JOB_TITLE_PERMISSIONS as Record<string, string[]>)[editForm.job_title] ?? [];
+                      const defaults = titleDefaults(editForm.job_title) ?? [];
                       // Keep locked permissions as they are; only reset the ones this editor may change.
                       setEditPermissions((prev) => {
                         const locked = ALL_PERMISSIONS.map((p) => p.key).filter((k) => isPermLocked(k));

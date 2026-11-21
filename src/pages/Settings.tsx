@@ -12,6 +12,7 @@ import OfficeLocationCard from '@/components/OfficeLocationCard';
 import { RoleManagement } from '@/components/RoleManagement';
 import DepartmentManagement from '@/components/DepartmentManagement';
 import DirectoryAccessRules from '@/components/DirectoryAccessRules';
+import PositionPermissionsSettings from '@/components/PositionPermissionsSettings';
 import ChainOfCommandSettings from '@/components/ChainOfCommandSettings';
 import TimeOffPolicySettings from '@/components/TimeOffPolicySettings';
 import WaypointDataSettings from '@/components/crm/WaypointDataSettings';
@@ -65,6 +66,7 @@ export default function Settings() {
             <TabsTrigger value="account">Account</TabsTrigger>
             {isAdminLevel && <TabsTrigger value="company">Company</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="roles">Roles</TabsTrigger>}
+            {isAdminLevel && <TabsTrigger value="positions">Positions</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="modules">Modules</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="timeoff">Time off</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="directory">Directory</TabsTrigger>}
@@ -133,6 +135,12 @@ export default function Settings() {
           {isAdminLevel && (
             <TabsContent value="roles" className="mt-6">
               <RoleManagement />
+            </TabsContent>
+          )}
+
+          {isAdminLevel && (
+            <TabsContent value="positions" className="mt-6">
+              <PositionPermissionsSettings />
             </TabsContent>
           )}
 

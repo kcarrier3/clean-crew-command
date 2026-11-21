@@ -21,4 +21,5 @@
 - Calendar navigation is grouped after access and module filtering and uses a shared dropdown in desktop and phone menus; why: grouping must not expose restricted destinations or diverge between pages.
 - Mobile page sections use SectionNavigation with the existing controlled tab value and permission-filtered options; secondary summaries use MobileDisclosure, leaving desktop content open, so presentation changes preserve navigation and authorization.
 - Default reporting lines live in `job_title_reporting` (title → reports-to title), read by `get_my_manager_on_duty` and `get_employee_managers`; department managers still take precedence for missed-punch texts; why: one table decides who workers report to.
-- Team directory visibility for non-admins adds `get_chain_directory()` (people above and below the viewer's title in `job_title_reporting`, excluding Owner; name, phone, title only) to what profiles RLS already allows; why: workers must not get SELECT on full profile rows.
+- Non-admin directory adds `get_chain_directory()` (chain up/down, no Owner, name/phone/title only); why: no full profile reads for workers.
+- Position permissions live in `job_title_permissions`; saving runs `apply_job_title_permissions` to overwrite holders' `user_permissions`; code defaults are fallback only; why: one source per position.
