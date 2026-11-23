@@ -42,15 +42,31 @@ const ResetPassword = () => {
         accessToken: hashParams.get('access_token'),
         refreshToken: hashParams.get('refresh_token'),
         code: searchParams.get('code') || hashParams.get('code'),
+        tokenHash: searchParams.get('token_hash'),
+        linkType: searchParams.get('type'),
         error: searchParams.get('error_description') || hashParams.get('error_description') || searchParams.get('error') || hashParams.get('error'),
       };
     };
 
     const verifyLink = async () => {
-      const { accessToken, refreshToken, code, error } = parseUrlParams();
+      const { accessToken, refreshToken, code, tokenHash, linkType, error } = parseUrlParams();
 
       if (error) {
         markError('This account setup link is invalid or has expired. Please ask your manager to resend your invite.');
+        return;
+      }
+
+      if (tokenHash) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: linkType === 'recovery' ? 'recovery' : 'invite',
+        });
+        if (otpError) {
+          markError('This account setup link is invalid or has expired. Please ask your manager to resend your invite.');
+          return;
+        }
+        window.history.replaceState(null, '', window.location.pathname);
+        markReady();
         return;
       }
 

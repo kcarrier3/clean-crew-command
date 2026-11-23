@@ -197,7 +197,11 @@ const handler = async (req: Request): Promise<Response> => {
         linkRes = await supabase.auth.admin.generateLink({ type: 'recovery', email, options: { redirectTo: redirectUrl } });
         if (!linkRes.error) await supabase.auth.admin.updateUserById(existingUser.id, { user_metadata: metadata });
       }
-      const link = linkRes.data?.properties?.action_link;
+      const props = linkRes.data?.properties;
+      // Link straight to our own page (verified there) so the email never points at the auth server.
+      const link = props?.hashed_token
+        ? `${redirectUrl}?token_hash=${encodeURIComponent(props.hashed_token)}&type=${props.verification_type === 'recovery' ? 'recovery' : 'invite'}`
+        : props?.action_link;
       if (linkRes.error || !link) {
         const msg = linkRes.error?.message || 'Could not create a setup link';
         await updateLog({ status: 'failed', error_message: msg });
