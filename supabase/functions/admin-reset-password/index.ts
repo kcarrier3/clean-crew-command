@@ -96,14 +96,37 @@ serve(async (req) => {
     }
 
     // mode === 'link'
-    const siteUrl = Deno.env.get('SITE_URL') || 'https://clean-crew-command.lovable.app';
-    const redirectTo = `${siteUrl}/reset-password`;
-    const { error: linkErr } = await admin.auth.admin.generateLink({
+    const appUrl = (Deno.env.get('APP_URL') || Deno.env.get('SITE_URL') || 'https://app.gosummitfacilities.com').replace(/\/$/, '');
+    const redirectTo = `${appUrl}/reset-password`;
+    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
       type: 'recovery',
       email,
       options: { redirectTo },
     });
     if (linkErr) return json(400, { error: linkErr.message });
+    const hashed = linkData?.properties?.hashed_token;
+    const resendKey = Deno.env.get('RESEND_API_KEY');
+    if (!hashed || !resendKey) return json(500, { error: 'Could not send the reset email.' });
+    // Link straight to our own page, which verifies the one-time code.
+    const link = `${redirectTo}?token_hash=${encodeURIComponent(hashed)}&type=recovery`;
+    const fromEmail = Deno.env.get('INVITE_FROM_EMAIL') || 'noreply@invites.crewcompass360.com';
+    const fromName = Deno.env.get('INVITE_FROM_NAME') || 'Crew Compass';
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: `${fromName} <${fromEmail}>`,
+        to: [email],
+        subject: 'Reset your Crew Compass password',
+        html: `<p>Your manager sent you a link to set a new Crew Compass password.</p><p><a href="${link}">Set my password</a></p><p style="font-size:13px;color:#6b7280">This link works once. If it expires, ask your manager for a new one.</p>`,
+        text: `Set a new Crew Compass password: ${link}`,
+      }),
+    });
+    if (!r.ok) {
+      const body = await r.text();
+      console.error(`Resend reset failed [${r.status}]: ${body}`);
+      return json(502, { error: `The reset email could not be sent (provider error ${r.status}).` });
+    }
     return json(200, { ok: true });
   } catch (err) {
     console.error('admin-reset-password error', err);
