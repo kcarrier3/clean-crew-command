@@ -1,5 +1,6 @@
 import InYourCourt from './court/InYourCourt';
 import OwnerKpis from './owner/OwnerKpis';
+import OpsKpis from './owner/OpsKpis';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -156,6 +157,7 @@ const ManagerDashboard = () => {
     <div className="flex flex-col gap-4 md:gap-6">
       <div className="order-1"><InYourCourt /></div>
       {profile?.job_title === 'Owner' && <div className="order-1"><OwnerKpis /></div>}
+      {(profile?.job_title === 'Owner' || profile?.job_title === 'Operations Manager') && <div className="order-1"><OpsKpis /></div>}
       <div className="order-2 md:order-1">
         <MobileDisclosure title="This week's training"><ManagerTrainingWeek /></MobileDisclosure>
       </div>

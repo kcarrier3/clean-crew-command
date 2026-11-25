@@ -45,3 +45,28 @@ export function avgWorkOrderHours(orders: KpiWorkOrder[]) {
   const h = orders.filter(o => o.completed_at).map(o => (day(o.completed_at!) - day(o.created_at)) / 3600000).filter(x => x >= 0);
   return h.length ? { hours: h.reduce((a, b) => a + b, 0) / h.length, count: h.length } : null;
 }
+
+export interface KpiSite { is_recurring_monthly: boolean | null; budgeted_hours: number | null; used_hours: number | null; current_month_used_hours: number | null; }
+/** Janitorial compares this month's hours to the monthly budget; construction compares total hours to the project budget. */
+export function budgetVsActual(sites: KpiSite[], recurring: boolean) {
+  const list = sites.filter(s => !!s.is_recurring_monthly === recurring && Number(s.budgeted_hours ?? 0) > 0);
+  const budgeted = list.reduce((a, s) => a + Number(s.budgeted_hours), 0);
+  const actual = list.reduce((a, s) => a + Number((recurring ? s.current_month_used_hours : s.used_hours) ?? 0), 0);
+  const over = list.filter(s => Number((recurring ? s.current_month_used_hours : s.used_hours) ?? 0) > Number(s.budgeted_hours)).length;
+  return { budgeted, actual, pct: budgeted ? (actual / budgeted) * 100 : null, count: list.length, over };
+}
+
+/** Completed work orders with a due date that were finished on or before it. */
+export function onTimePct(orders: { completed_at: string | null; due_date: string | null }[]) {
+  const done = orders.filter(o => o.completed_at && o.due_date);
+  if (!done.length) return null;
+  const ok = done.filter(o => o.completed_at!.slice(0, 10) <= o.due_date!).length;
+  return (ok / done.length) * 100;
+}
+
+/** Of staff hired at least a year ago, the share still active. */
+export function retentionPct(people: { hire_date: string | null; active: boolean | null }[], now = new Date()) {
+  const cutoff = new Date(now.getTime() - 365 * DAY).toISOString().slice(0, 10);
+  const pool = people.filter(p => p.hire_date && p.hire_date <= cutoff);
+  return pool.length ? { pct: (pool.filter(p => p.active).length / pool.length) * 100, count: pool.length } : null;
+}
