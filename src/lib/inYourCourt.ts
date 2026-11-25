@@ -3,12 +3,16 @@ export interface CourtSettings {
   payroll: { enabled: boolean; titles: string[]; week_start_day: number };
   billing: { enabled: boolean; titles: string[]; recurring_days: number; project_days: number };
   i9: { enabled: boolean; titles: string[] };
+  training: { enabled: boolean; titles: string[] };
+  work_orders: { enabled: boolean; titles: string[] };
 }
 
 export const DEFAULT_COURT_SETTINGS: CourtSettings = {
   payroll: { enabled: true, titles: ['Office Manager'], week_start_day: 0 },
   billing: { enabled: true, titles: ['Office Manager'], recurring_days: 5, project_days: 15 },
   i9: { enabled: true, titles: ['Office Manager'] },
+  training: { enabled: true, titles: ['Night Manager'] },
+  work_orders: { enabled: true, titles: ['Night Manager'] },
 };
 
 export function parseCourtSettings(raw: string | null | undefined): CourtSettings {
@@ -18,6 +22,8 @@ export function parseCourtSettings(raw: string | null | undefined): CourtSetting
       payroll: { ...DEFAULT_COURT_SETTINGS.payroll, ...(v.payroll || {}) },
       billing: { ...DEFAULT_COURT_SETTINGS.billing, ...(v.billing || {}) },
       i9: { ...DEFAULT_COURT_SETTINGS.i9, ...(v.i9 || {}) },
+      training: { ...DEFAULT_COURT_SETTINGS.training, ...(v.training || {}) },
+      work_orders: { ...DEFAULT_COURT_SETTINGS.work_orders, ...(v.work_orders || {}) },
     };
   } catch {
     return DEFAULT_COURT_SETTINGS;
@@ -53,4 +59,9 @@ export function needsFollowUp(dueDate: string | null, isRecurring: boolean, s: C
 /** A submitted I-9 needs ID verification until a reviewer approves it. */
 export function needsI9Verification(sub: { status: string; reviewed_at: string | null }): boolean {
   return sub.status === 'completed' && !sub.reviewed_at;
+}
+
+/** Work order follow-ups re-appear each day until the work order is completed. */
+export function workOrderCourtKey(id: string, now: Date): string {
+  return `wo:${id}:${ymd(now)}`;
 }

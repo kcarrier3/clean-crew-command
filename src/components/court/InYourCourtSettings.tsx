@@ -100,6 +100,32 @@ export default function InYourCourtSettings() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Training for the shift ahead</CardTitle>
+            <Switch checked={s.training.enabled} onCheckedChange={(v) => setS({ ...s, training: { ...s.training, enabled: v } })} />
+          </div>
+          <CardDescription>Shows published training sessions for today and tomorrow where this person is the assigned trainer.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2"><Label>Goes to</Label><TitlePicker value={s.training.titles} onChange={(t) => setS({ ...s, training: { ...s.training, titles: t } })} /></div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Outstanding work orders</CardTitle>
+            <Switch checked={s.work_orders.enabled} onCheckedChange={(v) => setS({ ...s, work_orders: { ...s.work_orders, enabled: v } })} />
+          </div>
+          <CardDescription>Shows open and in-progress work orders so they can check in with staff. Comes back each day until the work order is completed.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2"><Label>Goes to</Label><TitlePicker value={s.work_orders.titles} onChange={(t) => setS({ ...s, work_orders: { ...s.work_orders, titles: t } })} /></div>
+        </CardContent>
+      </Card>
+
       <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
     </div>
   );

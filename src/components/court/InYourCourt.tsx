@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Inbox, FileSpreadsheet, Receipt, Check, IdCard } from 'lucide-react';
+import { Inbox, FileSpreadsheet, Receipt, Check, IdCard, GraduationCap, Wrench } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { parseCourtSettings, lastClosedPayPeriod, needsFollowUp, daysPastDue, needsI9Verification } from '@/lib/inYourCourt';
+import { parseCourtSettings, lastClosedPayPeriod, needsFollowUp, daysPastDue, needsI9Verification, workOrderCourtKey } from '@/lib/inYourCourt';
 
-interface CourtItem { key: string; kind: 'payroll' | 'billing' | 'i9'; title: string; detail: string; openTab: string; clearLabel: string }
+interface CourtItem { key: string; kind: 'payroll' | 'billing' | 'i9' | 'training' | 'wo'; title: string; detail: string; openTab: string; clearLabel: string }
 
 const fmt = (s: string) => new Date(s + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
@@ -76,6 +76,37 @@ export default function InYourCourt() {
           openTab: 'documents', clearLabel: 'Verified' });
       }
     }
+    const ymdLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (s.training.enabled && s.training.titles.includes(title)) {
+      const tmr = new Date(now); tmr.setDate(now.getDate() + 1);
+      const { data: ts } = await (supabase.from('training_sessions') as any)
+        .select('id, worker_id, session_date, start_time, job_sites(name)')
+        .eq('manager_id', user.id).not('published_at', 'is', null)
+        .gte('session_date', ymdLocal(now)).lte('session_date', ymdLocal(tmr)).order('session_date');
+      const ids = [...new Set(((ts || []) as any[]).map((t) => t.worker_id))];
+      const { data: ppl } = ids.length ? await supabase.from('profiles').select('id, full_name').in('id', ids) : { data: [] as any[] };
+      const nm = new Map((ppl || []).map((p: any) => [p.id, p.full_name]));
+      for (const t of (ts || []) as any[]) {
+        const key = `training:${t.id}`;
+        if (cleared.has(key)) continue;
+        out.push({ key, kind: 'training', title: `Training: ${nm.get(t.worker_id) || 'New hire'}`,
+          detail: `${fmt(t.session_date)}${t.start_time ? ' · ' + String(t.start_time).slice(0, 5) : ''} at ${t.job_sites?.name || 'account'}`,
+          openTab: 'trainingplanner', clearLabel: 'Ready' });
+      }
+    }
+    if (s.work_orders.enabled && s.work_orders.titles.includes(title)) {
+      const { data: wos } = await supabase.from('work_orders')
+        .select('id, title, due_date, priority, job_sites(name)').in('status', ['open', 'in_progress']).order('due_date', { ascending: true });
+      const today = ymdLocal(now);
+      for (const w of (wos || []) as any[]) {
+        const key = workOrderCourtKey(w.id, now);
+        if (cleared.has(key)) continue;
+        const late = w.due_date && w.due_date < today;
+        out.push({ key, kind: 'wo', title: `Work order: ${w.title}`,
+          detail: `${w.job_sites?.name || 'Account'}${w.due_date ? ` · due ${fmt(w.due_date)}${late ? ' (overdue)' : ''}` : ''} · ${w.priority} — check in with staff`,
+          openTab: 'quality', clearLabel: 'Checked in' });
+      }
+    }
     setItems(out);
     setLoaded(true);
   }, [user, profile?.job_title]);
@@ -106,7 +137,7 @@ export default function InYourCourt() {
         {items.map((it) => (
           <div key={it.key} className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-md border p-3">
             <div className="flex items-start gap-2 flex-1 min-w-0">
-              {it.kind === 'i9' ? <IdCard className="h-4 w-4 mt-0.5 text-primary" /> : it.kind === 'payroll' ? <FileSpreadsheet className="h-4 w-4 mt-0.5 text-primary" /> : <Receipt className="h-4 w-4 mt-0.5 text-primary" />}
+              {it.kind === 'training' ? <GraduationCap className="h-4 w-4 mt-0.5 text-primary" /> : it.kind === 'wo' ? <Wrench className="h-4 w-4 mt-0.5 text-primary" /> : it.kind === 'i9' ? <IdCard className="h-4 w-4 mt-0.5 text-primary" /> : it.kind === 'payroll' ? <FileSpreadsheet className="h-4 w-4 mt-0.5 text-primary" /> : <Receipt className="h-4 w-4 mt-0.5 text-primary" />}
               <div className="min-w-0">
                 <div className="font-medium text-sm">{it.title}</div>
                 <div className="text-xs text-muted-foreground">{it.detail}</div>

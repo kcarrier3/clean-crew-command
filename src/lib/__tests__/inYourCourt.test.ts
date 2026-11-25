@@ -28,3 +28,14 @@ describe('I-9 verification', () => {
     expect(needsI9Verification({ status: 'completed', reviewed_at: '2026-11-25' })).toBe(false);
   });
 });
+
+import { workOrderCourtKey } from '../inYourCourt';
+describe('night manager court', () => {
+  it('training and work orders go to the Night Manager', () => {
+    expect(D.training.titles).toEqual(['Night Manager']);
+    expect(D.work_orders.titles).toEqual(['Night Manager']);
+  });
+  it('a work order check-in comes back the next day', () => {
+    expect(workOrderCourtKey('a', new Date(2026, 10, 25))).not.toBe(workOrderCourtKey('a', new Date(2026, 10, 26)));
+  });
+});
