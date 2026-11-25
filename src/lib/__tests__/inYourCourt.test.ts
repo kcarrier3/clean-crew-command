@@ -29,7 +29,15 @@ describe('I-9 verification', () => {
   });
 });
 
-import { workOrderCourtKey } from '../inYourCourt';
+import { workOrderCourtKey, myWorkOrderCourtKey } from '../inYourCourt';
+describe('worker court', () => {
+  it('assigned work orders go to Project Workers and Project Crew Leads', () => {
+    expect(D.work_orders_mine.titles).toEqual(['Project Worker', 'Project Crew Lead']);
+  });
+  it('a worker work order item comes back the next day until completed', () => {
+    expect(myWorkOrderCourtKey('a', new Date(2026, 10, 25))).not.toBe(myWorkOrderCourtKey('a', new Date(2026, 10, 26)));
+  });
+});
 describe('night manager court', () => {
   it('training and work orders go to the Night Manager', () => {
     expect(D.training.titles).toEqual(['Night Manager']);

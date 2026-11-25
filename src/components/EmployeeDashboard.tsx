@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import TimeClock from '@/components/TimeClock';
 import ManagerOnDutyCard from '@/components/dashboard/ManagerOnDutyCard';
+import InYourCourt from '@/components/court/InYourCourt';
 import { MobileDisclosure } from './layout/MobileDisclosure';
 
 interface Schedule {
@@ -194,6 +195,7 @@ const EmployeeDashboard = () => {
 
   return (
     <div className="space-y-6">
+      <InYourCourt />
       {/* Time Clock */}
       <Card className="border-0 bg-transparent shadow-none md:border md:bg-card md:shadow-sm">
         <CardHeader className="hidden md:block">

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Inbox, FileSpreadsheet, Receipt, Check, IdCard, GraduationCap, Wrench } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { parseCourtSettings, lastClosedPayPeriod, needsFollowUp, daysPastDue, needsI9Verification, workOrderCourtKey } from '@/lib/inYourCourt';
+import { parseCourtSettings, lastClosedPayPeriod, needsFollowUp, daysPastDue, needsI9Verification, workOrderCourtKey, myWorkOrderCourtKey } from '@/lib/inYourCourt';
 
 interface CourtItem { key: string; kind: 'payroll' | 'billing' | 'i9' | 'training' | 'wo'; title: string; detail: string; openTab: string; clearLabel: string }
 
@@ -105,6 +105,20 @@ export default function InYourCourt() {
         out.push({ key, kind: 'wo', title: `Work order: ${w.title}`,
           detail: `${w.job_sites?.name || 'Account'}${w.due_date ? ` · due ${fmt(w.due_date)}${late ? ' (overdue)' : ''}` : ''} · ${w.priority} — check in with staff`,
           openTab: 'quality', clearLabel: 'Checked in' });
+      }
+    }
+    if (s.work_orders_mine.enabled && s.work_orders_mine.titles.includes(title)) {
+      const { data: mine } = await supabase.from('work_orders')
+        .select('id, title, due_date, priority, job_sites(name)').eq('assigned_to', user.id)
+        .in('status', ['open', 'in_progress']).order('due_date', { ascending: true });
+      const today = ymdLocal(now);
+      for (const w of (mine || []) as any[]) {
+        const key = myWorkOrderCourtKey(w.id, now);
+        if (cleared.has(key)) continue;
+        const late = w.due_date && w.due_date < today;
+        out.push({ key, kind: 'wo', title: `Work order: ${w.title}`,
+          detail: `${w.job_sites?.name || 'Account'}${w.due_date ? ` · due ${fmt(w.due_date)}${late ? ' (overdue)' : ''}` : ''} · ${w.priority} — assigned to you`,
+          openTab: 'dashboard', clearLabel: 'Done' });
       }
     }
     setItems(out);

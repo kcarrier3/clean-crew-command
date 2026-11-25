@@ -126,6 +126,19 @@ export default function InYourCourtSettings() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">My assigned work orders</CardTitle>
+            <Switch checked={s.work_orders_mine.enabled} onCheckedChange={(v) => setS({ ...s, work_orders_mine: { ...s.work_orders_mine, enabled: v } })} />
+          </div>
+          <CardDescription>Shows each worker the open work orders assigned to them. Comes back each day until the work order is completed.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2"><Label>Goes to</Label><TitlePicker value={s.work_orders_mine.titles} onChange={(t) => setS({ ...s, work_orders_mine: { ...s.work_orders_mine, titles: t } })} /></div>
+        </CardContent>
+      </Card>
+
       <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
     </div>
   );

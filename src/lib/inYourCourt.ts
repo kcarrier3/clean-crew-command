@@ -5,6 +5,7 @@ export interface CourtSettings {
   i9: { enabled: boolean; titles: string[] };
   training: { enabled: boolean; titles: string[] };
   work_orders: { enabled: boolean; titles: string[] };
+  work_orders_mine: { enabled: boolean; titles: string[] };
 }
 
 export const DEFAULT_COURT_SETTINGS: CourtSettings = {
@@ -13,6 +14,7 @@ export const DEFAULT_COURT_SETTINGS: CourtSettings = {
   i9: { enabled: true, titles: ['Office Manager'] },
   training: { enabled: true, titles: ['Night Manager'] },
   work_orders: { enabled: true, titles: ['Night Manager'] },
+  work_orders_mine: { enabled: true, titles: ['Project Worker', 'Project Crew Lead'] },
 };
 
 export function parseCourtSettings(raw: string | null | undefined): CourtSettings {
@@ -24,6 +26,7 @@ export function parseCourtSettings(raw: string | null | undefined): CourtSetting
       i9: { ...DEFAULT_COURT_SETTINGS.i9, ...(v.i9 || {}) },
       training: { ...DEFAULT_COURT_SETTINGS.training, ...(v.training || {}) },
       work_orders: { ...DEFAULT_COURT_SETTINGS.work_orders, ...(v.work_orders || {}) },
+      work_orders_mine: { ...DEFAULT_COURT_SETTINGS.work_orders_mine, ...(v.work_orders_mine || {}) },
     };
   } catch {
     return DEFAULT_COURT_SETTINGS;
@@ -64,4 +67,9 @@ export function needsI9Verification(sub: { status: string; reviewed_at: string |
 /** Work order follow-ups re-appear each day until the work order is completed. */
 export function workOrderCourtKey(id: string, now: Date): string {
   return `wo:${id}:${ymd(now)}`;
+}
+
+/** A worker's own assigned work orders re-appear each day until completed. */
+export function myWorkOrderCourtKey(id: string, now: Date): string {
+  return `womine:${id}:${ymd(now)}`;
 }
