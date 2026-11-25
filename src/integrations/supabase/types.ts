@@ -8586,6 +8586,10 @@ export type Database = {
       }
       can_publish_schedules: { Args: { _user_id: string }; Returns: boolean }
       can_run_payroll: { Args: { _user_id: string }; Returns: boolean }
+      can_view_employee_documents: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       can_view_sov: { Args: { _user_id: string }; Returns: boolean }
       compute_inspection_score: {
         Args: { p_inspection_id: string }

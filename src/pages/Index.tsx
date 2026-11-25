@@ -22,6 +22,7 @@ import MySchedule from '@/components/MySchedule';
 import { OnboardingCenter } from '@/components/OnboardingCenter';
 import { OnboardingManager } from '@/components/OnboardingManager';
 import { DocumentsAdmin } from '@/components/documents/DocumentsAdmin';
+import { canViewEmployeeDocuments } from '@/lib/employeeDocumentAccess';
 import TimeOffRequests from '@/components/TimeOffRequests';
 import PtoBalanceCard from '@/components/PtoBalanceCard';
 import CRMDashboard from '@/components/crm/CRMDashboard';
@@ -165,6 +166,7 @@ const Index = () => {
   // Single source of truth for navigation. The desktop sidebar and the mobile
   // "More" menu are both built from this list so phone users get every area
   // they have on the computer browser.
+  const canSeeEmployeeDocs = canViewEmployeeDocuments(profile?.job_title);
   const allNavItems: SidebarItem[] = isManager()
     ? [
         { v: 'dashboard',  label: 'Dashboard',       icon: Home },
@@ -175,7 +177,7 @@ const Index = () => {
         ...(canViewSov() ? [{ v: 'billing', label: 'Billing', icon: Receipt }] : []),
         { v: 'quality',    label: 'Quality Control', icon: ClipboardCheck },
         { v: 'team',       label: 'Team',            icon: UsersIcon },
-        { v: 'documents',  label: 'Documents',       icon: FileSpreadsheet },
+        ...(canSeeEmployeeDocs ? [{ v: 'documents', label: 'Documents', icon: FileSpreadsheet }] : []),
         { v: 'training',   label: 'Training',        icon: GraduationCap },
         { v: 'trainingplanner', label: 'Training Planner', icon: GraduationCap },
         { v: 'newaccountcalendar', label: 'New Account Calendar', icon: CalendarDays },
@@ -207,7 +209,7 @@ const Index = () => {
 
   // Extra destinations that only make sense outside the sidebar.
   const extraNavItems: SidebarItem[] = [
-    ...(!isManager() ? [{ v: 'onboarding', label: 'Onboarding & Docs', icon: FileText }] : []),
+    ...(!canSeeEmployeeDocs ? [{ v: 'onboarding', label: 'Onboarding & Docs', icon: FileText }] : []),
     { v: 'contacts', label: 'Contacts', icon: Contact },
   ].filter((i) => isModuleEnabled(i.v));
 
@@ -523,7 +525,7 @@ const Index = () => {
             {/* Onboarding: employees complete docs, managers review */}
             {isModuleEnabled('onboarding') && (
               <TabsContent value="onboarding" className="mt-6">
-                {isManager() ? <OnboardingManager /> : <OnboardingCenter />}
+                {canSeeEmployeeDocs ? <OnboardingManager /> : <OnboardingCenter />}
               </TabsContent>
             )}
 
@@ -533,7 +535,7 @@ const Index = () => {
               </TabsContent>
             )}
 
-            {isManager() && isModuleEnabled('documents') && (
+            {canSeeEmployeeDocs && isModuleEnabled('documents') && (
               <TabsContent value="documents" className="mt-6">
                 <DocumentsAdmin />
               </TabsContent>
