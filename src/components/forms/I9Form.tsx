@@ -15,6 +15,7 @@ export interface I9IdDocument {
   size: number;
   content_type: string;
   uploaded_at: string;
+  slot?: 1 | 2;
 }
 
 interface I9Data {
@@ -88,47 +89,49 @@ export const I9Form = ({ data, onChange, readOnly = false, isManager = false, em
   const [uploading, setUploading] = useState(false);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const idDocs: I9IdDocument[] = Array.isArray(data.id_documents) ? data.id_documents : [];
-  const maxDocs = 2;
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  // Older uploads have no slot; place them by order.
+  const docForSlot = (slot: 1 | 2): I9IdDocument | undefined =>
+    idDocs.find(d => d.slot === slot) ??
+    idDocs.filter(d => !d.slot)[slot - 1 - idDocs.filter(d => d.slot && d.slot < slot).length];
+  const [uploadingSlot, setUploadingSlot] = useState<1 | 2 | null>(null);
+
+  const handleUpload = async (slot: 1 | 2, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     e.target.value = '';
-    if (!files.length) return;
+    if (!file) return;
     if (!employeeId) { toast({ title: 'Not ready', description: 'Please save your profile first.', variant: 'destructive' }); return; }
-    if (idDocs.length + files.length > maxDocs) {
-      toast({ title: `Maximum ${maxDocs} IDs`, description: 'Remove one before uploading another.', variant: 'destructive' });
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: 'File too large', description: `${file.name} exceeds 10MB.`, variant: 'destructive' });
       return;
     }
     setUploading(true);
-    const uploaded: I9IdDocument[] = [];
-    for (const file of files) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast({ title: 'File too large', description: `${file.name} exceeds 10MB.`, variant: 'destructive' });
-        continue;
-      }
-      const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
-      const path = `id-documents/${employeeId}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from('onboarding-files').upload(path, file, {
-        upsert: false,
-        contentType: file.type || undefined,
-      });
-      if (error) {
-        toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
-        continue;
-      }
-      uploaded.push({
-        path,
-        name: file.name,
-        size: file.size,
-        content_type: file.type || 'application/octet-stream',
-        uploaded_at: new Date().toISOString(),
-      });
-    }
-    if (uploaded.length) {
-      onChange({ ...data, id_documents: [...idDocs, ...uploaded] });
-      toast({ title: `${uploaded.length} file(s) uploaded` });
-    }
+    setUploadingSlot(slot);
+    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+    const path = `id-documents/${employeeId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from('onboarding-files').upload(path, file, {
+      upsert: false,
+      contentType: file.type || undefined,
+    });
     setUploading(false);
+    setUploadingSlot(null);
+    if (error) {
+      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
+      return;
+    }
+    const other = docForSlot(slot === 1 ? 2 : 1);
+    const next: I9IdDocument[] = [];
+    if (other) next.push({ ...other, slot: slot === 1 ? 2 : 1 });
+    next.push({
+      path,
+      name: file.name,
+      size: file.size,
+      content_type: file.type || 'application/octet-stream',
+      uploaded_at: new Date().toISOString(),
+      slot,
+    });
+    onChange({ ...data, id_documents: next.sort((x, y) => (x.slot ?? 0) - (y.slot ?? 0)) });
+    toast({ title: `ID ${slot} uploaded` });
   };
 
   const removeDoc = async (doc: I9IdDocument) => {
@@ -235,49 +238,54 @@ export const I9Form = ({ data, onChange, readOnly = false, isManager = false, em
       <div className="space-y-3">
         <h4 className="font-semibold text-sm border-b pb-1">Identification Documents</h4>
         <p className="text-xs text-muted-foreground">
-          Upload up to {maxDocs} forms of identification (e.g. Driver's License, Passport, Social Security card, Birth Certificate).
+          Upload two different forms of identification, one in each box.
           Accepted formats: PDF, JPG, PNG. Max 10MB each. These images are stored securely for your employer to verify.
         </p>
 
-        {idDocs.length > 0 && (
-          <div className="space-y-2">
-            {idDocs.map((doc) => (
-              <div key={doc.path} className="flex items-center gap-2 p-2 border rounded-md bg-muted/40">
-                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{doc.name}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {(doc.size / 1024).toFixed(0)} KB
-                  </p>
-                </div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => previewDoc(doc)}>View</Button>
-                {!readOnly && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => removeDoc(doc)}>
-                    <X className="h-4 w-4" />
-                  </Button>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {([1, 2] as const).map((slot) => {
+            const doc = docForSlot(slot);
+            return (
+              <div key={slot} className="space-y-1.5">
+                <Label className="text-xs font-medium">
+                  {slot === 1 ? 'ID #1 (e.g. Driver\'s License or Passport)' : 'ID #2 (e.g. Social Security Card or Birth Certificate)'}
+                </Label>
+                {doc ? (
+                  <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/40">
+                    <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{doc.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{(doc.size / 1024).toFixed(0)} KB</p>
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => previewDoc(doc)}>View</Button>
+                    {!readOnly && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeDoc(doc)} aria-label={`Remove ID ${slot}`}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ) : readOnly ? (
+                  <p className="text-xs text-muted-foreground p-2 border rounded-md">Not uploaded</p>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/40 transition">
+                    {uploadingSlot === slot ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> <span className="text-xs">Uploading…</span></>
+                    ) : (
+                      <><Upload className="h-4 w-4" /> <span className="text-xs">Upload ID #{slot}</span></>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="hidden"
+                      onChange={(e) => handleUpload(slot, e)}
+                      disabled={uploading}
+                    />
+                  </label>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-
-        {!readOnly && idDocs.length < maxDocs && (
-          <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/40 transition">
-            {uploading ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> <span className="text-xs">Uploading…</span></>
-            ) : (
-              <><Upload className="h-4 w-4" /> <span className="text-xs">Upload ID ({idDocs.length}/{maxDocs})</span></>
-            )}
-            <input
-              type="file"
-              multiple
-              accept="image/*,application/pdf"
-              className="hidden"
-              onChange={handleUpload}
-              disabled={uploading}
-            />
-          </label>
-        )}
+            );
+          })}
+        </div>
       </div>
 
       <Separator />
