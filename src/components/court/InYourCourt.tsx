@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Inbox, FileSpreadsheet, Receipt, Check } from 'lucide-react';
+import { Inbox, FileSpreadsheet, Receipt, Check, IdCard } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { parseCourtSettings, lastClosedPayPeriod, needsFollowUp, daysPastDue } from '@/lib/inYourCourt';
+import { parseCourtSettings, lastClosedPayPeriod, needsFollowUp, daysPastDue, needsI9Verification } from '@/lib/inYourCourt';
 
-interface CourtItem { key: string; kind: 'payroll' | 'billing'; title: string; detail: string; openTab: string; clearLabel: string }
+interface CourtItem { key: string; kind: 'payroll' | 'billing' | 'i9'; title: string; detail: string; openTab: string; clearLabel: string }
 
 const fmt = (s: string) => new Date(s + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
@@ -57,6 +57,25 @@ export default function InYourCourt() {
         });
       }
     }
+    if (s.i9.enabled && s.i9.titles.includes(title)) {
+      const { data: subs } = await supabase
+        .from('employee_document_submissions')
+        .select('id, employee_id, status, reviewed_at, submitted_at, onboarding_documents!inner(document_type)')
+        .eq('onboarding_documents.document_type', 'i9')
+        .eq('status', 'completed')
+        .is('reviewed_at', null);
+      const list = ((subs || []) as any[]).filter(needsI9Verification);
+      const ids = [...new Set(list.map((x) => x.employee_id))];
+      const { data: people } = ids.length ? await supabase.from('profiles').select('id, full_name').in('id', ids) : { data: [] as any[] };
+      const names = new Map((people || []).map((p: any) => [p.id, p.full_name]));
+      for (const x of list) {
+        const key = `i9:${x.id}`;
+        if (cleared.has(key)) continue;
+        out.push({ key, kind: 'i9', title: `Verify I-9: ${names.get(x.employee_id) || 'Employee'}`,
+          detail: "Check that the uploaded IDs match the employee's name, then approve the I-9",
+          openTab: 'documents', clearLabel: 'Verified' });
+      }
+    }
     setItems(out);
     setLoaded(true);
   }, [user, profile?.job_title]);
@@ -65,6 +84,9 @@ export default function InYourCourt() {
 
   const clear = async (key: string) => {
     if (!user) return;
+    if (key.startsWith('i9:')) {
+      await supabase.from('employee_document_submissions').update({ reviewed_at: new Date().toISOString(), reviewed_by: user.id }).eq('id', key.slice(3));
+    }
     const { error } = await supabase.from('court_item_clears').insert({ user_id: user.id, item_key: key });
     if (!error) setItems((xs) => xs.filter((x) => x.key !== key));
   };
@@ -84,7 +106,7 @@ export default function InYourCourt() {
         {items.map((it) => (
           <div key={it.key} className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-md border p-3">
             <div className="flex items-start gap-2 flex-1 min-w-0">
-              {it.kind === 'payroll' ? <FileSpreadsheet className="h-4 w-4 mt-0.5 text-primary" /> : <Receipt className="h-4 w-4 mt-0.5 text-primary" />}
+              {it.kind === 'i9' ? <IdCard className="h-4 w-4 mt-0.5 text-primary" /> : it.kind === 'payroll' ? <FileSpreadsheet className="h-4 w-4 mt-0.5 text-primary" /> : <Receipt className="h-4 w-4 mt-0.5 text-primary" />}
               <div className="min-w-0">
                 <div className="font-medium text-sm">{it.title}</div>
                 <div className="text-xs text-muted-foreground">{it.detail}</div>

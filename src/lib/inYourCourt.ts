@@ -2,11 +2,13 @@
 export interface CourtSettings {
   payroll: { enabled: boolean; titles: string[]; week_start_day: number };
   billing: { enabled: boolean; titles: string[]; recurring_days: number; project_days: number };
+  i9: { enabled: boolean; titles: string[] };
 }
 
 export const DEFAULT_COURT_SETTINGS: CourtSettings = {
   payroll: { enabled: true, titles: ['Office Manager'], week_start_day: 0 },
   billing: { enabled: true, titles: ['Office Manager'], recurring_days: 5, project_days: 15 },
+  i9: { enabled: true, titles: ['Office Manager'] },
 };
 
 export function parseCourtSettings(raw: string | null | undefined): CourtSettings {
@@ -15,6 +17,7 @@ export function parseCourtSettings(raw: string | null | undefined): CourtSetting
     return {
       payroll: { ...DEFAULT_COURT_SETTINGS.payroll, ...(v.payroll || {}) },
       billing: { ...DEFAULT_COURT_SETTINGS.billing, ...(v.billing || {}) },
+      i9: { ...DEFAULT_COURT_SETTINGS.i9, ...(v.i9 || {}) },
     };
   } catch {
     return DEFAULT_COURT_SETTINGS;
@@ -45,4 +48,9 @@ export function daysPastDue(dueDate: string, now: Date): number {
 export function needsFollowUp(dueDate: string | null, isRecurring: boolean, s: CourtSettings['billing'], now: Date): boolean {
   if (!dueDate) return false;
   return daysPastDue(dueDate, now) >= (isRecurring ? s.recurring_days : s.project_days);
+}
+
+/** A submitted I-9 needs ID verification until a reviewer approves it. */
+export function needsI9Verification(sub: { status: string; reviewed_at: string | null }): boolean {
+  return sub.status === 'completed' && !sub.reviewed_at;
 }

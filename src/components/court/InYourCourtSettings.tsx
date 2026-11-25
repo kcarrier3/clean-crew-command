@@ -87,6 +87,19 @@ export default function InYourCourtSettings() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">I-9 verification</CardTitle>
+            <Switch checked={s.i9.enabled} onCheckedChange={(v) => setS({ ...s, i9: { ...s.i9, enabled: v } })} />
+          </div>
+          <CardDescription>Shows up when an employee submits an I-9, so someone can check that their IDs match their name. Clears when the I-9 is approved or marked verified.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2"><Label>Goes to</Label><TitlePicker value={s.i9.titles} onChange={(t) => setS({ ...s, i9: { ...s.i9, titles: t } })} /></div>
+        </CardContent>
+      </Card>
+
       <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
     </div>
   );

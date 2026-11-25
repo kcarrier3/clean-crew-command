@@ -19,3 +19,12 @@ describe('In your court', () => {
     expect(needsFollowUp('2026-11-10', false, b, new Date(2026, 10, 25))).toBe(true);
   });
 });
+
+import { needsI9Verification, DEFAULT_COURT_SETTINGS as D } from '../inYourCourt';
+describe('I-9 verification', () => {
+  it('goes to the Office Manager and waits until reviewed', () => {
+    expect(D.i9.titles).toEqual(['Office Manager']);
+    expect(needsI9Verification({ status: 'completed', reviewed_at: null })).toBe(true);
+    expect(needsI9Verification({ status: 'completed', reviewed_at: '2026-11-25' })).toBe(false);
+  });
+});
