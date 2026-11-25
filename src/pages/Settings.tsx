@@ -1,3 +1,4 @@
+import InYourCourtSettings from '@/components/court/InYourCourtSettings';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, KeyRound, LogOut, Trash2, Settings as SettingsIcon, Shield, Building2, Users } from 'lucide-react';
@@ -72,6 +73,7 @@ export default function Settings() {
             {isAdminLevel && <TabsTrigger value="directory">Directory</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="waypoint">Waypoint</TabsTrigger>}
             {isAdminLevel && <TabsTrigger value="adp">ADP Payroll</TabsTrigger>}
+            {isAdminLevel && <TabsTrigger value="court">In your court</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="account" className="mt-6 space-y-6">
@@ -189,6 +191,11 @@ export default function Settings() {
           {isAdminLevel && (
             <TabsContent value="adp" className="mt-6 space-y-6">
               <AdpSettings />
+            </TabsContent>
+          )}
+          {isAdminLevel && (
+            <TabsContent value="court" className="mt-6 space-y-6">
+              <InYourCourtSettings />
             </TabsContent>
           )}
         </Tabs>

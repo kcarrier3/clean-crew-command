@@ -1886,6 +1886,30 @@ export type Database = {
           },
         ]
       }
+      court_item_clears: {
+        Row: {
+          cleared_at: string
+          id: string
+          item_key: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          cleared_at?: string
+          id?: string
+          item_key: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          cleared_at?: string
+          id?: string
+          item_key?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       crm_activities: {
         Row: {
           body: string | null

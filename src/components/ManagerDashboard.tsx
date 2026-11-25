@@ -1,3 +1,4 @@
+import InYourCourt from './court/InYourCourt';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -152,6 +153,7 @@ const ManagerDashboard = () => {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
+      <div className="order-1"><InYourCourt /></div>
       <div className="order-2 md:order-1">
         <MobileDisclosure title="This week's training"><ManagerTrainingWeek /></MobileDisclosure>
       </div>
